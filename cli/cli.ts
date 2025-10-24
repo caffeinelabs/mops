@@ -266,7 +266,7 @@ program
   .description("Build a canister")
   .addOption(new Option("--verbose", "Verbose console output"))
   .addOption(
-    new Option("--output", "Output directory").default(
+    new Option("--output, -o <output>", "Output directory").default(
       DEFAULT_BUILD_OUTPUT_DIR,
     ),
   )
@@ -664,7 +664,7 @@ docsCommand
   .description("Generate documentation for Motoko code")
   .addOption(new Option("--source <source>", "Source directory").default("src"))
   .addOption(
-    new Option("--output <output>", "Output directory").default("docs"),
+    new Option("--output, -o <output>", "Output directory").default("docs"),
   )
   .addOption(
     new Option("--format <format>", "Output format")

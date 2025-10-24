@@ -90,6 +90,9 @@ export async function build(
       args.push(...canister.args);
     }
     try {
+      if (options.verbose) {
+        console.log(chalk.gray(mocPath, JSON.stringify(args)));
+      }
       const result = await execa(mocPath, args, {
         stdio: options.verbose ? "inherit" : "pipe",
         reject: false,
