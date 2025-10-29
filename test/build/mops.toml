@@ -1,0 +1,9 @@
+[dependencies]
+core = "1.0.0"
+
+[canisters]
+foo = "src/Foo.mo"
+bar = { main = "src/Bar.mo", args = ["--incremental-gc"] }
+
+[build]
+args = ["--release"]

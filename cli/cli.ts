@@ -19,6 +19,7 @@ import { installAll } from "./commands/install/install-all.js";
 import { search } from "./commands/search.js";
 import { add } from "./commands/add.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
+import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
 import { test } from "./commands/test/test.js";
 import { template } from "./commands/template.js";
 import { remove } from "./commands/remove.js";
@@ -47,6 +48,7 @@ import {
 import { format } from "./commands/format.js";
 import { docs } from "./commands/docs.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
+import { resolve } from "node:path";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -56,6 +58,12 @@ declare global {
 }
 
 events.setMaxListeners(20);
+
+// Change working directory for `npm run mops`
+let cwd = process.env["MOPS_CWD"];
+if (cwd) {
+  process.chdir(resolve(cwd));
+}
 
 let networkFile = getNetworkFile();
 if (fs.existsSync(networkFile)) {
@@ -250,6 +258,32 @@ program
     } else if (sub == "show") {
       console.log(show());
     }
+  });
+
+// build
+program
+  .command("build [canisters...]")
+  .description("Build a canister")
+  .addOption(new Option("--verbose", "Verbose console output"))
+  .addOption(
+    new Option("--output, -o <output>", "Output directory").default(
+      DEFAULT_BUILD_OUTPUT_DIR,
+    ),
+  )
+  .allowUnknownOption(true) // TODO: restrict unknown before "--"
+  .action(async (canisters, options, command) => {
+    checkConfigFile(true);
+    const extraArgsIndex = command.args.indexOf("--");
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await build(canisters.length ? canisters : undefined, {
+      ...options,
+      extraArgs:
+        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+    });
   });
 
 // test
@@ -630,7 +664,7 @@ docsCommand
   .description("Generate documentation for Motoko code")
   .addOption(new Option("--source <source>", "Source directory").default("src"))
   .addOption(
-    new Option("--output <output>", "Output directory").default("docs"),
+    new Option("--output, -o <output>", "Output directory").default("docs"),
   )
   .addOption(
     new Option("--format <format>", "Output format")
