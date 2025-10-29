@@ -4,9 +4,9 @@ import { exists } from "fs-extra";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { getMocPath } from "../helpers/get-moc-path.js";
-import { readConfig } from "../mops";
-import { CanisterConfig } from "../types";
-import { sourcesArgs } from "./sources";
+import { readConfig } from "../mops.js";
+import { CanisterConfig } from "../types.js";
+import { sourcesArgs } from "./sources.js";
 
 export interface BuildOptions {
   outputDir: string;
