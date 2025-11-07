@@ -101,6 +101,13 @@ const config = {
 	plugins: [
 		'docusaurus-plugin-fathom',
 	],
+	
+	scripts: [
+		{
+			src: '/js/loadtags.js',
+			async: false,
+		},
+	],
 };
 
 module.exports = config;
