@@ -3,11 +3,14 @@ import events from "node:events";
 import fs from "node:fs";
 import process from "node:process";
 
+import { resolve } from "node:path";
 import { getNetwork } from "./api/network.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
 import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
+import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
 import { bump } from "./commands/bump.js";
+import { checkCandid } from "./commands/check-candid.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
@@ -47,8 +50,6 @@ import {
 } from "./mops.js";
 import { resolvePackages } from "./resolve-packages.js";
 import { Tool } from "./types.js";
-import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
-import { checkCandid } from "./commands/check-candid.js";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -58,6 +59,12 @@ declare global {
 }
 
 events.setMaxListeners(20);
+
+// Change working directory for `npm run mops`
+let cwd = process.env["MOPS_CWD"];
+if (cwd) {
+  process.chdir(resolve(cwd));
+}
 
 let networkFile = getNetworkFile();
 if (fs.existsSync(networkFile)) {
@@ -673,7 +680,7 @@ docsCommand
   .description("Generate documentation for Motoko code")
   .addOption(new Option("--source <source>", "Source directory").default("src"))
   .addOption(
-    new Option("--output <output>", "Output directory").default("docs"),
+    new Option("--output, -o <output>", "Output directory").default("docs"),
   )
   .addOption(
     new Option("--format <format>", "Output format")

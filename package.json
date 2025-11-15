@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "mops": "npm run --prefix ./cli mops",
+    "mops": "npx --no tsx --prefix cli ./cli/cli",
     "start": "npm run replica && npm run deploy-local && npm run decl && npm run frontends",
     "frontends": "npm run start-registry & npm run start-docs & npm run start-blog & npm run start-cli-releases",
     "start-registry": "cd frontend && npm run start",
