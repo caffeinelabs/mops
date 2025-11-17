@@ -31,7 +31,7 @@
     "mops": "tsx ./cli.ts",
     "build": "run-s prepare build:wasm bundle",
     "build:wasm": "wasm-pack build wasm --target nodejs --out-dir pkg && rm wasm/pkg/.gitignore",
-    "dist": "tsc",
+    "dist": "npm run build:wasm && tsc",
     "bundle": "rm -rf ./bundle && bun build ./cli.ts --outdir ./bundle --target node --minify --external @napi-rs/lzma --external fsevents --format esm --define '__dirname=import.meta.dirname' && npm run bundle:fix && npm run bundle:copy && npm run bundle:package-json && npm run bundle:tar",
     "bundle:fix": "rexreplace 'new URL\\(\"\\.\\./templates' 'new URL(\"./templates' bundle/cli.js && rexreplace 'resolve\\(\".*?/xhr-sync-worker\\.js\"\\)' 'resolve(\"./xhr-sync-worker.js\")' bundle/cli.js && rexreplace '\"import.meta.dirname\",\"wasm_bg.wasm\"' 'import.meta.dirname || new URL(\".\", import.meta.url).pathname,\"wasm_bg.wasm\"' bundle/cli.js",
     "bundle:copy": "cp -r commands/bench bundle && cp -r bin declarations templates package.json bundle && cp -r node_modules/prettier-plugin-motoko/wasm/pkg/nodejs/wasm_bg.wasm node_modules/jsdom/lib/jsdom/living/xhr/xhr-sync-worker.js bundle",
