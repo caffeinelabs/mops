@@ -33,12 +33,8 @@ export async function checkCandid(
   try {
     verbose && console.time("check-candid");
 
-    // Read the Candid files
-    const newCandidContent = readFileSync(resolvedNewCandidPath, "utf8");
-    const originalCandidContent = readFileSync(
-      resolvedOriginalCandidPath,
-      "utf8",
-    );
+    const newText = readFileSync(resolvedNewCandidPath, "utf8");
+    const originalText = readFileSync(resolvedOriginalCandidPath, "utf8");
 
     if (verbose) {
       console.log(
@@ -48,14 +44,9 @@ export async function checkCandid(
       );
     }
 
-    // Check compatibility using Wasm function
-    const result = is_candid_compatible(
-      newCandidContent,
-      originalCandidContent,
-    );
+    const result = is_candid_compatible(newText, originalText);
     if (!result) {
       console.error(chalk.red("✖ Candid compatibility check failed"));
-      console.error(chalk.red(result));
       process.exit(1);
     }
 
