@@ -8,6 +8,7 @@ import { readConfig } from "../mops.js";
 import { CanisterConfig } from "../types.js";
 import { sourcesArgs } from "./sources.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
+import { cliError } from "../error.js";
 
 export interface BuildOptions {
   outputDir: string;
@@ -22,7 +23,7 @@ export async function build(
   options: Partial<BuildOptions>,
 ): Promise<void> {
   if (canisterNames?.length == 0) {
-    throw new Error("No canisters specified to build");
+    cliError("No canisters specified to build");
   }
 
   let outputDir = options.outputDir ?? DEFAULT_BUILD_OUTPUT_DIR;
@@ -38,7 +39,7 @@ export async function build(
       ) ?? {};
   }
   if (!Object.keys(canisters).length) {
-    throw new Error(`No Motoko canisters found in mops.toml configuration`);
+    cliError(`No Motoko canisters found in mops.toml configuration`);
   }
 
   if (canisterNames) {
@@ -48,7 +49,7 @@ export async function build(
     }
     for (let name of canisterNames) {
       if (!(name in canisters)) {
-        throw new Error(
+        cliError(
           `Motoko canister '${name}' not found in mops.toml configuration`,
         );
       }
@@ -63,7 +64,7 @@ export async function build(
     console.log(chalk.blue("build canister"), chalk.bold(canisterName));
     let motokoPath = canister.main;
     if (!motokoPath) {
-      throw new Error(`No main file is specified for canister ${canisterName}`);
+      cliError(`No main file is specified for canister ${canisterName}`);
     }
     let args = [
       "-c",
@@ -76,7 +77,7 @@ export async function build(
     ];
     if (config.build?.args) {
       if (typeof config.build.args === "string") {
-        throw new Error(
+        cliError(
           `[build] config 'args' should be an array of strings in mops.toml config file`,
         );
       }
@@ -84,7 +85,7 @@ export async function build(
     }
     if (canister.args) {
       if (typeof canister.args === "string") {
-        throw new Error(
+        cliError(
           `Canister config 'args' should be an array of strings for canister ${canisterName}`,
         );
       }
@@ -100,9 +101,6 @@ export async function build(
       });
 
       if (result.exitCode !== 0) {
-        console.error(
-          chalk.red(`Error: Failed to build canister ${canisterName}`),
-        );
         if (!options.verbose) {
           if (result.stderr) {
             console.error(chalk.red(result.stderr));
@@ -112,10 +110,9 @@ export async function build(
             console.error(result.stdout);
           }
         }
-        // throw new Error(
-        //   `Build failed for canister ${canisterName} (exit code: ${result.exitCode})`,
-        // );
-        process.exit(1);
+        cliError(
+          `Build failed for canister ${canisterName} (exit code: ${result.exitCode})`,
+        );
       }
 
       if (options.verbose && result.stdout && result.stdout.trim()) {
@@ -126,55 +123,39 @@ export async function build(
         const generatedDidPath = join(outputDir, `${canisterName}.did`);
         const originalCandidPath = canister.candid;
 
-        const result = await isCandidCompatible(
-          generatedDidPath,
-          originalCandidPath,
-          { verbose: options.verbose },
-        );
+        try {
+          const compatible = await isCandidCompatible(
+            generatedDidPath,
+            originalCandidPath,
+          );
 
-        if (result.error) {
-          console.error(
-            chalk.red(
+          if (!compatible) {
+            cliError(
               `Candid compatibility check failed for canister ${canisterName}`,
-            ),
-          );
-          console.error(chalk.red(`Details: ${result.error}`));
-          throw new Error(
-            `Candid compatibility check execution failed for canister ${canisterName}`,
-          );
-        }
+            );
+          }
 
-        if (!result.compatible) {
-          console.error(
-            chalk.red(
-              `✖ Candid compatibility check failed for canister ${canisterName}`,
-            ),
-          );
-          throw new Error(
-            `Candid interface is not compatible for canister ${canisterName}`,
-          );
-        }
-
-        if (options.verbose) {
-          console.log(
-            chalk.green(
-              `✓ Candid compatibility check passed for canister ${canisterName}`,
-            ),
+          if (options.verbose) {
+            console.log(
+              chalk.green(
+                `Candid compatibility check passed for canister ${canisterName}`,
+              ),
+            );
+          }
+        } catch (candidError: any) {
+          cliError(
+            `Error during Candid compatibility check for canister ${canisterName}`,
+            candidError,
           );
         }
       }
-    } catch (error: any) {
-      if (error.message?.includes("Build failed for canister")) {
-        throw error;
+    } catch (cliError: any) {
+      if (cliError.message?.includes("Build failed for canister")) {
+        throw cliError;
       }
-      console.error(
-        chalk.red(`Error while compiling canister ${canisterName}`),
+      cliError(
+        `Error while compiling canister ${canisterName}${cliError?.message ? `\n${cliError.message}` : ""}`,
       );
-      if (error.message) {
-        console.error(chalk.red(`Details: ${error.message}`));
-      }
-
-      throw new Error(`Build execution failed for canister ${canisterName}`);
     }
     options.verbose && console.timeEnd(`build canister ${canisterName}`);
   }

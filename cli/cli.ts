@@ -291,7 +291,6 @@ program
 program
   .command("check-candid <new-candid> <original-candid>")
   .description("Check Candid interface compatibility between two Candid files")
-  .addOption(new Option("--verbose", "Verbose console output"))
   .action(async (newCandid, originalCandid, options) => {
     checkConfigFile(true);
     await installAll({
@@ -299,7 +298,7 @@ program
       lock: "ignore",
       installFromLockFile: true,
     });
-    await checkCandid(newCandid, originalCandid, options);
+    await checkCandid(newCandid, originalCandid);
   });
 
 // test
