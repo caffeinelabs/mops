@@ -2,6 +2,7 @@ FROM --platform=linux/amd64 zenvoich/mops-builder:1.1.0@sha256:9bb87e843a90f1c12
 
 # install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs/ | sh -s -- --default-toolchain=1.91.1 -y
+RUN echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
 
 # clone repository
 ARG COMMIT_HASH
