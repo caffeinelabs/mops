@@ -291,7 +291,7 @@ program
 program
   .command("check-candid <new-candid> <original-candid>")
   .description("Check Candid interface compatibility between two Candid files")
-  .action(async (newCandid, originalCandid, options) => {
+  .action(async (newCandid, originalCandid) => {
     checkConfigFile(true);
     await installAll({
       silent: true,
