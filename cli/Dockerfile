@@ -1,7 +1,7 @@
 FROM --platform=linux/amd64 zenvoich/mops-builder:1.1.0@sha256:9bb87e843a90f1c12ece4ba91ca703e19cd0d79522beb562f45b1f8a14cb05b6
 
 # install required packages
-RUN apt-get install -y curl bash && rm -rf /var/lib/apt/lists/*
+RUN apt install -y curl bash && rm -rf /var/lib/apt/lists/*
 
 # install Rust
 RUN curl -sSf https://sh.rustup.rs/ | bash -s -- --default-toolchain=1.91.1 -y
