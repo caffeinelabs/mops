@@ -20,9 +20,6 @@ const cliSnapshot = async (
   exitCode: number,
 ) => {
   const result = await cli(args, options);
-  // expect(result.timedOut).toBeFalsy();
-  // expect(result.stdout || result.stderr).toBeTruthy();
-  // expect(result.exitCode).toBe(exitCode);
   expect({
     command: result.command,
     exitCode: result.exitCode,
