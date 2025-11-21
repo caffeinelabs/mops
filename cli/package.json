@@ -46,7 +46,8 @@
     "release": "tsx release-cli.ts",
     "check": "tsc --project tsconfig.json --noEmit",
     "tsc": "tsc",
-    "esbuild": "esbuild"
+    "esbuild": "esbuild",
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
   },
   "dependencies": {
     "@iarna/toml": "2.2.5",
@@ -110,6 +111,7 @@
     "eslint": "8.57.0",
     "npm-run-all": "4.1.5",
     "rexreplace": "7.1.13",
+    "ts-jest": "29.4.5",
     "tsx": "4.19.2",
     "typescript": "5.9.2",
     "wasm-pack": "0.13.1"

@@ -1,0 +1,119 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`mops build packages success 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@1.12.0 mops
+> tsx ./environments/nodejs/cli.ts build
+
+build canister foo
+build canister bar
+
+✓ Built 2 canisters",
+}
+`;
+
+exports[`mops build packages success 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@1.12.0 mops
+> tsx ./environments/nodejs/cli.ts build foo
+
+build canister foo
+build canister bar
+
+✓ Built 2 canisters",
+}
+`;
+
+exports[`mops build packages success 3`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@1.12.0 mops
+> tsx ./environments/nodejs/cli.ts build bar
+
+build canister foo
+build canister bar
+
+✓ Built 2 canisters",
+}
+`;
+
+exports[`mops build packages success 4`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@1.12.0 mops
+> tsx ./environments/nodejs/cli.ts build foo bar
+
+build canister foo
+build canister bar
+
+✓ Built 2 canisters",
+}
+`;
+
+exports[`mops build success 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@1.12.0 mops
+> tsx ./environments/nodejs/cli.ts build
+
+build canister foo
+build canister bar
+
+✓ Built 2 canisters successfully",
+}
+`;
+
+exports[`mops build success 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@1.12.0 mops
+> tsx ./environments/nodejs/cli.ts build foo
+
+build canister foo
+
+✓ Built 1 canister successfully",
+}
+`;
+
+exports[`mops build success 3`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@1.12.0 mops
+> tsx ./environments/nodejs/cli.ts build bar
+
+build canister bar
+
+✓ Built 1 canister successfully",
+}
+`;
+
+exports[`mops build success 4`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@1.12.0 mops
+> tsx ./environments/nodejs/cli.ts build foo bar
+
+build canister foo
+build canister bar
+
+✓ Built 2 canisters successfully",
+}
+`;

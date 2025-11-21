@@ -59,7 +59,16 @@ export async function build(
   if (!(await exists(outputDir))) {
     await mkdir(outputDir, { recursive: true });
   }
-  for (let [canisterName, canister] of Object.entries(canisters)) {
+
+  const filteredCanisters = canisterNames
+    ? Object.fromEntries(
+        Object.entries(canisters).filter(([name]) =>
+          canisterNames.includes(name),
+        ),
+      )
+    : canisters;
+
+  for (let [canisterName, canister] of Object.entries(filteredCanisters)) {
     options.verbose && console.time(`build canister ${canisterName}`);
     console.log(chalk.blue("build canister"), chalk.bold(canisterName));
     let motokoPath = canister.main;
@@ -161,6 +170,8 @@ export async function build(
   }
 
   console.log(
-    chalk.green(`\n✓ Built ${Object.keys(canisters).length} canisters`),
+    chalk.green(
+      `\n✓ Built ${Object.keys(filteredCanisters).length} canister${Object.keys(filteredCanisters).length == 1 ? "" : "s"} successfully`,
+    ),
   );
 }

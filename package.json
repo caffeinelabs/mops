@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "mops": "npx --no tsx --prefix cli ./cli/environments/nodejs",
+    "mops": "npx --no tsx --prefix cli ./cli/environments/nodejs/cli",
     "start": "npm run replica && npm run deploy-local && npm run decl && npm run frontends",
     "frontends": "npm run start-registry & npm run start-docs & npm run start-blog & npm run start-cli-releases",
     "start-registry": "cd frontend && npm run start",
@@ -30,7 +30,7 @@
     "build-cli": "npm run prepare-cli && npm run release-cli",
     "prepare": "husky",
     "postinstall": "(cd frontend && npm install) && (cd cli && npm install) && (cd docs && npm install) && (cd blog && npm install) && (cd cli-releases && npm install)",
-    "test": "mops test",
+    "test": "mops test && npm --prefix cli test",
     "check:cli": "npm run --prefix ./cli check",
     "check:frontend": "npm run --prefix ./frontend check",
     "check": "run-p check:cli check:frontend",

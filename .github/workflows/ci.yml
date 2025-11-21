@@ -77,3 +77,6 @@ jobs:
 
       - name: Build CLI releases
         run: npm run build-cli-releases
+
+      - name: Run CLI tests
+        run: cd cli && npm test
