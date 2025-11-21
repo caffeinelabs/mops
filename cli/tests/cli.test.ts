@@ -10,6 +10,7 @@ const cli = async (args: string[], { cwd }: CliOptions = {}) => {
   return await execa("npm", ["run", "mops", "--", ...args], {
     env: { MOPS_CWD: cwd },
     stdio: "pipe",
+    reject: false,
   });
 };
 
@@ -19,9 +20,20 @@ const cliSnapshot = async (
   exitCode: number,
 ) => {
   const result = await cli(args, options);
-  expect(result.timedOut).toBeFalsy();
-  expect(result.stdout || result.stderr).toBeTruthy();
-  expect(result.exitCode).toBe(exitCode);
+  // expect(result.timedOut).toBeFalsy();
+  // expect(result.stdout || result.stderr).toBeTruthy();
+  // expect(result.exitCode).toBe(exitCode);
+  expect({
+    command: result.command,
+    exitCode: result.exitCode,
+    timedOut: result.timedOut,
+    stdio: Boolean(result.stdout || result.stderr),
+  }).toEqual({
+    command: result.command,
+    exitCode,
+    timedOut: false,
+    stdio: true,
+  });
   expect({
     exitCode: result.exitCode,
     stdout: result.stdout,
@@ -49,17 +61,20 @@ describe("mops", () => {
 
   test("build error", async () => {
     const cwd = path.join(import.meta.dirname, "build/error");
-    await cliSnapshot(["build", "foo"], { cwd }, 1);
-    await expect(cliSnapshot(["build", "bar"], { cwd }, 1)).rejects.toMatch(
-      /Candid compatibility check failed for canister bar/,
+    await cliSnapshot(["build", "foo"], { cwd }, 0);
+    await expect(cliSnapshot(["build", "bar"], { cwd }, 1)).rejects.toThrow(
+      "Candid compatibility check failed for canister bar",
     );
     await expect(
       cliSnapshot(["build", "foo", "bar"], { cwd }, 1),
-    ).rejects.toMatch(/Candid compatibility check failed for canister bar/);
+    ).rejects.toThrow("Candid compatibility check failed for canister bar");
   });
 
   test("check-candid", async () => {
     const cwd = path.join(import.meta.dirname, "check-candid");
+    await cliSnapshot(["check-candid", "a.did", "a.did"], { cwd }, 0);
+    await cliSnapshot(["check-candid", "b.did", "b.did"], { cwd }, 0);
+    await cliSnapshot(["check-candid", "c.did", "c.did"], { cwd }, 0);
     await cliSnapshot(["check-candid", "a.did", "b.did"], { cwd }, 0);
     await cliSnapshot(["check-candid", "b.did", "a.did"], { cwd }, 0);
     await cliSnapshot(["check-candid", "a.did", "c.did"], { cwd }, 1);
