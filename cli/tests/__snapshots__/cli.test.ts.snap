@@ -6,7 +6,7 @@ exports[`mops build error 1`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts build foo
+> tsx ./environments/nodejs/cli build foo
 
 build canister foo
 
@@ -32,7 +32,7 @@ exports[`mops build success 1`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts build
+> tsx ./environments/nodejs/cli build
 
 build canister foo
 build canister bar
@@ -47,7 +47,7 @@ exports[`mops build success 2`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts build foo
+> tsx ./environments/nodejs/cli build foo
 
 build canister foo
 
@@ -61,7 +61,7 @@ exports[`mops build success 3`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts build bar
+> tsx ./environments/nodejs/cli build bar
 
 build canister bar
 
@@ -75,7 +75,7 @@ exports[`mops build success 4`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts build foo bar
+> tsx ./environments/nodejs/cli build foo bar
 
 build canister foo
 build canister bar
@@ -90,7 +90,7 @@ exports[`mops check-candid 1`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts check-candid a.did a.did
+> tsx ./environments/nodejs/cli check-candid a.did a.did
 
 ✓ Candid compatibility check passed",
 }
@@ -102,7 +102,7 @@ exports[`mops check-candid 2`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts check-candid b.did b.did
+> tsx ./environments/nodejs/cli check-candid b.did b.did
 
 ✓ Candid compatibility check passed",
 }
@@ -114,7 +114,7 @@ exports[`mops check-candid 3`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts check-candid c.did c.did
+> tsx ./environments/nodejs/cli check-candid c.did c.did
 
 ✓ Candid compatibility check passed",
 }
@@ -126,7 +126,7 @@ exports[`mops check-candid 4`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts check-candid a.did b.did
+> tsx ./environments/nodejs/cli check-candid a.did b.did
 
 ✓ Candid compatibility check passed",
 }
@@ -138,7 +138,7 @@ exports[`mops check-candid 5`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts check-candid b.did a.did
+> tsx ./environments/nodejs/cli check-candid b.did a.did
 
 ✓ Candid compatibility check passed",
 }
@@ -150,7 +150,7 @@ exports[`mops check-candid 6`] = `
   "stderr": "✖ Candid compatibility check failed",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts check-candid a.did c.did
+> tsx ./environments/nodejs/cli check-candid a.did c.did
 ",
 }
 `;
@@ -161,7 +161,7 @@ exports[`mops check-candid 7`] = `
   "stderr": "✖ Candid compatibility check failed",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts check-candid c.did a.did
+> tsx ./environments/nodejs/cli check-candid c.did a.did
 ",
 }
 `;
@@ -172,7 +172,7 @@ exports[`mops check-candid 8`] = `
   "stderr": "✖ Candid compatibility check failed",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts check-candid b.did c.did
+> tsx ./environments/nodejs/cli check-candid b.did c.did
 ",
 }
 `;
@@ -183,7 +183,7 @@ exports[`mops check-candid 9`] = `
   "stderr": "✖ Candid compatibility check failed",
   "stdout": "
 > ic-mops@1.12.0 mops
-> tsx ./environments/nodejs/cli.ts check-candid c.did b.did
+> tsx ./environments/nodejs/cli check-candid c.did b.did
 ",
 }
 `;
