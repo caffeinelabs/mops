@@ -1,5 +1,14 @@
+export interface CustomSection {
+  name: string;
+  data: string;
+}
+
 export interface WasmBindings {
-  is_candid_compatible: (newText: string, originalText: string) => boolean;
+  is_candid_compatible: (newCandid: string, originalCandid: string) => boolean;
+  add_custom_sections: (
+    bytes: Uint8Array,
+    customSections: CustomSection[],
+  ) => Uint8Array;
 }
 
 let bindings: WasmBindings | undefined;
