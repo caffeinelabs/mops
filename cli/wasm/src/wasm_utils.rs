@@ -29,22 +29,20 @@ pub struct CustomSection {
     pub data: String,
 }
 
-pub fn add_custom_sections(bytes: &[u8], custom_sections: Vec<CustomSection>) -> Result<Vec<u8>, Error> {
+pub fn add_custom_sections(
+    bytes: &[u8],
+    custom_sections: Vec<CustomSection>,
+) -> Result<Vec<u8>, Error> {
     let mut module = parse_wasm(&bytes, false)?;
-
-    // Remove any existing custom sections with the same names
     for m in &custom_sections {
         module.customs.remove_raw(&m.name);
     }
-
-    // Add new custom sections
     for m in custom_sections {
         module.customs.add(RawCustomSection {
             name: m.name,
             data: m.data.as_bytes().to_vec(),
         });
     }
-
     Ok(module.emit_wasm())
 }
 
