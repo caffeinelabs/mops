@@ -1,8 +1,8 @@
 [dependencies]
 core = "1.0.0"
 
-[canisters]
-foo = "src/Foo.mo"
+[canisters.foo]
+main = "src/Foo.mo"
 
 [canisters.bar]
 main = "src/Bar.mo"
