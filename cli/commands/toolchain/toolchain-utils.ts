@@ -12,6 +12,18 @@ import { extract as extractTar } from "tar";
 
 import { getRootDir } from "../../mops.js";
 
+export let tryDownloadFile = async (url: string): Promise<Buffer | null> => {
+  let res = await fetch(url);
+
+  if (res.status !== 200) {
+    console.error(`ERROR ${res.status} ${url}`);
+    return null;
+  }
+
+  let arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+};
+
 export let downloadAndExtract = async (
   url: string,
   destDir: string,
