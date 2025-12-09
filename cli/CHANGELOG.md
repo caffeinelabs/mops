@@ -2,6 +2,7 @@
 
 ## Next
 - `mops publish` add support for subheadings in changelog (by @f0i)
+- `mops toolchain` now downloads `moc.js` in addition to `moc` binary
 
 ## 1.12.0
 - Add pinned dependencies support to `mops update` and `mops outdated` commands
