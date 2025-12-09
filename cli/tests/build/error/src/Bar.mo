@@ -1,5 +1,5 @@
-persistent actor {
+persistent actor class (message : Text) {
   public func call() : async Text {
-    "Hello";
+    message;
   };
 };

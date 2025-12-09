@@ -30,6 +30,7 @@ export type CanisterConfig = {
   main: string;
   args?: string[];
   candid?: string;
+  initArg?: string;
 };
 
 export type Dependencies = Record<string, Dependency>;
