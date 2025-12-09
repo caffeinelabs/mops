@@ -15,8 +15,8 @@ import { getRootDir } from "../../mops.js";
 export let tryDownloadFile = async (url: string): Promise<Buffer | null> => {
   let res = await fetch(url);
 
-  if (res.status !== 200) {
-    console.error(`ERROR ${res.status} ${url}`);
+  if (!res.ok) {
+    console.error(`HTTP ${res.status} ${url}`);
     return null;
   }
 
