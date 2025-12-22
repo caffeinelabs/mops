@@ -7,7 +7,7 @@ import base from "motoko/packages/latest/base.json";
 mo.loadPackage(base);
 
 // Enable all warning codes we can fix
-mo.setExtraFlags(["-W", "M0223,M0235,M0236,M0237"]);
+mo.setExtraFlags(["-W", "M0223,M0236,M0237"]);
 
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -58,14 +58,6 @@ export const fix = async (file: string, options: { dryRun?: boolean }) => {
           newText: "", // Remove the type instantiation entirely
           message: diag.message,
         });
-      }
-
-      // Fix M0235: Deprecation warning
-      // Note: Deprecation warnings can't be automatically fixed, but we skip them
-      // as they require manual code changes. The test may need adjustment.
-      if (diag.code === "M0235") {
-        // Skip - deprecation warnings require manual intervention
-        continue;
       }
 
       // Fix M0236: Dot notation suggestion

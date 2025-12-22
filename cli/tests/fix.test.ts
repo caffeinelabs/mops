@@ -23,7 +23,7 @@ const cli = async (args: string[], { cwd }: CliOptions = {}) => {
 
 const MO_VERSION = "1.0.0";
 // Enable all warning codes we test
-const WARNING_FLAGS = "-W M0223,M0235,M0236,M0237";
+const WARNING_FLAGS = "-W M0223,M0236,M0237";
 
 /**
  * Creates a temporary file from a source file and ensures cleanup
@@ -101,7 +101,6 @@ describe("mops fix", () => {
 
   const testCases = [
     { code: "M0223", file: "m0223.mo" },
-    { code: "M0235", file: "m0235.mo" },
     { code: "M0236", file: "m0236.mo" },
     { code: "M0237", file: "m0237.mo" },
   ];
