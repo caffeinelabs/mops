@@ -13,6 +13,7 @@ import { bump } from "./commands/bump.js";
 import { checkCandid } from "./commands/check-candid.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
+import { fix } from "./commands/fix.js";
 import { format } from "./commands/format.js";
 import { init } from "./commands/init.js";
 import { installAll } from "./commands/install/install-all.js";
@@ -508,6 +509,13 @@ maintainerCommand
   });
 
 program.addCommand(maintainerCommand);
+
+// fix
+program
+  .command("fix <file>")
+  .description("Automatically fix code issues in a file")
+  .option("--dry-run", "Show what would be fixed without modifying files")
+  .action(fix);
 
 // bump
 program
