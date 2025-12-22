@@ -22,9 +22,65 @@ const cli = async (args: string[], { cwd }: CliOptions = {}) => {
 };
 
 const MO_VERSION = "1.0.0";
-const SRC_FILE = path.join(import.meta.dirname, "fix/m0236.mo");
+// Enable all warning codes we test
+const WARNING_FLAGS = "-W M0223,M0235,M0236,M0237";
+
+/**
+ * Creates a temporary file from a source file and ensures cleanup
+ */
+async function withTmpFile<T>(
+  sourceFile: string,
+  callback: (tmpFile: string) => Promise<T>,
+): Promise<T> {
+  const tmpFile = `${sourceFile}.tmp`;
+  try {
+    // Copy the original source file to temp location
+    const originalContent = await readFile(sourceFile, "utf8");
+    await writeFile(tmpFile, originalContent);
+    return await callback(tmpFile);
+  } finally {
+    // Clean up temporary file
+    await rm(tmpFile, { force: true });
+  }
+}
+
+/**
+ * Gets the moc binary path from toolchain
+ */
+async function getMocPath(): Promise<string> {
+  const mocBinResult = await cli(["toolchain", "bin", "moc"]);
+  // Extract just the path, removing npm output prefix
+  const lines = mocBinResult.stdout.split("\n");
+  const mocPath = lines[lines.length - 1]!.trim();
+
+  if (!mocPath || !fs.existsSync(mocPath)) {
+    throw new Error(
+      `moc binary not found at ${mocPath}. Toolchain setup may have failed.`,
+    );
+  }
+  return mocPath;
+}
+
+function getWarnings(filePath: string, mocPath: string, cwd: string): string[] {
+  const output = execSync(
+    `"${mocPath}" --check "${filePath}" ${WARNING_FLAGS} 2>&1`,
+    { encoding: "utf8", cwd },
+  );
+
+  const warnings: string[] = [];
+
+  const warningRegex = /warning \[(M\d+)\]/gi;
+  let match;
+  while ((match = warningRegex.exec(output)) !== null) {
+    warnings.push(match[1]!);
+  }
+
+  return warnings;
+}
 
 describe("mops fix", () => {
+  let mocPath: string;
+
   beforeAll(async () => {
     // Ensure toolchain is initialized and moc is installed
     const initResult = await cli(["toolchain", "init"]);
@@ -39,72 +95,35 @@ describe("mops fix", () => {
     if (useResult.exitCode !== 0) {
       throw new Error(`toolchain use failed: ${useResult.stderr}`);
     }
+
+    mocPath = await getMocPath();
   }, 120000);
 
-  test("fixes M0236 warning", async () => {
-    // Create a temporary file by adding .tmp to the source file name
-    const tmpFile = `${SRC_FILE}.tmp`;
+  const testCases = [
+    { code: "M0223", file: "m0223.mo" },
+    { code: "M0235", file: "m0235.mo" },
+    { code: "M0236", file: "m0236.mo" },
+    { code: "M0237", file: "m0237.mo" },
+  ];
 
-    // Copy the original source file to temp location
-    const originalContent = await readFile(SRC_FILE, "utf8");
-    await writeFile(tmpFile, originalContent);
+  for (const { code, file } of testCases) {
+    test(`fixes ${code} warning`, async () => {
+      const srcFile = path.join(import.meta.dirname, "fix", file);
+      const tmpDir = path.dirname(srcFile);
 
-    // Get moc path via toolchain
-    const mocBinResult = await cli(["toolchain", "bin", "moc"]);
-    // Extract just the path, removing npm output prefix
-    const lines = mocBinResult.stdout.split("\n");
-    const mocPath = lines[lines.length - 1]!.trim();
+      await withTmpFile(srcFile, async (tmpFile) => {
+        // Check initial state - should have the warning
+        const beforeWarnings = getWarnings(tmpFile, mocPath, tmpDir);
+        expect(beforeWarnings).toContain(code);
 
-    if (!mocPath || !fs.existsSync(mocPath)) {
-      throw new Error(
-        `moc binary not found at ${mocPath}. Toolchain setup may have failed.`,
-      );
-    }
+        // Run mops fix on the temp file
+        const fixResult = await cli(["fix", tmpFile]);
+        expect(fixResult.exitCode).toBe(0);
 
-    // Check initial state - should have M0236 warning
-    let hasWarning = false;
-    const tmpDir = path.dirname(SRC_FILE);
-    try {
-      const checkResult = execSync(
-        `"${mocPath}" --check "${tmpFile}" -W M0236 2>&1`,
-        { encoding: "utf8", cwd: tmpDir },
-      );
-      hasWarning = checkResult.includes("M0236");
-    } catch (e: any) {
-      // If execSync throws, check stderr/stdout
-      const output = (e.stdout || e.stderr || e.message || "").toString();
-      hasWarning = output.includes("M0236");
-    }
-    expect(hasWarning).toBe(true);
-
-    // Run mops fix on the temp file
-    const fixResult = await cli(["fix", tmpFile]);
-    expect(fixResult.exitCode).toBe(0);
-
-    // Verify file content changed
-    const content = await readFile(tmpFile, "utf8");
-    expect(content).toContain("peopleMap.size()");
-    expect(content).not.toContain("Map.size(peopleMap)");
-
-    // Verify compilation after fix - should not have M0236 warning
-    try {
-      const postCheckResult = execSync(
-        `"${mocPath}" --check "${tmpFile}" -W M0236 2>&1`,
-        { encoding: "utf8", cwd: tmpDir },
-      );
-      expect(postCheckResult).not.toContain("M0236");
-      // Should compile without errors
-      expect(postCheckResult).not.toMatch(/error/i);
-    } catch (e: any) {
-      const output = e.stdout || e.stderr || e.message || "";
-      expect(output).not.toContain("M0236");
-      // If there are errors, they should not be related to our fix
-      if (output.toLowerCase().includes("error")) {
-        throw new Error(`Compilation failed after fix: ${output}`);
-      }
-    } finally {
-      // Clean up temporary file
-      await rm(tmpFile, { force: true });
-    }
-  }, 60000);
+        // Verify compilation after fix - should not have warnings or errors
+        const afterWarnings = getWarnings(tmpFile, mocPath, tmpDir);
+        expect(afterWarnings).toHaveLength(0);
+      });
+    }, 60000);
+  }
 });
