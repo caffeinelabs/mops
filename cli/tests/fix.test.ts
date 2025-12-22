@@ -23,7 +23,7 @@ const cli = async (args: string[], { cwd }: CliOptions = {}) => {
 
 const MO_VERSION = "1.0.0";
 // Enable all warning codes we test
-const WARNING_FLAGS = "-W M0223,M0236,M0237";
+const WARNING_FLAGS = "-W=M0223,M0236,M0237";
 
 /**
  * Creates a temporary file from a source file and ensures cleanup
@@ -116,7 +116,7 @@ describe("mops fix", () => {
         expect(beforeWarnings).toContain(code);
 
         // Run mops fix on the temp file
-        const fixResult = await cli(["fix", tmpFile]);
+        const fixResult = await cli(["fix", tmpFile, "--", WARNING_FLAGS]);
         expect(fixResult.exitCode).toBe(0);
 
         // Verify compilation after fix - should not have warnings or errors

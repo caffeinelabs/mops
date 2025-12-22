@@ -515,7 +515,10 @@ program
   .command("fix <file>")
   .description("Automatically fix code issues in a file")
   .option("--dry-run", "Show what would be fixed without modifying files")
-  .action(fix);
+  .allowExcessArguments(true)
+  .action(async (file, options) => {
+    await fix(file, { ...options, extraArgs: program.args });
+  });
 
 // bump
 program

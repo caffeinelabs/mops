@@ -2,13 +2,6 @@ import mo from "motoko";
 import fs from "node:fs";
 import { promisify } from "node:util";
 
-// @ts-ignore
-import base from "motoko/packages/latest/base.json";
-mo.loadPackage(base);
-
-// Enable all warning codes we can fix
-mo.setExtraFlags(["-W", "M0223,M0236,M0237"]);
-
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 
@@ -32,12 +25,19 @@ interface Fix {
   message: string;
 }
 
-export const fix = async (file: string, options: { dryRun?: boolean }) => {
+export const fix = async (
+  file: string,
+  options: { dryRun?: boolean; extraArgs?: string[] } = {},
+) => {
   console.log(`Checking for fixes in ${file}...`);
 
   try {
     const content = await readFile(file, "utf8");
     mo.write(file, content);
+
+    if (options.extraArgs && options.extraArgs.length > 0) {
+      mo.setExtraFlags(options.extraArgs);
+    }
 
     const diagnostics = mo.check(file) as any as Diagnostic[];
 
