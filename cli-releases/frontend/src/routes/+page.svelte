@@ -29,7 +29,7 @@
 			<div class="meta hashes">
 				{#if "commitHash" in release}
 					<div class="hash">
-						Commit hash: <a href="https://github.com/dfinity/mops/commit/{release.commitHash}" target="_blank">{release.commitHash}</a>
+						Commit hash: <a href="https://github.com/caffeinelabs/mops/commit/{release.commitHash}" target="_blank">{release.commitHash}</a>
 					</div>
 				{/if}
 				<div class="hash">Build hash: {release.hash}</div>

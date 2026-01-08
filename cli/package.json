@@ -1,6 +1,6 @@
 {
   "name": "ic-mops",
-  "version": "1.12.0",
+  "version": "2.0.0",
   "type": "module",
   "bin": {
     "mops": "dist/bin/mops.js",
@@ -21,7 +21,7 @@
   "homepage": "https://mops.one",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dfinity/mops.git"
+    "url": "https://github.com/caffeinelabs/mops.git"
   },
   "author": "DFINITY",
   "license": "MIT",

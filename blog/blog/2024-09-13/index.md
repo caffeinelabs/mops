@@ -66,7 +66,7 @@ docker build . --build-arg COMMIT_HASH=<commit_hash> --build-arg MOPS_VERSION=<m
 docker run --rm --env SHASUM=<build_hash> mops
 ```
 
-[Documentation](https://github.com/dfinity/mops/blob/main/cli/DEVELOPMENT.md#verify-build).
+[Documentation](https://github.com/caffeinelabs/mops/blob/main/cli/DEVELOPMENT.md#verify-build).
 
 
 ## Package Registry site updates

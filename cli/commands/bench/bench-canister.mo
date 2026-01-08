@@ -1,10 +1,9 @@
-import Nat64 "mo:base/Nat64";
-import Nat "mo:base/Nat";
-import Debug "mo:base/Debug";
-import ExperimentalInternetComputer "mo:base/ExperimentalInternetComputer";
-import ExperimentalStableMemory "mo:base/ExperimentalStableMemory";
-import Int64 "mo:base/Int64";
-import Region "mo:base/Region";
+import Nat64 "mo:core/Nat64";
+import Nat "mo:core/Nat";
+import Runtime "mo:core/Runtime";
+import InternetComputer "mo:core/InternetComputer";
+import Int64 "mo:core/Int64";
+import Region "mo:core/Region";
 import Prim "mo:prim";
 import Bench "mo:bench";
 
@@ -29,13 +28,12 @@ persistent actor class () {
   public func init() : async Bench.BenchSchema {
     let bench = UserBench.init();
     benchOpt := ?bench;
-    // ignore ExperimentalStableMemory.grow(1);
     ignore Region.grow(Region.new(), 1);
     bench.getSchema();
   };
 
   public query func getSchema() : async Bench.BenchSchema {
-    let ?bench = benchOpt else Debug.trap("bench not initialized");
+    let ?bench = benchOpt else Runtime.trap("bench not initialized");
     bench.getSchema();
   };
 
@@ -43,7 +41,7 @@ persistent actor class () {
     {
       instructions = 0;
       rts_heap_size = Prim.rts_heap_size();
-      stable_memory_size = Int64.toInt(Int64.fromNat64(ExperimentalStableMemory.size())) * 65536;
+      stable_memory_size = Int64.toInt(Int64.fromNat64(Prim.stableMemorySize())) * 65536;
       rts_stable_memory_size = Prim.rts_stable_memory_size();
       rts_logical_stable_memory_size = Prim.rts_logical_stable_memory_size();
       rts_memory_size = Prim.rts_memory_size();
@@ -70,11 +68,11 @@ persistent actor class () {
   };
 
   func _runCell(rowIndex : Nat, colIndex : Nat) : BenchResult {
-    let ?bench = benchOpt else Debug.trap("bench not initialized");
+    let ?bench = benchOpt else Runtime.trap("bench not initialized");
     let statsBefore = _getStats();
 
     let instructions = Nat64.toNat(
-      ExperimentalInternetComputer.countInstructions(
+      InternetComputer.countInstructions(
         func() {
           bench.runCell(rowIndex, colIndex);
         }
@@ -86,11 +84,11 @@ persistent actor class () {
   };
 
   func _runCellAwait(rowIndex : Nat, colIndex : Nat) : async BenchResult {
-    let ?bench = benchOpt else Debug.trap("bench not initialized");
+    let ?bench = benchOpt else Runtime.trap("bench not initialized");
     let statsBefore = _getStats();
 
     let instructions = Nat64.toNat(
-      ExperimentalInternetComputer.countInstructions(
+      InternetComputer.countInstructions(
         func() {
           bench.runCell(rowIndex, colIndex);
         }

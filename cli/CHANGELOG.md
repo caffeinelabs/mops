@@ -3,6 +3,8 @@
 ## Next
 - `mops publish` add support for subheadings in changelog (by @f0i)
 - `mops toolchain` now downloads `moc.js` in addition to `moc` binary
+- New `mops build` subcommand (alternative to `dfx build`)
+- `core` package used in place of `base` for benchmarks
 
 ## 1.12.0
 - Add pinned dependencies support to `mops update` and `mops outdated` commands
