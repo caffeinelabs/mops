@@ -5,7 +5,7 @@ exports[`mops build error 1`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli build foo
 
 build canister foo
@@ -19,7 +19,7 @@ exports[`mops build error 2`] = `
   "exitCode": 1,
   "stderr": "Candid compatibility check failed for canister bar",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli build bar
 
 build canister bar",
@@ -31,7 +31,7 @@ exports[`mops build error 3`] = `
   "exitCode": 1,
   "stderr": "Candid compatibility check failed for canister bar",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli build foo bar
 
 build canister foo
@@ -44,7 +44,7 @@ exports[`mops build success 1`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli build
 
 build canister foo
@@ -59,7 +59,7 @@ exports[`mops build success 2`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli build foo
 
 build canister foo
@@ -73,7 +73,7 @@ exports[`mops build success 3`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli build bar
 
 build canister bar
@@ -87,7 +87,7 @@ exports[`mops build success 4`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli build foo bar
 
 build canister foo
@@ -102,7 +102,7 @@ exports[`mops check-candid 1`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli check-candid a.did a.did
 
 ✓ Candid compatibility check passed",
@@ -114,7 +114,7 @@ exports[`mops check-candid 2`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli check-candid b.did b.did
 
 ✓ Candid compatibility check passed",
@@ -126,7 +126,7 @@ exports[`mops check-candid 3`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli check-candid c.did c.did
 
 ✓ Candid compatibility check passed",
@@ -138,7 +138,7 @@ exports[`mops check-candid 4`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli check-candid a.did b.did
 
 ✓ Candid compatibility check passed",
@@ -150,7 +150,7 @@ exports[`mops check-candid 5`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli check-candid b.did a.did
 
 ✓ Candid compatibility check passed",
@@ -162,7 +162,7 @@ exports[`mops check-candid 6`] = `
   "exitCode": 1,
   "stderr": "✖ Candid compatibility check failed",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli check-candid a.did c.did
 ",
 }
@@ -173,7 +173,7 @@ exports[`mops check-candid 7`] = `
   "exitCode": 1,
   "stderr": "✖ Candid compatibility check failed",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli check-candid c.did a.did
 ",
 }
@@ -184,7 +184,7 @@ exports[`mops check-candid 8`] = `
   "exitCode": 1,
   "stderr": "✖ Candid compatibility check failed",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli check-candid b.did c.did
 ",
 }
@@ -195,7 +195,7 @@ exports[`mops check-candid 9`] = `
   "exitCode": 1,
   "stderr": "✖ Candid compatibility check failed",
   "stdout": "
-> ic-mops@1.13.0 mops
+> ic-mops@2.0.0 mops
 > tsx ./environments/nodejs/cli check-candid c.did b.did
 ",
 }
