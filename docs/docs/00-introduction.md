@@ -27,7 +27,7 @@ You can discover Motoko packages on [mops.one](https://mops.one/).
 
 ### Mops is a test runner for Motoko
 
-Mops comes with a [test runner](/cli/mops-test) that follows [Mops Message Format](https://github.com/dfinity/mops-message-format) and works with the [`test` package](https://mops.one/test).
+Mops comes with a [test runner](/cli/mops-test) that follows [Mops Message Format](https://github.com/caffeinelabs/mops-message-format) and works with the [`test` package](https://mops.one/test).
 
 ### Mops is a benchmarking tool for Motoko
 

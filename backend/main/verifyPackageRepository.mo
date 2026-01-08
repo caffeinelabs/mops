@@ -18,7 +18,7 @@ module {
     };
 
     if (not Text.startsWith(repositoryUrl, #text("https://github.com/"))) {
-      return #err("Currently only github repositories are supported.\nPlease create an issue at https://github.com/dfinity/mops/issues if you want to add support for other repositories.");
+      return #err("Currently only github repositories are supported.\nPlease create an issue at https://github.com/caffeinelabs/mops/issues if you want to add support for other repositories.");
     };
 
     let urlPath = Iter.toArray(Text.split(repositoryUrl, #text("https://github.com/")))[1];
