@@ -69,7 +69,7 @@
     "filesize": "10.1.6",
     "fs-extra": "11.2.0",
     "get-folder-size": "5.0.0",
-    "glob": "11.0.1",
+    "glob": "11.1.0",
     "globby": "14.0.2",
     "got": "14.4.6",
     "jsdom": "26.1.0",
