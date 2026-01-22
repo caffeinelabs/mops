@@ -50,11 +50,11 @@ mops build -- --release --ai-errors
 
 ### `--verbose`
 
-Show detailed build information including compiler commands and timing.
+Show detailed build information including compiler commands and build times.
 
 ### `--output`, `-o`
 
-Specify the output directory for compiled WASM and Candid files.
+Specify the output directory for compiled Wasm and Candid files.
 
 Default `.mops/.build`
 
@@ -74,9 +74,9 @@ args = []
 
 Each canister configuration supports:
 - `main` - Path to the main Motoko file (required)
-- `candid` - Path to the Candid interface file (optional, for compatibility checking)
 - `args` - Additional compiler arguments for this specific canister (optional)
 - `initArg` - Candid-encoded initialization arguments (optional)
+- `candid` - Path to the Candid interface file (optional, for compatibility checking)
 
 You can also set global build arguments:
 ```toml
