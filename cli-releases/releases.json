@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "1.12.0"
+    "latest": "2.0.1"
   },
   "versions": {
     "0.41.0": {
@@ -248,6 +248,22 @@
       "commitHash": "41b5957183a740a9f7e39bff646793a20be7dd17",
       "url": "https://cli.mops.one/versions/1.12.0.tgz",
       "hash": "ca7585c96cb90d8107c28197788c79b32de18f50a58715638fc2f020c4d00930"
+    },
+    "2.0.0": {
+      "time": 1769189082453,
+      "size": 2540458,
+      "relseaseNotes": "",
+      "commitHash": "09935b98136560706057162f972afe46911e91f5",
+      "url": "https://cli.mops.one/versions/2.0.0.tgz",
+      "hash": "8a33cd3ab7fdd404b7cf51cb6cef396f766d98d51c2fd769aa8f7dad6d1589d0"
+    },
+    "2.0.1": {
+      "time": 1769190288167,
+      "size": 2539881,
+      "relseaseNotes": "",
+      "commitHash": "7dd0d5a05e21924c80087f94dfe255b8f23d3029",
+      "url": "https://cli.mops.one/versions/2.0.1.tgz",
+      "hash": "6a3db2988dd345406623c5c77f5183e6e386e53ed59bf330db056e50d983d567"
     }
   }
 }
