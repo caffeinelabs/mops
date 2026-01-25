@@ -2,7 +2,6 @@ import Nat64 "mo:core/Nat64";
 import Nat "mo:core/Nat";
 import Runtime "mo:core/Runtime";
 import InternetComputer "mo:core/InternetComputer";
-import Int64 "mo:core/Int64";
 import Region "mo:core/Region";
 import Prim "mo:prim";
 
@@ -53,7 +52,7 @@ persistent actor class () {
     {
       instructions = 0;
       rts_heap_size = Prim.rts_heap_size();
-      stable_memory_size = Int64.toInt(Int64.fromNat64(Prim.stableMemorySize())) * 65536;
+      stable_memory_size = Prim.rts_stable_memory_size() * 65536;
       rts_stable_memory_size = Prim.rts_stable_memory_size();
       rts_logical_stable_memory_size = Prim.rts_logical_stable_memory_size();
       rts_memory_size = Prim.rts_memory_size();
