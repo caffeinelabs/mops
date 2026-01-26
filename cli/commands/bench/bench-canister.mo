@@ -9,11 +9,11 @@ import UserBench "./user-bench"; // file path will be replaced with the *.bench.
 
 persistent actor class () {
   type BenchSchema = {
-		name : Text;
-		description : Text;
-		rows : [Text];
-		cols : [Text];
-	};
+    name : Text;
+    description : Text;
+    rows : [Text];
+    cols : [Text];
+  };
 
   type Bench = {
     getVersion : () -> Nat;
