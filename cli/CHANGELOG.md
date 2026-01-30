@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops lint` subcommand
 - `mops toolchain` add support for `lintoko` - extensible linter for Motoko
 
 ## 2.0.1
