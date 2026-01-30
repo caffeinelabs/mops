@@ -10,7 +10,6 @@ import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 export interface LintOptions {
   verbose: boolean;
   fix: boolean;
-  format: string;
   rules?: string[];
   extraArgs: string[];
 }
@@ -30,17 +29,19 @@ export async function lint(
 
   let rootDir = getRootDir();
 
-  // If no inputs provided, use glob to find all .mo files
+  // If no inputs provided, look for .mo files in lint(s) directory
   let filesToLint: string[] = [];
   if (!inputs || inputs.length === 0) {
-    let globStr = "**/*.mo";
+    let globStr = "**/lint?(s)/**/*.mo";
     filesToLint = globSync(path.join(rootDir, globStr), {
       ...MOTOKO_GLOB_CONFIG,
       cwd: rootDir,
     });
 
     if (filesToLint.length === 0) {
-      cliError("No Motoko files found to lint");
+      console.log(chalk.yellow("No Motoko files found in lint(s) directory"));
+      console.log("Put your files to lint in 'lint' or 'lints' directory");
+      return;
     }
   } else {
     filesToLint = inputs;
@@ -52,9 +53,6 @@ export async function lint(
   }
   if (options.fix) {
     args.push("--fix");
-  }
-  if (options.format) {
-    args.push("--format", options.format);
   }
   if (options.rules && options.rules.length > 0) {
     for (let rule of options.rules) {

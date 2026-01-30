@@ -685,11 +685,6 @@ program
   .addOption(new Option("--verbose", "Verbose output"))
   .addOption(new Option("--fix", "Apply fixes"))
   .addOption(
-    new Option("--format <format>", "Output format")
-      .choices(["pretty", "text"])
-      .default("pretty"),
-  )
-  .addOption(
     new Option(
       "-r, --rules <directory...>",
       "Directories containing rules (can be used multiple times)",

@@ -50,7 +50,7 @@ describe("mops", () => {
 
   test("build success", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
-    await cliSnapshot(["build"], { cwd }, 0);
+    await cliSnapshot(["build", "--verbose"], { cwd }, 0);
     await cliSnapshot(["build", "foo"], { cwd }, 0);
     await cliSnapshot(["build", "bar"], { cwd }, 0);
     await cliSnapshot(["build", "foo", "bar"], { cwd }, 0);
@@ -58,7 +58,7 @@ describe("mops", () => {
 
   test("build error", async () => {
     const cwd = path.join(import.meta.dirname, "build/error");
-    await cliSnapshot(["build", "foo"], { cwd }, 0);
+    await cliSnapshot(["build", "foo", "--verbose"], { cwd }, 0);
     expect((await cliSnapshot(["build", "bar"], { cwd }, 1)).stderr).toMatch(
       "Candid compatibility check failed for canister bar",
     );
@@ -78,5 +78,11 @@ describe("mops", () => {
     await cliSnapshot(["check-candid", "c.did", "a.did"], { cwd }, 1);
     await cliSnapshot(["check-candid", "b.did", "c.did"], { cwd }, 1);
     await cliSnapshot(["check-candid", "c.did", "b.did"], { cwd }, 1);
+  });
+
+  test("lint", async () => {
+    const cwd = path.join(import.meta.dirname, "lint");
+    await cliSnapshot(["lint", "src/Valid.mo", "--verbose"], { cwd }, 0);
+    await cliSnapshot(["lint", "src/NoBoolSwitch.mo", "--verbose"], { cwd }, 1);
   });
 });

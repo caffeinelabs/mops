@@ -200,3 +200,47 @@ exports[`mops check-candid 9`] = `
 ",
 }
 `;
+
+exports[`mops lint 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@2.0.1 mops
+> tsx ./environments/nodejs/cli lint src/Valid.mo
+
+lint Running lintoko...
+✓ Lint succeeded",
+}
+`;
+
+exports[`mops lint 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@2.0.1 mops
+> tsx ./environments/nodejs/cli lint src/Valid.mo --verbose
+
+/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko ["--verbose","--rules","lints","src/Valid.mo"]
+lint Running lintoko...
+[34mDEBUG[0m file input: src/Valid.mo
+[34mDEBUG[0m Loading rules from: lints
+[34mDEBUG[0m Parsing extra rule at: lints/assign-divide.toml
+[34mDEBUG[0m Linting file: src/Valid.mo
+✓ Lint succeeded",
+}
+`;
+
+exports[`mops lint 3`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "
+> ic-mops@2.0.1 mops
+> tsx ./environments/nodejs/cli lint src/Another.mo
+
+lint Running lintoko...
+✓ Lint succeeded",
+}
+`;
