@@ -24,6 +24,9 @@ export type Config = {
     outputDir?: string;
     args?: string[];
   };
+  lint?: {
+    args?: string[];
+  };
 };
 
 export type CanisterConfig = {

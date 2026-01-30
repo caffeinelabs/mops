@@ -7,6 +7,7 @@ import { add } from "./add.js";
 import { remove } from "./remove.js";
 import { checkIntegrity } from "../integrity.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
+import { MOTOKO_IGNORE_PATTERNS } from "../constants.js";
 
 type SyncOptions = {
   lock?: "update" | "ignore";
@@ -43,13 +44,6 @@ export async function sync({ lock }: SyncOptions = {}) {
   await checkIntegrity(lock);
 }
 
-let ignore = [
-  "**/node_modules/**",
-  "**/.vessel/**",
-  "**/.git/**",
-  "**/.mops/**",
-];
-
 async function getUsedPackages(): Promise<string[]> {
   let rootDir = getRootDir();
   let mocPath = getMocPath();
@@ -57,7 +51,7 @@ async function getUsedPackages(): Promise<string[]> {
   let files = globSync("**/*.mo", {
     cwd: rootDir,
     nocase: true,
-    ignore: ignore,
+    ignore: MOTOKO_IGNORE_PATTERNS,
   });
 
   let packages: Set<string> = new Set();

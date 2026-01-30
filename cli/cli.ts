@@ -15,6 +15,7 @@ import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
 import { init } from "./commands/init.js";
+import { lint } from "./commands/lint.js";
 import { installAll } from "./commands/install/install-all.js";
 import {
   addMaintainer,
@@ -675,6 +676,34 @@ program
     if (!ok) {
       process.exit(1);
     }
+  });
+
+// lint
+program
+  .command("lint [inputs...]")
+  .description("Lint Motoko code")
+  .addOption(new Option("--verbose", "Verbose output"))
+  .addOption(new Option("--fix", "Apply fixes"))
+  .addOption(
+    new Option("--format <format>", "Output format")
+      .choices(["pretty", "text"])
+      .default("pretty"),
+  )
+  .addOption(
+    new Option(
+      "-r, --rules <directory...>",
+      "Directories containing rules (can be used multiple times)",
+    ),
+  )
+  .allowUnknownOption(true)
+  .action(async (inputs, options, command) => {
+    checkConfigFile(true);
+    const extraArgsIndex = command.args.indexOf("--");
+    await lint(inputs.length ? inputs : undefined, {
+      ...options,
+      extraArgs:
+        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+    });
   });
 
 // docs
