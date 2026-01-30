@@ -20,4 +20,4 @@ prng = "0.0.8"
 [toolchain]
 moc = "0.14.14"
 wasmtime = "34.0.1"
-# pocket-ic = "9.0.3"
+lintoko = "0.7.0"

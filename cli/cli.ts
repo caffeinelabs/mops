@@ -575,7 +575,9 @@ toolchainCommand
 toolchainCommand
   .command("use")
   .description("Install specified tool version and update mops.toml")
-  .addArgument(new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic"]))
+  .addArgument(
+    new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic", "lintoko"]),
+  )
   .addArgument(new Argument("[version]"))
   .action(async (tool, version) => {
     if (!checkConfigFile()) {
@@ -589,7 +591,9 @@ toolchainCommand
   .description(
     "Update specified tool or all tools to the latest version and update mops.toml",
   )
-  .addArgument(new Argument("[tool]").choices(["moc", "wasmtime", "pocket-ic"]))
+  .addArgument(
+    new Argument("[tool]").choices(["moc", "wasmtime", "pocket-ic", "lintoko"]),
+  )
   .action(async (tool?: Tool) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -600,9 +604,11 @@ toolchainCommand
 toolchainCommand
   .command("bin")
   .description(
-    'Get path to the tool binary\n<tool> can be one of "moc", "wasmtime", "pocket-ic"',
+    'Get path to the tool binary\n<tool> can be one of "moc", "wasmtime", "pocket-ic", "lintoko"',
   )
-  .addArgument(new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic"]))
+  .addArgument(
+    new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic", "lintoko"]),
+  )
   .addOption(
     new Option(
       "--fallback",
