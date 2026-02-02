@@ -85,5 +85,6 @@ describe("mops", () => {
     await cliSnapshot(["lint", "--verbose"], { cwd }, 1);
     await cliSnapshot(["lint", "Valid", "--verbose"], { cwd }, 0);
     await cliSnapshot(["lint", "NoBoolSwitch", "--verbose"], { cwd }, 1);
+    await cliSnapshot(["lint", "DoesNotExist"], { cwd }, 1);
   });
 });

@@ -7,7 +7,7 @@ exports[`mops build error 1`] = `
   "stdout": "build canister foo
 moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Adding metadata to .mops/.build/foo.wasm
-build canister foo: 456.095ms
+build canister foo: 476.876ms
 
 ✓ Built 1 canister successfully",
 }
@@ -37,12 +37,12 @@ exports[`mops build success 1`] = `
   "stdout": "build canister foo
 moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Adding metadata to .mops/.build/foo.wasm
-build canister foo: 808.095ms
+build canister foo: 920.217ms
 build canister bar
 moc-wrapper ["-c","--idl","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
 Candid compatibility check passed for canister bar
 Adding metadata to .mops/.build/bar.wasm
-build canister bar: 313.168ms
+build canister bar: 287.278ms
 
 ✓ Built 2 canisters successfully",
 }
@@ -217,5 +217,13 @@ Lint failed with exit code 1",
 [34mDEBUG[0m Loading rules from: lints
 [34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
 [34mDEBUG[0m Linting file: /Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo",
+}
+`;
+
+exports[`mops lint 4`] = `
+{
+  "exitCode": 1,
+  "stderr": "No files found for filter 'DoesNotExist'",
+  "stdout": "",
 }
 `;
