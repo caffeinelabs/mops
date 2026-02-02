@@ -1,8 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
-- Add `mops lint` subcommand
-- `mops toolchain` add support for `lintoko` - extensible linter for Motoko
+- Add `mops lint` subcommand and `lintoko` toolchain management
 
 ## 2.0.1
 - Patch vulnerability in `tar` dependency
