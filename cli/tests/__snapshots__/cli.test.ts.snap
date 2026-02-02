@@ -7,7 +7,6 @@ exports[`mops build error 1`] = `
   "stdout": "build canister foo
 moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Adding metadata to .mops/.build/foo.wasm
-build canister foo: 476.876ms
 
 ✓ Built 1 canister successfully",
 }
@@ -37,12 +36,10 @@ exports[`mops build success 1`] = `
   "stdout": "build canister foo
 moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Adding metadata to .mops/.build/foo.wasm
-build canister foo: 920.217ms
 build canister bar
 moc-wrapper ["-c","--idl","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
 Candid compatibility check passed for canister bar
 Adding metadata to .mops/.build/bar.wasm
-build canister bar: 287.278ms
 
 ✓ Built 2 canisters successfully",
 }
