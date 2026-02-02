@@ -11,7 +11,7 @@ exports[`mops build error 1`] = `
 build canister foo
 moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Adding metadata to .mops/.build/foo.wasm
-build canister foo: 412.615ms
+build canister foo: 458.847ms
 
 ✓ Built 1 canister successfully",
 }
@@ -53,12 +53,12 @@ exports[`mops build success 1`] = `
 build canister foo
 moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Adding metadata to .mops/.build/foo.wasm
-build canister foo: 338.175ms
+build canister foo: 383.075ms
 build canister bar
 moc-wrapper ["-c","--idl","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
 Candid compatibility check passed for canister bar
 Adding metadata to .mops/.build/bar.wasm
-build canister bar: 324.677ms
+build canister bar: 306.824ms
 
 ✓ Built 2 canisters successfully",
 }
@@ -213,13 +213,33 @@ exports[`mops check-candid 9`] = `
 
 exports[`mops lint 1`] = `
 {
-  "exitCode": 0,
-  "stderr": "",
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-bool-switch
+   ╭─[/Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+Error: Found 1 errors
+Lint failed with exit code 1",
   "stdout": "
 > ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli lint src/Valid.mo --verbose
+> tsx ./environments/nodejs/cli lint --verbose
 
-Could not find any Motoko files to lint",
+lint Running lintoko:
+/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","/Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo","/Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo"]
+[34mDEBUG[0m file input: /Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo
+[34mDEBUG[0m file input: /Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo
+[34mDEBUG[0m Loading rules from: lints
+[34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
+[34mDEBUG[0m Linting file: /Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo
+[34mDEBUG[0m Linting file: /Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo",
 }
 `;
 
@@ -229,12 +249,45 @@ exports[`mops lint 2`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli lint src/NoBoolSwitch.mo --verbose
+> tsx ./environments/nodejs/cli lint Valid --verbose
 
-/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko ["--verbose","src/NoBoolSwitch.mo"]
-lint Running lintoko...
-[34mDEBUG[0m file input: src/NoBoolSwitch.mo
-[34mDEBUG[0m Linting file: src/NoBoolSwitch.mo
+lint Running lintoko:
+/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","/Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo"]
+[34mDEBUG[0m file input: /Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo
+[34mDEBUG[0m Loading rules from: lints
+[34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
+[34mDEBUG[0m Linting file: /Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo
 ✓ Lint succeeded",
+}
+`;
+
+exports[`mops lint 3`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-bool-switch
+   ╭─[/Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+Error: Found 1 errors
+Lint failed with exit code 1",
+  "stdout": "
+> ic-mops@2.0.1 mops
+> tsx ./environments/nodejs/cli lint NoBoolSwitch --verbose
+
+lint Running lintoko:
+/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","/Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo"]
+[34mDEBUG[0m file input: /Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo
+[34mDEBUG[0m Loading rules from: lints
+[34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
+[34mDEBUG[0m Linting file: /Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo",
 }
 `;
