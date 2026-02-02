@@ -7,7 +7,7 @@ interface CliOptions {
 }
 
 const cli = async (args: string[], { cwd }: CliOptions = {}) => {
-  return await execa("npm", ["run", "mops", "--", ...args], {
+  return await execa("npm", ["run", "--silent", "mops", "--", ...args], {
     env: { MOPS_CWD: cwd },
     stdio: "pipe",
     reject: false,
