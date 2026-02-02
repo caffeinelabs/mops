@@ -6,9 +6,12 @@ exports[`mops build error 1`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli build foo
+> tsx ./environments/nodejs/cli build foo --verbose
 
 build canister foo
+moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+Adding metadata to .mops/.build/foo.wasm
+build canister foo: 412.615ms
 
 ✓ Built 1 canister successfully",
 }
@@ -45,10 +48,17 @@ exports[`mops build success 1`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli build
+> tsx ./environments/nodejs/cli build --verbose
 
 build canister foo
+moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+Adding metadata to .mops/.build/foo.wasm
+build canister foo: 338.175ms
 build canister bar
+moc-wrapper ["-c","--idl","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
+Candid compatibility check passed for canister bar
+Adding metadata to .mops/.build/bar.wasm
+build canister bar: 324.677ms
 
 ✓ Built 2 canisters successfully",
 }
@@ -207,10 +217,9 @@ exports[`mops lint 1`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli lint src/Valid.mo
+> tsx ./environments/nodejs/cli lint src/Valid.mo --verbose
 
-lint Running lintoko...
-✓ Lint succeeded",
+Could not find any Motoko files to lint",
 }
 `;
 
@@ -220,27 +229,12 @@ exports[`mops lint 2`] = `
   "stderr": "",
   "stdout": "
 > ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli lint src/Valid.mo --verbose
+> tsx ./environments/nodejs/cli lint src/NoBoolSwitch.mo --verbose
 
-/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko ["--verbose","--rules","lints","src/Valid.mo"]
+/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko ["--verbose","src/NoBoolSwitch.mo"]
 lint Running lintoko...
-[34mDEBUG[0m file input: src/Valid.mo
-[34mDEBUG[0m Loading rules from: lints
-[34mDEBUG[0m Parsing extra rule at: lints/assign-divide.toml
-[34mDEBUG[0m Linting file: src/Valid.mo
-✓ Lint succeeded",
-}
-`;
-
-exports[`mops lint 3`] = `
-{
-  "exitCode": 0,
-  "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli lint src/Another.mo
-
-lint Running lintoko...
+[34mDEBUG[0m file input: src/NoBoolSwitch.mo
+[34mDEBUG[0m Linting file: src/NoBoolSwitch.mo
 ✓ Lint succeeded",
 }
 `;

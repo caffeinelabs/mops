@@ -33,10 +33,7 @@ export async function format(
   let startTime = Date.now();
 
   let rootDir = getRootDir();
-  let globStr = "**/*.mo";
-  if (filter) {
-    globStr = `**/*${filter}*.mo`;
-  }
+  let globStr = filter ? `**/*${filter}*.mo` : "**/*.mo";
 
   let files = globSync(path.join(rootDir, globStr), {
     ...MOTOKO_GLOB_CONFIG,

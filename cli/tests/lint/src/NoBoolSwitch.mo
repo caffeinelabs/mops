@@ -1,9 +1,8 @@
 module {
   public func boolSwitch(b : Bool) : Bool {
-    if (b) {
-      false;
-    } else {
-      true;
+    switch (b) {
+      case false { false };
+      case true { true };
     };
   };
 };

@@ -6,6 +6,7 @@ import { cliError } from "../error.js";
 import { getRootDir, readConfig } from "../mops.js";
 import { toolchain } from "./toolchain/index.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
+import { existsSync } from "node:fs";
 
 export interface LintOptions {
   verbose: boolean;
@@ -15,36 +16,23 @@ export interface LintOptions {
 }
 
 export async function lint(
-  inputs: string[] | undefined,
+  filter: string | undefined,
   options: Partial<LintOptions>,
 ): Promise<void> {
   let config = readConfig();
-  let lintokoBinPath: string;
-
-  if (config.toolchain?.lintoko) {
-    lintokoBinPath = await toolchain.bin("lintoko");
-  } else {
-    lintokoBinPath = "lintoko";
-  }
-
   let rootDir = getRootDir();
+  let lintokoBinPath = config.toolchain?.lintoko
+    ? await toolchain.bin("lintoko")
+    : "lintoko";
 
-  // If no inputs provided, look for .mo files in lint(s) directory
-  let filesToLint: string[] = [];
-  if (!inputs || inputs.length === 0) {
-    let globStr = "**/lint?(s)/**/*.mo";
-    filesToLint = globSync(path.join(rootDir, globStr), {
-      ...MOTOKO_GLOB_CONFIG,
-      cwd: rootDir,
-    });
-
-    if (filesToLint.length === 0) {
-      console.log(chalk.yellow("No Motoko files found in lint(s) directory"));
-      console.log("Put your files to lint in 'lint' or 'lints' directory");
-      return;
-    }
-  } else {
-    filesToLint = inputs;
+  let globStr = filter ? `**/*${filter}*.mo` : "**/*.mo";
+  let filesToLint = globSync(path.join(rootDir, globStr), {
+    ...MOTOKO_GLOB_CONFIG,
+    cwd: rootDir,
+  });
+  if (filesToLint.length === 0) {
+    console.log(chalk.yellow("Could not find any Motoko files to lint"));
+    return;
   }
 
   let args: string[] = [];
@@ -54,11 +42,11 @@ export async function lint(
   if (options.fix) {
     args.push("--fix");
   }
-  if (options.rules && options.rules.length > 0) {
-    for (let rule of options.rules) {
-      args.push("--rules", rule);
-    }
-  }
+  const rules =
+    options.rules && options.rules.length > 0
+      ? options.rules
+      : ["lint", "lints"].filter((d) => existsSync(path.join(rootDir, d)));
+  rules.forEach((rule) => args.push("--rules", rule));
 
   if (config.lint?.args) {
     if (typeof config.lint.args === "string") {
@@ -77,12 +65,13 @@ export async function lint(
 
   try {
     if (options.verbose) {
-      console.log(chalk.gray(lintokoBinPath, JSON.stringify(args)));
+      console.log(chalk.blue("lint"), chalk.gray("Running lintoko:"));
+      console.log(chalk.gray(lintokoBinPath));
+      console.log(chalk.gray(JSON.stringify(args)));
     }
 
-    console.log(chalk.blue("lint"), chalk.gray("Running lintoko..."));
-
     const result = await execa(lintokoBinPath, args, {
+      cwd: rootDir,
       stdio: "inherit",
       reject: false,
     });

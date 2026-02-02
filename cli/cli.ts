@@ -675,7 +675,7 @@ program
 
 // lint
 program
-  .command("lint [inputs...]")
+  .command("lint [filter]")
   .description("Lint Motoko code")
   .addOption(new Option("--verbose", "Verbose output"))
   .addOption(new Option("--fix", "Apply fixes"))
@@ -686,10 +686,10 @@ program
     ),
   )
   .allowUnknownOption(true)
-  .action(async (inputs, options, command) => {
+  .action(async (filter, options, command) => {
     checkConfigFile(true);
     const extraArgsIndex = command.args.indexOf("--");
-    await lint(inputs.length ? inputs : undefined, {
+    await lint(filter, {
       ...options,
       extraArgs:
         extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],

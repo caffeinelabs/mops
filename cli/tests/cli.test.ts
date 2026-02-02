@@ -82,6 +82,7 @@ describe("mops", () => {
 
   test("lint", async () => {
     const cwd = path.join(import.meta.dirname, "lint");
+    await cliSnapshot(["lint", "--verbose"], { cwd }, 1);
     await cliSnapshot(["lint", "src/Valid.mo", "--verbose"], { cwd }, 0);
     await cliSnapshot(["lint", "src/NoBoolSwitch.mo", "--verbose"], { cwd }, 1);
   });
