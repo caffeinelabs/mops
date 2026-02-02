@@ -70,7 +70,6 @@ export async function build(
     : canisters;
 
   for (let [canisterName, canister] of Object.entries(filteredCanisters)) {
-    options.verbose && console.time(`build canister ${canisterName}`);
     console.log(chalk.blue("build canister"), chalk.bold(canisterName));
     let motokoPath = canister.main;
     if (!motokoPath) {
@@ -193,7 +192,6 @@ export async function build(
         `Error while compiling canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
       );
     }
-    options.verbose && console.timeEnd(`build canister ${canisterName}`);
   }
 
   console.log(
