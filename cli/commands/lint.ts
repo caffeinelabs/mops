@@ -31,8 +31,7 @@ export async function lint(
     cwd: rootDir,
   });
   if (filesToLint.length === 0) {
-    console.log(chalk.yellow("Could not find any Motoko files to lint"));
-    return;
+    cliError(`No files found for filter '${filter}'`);
   }
 
   let args: string[] = [];
