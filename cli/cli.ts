@@ -51,6 +51,7 @@ import {
 } from "./mops.js";
 import { resolvePackages } from "./resolve-packages.js";
 import { Tool } from "./types.js";
+import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -576,9 +577,7 @@ toolchainCommand
 toolchainCommand
   .command("use")
   .description("Install specified tool version and update mops.toml")
-  .addArgument(
-    new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic", "lintoko"]),
-  )
+  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
   .addArgument(new Argument("[version]"))
   .action(async (tool, version) => {
     if (!checkConfigFile()) {
@@ -592,9 +591,7 @@ toolchainCommand
   .description(
     "Update specified tool or all tools to the latest version and update mops.toml",
   )
-  .addArgument(
-    new Argument("[tool]").choices(["moc", "wasmtime", "pocket-ic", "lintoko"]),
-  )
+  .addArgument(new Argument("[tool]").choices(TOOLCHAINS))
   .action(async (tool?: Tool) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -605,11 +602,9 @@ toolchainCommand
 toolchainCommand
   .command("bin")
   .description(
-    'Get path to the tool binary\n<tool> can be one of "moc", "wasmtime", "pocket-ic", "lintoko"',
+    `Get path to the tool binary\n<tool> can be one of ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}`,
   )
-  .addArgument(
-    new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic", "lintoko"]),
-  )
+  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
   .addOption(
     new Option(
       "--fallback",
