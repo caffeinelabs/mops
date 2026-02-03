@@ -8,19 +8,7 @@ import motokoPlugin from "prettier-plugin-motoko";
 import { getRootDir } from "../mops.js";
 import { absToRel } from "./test/utils.js";
 import { parallel } from "../parallel.js";
-
-let ignore = [
-  "**/node_modules/**",
-  "**/.mops/**",
-  "**/.vessel/**",
-  "**/.git/**",
-  "**/dist/**",
-];
-
-let globConfig = {
-  nocase: true,
-  ignore: ignore,
-};
+import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 
 type FormatOptions = {
   check: boolean;
@@ -45,13 +33,10 @@ export async function format(
   let startTime = Date.now();
 
   let rootDir = getRootDir();
-  let globStr = "**/*.mo";
-  if (filter) {
-    globStr = `**/*${filter}*.mo`;
-  }
+  let globStr = filter ? `**/*${filter}*.mo` : "**/*.mo";
 
   let files = globSync(path.join(rootDir, globStr), {
-    ...globConfig,
+    ...MOTOKO_GLOB_CONFIG,
     cwd: rootDir,
   });
   let invalidFiles = 0;

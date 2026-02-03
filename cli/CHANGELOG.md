@@ -1,6 +1,12 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops lint` subcommand and `lintoko` toolchain management
+
+## 2.0.1
+- Patch vulnerability in `tar` dependency
+
+# 2.0.0
 - `mops publish` add support for subheadings in changelog (by @f0i)
 - `mops toolchain` now downloads `moc.js` in addition to `moc` binary
 - New `mops build` subcommand (alternative to `dfx build`)

@@ -32,18 +32,7 @@ import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
 import { getDfxVersion } from "../../helpers/get-dfx-version.js";
-
-let ignore = [
-  "**/node_modules/**",
-  "**/.mops/**",
-  "**/.vessel/**",
-  "**/.git/**",
-];
-
-let globConfig = {
-  nocase: true,
-  ignore: ignore,
-};
+import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
 type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
@@ -146,7 +135,7 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
     let watcher = chokidar.watch(
       [path.join(rootDir, "**/*.mo"), path.join(rootDir, "mops.toml")],
       {
-        ignored: ignore,
+        ignored: MOTOKO_IGNORE_PATTERNS,
         ignoreInitial: true,
       },
     );
@@ -200,15 +189,14 @@ export async function testWithReporter(
 ): Promise<boolean> {
   let rootDir = getRootDir();
   let files: string[] = [];
-  let libFiles = globSync("**/test?(s)/lib.mo", globConfig);
+  let libFiles = globSync("**/test?(s)/lib.mo", MOTOKO_GLOB_CONFIG);
   if (libFiles[0]) {
     files = [libFiles[0]];
   } else {
-    let globStr = "**/test?(s)/**/*.test.mo";
-    if (filter) {
-      globStr = `**/test?(s)/**/*${filter}*.mo`;
-    }
-    files = globSync(path.join(rootDir, globStr), globConfig);
+    let globStr = filter
+      ? `**/test?(s)/**/*${filter}*.mo`
+      : "**/test?(s)/**/*.test.mo";
+    files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG);
   }
   if (!files.length) {
     if (filter) {

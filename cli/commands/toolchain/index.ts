@@ -19,6 +19,7 @@ import { checkRequirements } from "../../check-requirements.js";
 import * as moc from "./moc.js";
 import * as pocketIc from "./pocket-ic.js";
 import * as wasmtime from "./wasmtime.js";
+import * as lintoko from "./lintoko.js";
 
 function getToolUtils(tool: Tool) {
   if (tool === "moc") {
@@ -27,6 +28,8 @@ function getToolUtils(tool: Tool) {
     return pocketIc;
   } else if (tool === "wasmtime") {
     return wasmtime;
+  } else if (tool === "lintoko") {
+    return lintoko;
   } else {
     console.error(`Unknown tool '${tool}'`);
     process.exit(1);
@@ -215,6 +218,9 @@ async function installAll({ silent = false, verbose = false } = {}) {
       silent,
       verbose,
     });
+  }
+  if (config.toolchain?.lintoko) {
+    await download("lintoko", config.toolchain.lintoko, { silent, verbose });
   }
 
   if (!silent) {

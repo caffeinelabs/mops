@@ -15,6 +15,7 @@ import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
 import { init } from "./commands/init.js";
+import { lint } from "./commands/lint.js";
 import { installAll } from "./commands/install/install-all.js";
 import {
   addMaintainer,
@@ -50,6 +51,7 @@ import {
 } from "./mops.js";
 import { resolvePackages } from "./resolve-packages.js";
 import { Tool } from "./types.js";
+import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -575,7 +577,7 @@ toolchainCommand
 toolchainCommand
   .command("use")
   .description("Install specified tool version and update mops.toml")
-  .addArgument(new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic"]))
+  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
   .addArgument(new Argument("[version]"))
   .action(async (tool, version) => {
     if (!checkConfigFile()) {
@@ -589,7 +591,7 @@ toolchainCommand
   .description(
     "Update specified tool or all tools to the latest version and update mops.toml",
   )
-  .addArgument(new Argument("[tool]").choices(["moc", "wasmtime", "pocket-ic"]))
+  .addArgument(new Argument("[tool]").choices(TOOLCHAINS))
   .action(async (tool?: Tool) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -600,9 +602,9 @@ toolchainCommand
 toolchainCommand
   .command("bin")
   .description(
-    'Get path to the tool binary\n<tool> can be one of "moc", "wasmtime", "pocket-ic"',
+    `Get path to the tool binary\n<tool> can be one of ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}`,
   )
-  .addArgument(new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic"]))
+  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
   .addOption(
     new Option(
       "--fallback",
@@ -669,6 +671,29 @@ program
     if (!ok) {
       process.exit(1);
     }
+  });
+
+// lint
+program
+  .command("lint [filter]")
+  .description("Lint Motoko code")
+  .addOption(new Option("--verbose", "Verbose output"))
+  .addOption(new Option("--fix", "Apply fixes"))
+  .addOption(
+    new Option(
+      "-r, --rules <directory...>",
+      "Directories containing rules (can be used multiple times)",
+    ),
+  )
+  .allowUnknownOption(true)
+  .action(async (filter, options, command) => {
+    checkConfigFile(true);
+    const extraArgsIndex = command.args.indexOf("--");
+    await lint(filter, {
+      ...options,
+      extraArgs:
+        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+    });
   });
 
 // docs

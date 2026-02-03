@@ -13,6 +13,7 @@ When you run `mops install` command, Mops will install the specified version of 
 - `moc` - Motoko compiler
 - `wasmtime` - Wasmtime runtime (used by `mops test --mode wasi`)
 - `pocket-ic` - PocketIC replica (used by `mops bench --replica pocket-ic`)
+- `lintoko` - Extensible linter for Motoko ([https://github.com/caffeinelabs/lintoko](https://github.com/caffeinelabs/lintoko))
 
 ## Specifying tool versions
 
@@ -23,6 +24,7 @@ You can use [`mops toolchain use`](/cli/mops-toolchain-use) command to install s
 mops toolchain use moc 0.10.3
 mops toolchain use wasmtime 16.0.0
 mops toolchain use pocket-ic 1.0.0
+mops toolchain use lintoko 0.7.0
 ```
 
 No need to run `mops install` when you use `mops toolchain use` command.
@@ -35,6 +37,7 @@ You can manually edit `mops.toml` file to specify exact versions of each tool.
 [toolchain]
 moc = "0.10.3"
 wasmtime = "16.0.0"
+lintoko = "0.7.0"
 pocket-ic = "1.0.0"
 ```
 

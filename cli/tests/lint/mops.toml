@@ -1,0 +1,4 @@
+[dependencies]
+
+[toolchain]
+lintoko = "0.7.0"

@@ -24,6 +24,9 @@ export type Config = {
     outputDir?: string;
     args?: string[];
   };
+  lint?: {
+    args?: string[];
+  };
 };
 
 export type CanisterConfig = {
@@ -46,9 +49,10 @@ export type Toolchain = {
   moc?: string;
   wasmtime?: string;
   "pocket-ic"?: string;
+  lintoko?: string;
 };
 
-export type Tool = "moc" | "wasmtime" | "pocket-ic";
+export type Tool = "moc" | "wasmtime" | "pocket-ic" | "lintoko";
 
 export type Requirements = {
   moc?: string;

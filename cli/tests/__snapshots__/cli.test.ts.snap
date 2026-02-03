@@ -4,11 +4,9 @@ exports[`mops build error 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli build foo
-
-build canister foo
+  "stdout": "build canister foo
+moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+Adding metadata to .mops/.build/foo.wasm
 
 ✓ Built 1 canister successfully",
 }
@@ -18,11 +16,7 @@ exports[`mops build error 2`] = `
 {
   "exitCode": 1,
   "stderr": "Candid compatibility check failed for canister bar",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli build bar
-
-build canister bar",
+  "stdout": "build canister bar",
 }
 `;
 
@@ -30,11 +24,7 @@ exports[`mops build error 3`] = `
 {
   "exitCode": 1,
   "stderr": "Candid compatibility check failed for canister bar",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli build foo bar
-
-build canister foo
+  "stdout": "build canister foo
 build canister bar",
 }
 `;
@@ -43,12 +33,13 @@ exports[`mops build success 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli build
-
-build canister foo
+  "stdout": "build canister foo
+moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+Adding metadata to .mops/.build/foo.wasm
 build canister bar
+moc-wrapper ["-c","--idl","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
+Candid compatibility check passed for canister bar
+Adding metadata to .mops/.build/bar.wasm
 
 ✓ Built 2 canisters successfully",
 }
@@ -58,11 +49,7 @@ exports[`mops build success 2`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli build foo
-
-build canister foo
+  "stdout": "build canister foo
 
 ✓ Built 1 canister successfully",
 }
@@ -72,11 +59,7 @@ exports[`mops build success 3`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli build bar
-
-build canister bar
+  "stdout": "build canister bar
 
 ✓ Built 1 canister successfully",
 }
@@ -86,11 +69,7 @@ exports[`mops build success 4`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli build foo bar
-
-build canister foo
+  "stdout": "build canister foo
 build canister bar
 
 ✓ Built 2 canisters successfully",
@@ -101,11 +80,7 @@ exports[`mops check-candid 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli check-candid a.did a.did
-
-✓ Candid compatibility check passed",
+  "stdout": "✓ Candid compatibility check passed",
 }
 `;
 
@@ -113,11 +88,7 @@ exports[`mops check-candid 2`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli check-candid b.did b.did
-
-✓ Candid compatibility check passed",
+  "stdout": "✓ Candid compatibility check passed",
 }
 `;
 
@@ -125,11 +96,7 @@ exports[`mops check-candid 3`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli check-candid c.did c.did
-
-✓ Candid compatibility check passed",
+  "stdout": "✓ Candid compatibility check passed",
 }
 `;
 
@@ -137,11 +104,7 @@ exports[`mops check-candid 4`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli check-candid a.did b.did
-
-✓ Candid compatibility check passed",
+  "stdout": "✓ Candid compatibility check passed",
 }
 `;
 
@@ -149,11 +112,7 @@ exports[`mops check-candid 5`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli check-candid b.did a.did
-
-✓ Candid compatibility check passed",
+  "stdout": "✓ Candid compatibility check passed",
 }
 `;
 
@@ -161,10 +120,7 @@ exports[`mops check-candid 6`] = `
 {
   "exitCode": 1,
   "stderr": "✖ Candid compatibility check failed",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli check-candid a.did c.did
-",
+  "stdout": "",
 }
 `;
 
@@ -172,10 +128,7 @@ exports[`mops check-candid 7`] = `
 {
   "exitCode": 1,
   "stderr": "✖ Candid compatibility check failed",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli check-candid c.did a.did
-",
+  "stdout": "",
 }
 `;
 
@@ -183,10 +136,7 @@ exports[`mops check-candid 8`] = `
 {
   "exitCode": 1,
   "stderr": "✖ Candid compatibility check failed",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli check-candid b.did c.did
-",
+  "stdout": "",
 }
 `;
 
@@ -194,9 +144,83 @@ exports[`mops check-candid 9`] = `
 {
   "exitCode": 1,
   "stderr": "✖ Candid compatibility check failed",
-  "stdout": "
-> ic-mops@2.0.1 mops
-> tsx ./environments/nodejs/cli check-candid c.did b.did
-",
+  "stdout": "",
+}
+`;
+
+exports[`mops lint 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-bool-switch
+   ╭─[<TEST_DIR>/lint/src/NoBoolSwitch.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+Error: Found 1 errors
+Lint failed with exit code 1",
+  "stdout": "lint Running lintoko:
+<CACHE>/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","<TEST_DIR>/lint/src/Valid.mo","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
+[34mDEBUG[0m file input: <TEST_DIR>/lint/src/Valid.mo
+[34mDEBUG[0m file input: <TEST_DIR>/lint/src/NoBoolSwitch.mo
+[34mDEBUG[0m Loading rules from: lints
+[34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
+[34mDEBUG[0m Linting file: <TEST_DIR>/lint/src/NoBoolSwitch.mo
+[34mDEBUG[0m Linting file: <TEST_DIR>/lint/src/Valid.mo",
+}
+`;
+
+exports[`mops lint 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "lint Running lintoko:
+<CACHE>/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","<TEST_DIR>/lint/src/Valid.mo"]
+[34mDEBUG[0m file input: <TEST_DIR>/lint/src/Valid.mo
+[34mDEBUG[0m Loading rules from: lints
+[34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
+[34mDEBUG[0m Linting file: <TEST_DIR>/lint/src/Valid.mo
+✓ Lint succeeded",
+}
+`;
+
+exports[`mops lint 3`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-bool-switch
+   ╭─[<TEST_DIR>/lint/src/NoBoolSwitch.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+Error: Found 1 errors
+Lint failed with exit code 1",
+  "stdout": "lint Running lintoko:
+<CACHE>/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
+[34mDEBUG[0m file input: <TEST_DIR>/lint/src/NoBoolSwitch.mo
+[34mDEBUG[0m Loading rules from: lints
+[34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
+[34mDEBUG[0m Linting file: <TEST_DIR>/lint/src/NoBoolSwitch.mo",
+}
+`;
+
+exports[`mops lint 4`] = `
+{
+  "exitCode": 1,
+  "stderr": "No files found for filter 'DoesNotExist'",
+  "stdout": "",
 }
 `;

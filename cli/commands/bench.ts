@@ -19,24 +19,13 @@ import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
 import { sources } from "./sources.js";
+import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
 import { BenchReplica } from "./bench-replica.js";
 
 type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
-
-let ignore = [
-  "**/node_modules/**",
-  "**/.mops/**",
-  "**/.vessel/**",
-  "**/.git/**",
-];
-
-let globConfig = {
-  nocase: true,
-  ignore: ignore,
-};
 
 type BenchOptions = {
   replica: ReplicaName;
@@ -113,7 +102,7 @@ export async function bench(
   if (filter) {
     globStr = `**/bench?(mark)/**/*${filter}*.mo`;
   }
-  let files = globSync(path.join(rootDir, globStr), globConfig);
+  let files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG);
   if (!files.length) {
     if (filter) {
       options.silent ||
