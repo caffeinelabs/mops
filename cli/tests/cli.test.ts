@@ -18,7 +18,7 @@ const cli = async (args: string[], { cwd }: CliOptions = {}) => {
 const normalizePaths = (text: string): string => {
   // Replace absolute paths with placeholders for CI
   return text
-    .replace(dirname(fileURLToPath(import.meta.url)), "<TEST_DIR>")
+    .replaceAll(dirname(fileURLToPath(import.meta.url)), "<TEST_DIR>")
     .replace(/\/[^\s"]+\/\.cache\/mops/g, "<CACHE>")
     .replace(/\/[^\s"]+\/Library\/Caches\/mops/g, "<CACHE>");
 };
