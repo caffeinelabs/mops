@@ -152,7 +152,7 @@ exports[`mops lint 1`] = `
 {
   "exitCode": 1,
   "stderr": "  × [ERROR]: no-bool-switch
-   ╭─[/Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo:3:5]
+   ╭─[<PROJECT_ROOT>/cli/tests/lint/src/NoBoolSwitch.mo:3:5]
  2 │       public func boolSwitch(b : Bool) : Bool {
  3 │ ╭─▶     switch (b) {
  4 │ │         case false { false };
@@ -165,14 +165,14 @@ exports[`mops lint 1`] = `
 Error: Found 1 errors
 Lint failed with exit code 1",
   "stdout": "lint Running lintoko:
-/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko
-["--verbose","--rules","lints","/Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo","/Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo"]
-[34mDEBUG[0m file input: /Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo
-[34mDEBUG[0m file input: /Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo
+<CACHE>/mops/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","<PROJECT_ROOT>/cli/tests/lint/src/Valid.mo","<PROJECT_ROOT>/cli/tests/lint/src/NoBoolSwitch.mo"]
+[34mDEBUG[0m file input: <PROJECT_ROOT>/cli/tests/lint/src/Valid.mo
+[34mDEBUG[0m file input: <PROJECT_ROOT>/cli/tests/lint/src/NoBoolSwitch.mo
 [34mDEBUG[0m Loading rules from: lints
 [34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
-[34mDEBUG[0m Linting file: /Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo
-[34mDEBUG[0m Linting file: /Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo",
+[34mDEBUG[0m Linting file: <PROJECT_ROOT>/cli/tests/lint/src/NoBoolSwitch.mo
+[34mDEBUG[0m Linting file: <PROJECT_ROOT>/cli/tests/lint/src/Valid.mo",
 }
 `;
 
@@ -181,12 +181,12 @@ exports[`mops lint 2`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "lint Running lintoko:
-/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko
-["--verbose","--rules","lints","/Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo"]
-[34mDEBUG[0m file input: /Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo
+<CACHE>/mops/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","<PROJECT_ROOT>/cli/tests/lint/src/Valid.mo"]
+[34mDEBUG[0m file input: <PROJECT_ROOT>/cli/tests/lint/src/Valid.mo
 [34mDEBUG[0m Loading rules from: lints
 [34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
-[34mDEBUG[0m Linting file: /Users/ryan/dfinity/mops/cli/tests/lint/src/Valid.mo
+[34mDEBUG[0m Linting file: <PROJECT_ROOT>/cli/tests/lint/src/Valid.mo
 ✓ Lint succeeded",
 }
 `;
@@ -195,7 +195,7 @@ exports[`mops lint 3`] = `
 {
   "exitCode": 1,
   "stderr": "  × [ERROR]: no-bool-switch
-   ╭─[/Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo:3:5]
+   ╭─[<PROJECT_ROOT>/cli/tests/lint/src/NoBoolSwitch.mo:3:5]
  2 │       public func boolSwitch(b : Bool) : Bool {
  3 │ ╭─▶     switch (b) {
  4 │ │         case false { false };
@@ -208,12 +208,12 @@ exports[`mops lint 3`] = `
 Error: Found 1 errors
 Lint failed with exit code 1",
   "stdout": "lint Running lintoko:
-/Users/ryan/Library/Caches/mops/lintoko/0.7.0/lintoko
-["--verbose","--rules","lints","/Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo"]
-[34mDEBUG[0m file input: /Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo
+<CACHE>/mops/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","<PROJECT_ROOT>/cli/tests/lint/src/NoBoolSwitch.mo"]
+[34mDEBUG[0m file input: <PROJECT_ROOT>/cli/tests/lint/src/NoBoolSwitch.mo
 [34mDEBUG[0m Loading rules from: lints
 [34mDEBUG[0m Parsing extra rule at: lints/no-bool-switch.toml
-[34mDEBUG[0m Linting file: /Users/ryan/dfinity/mops/cli/tests/lint/src/NoBoolSwitch.mo",
+[34mDEBUG[0m Linting file: <PROJECT_ROOT>/cli/tests/lint/src/NoBoolSwitch.mo",
 }
 `;
 

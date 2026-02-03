@@ -14,6 +14,11 @@ const cli = async (args: string[], { cwd }: CliOptions = {}) => {
   });
 };
 
+const normalizePaths = (text: string): string => {
+  // Replace absolute paths with placeholders for CI
+  return text.replace(/\/[^\s"]+\/cli\/tests/g, "<PROJECT_ROOT>/cli/tests");
+};
+
 const cliSnapshot = async (
   args: string[],
   options: CliOptions,
@@ -33,8 +38,8 @@ const cliSnapshot = async (
   });
   expect({
     exitCode: result.exitCode,
-    stdout: result.stdout,
-    stderr: result.stderr,
+    stdout: normalizePaths(result.stdout),
+    stderr: normalizePaths(result.stderr),
   }).toMatchSnapshot();
   return result;
 };
