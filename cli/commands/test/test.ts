@@ -193,10 +193,9 @@ export async function testWithReporter(
   if (libFiles[0]) {
     files = [libFiles[0]];
   } else {
-    let globStr = "**/test?(s)/**/*.test.mo";
-    if (filter) {
-      globStr = `**/test?(s)/**/*${filter}*.mo`;
-    }
+    let globStr = filter
+      ? `**/test?(s)/**/*${filter}*.mo`
+      : "**/test?(s)/**/*.test.mo";
     files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG);
   }
   if (!files.length) {
