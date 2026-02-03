@@ -13,6 +13,7 @@ import { mainActor, storageActor } from "./api/actors.js";
 import { getNetwork } from "./api/network.js";
 import { getHighestVersion } from "./api/getHighestVersion.js";
 import { getPackageId } from "./helpers/get-package-id.js";
+import { FILE_PATH_REGEX } from "./constants.js";
 
 if (!globalThis.fetch) {
   globalThis.fetch = fetch as any;
@@ -157,7 +158,7 @@ export function getDependencyType(version: string) {
   }
   if (version.startsWith("https://github.com/")) {
     return "github";
-  } else if (version.match(/^(\.?\.)?\//)) {
+  } else if (version.match(FILE_PATH_REGEX)) {
     return "local";
   } else {
     return "mops";

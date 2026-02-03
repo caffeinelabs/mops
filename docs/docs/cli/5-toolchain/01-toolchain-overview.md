@@ -43,6 +43,17 @@ pocket-ic = "1.0.0"
 
 You need to run `mops install` command when you edit `mops.toml` file manually.
 
+### Option 3: Use explicit file paths
+
+You can also specify file paths to toolchain binaries. This is useful when building a tool from source. File paths must start with `/`, `./`, or `../`.
+
+```toml
+[toolchain]
+moc = "./tools/moc"
+moc = "/usr/local/bin/moc"
+lintoko = "../custom-lintoko/bin/lintoko"
+```
+
 ## Toolchain management commands
 
 - [`mops toolchain init`](/cli/mops-toolchain-init)

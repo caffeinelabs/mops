@@ -53,9 +53,12 @@ See [toolchain management](/cli/toolchain) page for more details.
 
 | Field                | Description                                      |
 | -------------------- | ------------------------------------------------ |
-| moc                  | Motoko compiler used for building canisters and running tests   |
-| wasmtime             | WASM runtime used to run [tests](/cli/mops-test#--mode) in `wasi` mode   |
-| pocket-ic            | Local IC replica used to run [benchmarks](/cli/mops-bench#--replica)   |
+| moc                  | Motoko compiler version (e.g. `1.0.0`) or file path (e.g. `./tools/moc`, `/usr/local/bin/moc`)   |
+| wasmtime             | WASM runtime version (e.g. `41.0.0`) or file path used to run [tests](/cli/mops-test#--mode) in `wasi` mode   |
+| pocket-ic            | Local IC replica version (e.g. `12.0.0`) or file path used to run [benchmarks](/cli/mops-bench#--replica)   |
+| lintoko              | Linter version (e.g. `0.7.0`) or file path for Motoko linting   |
+
+File paths must start with `/`, `./`, or `../`.
 
 
 ## [requirements]

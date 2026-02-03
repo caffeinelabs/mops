@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Allow specifying toolchain file paths in `mops.toml`
 - Add `mops lint` subcommand and `lintoko` toolchain management
 
 ## 2.0.1

@@ -20,6 +20,7 @@ import * as moc from "./moc.js";
 import * as pocketIc from "./pocket-ic.js";
 import * as wasmtime from "./wasmtime.js";
 import * as lintoko from "./lintoko.js";
+import { FILE_PATH_REGEX } from "../../constants.js";
 
 function getToolUtils(tool: Tool) {
   if (tool === "moc") {
@@ -359,6 +360,10 @@ async function bin(tool: Tool, { fallback = false } = {}): Promise<string> {
   let version = config.toolchain?.[tool];
 
   if (version) {
+    if (version.match(FILE_PATH_REGEX)) {
+      return version;
+    }
+
     if (tool === "moc") {
       await ensureToolchainInited();
     }
