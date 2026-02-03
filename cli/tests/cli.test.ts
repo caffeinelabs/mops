@@ -1,6 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
 import { execa } from "execa";
-import path from "path";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
 
 interface CliOptions {
   cwd?: string;
@@ -16,7 +17,10 @@ const cli = async (args: string[], { cwd }: CliOptions = {}) => {
 
 const normalizePaths = (text: string): string => {
   // Replace absolute paths with placeholders for CI
-  return text.replace(/\/[^\s"]+\/cli\/tests/g, "<PROJECT_ROOT>/cli/tests");
+  return text
+    .replace(dirname(fileURLToPath(import.meta.url)), "<TEST_DIR>")
+    .replace(/\/[^\s"]+\/\.cache\/mops/g, "<CACHE>")
+    .replace(/\/[^\s"]+\/Library\/Caches\/mops/g, "<CACHE>");
 };
 
 const cliSnapshot = async (
