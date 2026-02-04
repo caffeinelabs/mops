@@ -96,4 +96,11 @@ describe("mops", () => {
     await cliSnapshot(["lint", "NoBoolSwitch", "--verbose"], { cwd }, 1);
     await cliSnapshot(["lint", "DoesNotExist"], { cwd }, 1);
   });
+
+  test("toolchain file URI", async () => {
+    const cwd = path.join(import.meta.dirname, "toolchain");
+    const result = await cli(["toolchain", "bin", "moc"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("./mock");
+  });
 });

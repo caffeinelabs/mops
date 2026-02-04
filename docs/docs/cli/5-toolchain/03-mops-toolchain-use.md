@@ -32,3 +32,15 @@ mops toolchain use moc
 ```
 
 ![user prompt image](mops-toolchain-use-moc.png)
+
+## Using explicit file paths
+
+You can also specify file paths to toolchain binaries instead of version numbers. This is useful when building a tool from source. File paths must start with `/`, `./`, or `../`.
+
+### Examples
+
+```
+mops toolchain use moc ./tools/moc
+mops toolchain use lintoko /usr/local/bin/lintoko
+mops toolchain use wasmtime ../custom-wasmtime/bin/wasmtime
+```
