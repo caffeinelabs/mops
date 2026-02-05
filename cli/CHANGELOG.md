@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops check` subcommand for type-checking Motoko files
 - Allow specifying toolchain file paths in `mops.toml`
 - Add `mops lint` subcommand and `lintoko` toolchain management
 

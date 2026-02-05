@@ -10,6 +10,7 @@ import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
 import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
 import { bump } from "./commands/bump.js";
+import { check } from "./commands/check.js";
 import { checkCandid } from "./commands/check-candid.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
@@ -283,6 +284,27 @@ program
       installFromLockFile: true,
     });
     await build(canisters.length ? canisters : undefined, {
+      ...options,
+      extraArgs:
+        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+    });
+  });
+
+// check
+program
+  .command("check <files...>")
+  .description("Check Motoko files for syntax errors and type issues")
+  .option("--verbose", "Verbose console output")
+  .allowUnknownOption(true)
+  .action(async (files, options, command) => {
+    checkConfigFile(true);
+    const extraArgsIndex = command.args.indexOf("--");
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await check(files, {
       ...options,
       extraArgs:
         extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],

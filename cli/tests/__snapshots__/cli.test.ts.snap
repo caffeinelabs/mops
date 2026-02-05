@@ -76,6 +76,37 @@ build canister bar
 }
 `;
 
+exports[`mops check error 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "Invalid.mo:1.1-5.2: type error [M0096], expression of type
+  actor {hello : shared () -> async Text}
+cannot produce expected type
+  ()
+Invalid.mo:7.1-7.21: type error [M0057], unbound variable thisshouldnotcompile
+✗ Check failed for file Invalid.mo (exit code: 1)",
+  "stdout": "",
+}
+`;
+
+exports[`mops check success 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Valid.mo",
+}
+`;
+
+exports[`mops check success 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "check Running moc:
+/Users/ryan/.motoko/bin/moc ["--check","Valid.mo","--package","core",".mops/core@2.0.0/src"]
+✓ Valid.mo",
+}
+`;
+
 exports[`mops check-candid 1`] = `
 {
   "exitCode": 0,

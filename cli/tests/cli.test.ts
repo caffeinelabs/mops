@@ -76,6 +76,18 @@ describe("mops", () => {
     ).toMatch("Candid compatibility check failed for canister bar");
   });
 
+  test("check success", async () => {
+    const cwd = path.join(import.meta.dirname, "check/success");
+    await cliSnapshot(["check", "Valid.mo"], { cwd }, 0);
+    await cliSnapshot(["check", "Valid.mo", "--verbose"], { cwd }, 0);
+  });
+
+  test("check error", async () => {
+    const cwd = path.join(import.meta.dirname, "check/error");
+    await cliSnapshot(["check", "Invalid.mo"], { cwd }, 1);
+    await cliSnapshot(["check", "Valid.mo", "Invalid.mo"], { cwd }, 1);
+  });
+
   test("check-candid", async () => {
     const cwd = path.join(import.meta.dirname, "check-candid");
     await cliSnapshot(["check-candid", "a.did", "a.did"], { cwd }, 0);
