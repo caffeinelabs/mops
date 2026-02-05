@@ -154,7 +154,7 @@ program
     }
 
     if (options.toolchain) {
-      await toolchain.ensureToolchainInited({ strict: false });
+      await toolchain.checkToolchainInited({ strict: false });
     }
 
     let ok = await installAll(options);
@@ -233,7 +233,7 @@ program
         installFromLockFile: true,
       });
     }
-    await toolchain.ensureToolchainInited({ strict: false });
+    await toolchain.checkToolchainInited({ strict: false });
     let sourcesArr = await sources(options);
     console.log(sourcesArr.join("\n"));
   });
