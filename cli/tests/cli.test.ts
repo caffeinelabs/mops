@@ -9,18 +9,27 @@ interface CliOptions {
 
 const cli = async (args: string[], { cwd }: CliOptions = {}) => {
   return await execa("npm", ["run", "--silent", "mops", "--", ...args], {
-    env: { MOPS_CWD: cwd },
+    env: { ...process.env, ...(cwd != null && { MOPS_CWD: cwd }) },
+    ...(cwd != null && { cwd }),
     stdio: "pipe",
     reject: false,
   });
 };
 
+// Strip ANSI escape codes for portable snapshots (avoid control char in regex literal)
+const stripAnsi = (s: string) =>
+  s.replace(new RegExp(`\u001b\\[[0-9;]*m`, "g"), "");
+
 const normalizePaths = (text: string): string => {
   // Replace absolute paths with placeholders for CI
-  return text
-    .replaceAll(dirname(fileURLToPath(import.meta.url)), "<TEST_DIR>")
-    .replace(/\/[^\s"]+\/\.cache\/mops/g, "<CACHE>")
-    .replace(/\/[^\s"]+\/Library\/Caches\/mops/g, "<CACHE>");
+  return stripAnsi(
+    text
+      .replaceAll(dirname(fileURLToPath(import.meta.url)), "<TEST_DIR>")
+      .replace(/\/[^\s"]+\/\.cache\/mops/g, "<CACHE>")
+      .replace(/\/[^\s"]+\/Library\/Caches\/mops/g, "<CACHE>")
+      .replace(/\/[^\s"[\]]+\/moc(?:-wrapper)?(?=\s|$)/g, "moc-wrapper")
+      .replace(/\/[^\s"[\]]+\.motoko\/bin\/moc/g, "moc-wrapper"),
+  );
 };
 
 const cliSnapshot = async (
@@ -86,6 +95,36 @@ describe("mops", () => {
     const cwd = path.join(import.meta.dirname, "check/error");
     await cliSnapshot(["check", "Invalid.mo"], { cwd }, 1);
     await cliSnapshot(["check", "Valid.mo", "Invalid.mo"], { cwd }, 1);
+  });
+
+  test("check --fix M0223", async () => {
+    const cwd = path.join(import.meta.dirname, "check/fix");
+    const result = await cli(["check", "M0223.mo", "--fix"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBeTruthy();
+  });
+
+  test("check --fix M0236", async () => {
+    const cwd = path.join(import.meta.dirname, "check/fix");
+    const result = await cli(["check", "M0236.mo", "--fix"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBeTruthy();
+  });
+
+  test("check --fix M0237", async () => {
+    const cwd = path.join(import.meta.dirname, "check/fix");
+    const result = await cli(["check", "M0237.mo", "--fix"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBeTruthy();
+  });
+
+  test("check --fix verbose", async () => {
+    const cwd = path.join(import.meta.dirname, "check/fix");
+    const result = await cli(["check", "Valid.mo", "--fix", "--verbose"], {
+      cwd,
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBeTruthy();
   });
 
   test("check-candid", async () => {
