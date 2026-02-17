@@ -1,4 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
+import { cpSync, mkdirSync, readFileSync } from "node:fs";
 import { execa } from "execa";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -87,40 +88,71 @@ describe("mops", () => {
 
   test("check success", async () => {
     const cwd = path.join(import.meta.dirname, "check/success");
-    await cliSnapshot(["check", "Valid.mo"], { cwd }, 0);
-    await cliSnapshot(["check", "Valid.mo", "--verbose"], { cwd }, 0);
+    await cliSnapshot(["check", "Ok.mo"], { cwd }, 0);
+    await cliSnapshot(["check", "Ok.mo", "--verbose"], { cwd }, 0);
   });
 
   test("check error", async () => {
     const cwd = path.join(import.meta.dirname, "check/error");
-    await cliSnapshot(["check", "Invalid.mo"], { cwd }, 1);
-    await cliSnapshot(["check", "Valid.mo", "Invalid.mo"], { cwd }, 1);
+    await cliSnapshot(["check", "Error.mo"], { cwd }, 1);
+    await cliSnapshot(["check", "Ok.mo", "Error.mo"], { cwd }, 1);
   });
 
-  test("check --fix M0223", async () => {
+  test("check warning", async () => {
     const cwd = path.join(import.meta.dirname, "check/fix");
-    const result = await cli(["check", "M0223.mo", "--fix"], { cwd });
+    await cliSnapshot(["check", "M0223.mo"], { cwd }, 0);
+  });
+
+  test("check warning verbose", async () => {
+    const cwd = path.join(import.meta.dirname, "check/success");
+    const result = await cliSnapshot(
+      ["check", "Warning.mo", "--verbose"],
+      { cwd },
+      0,
+    );
+    // Verify the warning is shown in stderr without --warnings flag
+    expect(result.stderr).toMatch(/warning \[M0194\]/);
+    expect(result.stderr).toMatch(/unused identifier/);
+  });
+
+  test("check warning with --warnings flag", async () => {
+    const cwd = path.join(import.meta.dirname, "check/success");
+    // With --warnings flag, warnings should cause check to fail
+    await cliSnapshot(["check", "Warning.mo", "--warnings"], { cwd }, 1);
+  });
+
+  const fixDir = path.join(import.meta.dirname, "check/fix");
+  const runDir = path.join(fixDir, "run");
+
+  async function checkFix(file: string, original: string, expected: string) {
+    mkdirSync(runDir, { recursive: true });
+    cpSync(path.join(fixDir, file), path.join(runDir, file));
+    const before = readFileSync(path.join(runDir, file), "utf-8");
+    expect(before).toContain(original);
+    const result = await cli(["check", `run/${file}`, "--fix"], {
+      cwd: fixDir,
+    });
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBeTruthy();
+    const after = readFileSync(path.join(runDir, file), "utf-8");
+    expect(after).toContain(expected);
+    expect(after).not.toContain(original);
+  }
+
+  test("check --fix M0223", async () => {
+    await checkFix("M0223.mo", "let _x : Nat = 42", "let _x = 42");
   });
 
   test("check --fix M0236", async () => {
-    const cwd = path.join(import.meta.dirname, "check/fix");
-    const result = await cli(["check", "M0236.mo", "--fix"], { cwd });
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBeTruthy();
+    await checkFix("M0236.mo", "Array.size(arr)", "arr.size()");
   });
 
   test("check --fix M0237", async () => {
-    const cwd = path.join(import.meta.dirname, "check/fix");
-    const result = await cli(["check", "M0237.mo", "--fix"], { cwd });
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBeTruthy();
+    await checkFix("M0237.mo", "let _x : ?Text = null", "let _x = null");
   });
 
   test("check --fix verbose", async () => {
     const cwd = path.join(import.meta.dirname, "check/fix");
-    const result = await cli(["check", "Valid.mo", "--fix", "--verbose"], {
+    const result = await cli(["check", "Ok.mo", "--fix", "--verbose"], {
       cwd,
     });
     expect(result.exitCode).toBe(0);
@@ -143,7 +175,7 @@ describe("mops", () => {
   test("lint", async () => {
     const cwd = path.join(import.meta.dirname, "lint");
     await cliSnapshot(["lint", "--verbose"], { cwd }, 1);
-    await cliSnapshot(["lint", "Valid", "--verbose"], { cwd }, 0);
+    await cliSnapshot(["lint", "Ok", "--verbose"], { cwd }, 0);
     await cliSnapshot(["lint", "NoBoolSwitch", "--verbose"], { cwd }, 1);
     await cliSnapshot(["lint", "DoesNotExist"], { cwd }, 1);
   });

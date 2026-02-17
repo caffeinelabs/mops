@@ -79,12 +79,12 @@ build canister bar
 exports[`mops check error 1`] = `
 {
   "exitCode": 1,
-  "stderr": "Invalid.mo:1.1-5.2: type error [M0096], expression of type
+  "stderr": "Error.mo:1.1-5.2: type error [M0096], expression of type
   actor {hello : shared () -> async Text}
 cannot produce expected type
   ()
-Invalid.mo:7.1-7.21: type error [M0057], unbound variable thisshouldnotcompile
-✗ Check failed for file Invalid.mo (exit code: 1)",
+Error.mo:7.1-7.21: type error [M0057], unbound variable thisshouldnotcompile
+✗ Check failed for file Error.mo (exit code: 1)",
   "stdout": "",
 }
 `;
@@ -92,8 +92,8 @@ Invalid.mo:7.1-7.21: type error [M0057], unbound variable thisshouldnotcompile
 exports[`mops check error 2`] = `
 {
   "exitCode": 1,
-  "stderr": "Valid.mo: No such file or directory
-✗ Check failed for file Valid.mo (exit code: 1)",
+  "stderr": "Ok.mo: No such file or directory
+✗ Check failed for file Ok.mo (exit code: 1)",
   "stdout": "",
 }
 `;
@@ -102,7 +102,7 @@ exports[`mops check success 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "✓ Valid.mo",
+  "stdout": "✓ Ok.mo",
 }
 `;
 
@@ -111,8 +111,35 @@ exports[`mops check success 2`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "check Running moc:
-moc-wrapper ["--check","Valid.mo","--package","core",".mops/core@2.0.0/src"]
-✓ Valid.mo",
+moc-wrapper ["--check","Ok.mo","--package","core",".mops/core@2.0.0/src"]
+✓ Ok.mo",
+}
+`;
+
+exports[`mops check warning 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ M0223.mo",
+}
+`;
+
+exports[`mops check warning verbose 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)",
+  "stdout": "check Running moc:
+moc-wrapper ["--check","Warning.mo","--package","core",".mops/core@2.0.0/src"]
+✓ Warning.mo",
+}
+`;
+
+exports[`mops check warning with --warnings flag 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)
+✗ Check failed for file Warning.mo (exit code: 1)",
+  "stdout": "",
 }
 `;
 
@@ -206,13 +233,13 @@ Error: Found 1 errors
 Lint failed with exit code 1",
   "stdout": "lint Running lintoko:
 <CACHE>/lintoko/0.7.0/lintoko
-["--verbose","--rules","lints","<TEST_DIR>/lint/src/Valid.mo","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
-DEBUG file input: <TEST_DIR>/lint/src/Valid.mo
+["--verbose","--rules","lints","<TEST_DIR>/lint/src/Ok.mo","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
+DEBUG file input: <TEST_DIR>/lint/src/Ok.mo
 DEBUG file input: <TEST_DIR>/lint/src/NoBoolSwitch.mo
 DEBUG Loading rules from: lints
 DEBUG Parsing extra rule at: lints/no-bool-switch.toml
 DEBUG Linting file: <TEST_DIR>/lint/src/NoBoolSwitch.mo
-DEBUG Linting file: <TEST_DIR>/lint/src/Valid.mo",
+DEBUG Linting file: <TEST_DIR>/lint/src/Ok.mo",
 }
 `;
 
@@ -222,11 +249,11 @@ exports[`mops lint 2`] = `
   "stderr": "",
   "stdout": "lint Running lintoko:
 <CACHE>/lintoko/0.7.0/lintoko
-["--verbose","--rules","lints","<TEST_DIR>/lint/src/Valid.mo"]
-DEBUG file input: <TEST_DIR>/lint/src/Valid.mo
+["--verbose","--rules","lints","<TEST_DIR>/lint/src/Ok.mo"]
+DEBUG file input: <TEST_DIR>/lint/src/Ok.mo
 DEBUG Loading rules from: lints
 DEBUG Parsing extra rule at: lints/no-bool-switch.toml
-DEBUG Linting file: <TEST_DIR>/lint/src/Valid.mo
+DEBUG Linting file: <TEST_DIR>/lint/src/Ok.mo
 ✓ Lint succeeded",
 }
 `;

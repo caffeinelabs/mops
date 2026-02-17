@@ -296,6 +296,7 @@ program
   .description("Check Motoko files for syntax errors and type issues")
   .option("--verbose", "Verbose console output")
   .addOption(new Option("--fix", "Apply autofixes"))
+  .addOption(new Option("--warnings", "Treat warnings as errors"))
   .allowUnknownOption(true)
   .action(async (files, options, command) => {
     checkConfigFile(true);

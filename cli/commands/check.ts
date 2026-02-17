@@ -8,6 +8,7 @@ import { sourcesArgs } from "./sources.js";
 export interface CheckOptions {
   verbose: boolean;
   fix: boolean;
+  warnings: boolean;
   extraArgs: string[];
 }
 
@@ -35,6 +36,7 @@ export async function check(
         "--check",
         file,
         ...sources.flat(),
+        ...(options.warnings ? ["-Werror"] : []),
         ...(options.extraArgs ?? []),
       ];
 
@@ -83,6 +85,7 @@ export async function check(
       "--check",
       file,
       ...sources.flat(),
+      ...(options.warnings ? ["-Werror"] : []),
       ...(options.extraArgs ?? []),
     ];
 
