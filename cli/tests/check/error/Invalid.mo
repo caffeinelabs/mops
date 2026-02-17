@@ -4,4 +4,4 @@ persistent actor {
   };
 };
 
-thisshouldnotcompile
+thisshouldnotcompile;

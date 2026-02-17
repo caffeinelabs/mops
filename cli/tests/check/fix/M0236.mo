@@ -6,6 +6,6 @@ persistent actor {
   public func testM0236() : async Nat {
     let arr = [1, 2, 3];
     let len = Array.size(arr);
-    len
+    len;
   };
 };
