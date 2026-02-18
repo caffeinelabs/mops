@@ -1,11 +1,11 @@
 // M0236: Suggested to use dot notation
 // Function calls can be rewritten using dot notation
-import Array "mo:core/Array";
+import List "mo:core/List";
+import Nat "mo:core/Nat";
 
 persistent actor {
-  public func testM0236() : async Nat {
-    let arr = [1, 2, 3];
-    let len = Array.size(arr);
-    len;
+  public func testM0236() : async () {
+    let list = List.fromArray<Nat>([1, 2, 3]);
+    List.sortInPlace(list);
   };
 };

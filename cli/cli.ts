@@ -76,6 +76,22 @@ if (fs.existsSync(networkFile)) {
 
 let program = new Command();
 
+function parseExtraArgs(variadicArgs?: string[]): {
+  extraArgs: string[];
+  args: string[];
+} {
+  const rawArgs = process.argv.slice(2);
+  const dashDashIndex = rawArgs.indexOf("--");
+  const extraArgs =
+    dashDashIndex !== -1 ? rawArgs.slice(dashDashIndex + 1) : [];
+  const args = variadicArgs
+    ? extraArgs.length > 0
+      ? variadicArgs.slice(0, variadicArgs.length - extraArgs.length)
+      : variadicArgs
+    : [];
+  return { extraArgs, args };
+}
+
 program.name("mops");
 
 // --version
@@ -275,18 +291,17 @@ program
     ),
   )
   .allowUnknownOption(true) // TODO: restrict unknown before "--"
-  .action(async (canisters, options, command) => {
+  .action(async (canisters, options) => {
     checkConfigFile(true);
-    const extraArgsIndex = command.args.indexOf("--");
+    const { extraArgs, args } = parseExtraArgs(canisters);
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await build(canisters.length ? canisters : undefined, {
+    await build(args.length ? args : undefined, {
       ...options,
-      extraArgs:
-        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+      extraArgs,
     });
   });
 
@@ -296,20 +311,18 @@ program
   .description("Check Motoko files for syntax errors and type issues")
   .option("--verbose", "Verbose console output")
   .addOption(new Option("--fix", "Apply autofixes"))
-  .addOption(new Option("--warnings", "Treat warnings as errors"))
   .allowUnknownOption(true)
-  .action(async (files, options, command) => {
+  .action(async (files, options) => {
     checkConfigFile(true);
-    const extraArgsIndex = command.args.indexOf("--");
+    const { extraArgs, args: fileList } = parseExtraArgs(files);
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await check(files, {
+    await check(fileList, {
       ...options,
-      extraArgs:
-        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+      extraArgs,
     });
   });
 
@@ -710,13 +723,12 @@ program
     ),
   )
   .allowUnknownOption(true)
-  .action(async (filter, options, command) => {
+  .action(async (filter, options) => {
     checkConfigFile(true);
-    const extraArgsIndex = command.args.indexOf("--");
+    const { extraArgs } = parseExtraArgs();
     await lint(filter, {
       ...options,
-      extraArgs:
-        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+      extraArgs,
     });
   });
 
