@@ -1,0 +1,73 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`check-candid error 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "✖ Candid compatibility check failed",
+  "stdout": "",
+}
+`;
+
+exports[`check-candid error 2`] = `
+{
+  "exitCode": 1,
+  "stderr": "✖ Candid compatibility check failed",
+  "stdout": "",
+}
+`;
+
+exports[`check-candid error 3`] = `
+{
+  "exitCode": 1,
+  "stderr": "✖ Candid compatibility check failed",
+  "stdout": "",
+}
+`;
+
+exports[`check-candid error 4`] = `
+{
+  "exitCode": 1,
+  "stderr": "✖ Candid compatibility check failed",
+  "stdout": "",
+}
+`;
+
+exports[`check-candid ok 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Candid compatibility check passed",
+}
+`;
+
+exports[`check-candid ok 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Candid compatibility check passed",
+}
+`;
+
+exports[`check-candid ok 3`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Candid compatibility check passed",
+}
+`;
+
+exports[`check-candid ok 4`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Candid compatibility check passed",
+}
+`;
+
+exports[`check-candid ok 5`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Candid compatibility check passed",
+}
+`;

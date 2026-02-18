@@ -1,0 +1,78 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`lint error 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-bool-switch
+   ╭─[<TEST_DIR>/lint/src/NoBoolSwitch.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+Error: Found 1 errors
+Lint failed with exit code 1",
+  "stdout": "lint Running lintoko:
+<CACHE>/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","<TEST_DIR>/lint/src/Ok.mo","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
+DEBUG file input: <TEST_DIR>/lint/src/Ok.mo
+DEBUG file input: <TEST_DIR>/lint/src/NoBoolSwitch.mo
+DEBUG Loading rules from: lints
+DEBUG Parsing extra rule at: lints/no-bool-switch.toml
+DEBUG Linting file: <TEST_DIR>/lint/src/NoBoolSwitch.mo
+DEBUG Linting file: <TEST_DIR>/lint/src/Ok.mo",
+}
+`;
+
+exports[`lint error 2`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-bool-switch
+   ╭─[<TEST_DIR>/lint/src/NoBoolSwitch.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+Error: Found 1 errors
+Lint failed with exit code 1",
+  "stdout": "lint Running lintoko:
+<CACHE>/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
+DEBUG file input: <TEST_DIR>/lint/src/NoBoolSwitch.mo
+DEBUG Loading rules from: lints
+DEBUG Parsing extra rule at: lints/no-bool-switch.toml
+DEBUG Linting file: <TEST_DIR>/lint/src/NoBoolSwitch.mo",
+}
+`;
+
+exports[`lint error 3`] = `
+{
+  "exitCode": 1,
+  "stderr": "No files found for filter 'DoesNotExist'",
+  "stdout": "",
+}
+`;
+
+exports[`lint ok 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "lint Running lintoko:
+<CACHE>/lintoko/0.7.0/lintoko
+["--verbose","--rules","lints","<TEST_DIR>/lint/src/Ok.mo"]
+DEBUG file input: <TEST_DIR>/lint/src/Ok.mo
+DEBUG Loading rules from: lints
+DEBUG Parsing extra rule at: lints/no-bool-switch.toml
+DEBUG Linting file: <TEST_DIR>/lint/src/Ok.mo
+✓ Lint succeeded",
+}
+`;

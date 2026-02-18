@@ -10,6 +10,7 @@ import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
 import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
 import { bump } from "./commands/bump.js";
+import { check } from "./commands/check.js";
 import { checkCandid } from "./commands/check-candid.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
@@ -74,6 +75,22 @@ if (fs.existsSync(networkFile)) {
 }
 
 let program = new Command();
+
+function parseExtraArgs(variadicArgs?: string[]): {
+  extraArgs: string[];
+  args: string[];
+} {
+  const rawArgs = process.argv.slice(2);
+  const dashDashIndex = rawArgs.indexOf("--");
+  const extraArgs =
+    dashDashIndex !== -1 ? rawArgs.slice(dashDashIndex + 1) : [];
+  const args = variadicArgs
+    ? extraArgs.length > 0
+      ? variadicArgs.slice(0, variadicArgs.length - extraArgs.length)
+      : variadicArgs
+    : [];
+  return { extraArgs, args };
+}
 
 program.name("mops");
 
@@ -274,18 +291,38 @@ program
     ),
   )
   .allowUnknownOption(true) // TODO: restrict unknown before "--"
-  .action(async (canisters, options, command) => {
+  .action(async (canisters, options) => {
     checkConfigFile(true);
-    const extraArgsIndex = command.args.indexOf("--");
+    const { extraArgs, args } = parseExtraArgs(canisters);
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await build(canisters.length ? canisters : undefined, {
+    await build(args.length ? args : undefined, {
       ...options,
-      extraArgs:
-        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+      extraArgs,
+    });
+  });
+
+// check
+program
+  .command("check <files...>")
+  .description("Check Motoko files for syntax errors and type issues")
+  .option("--verbose", "Verbose console output")
+  .addOption(new Option("--fix", "Apply autofixes"))
+  .allowUnknownOption(true)
+  .action(async (files, options) => {
+    checkConfigFile(true);
+    const { extraArgs, args: fileList } = parseExtraArgs(files);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await check(fileList, {
+      ...options,
+      extraArgs,
     });
   });
 
@@ -686,13 +723,12 @@ program
     ),
   )
   .allowUnknownOption(true)
-  .action(async (filter, options, command) => {
+  .action(async (filter, options) => {
     checkConfigFile(true);
-    const extraArgsIndex = command.args.indexOf("--");
+    const { extraArgs } = parseExtraArgs();
     await lint(filter, {
       ...options,
-      extraArgs:
-        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+      extraArgs,
     });
   });
 

@@ -1,0 +1,77 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`build error 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "build canister foo
+moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+Adding metadata to .mops/.build/foo.wasm
+
+✓ Built 1 canister successfully",
+}
+`;
+
+exports[`build error 2`] = `
+{
+  "exitCode": 1,
+  "stderr": "Candid compatibility check failed for canister bar",
+  "stdout": "build canister bar",
+}
+`;
+
+exports[`build error 3`] = `
+{
+  "exitCode": 1,
+  "stderr": "Candid compatibility check failed for canister bar",
+  "stdout": "build canister foo
+build canister bar",
+}
+`;
+
+exports[`build ok 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "build canister foo
+moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+Adding metadata to .mops/.build/foo.wasm
+build canister bar
+moc-wrapper ["-c","--idl","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
+Candid compatibility check passed for canister bar
+Adding metadata to .mops/.build/bar.wasm
+
+✓ Built 2 canisters successfully",
+}
+`;
+
+exports[`build ok 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "build canister foo
+
+✓ Built 1 canister successfully",
+}
+`;
+
+exports[`build ok 3`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "build canister bar
+
+✓ Built 1 canister successfully",
+}
+`;
+
+exports[`build ok 4`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "build canister foo
+build canister bar
+
+✓ Built 2 canisters successfully",
+}
+`;
