@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "@jest/globals";
+import { beforeAll, describe, expect, test } from "@jest/globals";
 import { cpSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
 import path from "path";
 import { cli, cliSnapshot } from "./helpers";
@@ -41,7 +41,7 @@ describe("check", () => {
     const fixDir = path.join(import.meta.dirname, "check/fix");
     const runDir = path.join(fixDir, "run");
 
-    beforeEach(() => {
+    beforeAll(() => {
       for (const file of readdirSync(runDir).filter((f) => f.endsWith(".mo"))) {
         unlinkSync(path.join(runDir, file));
       }
@@ -53,12 +53,25 @@ describe("check", () => {
       expected: string,
     ) {
       const file = `${errorCode}.mo`;
-      cpSync(path.join(fixDir, file), path.join(runDir, file));
-      const before = readFileSync(path.join(runDir, file), "utf-8");
+      const runFilePath = path.join(runDir, file);
+      cpSync(path.join(fixDir, file), runFilePath);
+      const before = readFileSync(runFilePath, "utf-8");
       expect(before).toContain(original);
-      const result = await cli(["check", `run/${file}`, "--fix"], {
-        cwd: fixDir,
-      });
+      const result = await cli(
+        [
+          "check",
+          runFilePath,
+          "--fix",
+          "--",
+          "--ai-errors",
+          "-Werror",
+          "-E",
+          errorCode,
+        ],
+        {
+          cwd: fixDir,
+        },
+      );
       expect(result.exitCode).toBe(0);
       const after = readFileSync(path.join(runDir, file), "utf-8");
       expect(after).toContain(expected);
@@ -66,7 +79,7 @@ describe("check", () => {
     }
 
     test("M0223", async () => {
-      await checkFix("M0223", "List.empty<Nat>()", "List.empty()");
+      await checkFix("M0223", "identity<Nat>(1)", "identity(1)");
     });
 
     test("M0236", async () => {

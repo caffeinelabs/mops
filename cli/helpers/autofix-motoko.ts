@@ -229,19 +229,17 @@ export class MotokoFixer {
     const range = rangeFromDiagnostic(diag);
     const originalText = fileContent.textAt(range);
 
-    // Extract function name and first argument from the error message
-    // The message format is typically: "suggestion: use dot notation: obj.method(...)"
-    const match = originalText.match(/(\w+)\s*\(\s*(\w+)/);
+    // Match optional module prefix, method name, and first argument
+    // e.g. "List.sortInPlace(list, ...)" -> "list.sortInPlace(...)"
+    const match = originalText.match(/(?:\w+\.)*(\w+)\s*\(\s*(\w+)/);
     if (!match) {
       return null;
     }
 
-    const funcName = match[1];
-
-    // Simple replacement: convert func(obj, ...) to obj.func(...)
+    // Replace: [Module.]funcName(obj, ...) -> obj.funcName(...)
     const newText = originalText.replace(
-      /(\w+)\s*\(\s*(\w+)/,
-      `$2.${funcName}(`,
+      /(?:\w+\.)*(\w+)\s*\(\s*(\w+)/,
+      `$2.$1(`,
     );
 
     return { range, newText };
@@ -419,29 +417,21 @@ export class MotokoFixer {
   }
 }
 
-export async function autofixMotoko(
-  files: string[],
-  compileErrors: (filePaths: string[]) => Promise<string | null>,
-  baseDir: string = process.cwd(),
+export type FileSet = Record<string, string>;
+
+export async function motokoFix(
+  files: FileSet,
+  errors: string,
+  compileErrors: (fileSet: FileSet) => Promise<string | null>,
 ): Promise<{
-  fixedCount: number;
+  fixedFiles: FileSet;
   fixedErrorCounts: Record<string, number>;
+  result: { errors: string | null; files: FileSet };
 } | null> {
-  // Load file contents
-  const fileContents = new Map<string, string>();
-  const filePaths = new Map<string, string>(); // maps relative path to absolute path
-
-  for (const file of files) {
-    const absolutePath = file.startsWith("/") ? file : join(baseDir, file);
-    const content = readFileSync(absolutePath, "utf-8");
-    fileContents.set(file, content);
-    filePaths.set(file, absolutePath);
-  }
-
-  let currentFiles = fileContents;
-  let currentErrors = await compileErrors(files);
-  let totalFixedCount = 0;
+  const currentFiles = new Map(Object.entries(files));
+  let currentErrors: string | null = errors;
   const allFixedErrorCounts: Record<string, number> = {};
+  const changedFiles = new Set<string>();
 
   const fixer = new MotokoFixer();
   const maxIterations = 10;
@@ -452,41 +442,82 @@ export async function autofixMotoko(
       break;
     }
 
-    // Merge fixed files
     for (const [file, content] of fixResult.fixedFiles) {
       currentFiles.set(file, content);
+      changedFiles.add(file);
     }
 
-    totalFixedCount += fixResult.fixedFiles.size;
-
-    // Accumulate fixed error counts
     for (const [code, count] of Object.entries(fixResult.fixedErrorCounts)) {
       allFixedErrorCounts[code] = (allFixedErrorCounts[code] ?? 0) + count;
     }
 
-    currentErrors = await compileErrors(files);
+    currentErrors = await compileErrors(Object.fromEntries(currentFiles));
     if (currentErrors !== null) {
       fixer.verifyFixes(currentErrors);
     }
   }
 
-  if (totalFixedCount === 0) {
+  if (changedFiles.size === 0) {
     return null;
   }
 
-  // Write fixed files back to disk
-  for (const file of files) {
-    const absolutePath = filePaths.get(file);
-    if (absolutePath && currentFiles.has(file)) {
-      const fixedContent = currentFiles.get(file);
-      if (fixedContent) {
-        writeFileSync(absolutePath, fixedContent, "utf-8");
-      }
+  const fixedFiles: FileSet = {};
+  for (const file of changedFiles) {
+    const content = currentFiles.get(file);
+    if (content !== undefined) {
+      fixedFiles[file] = content;
     }
   }
 
   return {
-    fixedCount: totalFixedCount,
+    fixedFiles,
     fixedErrorCounts: allFixedErrorCounts,
+    result: {
+      errors: currentErrors,
+      files: Object.fromEntries(currentFiles),
+    },
+  };
+}
+
+export async function autofixMotoko(
+  files: string[],
+  compileErrors: (filePaths: string[]) => Promise<string | null>,
+  baseDir: string = process.cwd(),
+): Promise<{
+  fixedCount: number;
+  fixedErrorCounts: Record<string, number>;
+} | null> {
+  const fileContents: FileSet = {};
+  const filePaths = new Map<string, string>();
+
+  for (const file of files) {
+    const absolutePath = file.startsWith("/") ? file : join(baseDir, file);
+    fileContents[file] = readFileSync(absolutePath, "utf-8");
+    filePaths.set(file, absolutePath);
+  }
+
+  const initialErrors = await compileErrors(files);
+  if (initialErrors === null) {
+    return null;
+  }
+
+  const fix = await motokoFix(fileContents, initialErrors, async (fileSet) => {
+    // Write updated in-memory files to disk before compiling
+    for (const [file, content] of Object.entries(fileSet)) {
+      const absolutePath = filePaths.get(file);
+      if (absolutePath) {
+        writeFileSync(absolutePath, content, "utf-8");
+      }
+    }
+    return compileErrors(files);
+  });
+
+  if (!fix) {
+    return null;
+  }
+
+  return {
+    fixedCount: Object.keys(fix.fixedFiles).length,
+    fixedErrorCounts: fix.fixedErrorCounts,
   };
 }

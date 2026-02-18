@@ -23,22 +23,15 @@ export async function check(
 
   let mocPath = getMocPath();
   let sources = await sourcesArgs();
+  const mocArgs = ["--check", ...sources.flat(), ...(options.extraArgs ?? [])];
 
-  // Helper function to compile and get errors
   const compileErrors = async (
     filesToCheck: string[],
   ): Promise<string | null> => {
     let allErrors = "";
 
     for (const file of filesToCheck) {
-      let args = [
-        "--check",
-        file,
-        ...sources.flat(),
-        ...(options.extraArgs ?? []),
-      ];
-
-      const result = await execa(mocPath, args, {
+      const result = await execa(mocPath, [file, ...mocArgs], {
         stdio: "pipe",
         reject: false,
       });
@@ -54,7 +47,6 @@ export async function check(
     return allErrors.trim() ? allErrors.trim() : null;
   };
 
-  // If fix flag is enabled, attempt to fix errors
   if (options.fix) {
     if (options.verbose) {
       console.log(chalk.blue("check"), chalk.gray("Attempting to fix files"));
@@ -77,42 +69,23 @@ export async function check(
     }
   }
 
-  // Final check to verify all files pass
   for (const file of fileList) {
-    let args = [
-      "--check",
-      file,
-      ...sources.flat(),
-      ...(options.extraArgs ?? []),
-    ];
-
     try {
+      const args = [file, ...mocArgs];
       if (options.verbose) {
         console.log(chalk.blue("check"), chalk.gray("Running moc:"));
         console.log(chalk.gray(mocPath, JSON.stringify(args)));
       }
 
       const result = await execa(mocPath, args, {
-        stdio: options.verbose ? "inherit" : "pipe",
+        stdio: "inherit",
         reject: false,
       });
 
       if (result.exitCode !== 0) {
-        if (!options.verbose) {
-          if (result.stderr) {
-            console.error(chalk.red(result.stderr));
-          }
-          if (result.stdout?.trim()) {
-            console.error(result.stdout);
-          }
-        }
         cliError(
           `✗ Check failed for file ${file} (exit code: ${result.exitCode})`,
         );
-      }
-
-      if (options.verbose && result.stdout && result.stdout.trim()) {
-        console.log(result.stdout);
       }
 
       console.log(chalk.green(`✓ ${file}`));

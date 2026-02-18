@@ -35,7 +35,7 @@ exports[`check ok 2`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "check Running moc:
-moc-wrapper ["--check","Ok.mo","--package","core",".mops/core@2.0.0/src"]
+moc-wrapper ["Ok.mo","--check","--package","core",".mops/core@2.0.0/src"]
 ✓ Ok.mo",
 }
 `;
@@ -53,7 +53,7 @@ exports[`check warning verbose 1`] = `
   "exitCode": 0,
   "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)",
   "stdout": "check Running moc:
-moc-wrapper ["--check","Warning.mo","--package","core",".mops/core@2.0.0/src"]
+moc-wrapper ["Warning.mo","--check","--package","core",".mops/core@2.0.0/src"]
 ✓ Warning.mo",
 }
 `;

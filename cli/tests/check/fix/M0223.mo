@@ -1,10 +1,11 @@
 // M0223: Redundant type instantiation
 // The type annotation is not needed when it can be inferred
-import List "mo:core/List";
 
 persistent actor {
-  public func testM0223() : async Bool {
-    let list : List.List<Nat> = List.empty<Nat>();
-    list.isEmpty();
+  public func testM0223() : async () {
+    func identity<T>(x : T) : T = x;
+    let varArray : [var Nat] = [var 1];
+    let nat = identity<Nat>(1);
+    varArray[0] := nat;
   };
 };
