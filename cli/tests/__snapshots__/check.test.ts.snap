@@ -43,8 +43,8 @@ moc-wrapper ["Ok.mo","--check","--package","core",".mops/core@2.0.0/src"]
 exports[`check warning 1`] = `
 {
   "exitCode": 0,
-  "stderr": "",
-  "stdout": "✓ M0223.mo",
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)",
+  "stdout": "✓ Warning.mo",
 }
 `;
 

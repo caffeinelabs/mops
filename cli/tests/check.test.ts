@@ -16,8 +16,8 @@ describe("check", () => {
   });
 
   test("warning", async () => {
-    const cwd = path.join(import.meta.dirname, "check/fix");
-    await cliSnapshot(["check", "M0223.mo"], { cwd }, 0);
+    const cwd = path.join(import.meta.dirname, "check/success");
+    await cliSnapshot(["check", "Warning.mo"], { cwd }, 0);
   });
 
   test("warning verbose", async () => {
