@@ -308,7 +308,7 @@ program
 // check
 program
   .command("check <files...>")
-  .description("Check Motoko files for syntax errors and type issues")
+  .description("Check Motoko files for syntax errors and type issues.")
   .option("--verbose", "Verbose console output")
   .allowUnknownOption(true)
   .action(async (files, options) => {
