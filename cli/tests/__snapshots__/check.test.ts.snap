@@ -1,0 +1,68 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`check error 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "Error.mo:1.1-5.2: type error [M0096], expression of type
+  actor {hello : shared () -> async Text}
+cannot produce expected type
+  ()
+Error.mo:7.1-7.21: type error [M0057], unbound variable thisshouldnotcompile
+✗ Check failed for file Error.mo (exit code: 1)",
+  "stdout": "",
+}
+`;
+
+exports[`check error 2`] = `
+{
+  "exitCode": 1,
+  "stderr": "Ok.mo: No such file or directory
+✗ Check failed for file Ok.mo (exit code: 1)",
+  "stdout": "",
+}
+`;
+
+exports[`check ok 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Ok.mo",
+}
+`;
+
+exports[`check ok 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "check Running moc:
+moc-wrapper ["Ok.mo","--check","--package","core",".mops/core@2.0.0/src"]
+✓ Ok.mo",
+}
+`;
+
+exports[`check warning 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)",
+  "stdout": "✓ Warning.mo",
+}
+`;
+
+exports[`check warning verbose 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)",
+  "stdout": "check Running moc:
+moc-wrapper ["Warning.mo","--check","--package","core",".mops/core@2.0.0/src"]
+✓ Warning.mo",
+}
+`;
+
+exports[`check warning with -Werror flag 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)
+✗ Check failed for file Warning.mo (exit code: 1)",
+  "stdout": "",
+}
+`;

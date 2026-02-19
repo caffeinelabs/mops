@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops check` subcommand for type-checking Motoko files
 - Warn for `dfx` projects instead of requiring `mops toolchain init`
 - Allow specifying toolchain file paths in `mops.toml`
 - Add `mops lint` subcommand and `lintoko` toolchain management
