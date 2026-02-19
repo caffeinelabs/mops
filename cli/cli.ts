@@ -310,7 +310,6 @@ program
   .command("check <files...>")
   .description("Check Motoko files for syntax errors and type issues")
   .option("--verbose", "Verbose console output")
-  .addOption(new Option("--fix", "Apply autofixes"))
   .allowUnknownOption(true)
   .action(async (files, options) => {
     checkConfigFile(true);
