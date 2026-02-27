@@ -5,8 +5,6 @@ import { Identity } from "@icp-sdk/core/agent";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import prompts from "prompts";
-import fetch from "node-fetch";
-
 import { decodeFile } from "./pem.js";
 import { Config, Dependency } from "./types.js";
 import { mainActor, storageActor } from "./api/actors.js";
@@ -14,10 +12,6 @@ import { getNetwork } from "./api/network.js";
 import { getHighestVersion } from "./api/getHighestVersion.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { FILE_PATH_REGEX } from "./constants.js";
-
-if (!globalThis.fetch) {
-  globalThis.fetch = fetch as any;
-}
 
 // (!) make changes in pair with backend
 export let apiVersion = "1.3";
