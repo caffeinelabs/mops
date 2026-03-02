@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { execa } from "execa";
 
 interface Position {
   line: number;
@@ -11,23 +11,31 @@ interface Range {
   end: Position;
 }
 
-interface TextEdit {
-  range: Range;
-  newText: string;
-}
-
-interface Diagnostic {
+interface Fix {
   file: string;
-  startLine: number;
-  startChar: number;
-  endLine: number;
-  endChar: number;
   code: string;
-  message: string;
+  range: Range;
+  replacement: string;
 }
 
-interface CodeFix extends TextEdit {
+interface MocSpan {
+  file: string;
+  line_start: number;
+  column_start: number;
+  line_end: number;
+  column_end: number;
+  is_primary: boolean;
+  label: string | null;
+  suggested_replacement: string | null;
+  suggestion_applicability: string | null;
+}
+
+interface MocDiagnostic {
+  message: string;
   code: string;
+  level: string;
+  spans: MocSpan[];
+  notes: string[];
 }
 
 class FileContent {
@@ -61,463 +69,140 @@ class FileContent {
     const offset = offsets[pos.line];
     return Math.min((offset ?? 0) + pos.character, this.content.length);
   }
-
-  textAt(range: Range): string {
-    const start = this.getOffset(range.start);
-    const end = this.getOffset(range.end);
-    return this.content.substring(start, end);
-  }
-
-  lineAt(line: number): string {
-    const lines = this.getLines();
-    return lines[line] ?? "";
-  }
 }
 
-function rangeFromDiagnostic(diag: Diagnostic): Range {
-  return {
-    start: { line: diag.startLine - 1, character: diag.startChar - 1 },
-    end: { line: diag.endLine - 1, character: diag.endChar - 1 },
-  };
-}
-
-export class MotokoFixer {
-  private readonly supportedCodes1 = ["M0223"];
-  private readonly supportedCodes2 = ["M0236", "M0237"];
-  private readonly initialErrorCounts = new Map<string, number>();
-  private readonly fixedErrorCounts = new Map<string, number>();
-  private readonly fileContentCache = new Map<string, FileContent>();
-
-  public fix(
-    files: Map<string, string>,
-    errorOutput: string,
-  ): {
-    fixedFiles: Map<string, string>;
-    fixedErrorCounts: Record<string, number>;
-  } | null {
-    this.initialErrorCounts.clear();
-    this.fixedErrorCounts.clear();
-    this.fileContentCache.clear();
-
-    const allDiagnostics = this.parseDiagnostics(errorOutput);
-    if (allDiagnostics.length === 0) {
-      return null;
-    }
-
-    for (const diag of allDiagnostics) {
-      this.initialErrorCounts.set(
-        diag.code,
-        (this.initialErrorCounts.get(diag.code) ?? 0) + 1,
-      );
-    }
-
-    const fixedFiles = new Map<string, string>();
-    const diagnosticsByFile = allDiagnostics.reduce((acc, diag) => {
-      const current = acc.get(diag.file) ?? [];
-      current.push(diag);
-      acc.set(diag.file, current);
-      return acc;
-    }, new Map<string, Diagnostic[]>());
-
-    for (const [file, diagnostics] of diagnosticsByFile) {
-      const fileKey = this.findFileKey(files, file);
-      if (!fileKey) {
-        continue;
-      }
-
-      let fileContent = this.getFileContent(files, fileKey);
-      if (!fileContent) {
-        continue;
-      }
-
-      // Phase 1: Apply simple fixes first to avoid overlapping fixes
-      const diagnostics1 = diagnostics.filter((diag) =>
-        this.supportedCodes1.includes(diag.code),
-      );
-      let fixes1 = this.generateFixes(diagnostics1, fileContent);
-      if (fixes1.length > 0) {
-        const result1 = this.applyFixes(fileContent, fixes1);
-        fixes1 = result1.applied;
-        fixedFiles.set(fileKey, result1.content);
-        fileContent = this.setFileContent(result1.content, fileKey);
-      }
-
-      // Phase 2: Apply more complex fixes
-      let diagnostics2 = diagnostics.filter((diag) =>
-        this.supportedCodes2.includes(diag.code),
-      );
-      diagnostics2 = this.adjustDiagnosticPositions(diagnostics2, fixes1);
-      const fixes2 = this.generateFixes(diagnostics2, fileContent);
-      if (fixes2.length === 0) {
-        continue;
-      }
-      fixedFiles.set(fileKey, this.applyFixes(fileContent, fixes2).content);
-    }
-
-    if (fixedFiles.size === 0) {
-      return null;
-    }
-
-    return {
-      fixedFiles,
-      fixedErrorCounts: Object.fromEntries(this.fixedErrorCounts),
-    };
-  }
-
-  private findFileKey(
-    files: Map<string, string>,
-    fileName: string,
-  ): string | null {
-    // Try exact match first
-    if (files.has(fileName)) {
-      return fileName;
-    }
-
-    // Try matching the end of the file path
-    for (const key of files.keys()) {
-      if (key.endsWith(fileName) || key.endsWith(`/${fileName}`)) {
-        return key;
-      }
-    }
-
-    return null;
-  }
-
-  private generateFix(
-    diag: Diagnostic,
-    fileContent: FileContent,
-  ): TextEdit | null {
-    switch (diag.code) {
-      case "M0223":
-        return this.fixRedundantTypeInstantiation(diag);
-      case "M0236":
-        return this.fixDotNotationSuggestion(diag, fileContent);
-      case "M0237":
-        return this.fixRedundantImplicitArgument(diag, fileContent);
-      default:
+function parseDiagnostics(stdout: string): MocDiagnostic[] {
+  return stdout
+    .split("\n")
+    .filter((l) => l.trim())
+    .map((l) => {
+      try {
+        return JSON.parse(l) as MocDiagnostic;
+      } catch {
         return null;
-    }
-  }
-
-  private generateFixes(
-    diagnostics: Diagnostic[],
-    fileContent: FileContent,
-  ): CodeFix[] {
-    const fixes: CodeFix[] = [];
-    for (const diag of diagnostics) {
-      const fix = this.generateFix(diag, fileContent);
-      if (fix) {
-        fixes.push({ ...fix, code: diag.code });
       }
-    }
-    // Sort by start position descending (bottom-up)
-    return fixes.sort(
-      (a, b) =>
-        b.range.start.line - a.range.start.line ||
-        b.range.start.character - a.range.start.character,
-    );
-  }
-
-  private fixRedundantTypeInstantiation(diag: Diagnostic): TextEdit {
-    return { range: rangeFromDiagnostic(diag), newText: "" };
-  }
-
-  private fixDotNotationSuggestion(
-    diag: Diagnostic,
-    fileContent: FileContent,
-  ): TextEdit | null {
-    const range = rangeFromDiagnostic(diag);
-    const originalText = fileContent.textAt(range);
-
-    // Match optional module prefix, method name, and first argument
-    // e.g. "List.sortInPlace(list, ...)" -> "list.sortInPlace(...)"
-    const match = originalText.match(/(?:\w+\.)*(\w+)\s*\(\s*(\w+)/);
-    if (!match) {
-      return null;
-    }
-
-    // Replace: [Module.]funcName(obj, ...) -> obj.funcName(...)
-    const newText = originalText.replace(
-      /(?:\w+\.)*(\w+)\s*\(\s*(\w+)/,
-      `$2.$1(`,
-    );
-
-    return { range, newText };
-  }
-
-  private fixRedundantImplicitArgument(
-    diag: Diagnostic,
-    fileContent: FileContent,
-  ): TextEdit | null {
-    const range = rangeFromDiagnostic(diag);
-
-    this.extendRangeWithComma(range, fileContent);
-
-    const textAfter = fileContent
-      .lineAt(range.end.line)
-      .substring(range.end.character);
-    const textBefore = fileContent
-      .lineAt(range.start.line)
-      .substring(0, range.start.character);
-
-    if (textBefore.trim() === "" && textAfter.trim() === "") {
-      range.start.character = 0;
-      range.end.line += 1;
-      range.end.character = 0;
-    }
-
-    return { range, newText: "" };
-  }
-
-  private extendRangeWithComma(range: Range, fileContent: FileContent): void {
-    const textAfter = fileContent
-      .lineAt(range.end.line)
-      .substring(range.end.character);
-    const commaMatch = textAfter.match(/^\s*,\s*/);
-    if (commaMatch) {
-      range.end.character += commaMatch[0].length;
-    }
-  }
-
-  public verifyFixes(newErrors: string): void {
-    const newCounts = new Map<string, number>();
-    for (const d of this.parseDiagnostics(newErrors)) {
-      newCounts.set(d.code, (newCounts.get(d.code) ?? 0) + 1);
-    }
-
-    for (const [code, actualCount] of newCounts) {
-      if (code === "M0223") {
-        continue; // Cannot verify M0223 fixes
-      }
-      const initialCount = this.initialErrorCounts.get(code) ?? 0;
-      const fixedCount = this.fixedErrorCounts.get(code) ?? 0;
-      if (actualCount !== initialCount - fixedCount) {
-        console.warn(
-          `Warning: Incorrect error count for fix code ${code}: ` +
-            `${actualCount} !== ${initialCount} - ${fixedCount}`,
-        );
-      }
-    }
-  }
-
-  private parseDiagnostics(output: string): Diagnostic[] {
-    const regex =
-      /^([^:\n]+):(\d+)\.(\d+)-(\d+)\.(\d+): (?:type error|warning) \[(M\d+)\], (.+)$/gim;
-    return Array.from(output.matchAll(regex)).map((m) => {
-      const file = m[1] ?? "";
-      const startLine = parseInt(m[2] ?? "0");
-      const startChar = parseInt(m[3] ?? "0");
-      const endLine = parseInt(m[4] ?? "0");
-      const endChar = parseInt(m[5] ?? "0");
-      const code = m[6] ?? "";
-      const message = m[7] ?? "";
-      return {
-        file,
-        startLine,
-        startChar,
-        endLine,
-        endChar,
-        code,
-        message,
-      };
-    });
-  }
-
-  private applyFixes(
-    fileContent: FileContent,
-    fixes: CodeFix[],
-  ): { content: string; applied: CodeFix[] } {
-    let result = fileContent.content;
-    const applied: CodeFix[] = [];
-    let lastFixStartOffset = Infinity;
-
-    for (const fix of fixes) {
-      const start = fileContent.getOffset(fix.range.start);
-      const end = fileContent.getOffset(fix.range.end);
-
-      if (end > lastFixStartOffset) {
-        continue;
-      }
-
-      result = result.slice(0, start) + fix.newText + result.slice(end);
-      lastFixStartOffset = start;
-      applied.push(fix);
-
-      this.fixedErrorCounts.set(
-        fix.code,
-        (this.fixedErrorCounts.get(fix.code) ?? 0) + 1,
-      );
-    }
-    return { content: result, applied };
-  }
-
-  private getFileContent(
-    files: Map<string, string>,
-    fileKey: string,
-  ): FileContent | null {
-    let fileContent = this.fileContentCache.get(fileKey);
-    if (fileContent !== undefined) {
-      return fileContent;
-    }
-
-    const content = files.get(fileKey);
-    if (typeof content !== "string") {
-      return null;
-    }
-    fileContent = new FileContent(content);
-    this.fileContentCache.set(fileKey, fileContent);
-    return fileContent;
-  }
-
-  private setFileContent(content: string, fileKey: string): FileContent {
-    const fileContent = new FileContent(content);
-    this.fileContentCache.set(fileKey, fileContent);
-    return fileContent;
-  }
-
-  private adjustDiagnosticPositions(
-    diagnostics: Diagnostic[],
-    fixes: CodeFix[],
-  ): Diagnostic[] {
-    const removedFromStart: number[] = diagnostics.map(() => 0);
-    const removedFromEnd: number[] = diagnostics.map(() => 0);
-
-    for (const [index, diag] of diagnostics.entries()) {
-      const startLine = diag.startLine - 1;
-      const startChar = diag.startChar - 1;
-      const endLine = diag.endLine - 1;
-      const endChar = diag.endChar - 1;
-
-      for (const fix of fixes) {
-        if (fix.newText !== "") {
-          continue;
-        }
-        if (fix.range.start.line !== fix.range.end.line) {
-          continue;
-        }
-
-        const fixLine = fix.range.start.line;
-        const fixLen = fix.range.end.character - fix.range.start.character;
-
-        if (fixLine === startLine && fixLen <= startChar) {
-          removedFromStart[index] = (removedFromStart[index] ?? 0) + fixLen;
-        }
-
-        if (fixLine === endLine && fixLen <= endChar) {
-          removedFromEnd[index] = (removedFromEnd[index] ?? 0) + fixLen;
-        }
-      }
-    }
-
-    return diagnostics.map((diag, index) => ({
-      ...diag,
-      startChar: diag.startChar - (removedFromStart[index] ?? 0),
-      endChar: diag.endChar - (removedFromEnd[index] ?? 0),
-    }));
-  }
+    })
+    .filter((d) => d !== null);
 }
 
-export type FileSet = Record<string, string>;
-
-export async function motokoFix(
-  files: FileSet,
-  errors: string,
-  compileErrors: (fileSet: FileSet) => Promise<string | null>,
-): Promise<{
-  fixedFiles: FileSet;
-  fixedErrorCounts: Record<string, number>;
-  result: { errors: string | null; files: FileSet };
-} | null> {
-  const currentFiles = new Map(Object.entries(files));
-  let currentErrors: string | null = errors;
-  const allFixedErrorCounts: Record<string, number> = {};
-  const changedFiles = new Set<string>();
-
-  const fixer = new MotokoFixer();
-  const maxIterations = 10;
-
-  for (let i = 0; i < maxIterations && currentErrors !== null; i++) {
-    const fixResult = fixer.fix(currentFiles, currentErrors);
-    if (!fixResult) {
-      break;
-    }
-
-    for (const [file, content] of fixResult.fixedFiles) {
-      currentFiles.set(file, content);
-      changedFiles.add(file);
-    }
-
-    for (const [code, count] of Object.entries(fixResult.fixedErrorCounts)) {
-      allFixedErrorCounts[code] = (allFixedErrorCounts[code] ?? 0) + count;
-    }
-
-    currentErrors = await compileErrors(Object.fromEntries(currentFiles));
-    if (currentErrors !== null) {
-      fixer.verifyFixes(currentErrors);
+function extractFixes(diagnostics: MocDiagnostic[]): Fix[] {
+  const fixes: Fix[] = [];
+  for (const diag of diagnostics) {
+    for (const span of diag.spans) {
+      if (
+        span.suggestion_applicability === "MachineApplicable" &&
+        span.suggested_replacement !== null
+      ) {
+        fixes.push({
+          file: span.file,
+          code: diag.code,
+          range: {
+            start: {
+              line: span.line_start - 1,
+              character: span.column_start - 1,
+            },
+            end: {
+              line: span.line_end - 1,
+              character: span.column_end - 1,
+            },
+          },
+          replacement: span.suggested_replacement,
+        });
+      }
     }
   }
+  return fixes;
+}
 
-  if (changedFiles.size === 0) {
-    return null;
-  }
+function applyFixes(
+  content: FileContent,
+  fixes: Fix[],
+): { result: string; appliedCount: number; appliedCodes: Map<string, number> } {
+  const sorted = [...fixes].sort(
+    (a, b) =>
+      b.range.start.line - a.range.start.line ||
+      b.range.start.character - a.range.start.character,
+  );
 
-  const fixedFiles: FileSet = {};
-  for (const file of changedFiles) {
-    const content = currentFiles.get(file);
-    if (content !== undefined) {
-      fixedFiles[file] = content;
+  let result = content.content;
+  let appliedCount = 0;
+  let lastFixStartOffset = Infinity;
+  const appliedCodes = new Map<string, number>();
+
+  for (const fix of sorted) {
+    const start = content.getOffset(fix.range.start);
+    const end = content.getOffset(fix.range.end);
+
+    if (end > lastFixStartOffset) {
+      continue;
     }
+
+    result = result.slice(0, start) + fix.replacement + result.slice(end);
+    lastFixStartOffset = start;
+    appliedCount++;
+    appliedCodes.set(fix.code, (appliedCodes.get(fix.code) ?? 0) + 1);
   }
 
-  return {
-    fixedFiles,
-    fixedErrorCounts: allFixedErrorCounts,
-    result: {
-      errors: currentErrors,
-      files: Object.fromEntries(currentFiles),
-    },
-  };
+  return { result, appliedCount, appliedCodes };
 }
 
 export async function autofixMotoko(
+  mocPath: string,
   files: string[],
-  compileErrors: (filePaths: string[]) => Promise<string | null>,
-  baseDir: string = process.cwd(),
+  mocArgs: string[],
 ): Promise<{
   fixedCount: number;
   fixedErrorCounts: Record<string, number>;
 } | null> {
-  const fileContents: FileSet = {};
-  const filePaths = new Map<string, string>();
+  const allFixes: Fix[] = [];
 
   for (const file of files) {
-    const absolutePath = file.startsWith("/") ? file : join(baseDir, file);
-    fileContents[file] = readFileSync(absolutePath, "utf-8");
-    filePaths.set(file, absolutePath);
+    const result = await execa(
+      mocPath,
+      [file, "--error-format=json", "--all-libs", ...mocArgs],
+      { stdio: "pipe", reject: false },
+    );
+
+    const diagnostics = parseDiagnostics(result.stdout);
+    allFixes.push(...extractFixes(diagnostics));
   }
 
-  const initialErrors = await compileErrors(files);
-  if (initialErrors === null) {
+  if (allFixes.length === 0) {
     return null;
   }
 
-  const fix = await motokoFix(fileContents, initialErrors, async (fileSet) => {
-    // Write updated in-memory files to disk before compiling
-    for (const [file, content] of Object.entries(fileSet)) {
-      const absolutePath = filePaths.get(file);
-      if (absolutePath) {
-        writeFileSync(absolutePath, content, "utf-8");
-      }
-    }
-    return compileErrors(files);
-  });
+  const fixesByFile = new Map<string, Fix[]>();
+  for (const fix of allFixes) {
+    const existing = fixesByFile.get(fix.file) ?? [];
+    existing.push(fix);
+    fixesByFile.set(fix.file, existing);
+  }
 
-  if (!fix) {
+  let totalFixedFiles = 0;
+  const totalFixedCodes: Record<string, number> = {};
+
+  for (const [file, fixes] of fixesByFile) {
+    const content = new FileContent(readFileSync(file, "utf-8"));
+    const { result, appliedCount, appliedCodes } = applyFixes(content, fixes);
+
+    if (appliedCount === 0) {
+      continue;
+    }
+
+    writeFileSync(file, result, "utf-8");
+    totalFixedFiles++;
+
+    for (const [code, count] of appliedCodes) {
+      totalFixedCodes[code] = (totalFixedCodes[code] ?? 0) + count;
+    }
+  }
+
+  if (totalFixedFiles === 0) {
     return null;
   }
 
   return {
-    fixedCount: Object.keys(fix.fixedFiles).length,
-    fixedErrorCounts: fix.fixedErrorCounts,
+    fixedCount: totalFixedFiles,
+    fixedErrorCounts: totalFixedCodes,
   };
 }

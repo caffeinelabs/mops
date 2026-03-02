@@ -58,19 +58,8 @@ describe("check", () => {
       const before = readFileSync(runFilePath, "utf-8");
       expect(before).toContain(original);
       const result = await cli(
-        [
-          "check",
-          runFilePath,
-          "--fix",
-          "--",
-          "--ai-errors",
-          "-Werror",
-          "-E",
-          errorCode,
-        ],
-        {
-          cwd: fixDir,
-        },
+        ["check", runFilePath, "--fix", "--", "-W=M0223,M0236,M0237"],
+        { cwd: fixDir },
       );
       expect(result.exitCode).toBe(0);
       const after = readFileSync(path.join(runDir, file), "utf-8");
@@ -92,6 +81,17 @@ describe("check", () => {
         "list.sortInPlace(Nat.compare)",
         "list.sortInPlace()",
       );
+    });
+
+    test("edit-suggestions", async () => {
+      const file = "edit-suggestions.mo";
+      const runFilePath = path.join(runDir, file);
+      cpSync(path.join(fixDir, file), runFilePath);
+      await cli(["check", runFilePath, "--fix", "--", "-W=M0223,M0236,M0237"], {
+        cwd: fixDir,
+      });
+      const after = readFileSync(runFilePath, "utf-8");
+      expect(after).toMatchSnapshot();
     });
 
     test("verbose", async () => {

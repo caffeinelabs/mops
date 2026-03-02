@@ -1,7 +1,4 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
-
-exports[`check --fix edit-suggestions 1`] = `
-"import Map "mo:core/Map";
+import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import Text "mo:core/Text";
 import { type Order } "mo:core/Order";
@@ -10,7 +7,7 @@ import { type Order } "mo:core/Order";
 
 do {
   func inferred<T>(x : T) : T = x;
-  let n1 = inferred(1);
+  let n1 = inferred<Nat>(1);
   ignore n1;
 };
 
@@ -21,21 +18,23 @@ do {
   let m2 = Map.empty<Int, Text>();
 
   // single arg
-  ignore m.size(); // warn M0236
+  ignore Map.size(m); // warn M0236
 
   // multi arg, no implicit in scope -> M0230 error + M0236 warn
-  ignore m2.get(1); // warn M0236
+  ignore Map.get(m2, 1); // warn M0236
 
   // multi arg with implicit -> M0236 + M0237
-  ignore m.get(1); // warn M0236 + M0237
+  ignore Map.get(m, Nat.compare, 1); // warn M0236 + M0237
 
   // complex receiver
-  ignore Map.empty<Nat, Text>().size(
-    
+  ignore Map.size(
+    Map.empty<Nat, Text>()
   ); // warn M0236
 
   // multiline call -> M0236 + M0237
-  m.add(
+  Map.add(
+    m,
+    Nat.compare,
     1,
     "John",
   ); // warn M0236 + M0237
@@ -47,10 +46,11 @@ do {
   let m = Map.empty<Nat, Text>();
 
   // single line
-  ignore m.get(1); // warn M0237
+  ignore m.get(Nat.compare, 1); // warn M0237
 
   // multiline
   ignore m.get(
+    Nat.compare,
     1,
   ); // warn M0237
 };
@@ -109,24 +109,27 @@ do {
   let data : [(Nat, Text)] = [];
 
   // implicit in the middle -> M0236 + M0237
-  ignore data.get(1);
+  ignore Impl.get(data, Nat.compare, 1);
 
   // two adjacent implicits -> M0236 + M0237 x2
-  ignore data.put(1, "a");
+  ignore Impl.put(data, Nat.compare, Text.compare, 1, "a");
 
   // implicit at the end -> M0236 + M0237
-  ignore data.find(1, );
-  ignore data.sort1(); // -> M0236 + M0237
-  ignore Impl.sort2(data, ); // no dot suggestion (notSelf), M0237 only
+  ignore Impl.find(data, 1, Nat.compare);
+  ignore Impl.sort1(data, Nat.compare); // -> M0236 + M0237
+  ignore Impl.sort2(data, Nat.compare); // no dot suggestion (notSelf), M0237 only
 
   // all implicits -> M0237 x2
-  let _ = Impl.make<Nat, Text>();
+  let _ = Impl.make<Nat, Text>(Nat.compare, Text.compare);
 
   // non-adjacent implicits -> M0236 + M0237 x2
-  ignore data.update(1, "a");
+  ignore Impl.update(data, Nat.compare, 1, Text.compare, "a");
 
   // multiline: two adjacent implicits -> M0236 + M0237 x2
-  ignore data.put(
+  ignore Impl.put(
+    data,
+    Nat.compare,
+    Text.compare,
     1,
     "a",
   );
@@ -135,78 +138,11 @@ do {
 // --- Mix: M0223 + M0236 + M0237 ---
 
 do {
-  // NB: Must use \`let _ = ...\` to get the 'redundant type instantiation' error
-  let _ = Map.empty<Nat, Text>().add(
+  // NB: Must use `let _ = ...` to get the 'redundant type instantiation' error
+  let _ = Map.add<Nat, Text>(
+    Map.empty<Nat, Text>(),
+    Nat.compare,
     1,
     "John",
   ); // warn M0223 + M0236 + M0237
 };
-"
-`;
-
-exports[`check error 1`] = `
-{
-  "exitCode": 1,
-  "stderr": "Error.mo:1.1-5.2: type error [M0096], expression of type
-  actor {hello : shared () -> async Text}
-cannot produce expected type
-  ()
-Error.mo:7.1-7.21: type error [M0057], unbound variable thisshouldnotcompile
-✗ Check failed for file Error.mo (exit code: 1)",
-  "stdout": "",
-}
-`;
-
-exports[`check error 2`] = `
-{
-  "exitCode": 1,
-  "stderr": "Ok.mo: No such file or directory
-✗ Check failed for file Ok.mo (exit code: 1)",
-  "stdout": "",
-}
-`;
-
-exports[`check ok 1`] = `
-{
-  "exitCode": 0,
-  "stderr": "",
-  "stdout": "✓ Ok.mo",
-}
-`;
-
-exports[`check ok 2`] = `
-{
-  "exitCode": 0,
-  "stderr": "",
-  "stdout": "check Running moc:
-moc-wrapper ["Ok.mo","--check","--package","core",".mops/core@2.0.0/src"]
-✓ Ok.mo",
-}
-`;
-
-exports[`check warning 1`] = `
-{
-  "exitCode": 0,
-  "stderr": "",
-  "stdout": "✓ M0223.mo",
-}
-`;
-
-exports[`check warning verbose 1`] = `
-{
-  "exitCode": 0,
-  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)",
-  "stdout": "check Running moc:
-moc-wrapper ["Warning.mo","--check","--package","core",".mops/core@2.0.0/src"]
-✓ Warning.mo",
-}
-`;
-
-exports[`check warning with -Werror flag 1`] = `
-{
-  "exitCode": 1,
-  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)
-✗ Check failed for file Warning.mo (exit code: 1)",
-  "stdout": "",
-}
-`;

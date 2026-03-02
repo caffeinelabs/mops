@@ -25,34 +25,12 @@ export async function check(
   let sources = await sourcesArgs();
   const mocArgs = ["--check", ...sources.flat(), ...(options.extraArgs ?? [])];
 
-  const compileErrors = async (
-    filesToCheck: string[],
-  ): Promise<string | null> => {
-    let allErrors = "";
-
-    for (const file of filesToCheck) {
-      const result = await execa(mocPath, [file, ...mocArgs], {
-        stdio: "pipe",
-        reject: false,
-      });
-
-      if (result.stderr) {
-        allErrors += result.stderr + "\n";
-      }
-      if (result.stdout?.trim()) {
-        allErrors += result.stdout + "\n";
-      }
-    }
-
-    return allErrors.trim() ? allErrors.trim() : null;
-  };
-
   if (options.fix) {
     if (options.verbose) {
       console.log(chalk.blue("check"), chalk.gray("Attempting to fix files"));
     }
 
-    const fixResult = await autofixMotoko(fileList, compileErrors);
+    const fixResult = await autofixMotoko(mocPath, fileList, mocArgs);
     if (fixResult) {
       console.log(
         chalk.green(
