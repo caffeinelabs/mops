@@ -30,7 +30,7 @@ interface MocSpan {
   suggestion_applicability: string | null;
 }
 
-interface MocDiagnostic {
+export interface MocDiagnostic {
   message: string;
   code: string;
   level: string;
@@ -71,7 +71,7 @@ class FileContent {
   }
 }
 
-function parseDiagnostics(stdout: string): MocDiagnostic[] {
+export function parseDiagnostics(stdout: string): MocDiagnostic[] {
   return stdout
     .split("\n")
     .filter((l) => l.trim())
