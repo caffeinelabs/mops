@@ -1,21 +1,14 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { execa } from "execa";
-
-interface Position {
-  line: number;
-  character: number;
-}
-
-interface Range {
-  start: Position;
-  end: Position;
-}
+import {
+  TextDocument,
+  type TextEdit,
+} from "vscode-languageserver-textdocument";
 
 interface Fix {
   file: string;
   code: string;
-  range: Range;
-  replacement: string;
+  edit: TextEdit;
 }
 
 interface MocSpan {
@@ -36,39 +29,6 @@ export interface MocDiagnostic {
   level: string;
   spans: MocSpan[];
   notes: string[];
-}
-
-class FileContent {
-  constructor(public readonly content: string) {}
-
-  private lines: string[] | undefined;
-  private lineOffsets: number[] | undefined;
-
-  getLines(): string[] {
-    this.lines ??= this.content.split("\n");
-    return this.lines;
-  }
-
-  getLineOffsets(): number[] {
-    if (!this.lineOffsets) {
-      let currentOffset = 0;
-      this.lineOffsets = this.getLines().map((l) => {
-        const off = currentOffset;
-        currentOffset += l.length + 1;
-        return off;
-      });
-    }
-    return this.lineOffsets;
-  }
-
-  getOffset(pos: Position): number {
-    const offsets = this.getLineOffsets();
-    if (pos.line >= offsets.length) {
-      return this.content.length;
-    }
-    const offset = offsets[pos.line];
-    return Math.min((offset ?? 0) + pos.character, this.content.length);
-  }
 }
 
 export function parseDiagnostics(stdout: string): MocDiagnostic[] {
@@ -96,54 +56,24 @@ function extractFixes(diagnostics: MocDiagnostic[]): Fix[] {
         fixes.push({
           file: span.file,
           code: diag.code,
-          range: {
-            start: {
-              line: span.line_start - 1,
-              character: span.column_start - 1,
+          edit: {
+            range: {
+              start: {
+                line: span.line_start - 1,
+                character: span.column_start - 1,
+              },
+              end: {
+                line: span.line_end - 1,
+                character: span.column_end - 1,
+              },
             },
-            end: {
-              line: span.line_end - 1,
-              character: span.column_end - 1,
-            },
+            newText: span.suggested_replacement,
           },
-          replacement: span.suggested_replacement,
         });
       }
     }
   }
   return fixes;
-}
-
-function applyFixes(
-  content: FileContent,
-  fixes: Fix[],
-): { result: string; appliedCount: number; appliedCodes: Map<string, number> } {
-  const sorted = [...fixes].sort(
-    (a, b) =>
-      b.range.start.line - a.range.start.line ||
-      b.range.start.character - a.range.start.character,
-  );
-
-  let result = content.content;
-  let appliedCount = 0;
-  let lastFixStartOffset = Infinity;
-  const appliedCodes = new Map<string, number>();
-
-  for (const fix of sorted) {
-    const start = content.getOffset(fix.range.start);
-    const end = content.getOffset(fix.range.end);
-
-    if (end > lastFixStartOffset) {
-      continue;
-    }
-
-    result = result.slice(0, start) + fix.replacement + result.slice(end);
-    lastFixStartOffset = start;
-    appliedCount++;
-    appliedCodes.set(fix.code, (appliedCodes.get(fix.code) ?? 0) + 1);
-  }
-
-  return { result, appliedCount, appliedCodes };
 }
 
 export async function autofixMotoko(
@@ -182,18 +112,22 @@ export async function autofixMotoko(
   const totalFixedCodes: Record<string, number> = {};
 
   for (const [file, fixes] of fixesByFile) {
-    const content = new FileContent(readFileSync(file, "utf-8"));
-    const { result, appliedCount, appliedCodes } = applyFixes(content, fixes);
+    const original = readFileSync(file, "utf-8");
+    const doc = TextDocument.create(`file://${file}`, "motoko", 0, original);
+    const result = TextDocument.applyEdits(
+      doc,
+      fixes.map((f) => f.edit),
+    );
 
-    if (appliedCount === 0) {
+    if (result === original) {
       continue;
     }
 
     writeFileSync(file, result, "utf-8");
     totalFixedFiles++;
 
-    for (const [code, count] of appliedCodes) {
-      totalFixedCodes[code] = (totalFixedCodes[code] ?? 0) + count;
+    for (const fix of fixes) {
+      totalFixedCodes[fix.code] = (totalFixedCodes[fix.code] ?? 0) + 1;
     }
   }
 
