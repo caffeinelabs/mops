@@ -4,12 +4,10 @@ import path from "path";
 import { parseDiagnostics } from "../helpers/autofix-motoko";
 import { cli } from "./helpers";
 
-function countCodes(stdout: string, codes: string[]): Record<string, number> {
+function countCodes(stdout: string): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const diag of parseDiagnostics(stdout)) {
-    if (codes.includes(diag.code)) {
-      counts[diag.code] = (counts[diag.code] ?? 0) + 1;
-    }
+    counts[diag.code] = (counts[diag.code] ?? 0) + 1;
   }
   return counts;
 }
@@ -35,15 +33,15 @@ describe("check --fix", () => {
   async function testCheckFix(
     file: string,
     expectedDiagnostics: Record<string, number>,
+    expectedAfterDiagnostics: Record<string, number> = {},
   ): Promise<string> {
     const runFilePath = copyFixture(file);
-    const codes = Object.keys(expectedDiagnostics);
 
     const beforeResult = await cli(
       ["check", runFilePath, "--", ...diagnosticFlags],
       { cwd: fixDir },
     );
-    expect(countCodes(beforeResult.stdout, codes)).toEqual(expectedDiagnostics);
+    expect(countCodes(beforeResult.stdout)).toEqual(expectedDiagnostics);
 
     await cli(["check", runFilePath, "--fix", "--", warningFlags], {
       cwd: fixDir,
@@ -55,7 +53,7 @@ describe("check --fix", () => {
       ["check", runFilePath, "--", ...diagnosticFlags],
       { cwd: fixDir },
     );
-    expect(countCodes(afterResult.stdout, codes)).toEqual({});
+    expect(countCodes(afterResult.stdout)).toEqual(expectedAfterDiagnostics);
 
     return runFilePath;
   }
@@ -75,7 +73,7 @@ describe("check --fix", () => {
   test("edit-suggestions", async () => {
     await testCheckFix("edit-suggestions.mo", {
       M0223: 2,
-      M0236: 12,
+      M0236: 11,
       M0237: 17,
     });
   });
@@ -94,7 +92,7 @@ describe("check --fix", () => {
       ["check", runMainPath, "--", ...diagnosticFlags],
       { cwd: fixDir },
     );
-    expect(countCodes(afterResult.stdout, ["M0236"])).toEqual({});
+    expect(countCodes(afterResult.stdout)).toEqual({});
   });
 
   test("verbose", async () => {

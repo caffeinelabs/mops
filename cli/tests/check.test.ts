@@ -19,6 +19,7 @@ describe("check", () => {
     const cwd = path.join(import.meta.dirname, "check/success");
     const result = await cliSnapshot(["check", "Warning.mo"], { cwd }, 0);
     expect(result.stderr).toMatch(/warning \[M0194\]/);
+    expect(result.stderr).toMatch(/unused identifier/);
   });
 
   test("warning verbose", async () => {
@@ -40,5 +41,6 @@ describe("check", () => {
       1,
     );
     expect(result.stderr).toMatch(/warning \[M0194\]/);
+    expect(result.stderr).toMatch(/unused identifier/);
   });
 });

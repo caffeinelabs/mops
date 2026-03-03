@@ -63,13 +63,8 @@ do {
 
 do {
   let m = Map.empty<Nat, Text>();
-  let m2 = Map.empty<Int, Text>();
-
   // single arg
   ignore m.size(); // warn M0236
-
-  // multi arg, no implicit in scope -> M0230 error + M0236 warn
-  ignore m2.get(1); // warn M0236
 
   // multi arg with implicit -> M0236 + M0237
   ignore m.get(1); // warn M0236 + M0237
@@ -181,7 +176,7 @@ do {
 
 do {
   // NB: Must use \`let _ = ...\` to get the 'redundant type instantiation' error
-  let _ = Map.empty<Nat, Text>().add(
+  let _ = Map.empty<Nat, Text>().insert(
     1,
     "John",
   ); // warn M0223 + M0236 + M0237
