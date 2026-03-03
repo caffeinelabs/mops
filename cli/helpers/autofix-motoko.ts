@@ -82,14 +82,14 @@ export async function autofixMotoko(
   mocArgs: string[],
 ): Promise<{
   fixedCount: number;
-  fixedErrorCounts: Record<string, number>;
+  fixedDiagnosticCounts: Record<string, number>;
 } | null> {
   const allFixes: Fix[] = [];
 
   for (const file of files) {
     const result = await execa(
       mocPath,
-      [file, "--error-format=json", "--all-libs", ...mocArgs],
+      [file, "--error-format=json", ...mocArgs],
       { stdio: "pipe", reject: false },
     );
 
@@ -114,10 +114,17 @@ export async function autofixMotoko(
   for (const [file, fixes] of fixesByFile) {
     const original = readFileSync(file, "utf-8");
     const doc = TextDocument.create(`file://${file}`, "motoko", 0, original);
-    const result = TextDocument.applyEdits(
-      doc,
-      fixes.map((f) => f.edit),
-    );
+
+    let result: string;
+    try {
+      result = TextDocument.applyEdits(
+        doc,
+        fixes.map((f) => f.edit),
+      );
+    } catch (err) {
+      console.warn(`Warning: could not apply fixes to ${file}: ${err}`);
+      continue;
+    }
 
     if (result === original) {
       continue;
@@ -137,6 +144,6 @@ export async function autofixMotoko(
 
   return {
     fixedCount: totalFixedFiles,
-    fixedErrorCounts: totalFixedCodes,
+    fixedDiagnosticCounts: totalFixedCodes,
   };
 }

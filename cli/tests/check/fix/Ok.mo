@@ -1,4 +1,4 @@
-// File with M0237 redundant implicit argument that can be auto-fixed
+// Clean file — no fixable warnings
 persistent actor {
   public func example() : async () {
     let _x : ?Text = null;

@@ -109,6 +109,7 @@ describe("check --fix", () => {
       cwd: fixDir,
     });
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBeTruthy();
+    expect(result.stdout).toContain("Attempting to fix files");
+    expect(result.stdout).toContain("No fixes were needed");
   });
 });
