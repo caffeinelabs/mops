@@ -26,42 +26,31 @@ describe("check --fix", () => {
     }
   });
 
+  function copyFixture(file: string): string {
+    const dest = path.join(runDir, file);
+    cpSync(path.join(fixDir, file), dest);
+    return dest;
+  }
+
   async function testCheckFix(
     file: string,
     expectedDiagnostics: Record<string, number>,
-    verifyContent?: { before: string; after: string },
   ): Promise<string> {
-    const runFilePath = path.join(runDir, file);
-    cpSync(path.join(fixDir, file), runFilePath);
+    const runFilePath = copyFixture(file);
     const codes = Object.keys(expectedDiagnostics);
 
-    // Verify expected diagnostics before fix
     const beforeResult = await cli(
       ["check", runFilePath, "--", ...diagnosticFlags],
       { cwd: fixDir },
     );
     expect(countCodes(beforeResult.stdout, codes)).toEqual(expectedDiagnostics);
 
-    // Verify content before fix
-    if (verifyContent) {
-      expect(readFileSync(runFilePath, "utf-8")).toContain(
-        verifyContent.before,
-      );
-    }
-
-    // Apply fix (no --error-format=json — autofixMotoko adds it internally)
     await cli(["check", runFilePath, "--fix", "--", warningFlags], {
       cwd: fixDir,
     });
 
-    // Verify content after fix
-    if (verifyContent) {
-      const after = readFileSync(runFilePath, "utf-8");
-      expect(after).toContain(verifyContent.after);
-      expect(after).not.toContain(verifyContent.before);
-    }
+    expect(readFileSync(runFilePath, "utf-8")).toMatchSnapshot();
 
-    // Verify no target diagnostics remain after fix
     const afterResult = await cli(
       ["check", runFilePath, "--", ...diagnosticFlags],
       { cwd: fixDir },
@@ -72,65 +61,35 @@ describe("check --fix", () => {
   }
 
   test("M0223", async () => {
-    await testCheckFix(
-      "M0223.mo",
-      { M0223: 1 },
-      { before: "identity<Nat>(1)", after: "identity(1)" },
-    );
+    await testCheckFix("M0223.mo", { M0223: 1 });
   });
 
   test("M0236", async () => {
-    await testCheckFix(
-      "M0236.mo",
-      { M0236: 1 },
-      { before: "List.sortInPlace(list)", after: "list.sortInPlace()" },
-    );
+    await testCheckFix("M0236.mo", { M0236: 1 });
   });
 
   test("M0237", async () => {
-    await testCheckFix(
-      "M0237.mo",
-      { M0237: 1 },
-      { before: "list.sortInPlace(Nat.compare)", after: "list.sortInPlace()" },
-    );
+    await testCheckFix("M0237.mo", { M0237: 1 });
   });
 
   test("edit-suggestions", async () => {
-    const runFilePath = await testCheckFix("edit-suggestions.mo", {
+    await testCheckFix("edit-suggestions.mo", {
       M0223: 2,
       M0236: 12,
       M0237: 17,
     });
-    expect(readFileSync(runFilePath, "utf-8")).toMatchSnapshot();
   });
 
   test("transitive imports", async () => {
-    const mainFile = "transitive-main.mo";
-    const libFile = "transitive-lib.mo";
-    const runMainPath = path.join(runDir, mainFile);
-    const runLibPath = path.join(runDir, libFile);
+    const runMainPath = copyFixture("transitive-main.mo");
+    const runLibPath = copyFixture("transitive-lib.mo");
 
-    cpSync(path.join(fixDir, mainFile), runMainPath);
-    cpSync(path.join(fixDir, libFile), runLibPath);
-
-    // Verify lib has fixable diagnostics before fix
-    expect(readFileSync(runLibPath, "utf-8")).toContain(
-      "List.sortInPlace(list)",
-    );
-
-    // Run fix on the entrypoint only
     await cli(["check", runMainPath, "--fix", "--", warningFlags], {
       cwd: fixDir,
     });
 
-    // Verify the transitively imported lib was also fixed
-    const libAfter = readFileSync(runLibPath, "utf-8");
-    expect(libAfter).toContain("list.sortInPlace()");
-    expect(libAfter).not.toContain("List.sortInPlace(list)");
+    expect(readFileSync(runLibPath, "utf-8")).toMatchSnapshot();
 
-    expect(libAfter).toMatchSnapshot();
-
-    // Verify no M0236 diagnostics remain when checking the entrypoint
     const afterResult = await cli(
       ["check", runMainPath, "--", ...diagnosticFlags],
       { cwd: fixDir },
