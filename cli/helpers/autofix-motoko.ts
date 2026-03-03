@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { execa } from "execa";
 import {
   TextDocument,
@@ -103,9 +104,10 @@ export async function autofixMotoko(
 
   const fixesByFile = new Map<string, Fix[]>();
   for (const fix of allFixes) {
-    const existing = fixesByFile.get(fix.file) ?? [];
+    const normalizedPath = resolve(fix.file);
+    const existing = fixesByFile.get(normalizedPath) ?? [];
     existing.push(fix);
-    fixesByFile.set(fix.file, existing);
+    fixesByFile.set(normalizedPath, existing);
   }
 
   let totalFixedFiles = 0;

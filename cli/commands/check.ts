@@ -35,19 +35,17 @@ export async function check(
   // --all-libs enables richer diagnostics with edit suggestions from moc (requires moc >= 1.3.0)
   const allLibs = supportsAllLibsFlag(mocPath);
 
-  if (options.verbose) {
-    if (allLibs) {
-      console.log(
-        chalk.blue("check"),
-        chalk.gray("Using --all-libs for richer diagnostics"),
-      );
-    } else {
-      console.log(
-        chalk.yellow(
-          `moc < ${MOC_ALL_LIBS_MIN_VERSION}: some diagnostic hints may be missing`,
-        ),
-      );
-    }
+  if (!allLibs) {
+    console.log(
+      chalk.yellow(
+        `moc < ${MOC_ALL_LIBS_MIN_VERSION}: some diagnostic hints may be missing`,
+      ),
+    );
+  } else if (options.verbose) {
+    console.log(
+      chalk.blue("check"),
+      chalk.gray("Using --all-libs for richer diagnostics"),
+    );
   }
 
   const mocArgs = [
