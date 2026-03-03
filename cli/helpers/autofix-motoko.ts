@@ -77,6 +77,8 @@ function extractFixes(diagnostics: MocDiagnostic[]): Fix[] {
   return fixes;
 }
 
+const MAX_FIX_ITERATIONS = 10;
+
 export async function autofixMotoko(
   mocPath: string,
   files: string[],
@@ -85,67 +87,76 @@ export async function autofixMotoko(
   fixedCount: number;
   fixedDiagnosticCounts: Record<string, number>;
 } | null> {
-  const allFixes: Fix[] = [];
-
-  for (const file of files) {
-    const result = await execa(
-      mocPath,
-      [file, "--error-format=json", ...mocArgs],
-      { stdio: "pipe", reject: false },
-    );
-
-    const diagnostics = parseDiagnostics(result.stdout);
-    allFixes.push(...extractFixes(diagnostics));
-  }
-
-  if (allFixes.length === 0) {
-    return null;
-  }
-
-  const fixesByFile = new Map<string, Fix[]>();
-  for (const fix of allFixes) {
-    const normalizedPath = resolve(fix.file);
-    const existing = fixesByFile.get(normalizedPath) ?? [];
-    existing.push(fix);
-    fixesByFile.set(normalizedPath, existing);
-  }
-
-  let totalFixedFiles = 0;
+  const fixedFiles = new Set<string>();
   const totalFixedCodes: Record<string, number> = {};
 
-  for (const [file, fixes] of fixesByFile) {
-    const original = readFileSync(file, "utf-8");
-    const doc = TextDocument.create(`file://${file}`, "motoko", 0, original);
+  for (let iteration = 0; iteration < MAX_FIX_ITERATIONS; iteration++) {
+    const allFixes: Fix[] = [];
 
-    let result: string;
-    try {
-      result = TextDocument.applyEdits(
-        doc,
-        fixes.map((f) => f.edit),
+    for (const file of files) {
+      const result = await execa(
+        mocPath,
+        [file, "--error-format=json", ...mocArgs],
+        { stdio: "pipe", reject: false },
       );
-    } catch (err) {
-      console.warn(`Warning: could not apply fixes to ${file}: ${err}`);
-      continue;
+
+      const diagnostics = parseDiagnostics(result.stdout);
+      allFixes.push(...extractFixes(diagnostics));
     }
 
-    if (result === original) {
-      continue;
+    if (allFixes.length === 0) {
+      break;
     }
 
-    writeFileSync(file, result, "utf-8");
-    totalFixedFiles++;
+    const fixesByFile = new Map<string, Fix[]>();
+    for (const fix of allFixes) {
+      const normalizedPath = resolve(fix.file);
+      const existing = fixesByFile.get(normalizedPath) ?? [];
+      existing.push(fix);
+      fixesByFile.set(normalizedPath, existing);
+    }
 
-    for (const fix of fixes) {
-      totalFixedCodes[fix.code] = (totalFixedCodes[fix.code] ?? 0) + 1;
+    let appliedInIteration = 0;
+
+    for (const [file, fixes] of fixesByFile) {
+      const original = readFileSync(file, "utf-8");
+      const doc = TextDocument.create(`file://${file}`, "motoko", 0, original);
+
+      let result: string;
+      try {
+        result = TextDocument.applyEdits(
+          doc,
+          fixes.map((f) => f.edit),
+        );
+      } catch (err) {
+        console.warn(`Warning: could not apply fixes to ${file}: ${err}`);
+        continue;
+      }
+
+      if (result === original) {
+        continue;
+      }
+
+      writeFileSync(file, result, "utf-8");
+      fixedFiles.add(file);
+      appliedInIteration++;
+
+      for (const fix of fixes) {
+        totalFixedCodes[fix.code] = (totalFixedCodes[fix.code] ?? 0) + 1;
+      }
+    }
+
+    if (appliedInIteration === 0) {
+      break;
     }
   }
 
-  if (totalFixedFiles === 0) {
+  if (fixedFiles.size === 0) {
     return null;
   }
 
   return {
-    fixedCount: totalFixedFiles,
+    fixedCount: fixedFiles.size,
     fixedDiagnosticCounts: totalFixedCodes,
   };
 }
