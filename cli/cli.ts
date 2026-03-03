@@ -308,9 +308,16 @@ program
 // check
 program
   .command("check <files...>")
-  .description("Check Motoko files for syntax errors and type issues")
+  .description(
+    "Check Motoko entrypoint files for syntax errors and type issues (including transitively imported files)",
+  )
   .option("--verbose", "Verbose console output")
-  .addOption(new Option("--fix", "Apply autofixes"))
+  .addOption(
+    new Option(
+      "--fix",
+      "Apply autofixes to all files, including transitively imported ones",
+    ),
+  )
   .allowUnknownOption(true)
   .action(async (files, options) => {
     checkConfigFile(true);

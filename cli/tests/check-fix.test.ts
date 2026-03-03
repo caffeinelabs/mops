@@ -104,6 +104,40 @@ describe("check --fix", () => {
     expect(readFileSync(runFilePath, "utf-8")).toMatchSnapshot();
   });
 
+  test("transitive imports", async () => {
+    const mainFile = "transitive-main.mo";
+    const libFile = "transitive-lib.mo";
+    const runMainPath = path.join(runDir, mainFile);
+    const runLibPath = path.join(runDir, libFile);
+
+    cpSync(path.join(fixDir, mainFile), runMainPath);
+    cpSync(path.join(fixDir, libFile), runLibPath);
+
+    // Verify lib has fixable diagnostics before fix
+    expect(readFileSync(runLibPath, "utf-8")).toContain(
+      "List.sortInPlace(list)",
+    );
+
+    // Run fix on the entrypoint only
+    await cli(["check", runMainPath, "--fix", "--", warningFlags], {
+      cwd: fixDir,
+    });
+
+    // Verify the transitively imported lib was also fixed
+    const libAfter = readFileSync(runLibPath, "utf-8");
+    expect(libAfter).toContain("list.sortInPlace()");
+    expect(libAfter).not.toContain("List.sortInPlace(list)");
+
+    expect(libAfter).toMatchSnapshot();
+
+    // Verify no M0236 diagnostics remain when checking the entrypoint
+    const afterResult = await cli(
+      ["check", runMainPath, "--", ...diagnosticFlags],
+      { cwd: fixDir },
+    );
+    expect(countCodes(afterResult.stdout, ["M0236"])).toEqual({});
+  });
+
   test("verbose", async () => {
     const result = await cli(["check", "Ok.mo", "--fix", "--verbose"], {
       cwd: fixDir,
