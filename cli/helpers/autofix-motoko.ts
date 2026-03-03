@@ -79,16 +79,18 @@ function extractFixes(diagnostics: MocDiagnostic[]): Fix[] {
 
 const MAX_FIX_ITERATIONS = 10;
 
+export interface AutofixResult {
+  /** Map of file path → diagnostic codes fixed in that file */
+  fixedFiles: Map<string, string[]>;
+  totalFixCount: number;
+}
+
 export async function autofixMotoko(
   mocPath: string,
   files: string[],
   mocArgs: string[],
-): Promise<{
-  fixedCount: number;
-  fixedDiagnosticCounts: Record<string, number>;
-} | null> {
-  const fixedFiles = new Set<string>();
-  const totalFixedCodes: Record<string, number> = {};
+): Promise<AutofixResult | null> {
+  const fixedFilesCodes = new Map<string, string[]>();
 
   for (let iteration = 0; iteration < MAX_FIX_ITERATIONS; iteration++) {
     const allFixes: Fix[] = [];
@@ -138,12 +140,13 @@ export async function autofixMotoko(
       }
 
       await writeFile(file, result, "utf-8");
-      fixedFiles.add(file);
       progress = true;
 
+      const existing = fixedFilesCodes.get(file) ?? [];
       for (const fix of fixes) {
-        totalFixedCodes[fix.code] = (totalFixedCodes[fix.code] ?? 0) + 1;
+        existing.push(fix.code);
       }
+      fixedFilesCodes.set(file, existing);
     }
 
     if (!progress) {
@@ -151,12 +154,17 @@ export async function autofixMotoko(
     }
   }
 
-  if (fixedFiles.size === 0) {
+  if (fixedFilesCodes.size === 0) {
     return null;
   }
 
+  let totalFixCount = 0;
+  for (const codes of fixedFilesCodes.values()) {
+    totalFixCount += codes.length;
+  }
+
   return {
-    fixedCount: fixedFiles.size,
-    fixedDiagnosticCounts: totalFixedCodes,
+    fixedFiles: fixedFilesCodes,
+    totalFixCount,
   };
 }

@@ -1,3 +1,4 @@
+import { relative } from "node:path";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
@@ -62,16 +63,22 @@ export async function check(
 
     const fixResult = await autofixMotoko(mocPath, fileList, mocArgs);
     if (fixResult) {
+      for (const [file, codes] of fixResult.fixedFiles) {
+        const unique = [...new Set(codes)].sort();
+        const n = codes.length;
+        const rel = relative(process.cwd(), file);
+        console.log(
+          chalk.green(
+            `Fixed ${rel} (${n} ${n === 1 ? "fix" : "fixes"}: ${unique.join(", ")})`,
+          ),
+        );
+      }
+      const fileCount = fixResult.fixedFiles.size;
       console.log(
         chalk.green(
-          `✓ Fixed ${fixResult.fixedCount} file(s) with the following fixes:`,
+          `\n✓ ${fixResult.totalFixCount} ${fixResult.totalFixCount === 1 ? "fix" : "fixes"} applied to ${fileCount} ${fileCount === 1 ? "file" : "files"}`,
         ),
       );
-      for (const [code, count] of Object.entries(
-        fixResult.fixedDiagnosticCounts,
-      )) {
-        console.log(chalk.green(`  ${code}: ${count} fix(es)`));
-      }
     } else {
       if (options.verbose) {
         console.log(chalk.yellow("No fixes were needed"));
@@ -98,7 +105,9 @@ export async function check(
         );
       }
 
-      console.log(chalk.green(`✓ ${file}`));
+      if (!options.fix) {
+        console.log(chalk.green(`✓ ${file}`));
+      }
     } catch (err: any) {
       cliError(
         `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,

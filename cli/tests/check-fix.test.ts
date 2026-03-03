@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from "@jest/globals";
 import { cpSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
 import path from "path";
 import { parseDiagnostics } from "../helpers/autofix-motoko";
-import { cli } from "./helpers";
+import { cli, normalizePaths } from "./helpers";
 
 function countCodes(stdout: string): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -43,10 +43,12 @@ describe("check --fix", () => {
     );
     expect(countCodes(beforeResult.stdout)).toEqual(expectedDiagnostics);
 
-    await cli(["check", runFilePath, "--fix", "--", warningFlags], {
-      cwd: fixDir,
-    });
+    const fixResult = await cli(
+      ["check", runFilePath, "--fix", "--", warningFlags],
+      { cwd: fixDir },
+    );
 
+    expect(normalizePaths(fixResult.stdout)).toMatchSnapshot("fix output");
     expect(readFileSync(runFilePath, "utf-8")).toMatchSnapshot();
 
     const afterResult = await cli(
@@ -82,11 +84,14 @@ describe("check --fix", () => {
     const runMainPath = copyFixture("transitive-main.mo");
     const runLibPath = copyFixture("transitive-lib.mo");
 
-    await cli(["check", runMainPath, "--fix", "--", warningFlags], {
-      cwd: fixDir,
-    });
+    const fixResult = await cli(
+      ["check", runMainPath, "--fix", "--", warningFlags],
+      { cwd: fixDir },
+    );
 
-    expect(readFileSync(runLibPath, "utf-8")).toMatchSnapshot();
+    expect(normalizePaths(fixResult.stdout)).toMatchSnapshot("fix output");
+    expect(readFileSync(runMainPath, "utf-8")).toMatchSnapshot("main file");
+    expect(readFileSync(runLibPath, "utf-8")).toMatchSnapshot("lib file");
 
     const afterResult = await cli(
       ["check", runMainPath, "--", ...diagnosticFlags],

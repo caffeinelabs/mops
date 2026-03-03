@@ -20,7 +20,7 @@ export const cli = async (args: string[], { cwd }: CliOptions = {}) => {
 const stripAnsi = (s: string) =>
   s.replace(new RegExp(`\u001b\\[[0-9;]*m`, "g"), "");
 
-const normalizePaths = (text: string): string => {
+export const normalizePaths = (text: string): string => {
   // Replace absolute paths with placeholders for CI
   return stripAnsi(
     text
