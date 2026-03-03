@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { execa } from "execa";
 import {
@@ -116,10 +116,10 @@ export async function autofixMotoko(
       fixesByFile.set(normalizedPath, existing);
     }
 
-    let appliedInIteration = 0;
+    let progress = false;
 
     for (const [file, fixes] of fixesByFile) {
-      const original = readFileSync(file, "utf-8");
+      const original = await readFile(file, "utf-8");
       const doc = TextDocument.create(`file://${file}`, "motoko", 0, original);
 
       let result: string;
@@ -137,16 +137,16 @@ export async function autofixMotoko(
         continue;
       }
 
-      writeFileSync(file, result, "utf-8");
+      await writeFile(file, result, "utf-8");
       fixedFiles.add(file);
-      appliedInIteration++;
+      progress = true;
 
       for (const fix of fixes) {
         totalFixedCodes[fix.code] = (totalFixedCodes[fix.code] ?? 0) + 1;
       }
     }
 
-    if (appliedInIteration === 0) {
+    if (!progress) {
       break;
     }
   }

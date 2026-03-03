@@ -8,8 +8,8 @@ import { toolchain } from "./toolchain/index.js";
 
 const MOC_ALL_LIBS_MIN_VERSION = "1.3.0";
 
-function supportsAllLibsFlag(mocPath: string): boolean {
-  const version = getMocSemVer(mocPath);
+function supportsAllLibsFlag(): boolean {
+  const version = getMocSemVer();
   return version ? version.compare(MOC_ALL_LIBS_MIN_VERSION) >= 0 : false;
 }
 
@@ -33,7 +33,7 @@ export async function check(
   const sources = await sourcesArgs();
 
   // --all-libs enables richer diagnostics with edit suggestions from moc (requires moc >= 1.3.0)
-  const allLibs = supportsAllLibsFlag(mocPath);
+  const allLibs = supportsAllLibsFlag();
 
   if (!allLibs) {
     console.log(
