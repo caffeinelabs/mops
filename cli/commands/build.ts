@@ -7,7 +7,7 @@ import { cliError } from "../error.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
-import { readConfig } from "../mops.js";
+import { getGlobalMocArgs, readConfig } from "../mops.js";
 import { CanisterConfig } from "../types.js";
 import { sourcesArgs } from "./sources.js";
 
@@ -85,6 +85,7 @@ export async function build(
       ...(options.extraArgs ?? []),
       ...(await sourcesArgs()).flat(),
     ];
+    args.push(...getGlobalMocArgs(config));
     if (config.build?.args) {
       if (typeof config.build.args === "string") {
         cliError(

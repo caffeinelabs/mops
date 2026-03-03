@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
+import { getGlobalMocArgs, readConfig } from "../mops.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
 import { sourcesArgs } from "./sources.js";
 
@@ -19,9 +20,16 @@ export async function check(
     cliError("No Motoko files specified for checking");
   }
 
+  let config = readConfig();
   let mocPath = getMocPath();
   let sources = await sourcesArgs();
-  const mocArgs = ["--check", ...sources.flat(), ...(options.extraArgs ?? [])];
+  const globalMocArgs = getGlobalMocArgs(config);
+  const mocArgs = [
+    "--check",
+    ...sources.flat(),
+    ...globalMocArgs,
+    ...(options.extraArgs ?? []),
+  ];
 
   for (const file of fileList) {
     try {

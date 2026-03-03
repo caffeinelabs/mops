@@ -1,5 +1,14 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`check [moc] args are passed to moc 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)
+✗ Check failed for file Warning.mo (exit code: 1)",
+  "stdout": "",
+}
+`;
+
 exports[`check error 1`] = `
 {
   "exitCode": 1,
