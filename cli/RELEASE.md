@@ -43,15 +43,39 @@ Move items from the `## Next` section in `CHANGELOG.md` into a new version headi
 
 The heading must contain the exact version string — `release-cli.ts` parses it to extract release notes.
 
-### 3. Push to `main`
+### 3. Create a release branch and PR
+
+Direct pushes to `main` are not allowed. Create a branch and PR:
 
 ```bash
-git add -A && git commit -m "prepare release X.Y.Z" && git push origin main
+git checkout -b <username>/release-X.Y.Z
 ```
 
-### 4. Check reproducibility of the build
+### 4. Bump version
 
-Check the SHA256 hash from the latest [build-hash workflow](https://github.com/caffeinelabs/mops/actions/workflows/build-hash.yml) run on CI (it builds version `0.0.0`).
+Use `--no-git-tag-version` since the version bump will be committed as part of the PR (not directly on `main`):
+
+```bash
+cd cli
+npm version minor --no-git-tag-version  # or: patch / major
+```
+
+### 5. Commit, push, and open PR
+
+```bash
+git add cli/CHANGELOG.md cli/package.json cli/package-lock.json
+git commit -m "release: CLI vX.Y.Z"
+git push -u origin <username>/release-X.Y.Z
+gh pr create --title "release: CLI vX.Y.Z" --body "..."
+```
+
+Wait for CI to pass, then merge the PR.
+
+### 6. Check reproducibility of the build
+
+After the PR is merged to `main`, check the SHA256 hash from the latest [build-hash workflow](https://github.com/caffeinelabs/mops/actions/workflows/build-hash.yml) run.
+
+**Important**: The CI hash is written to the GitHub Actions **Step Summary** — it is only visible on the **Summary tab** of the workflow run page. It does **not** appear in the downloadable logs (`gh run view --log` will not find it). You must open the run URL in a browser to see it.
 
 Build the same version locally:
 ```bash
@@ -66,25 +90,24 @@ MOPS_VERSION=0.0.0 ./build.sh
 4. Prints the SHA256 hash of `cli.tgz`
 5. Copies `cli.tgz` out of the container into `cli/bundle/cli.tgz`
 
-Compare the locally printed hash with the one from CI. If they don't match, do not proceed.
+Compare the locally printed hash with the one from the CI Step Summary. If they don't match, do not proceed.
 
-### 5. Bump version
+**Notes on the local build output:**
+- The "Verification failed" message at the end is **expected** — it happens because no `SHASUM` env var is passed for comparison. The important output is the `Actual shasum: <hash>` line.
 
-```bash
-cd cli
-npm version patch  # or: minor / major
-```
+### 7. Publish to npm
 
-### 6. Publish to npm
+After the PR is merged and the build hash is verified:
 
 ```bash
+git checkout main && git pull
 cd cli
 npm publish
 ```
 
-### 7. Prepare on-chain release
+### 8. Prepare on-chain release
 
-Run from the **repo root** (not `cli/`):
+Run from the **repo root** (not `cli/`), with Docker running:
 
 ```bash
 npm run release-cli
@@ -99,7 +122,7 @@ This runs `cli/release-cli.ts`, which:
 6. Updates `cli-releases/tags/latest` to the new version
 7. Updates `cli-releases/releases.json` with metadata (timestamp, size, hash, commit hash, download URL, release notes)
 
-### 8. Deploy the canister
+### 9. Deploy the canister
 
 ```bash
 dfx deploy --network ic --no-wallet cli --identity mops
