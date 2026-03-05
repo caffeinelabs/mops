@@ -82,10 +82,9 @@ export async function build(
       "-o",
       wasmPath,
       motokoPath,
-      ...(options.extraArgs ?? []),
       ...(await sourcesArgs()).flat(),
+      ...getGlobalMocArgs(config),
     ];
-    args.push(...getGlobalMocArgs(config));
     if (config.build?.args) {
       if (typeof config.build.args === "string") {
         cliError(
@@ -102,6 +101,7 @@ export async function build(
       }
       args.push(...canister.args);
     }
+    args.push(...(options.extraArgs ?? []));
     const isPublicCandid = true; // always true for now to reduce corner cases
     const candidVisibility = isPublicCandid ? "icp:public" : "icp:private";
     if (isPublicCandid) {

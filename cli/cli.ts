@@ -46,7 +46,9 @@ import {
   apiVersion,
   checkApiCompatibility,
   checkConfigFile,
+  getGlobalMocArgs,
   getNetworkFile,
+  readConfig,
   setNetwork,
   version,
 } from "./mops.js";
@@ -253,6 +255,19 @@ program
     await toolchain.checkToolchainInited({ strict: false });
     let sourcesArr = await sources(options);
     console.log(sourcesArr.join("\n"));
+  });
+
+// moc-args
+program
+  .command("moc-args")
+  .description("Print global moc compiler flags from [moc] config section")
+  .action(async () => {
+    checkConfigFile(true);
+    let config = readConfig();
+    let args = getGlobalMocArgs(config);
+    if (args.length) {
+      console.log(args.join("\n"));
+    }
   });
 
 // search
