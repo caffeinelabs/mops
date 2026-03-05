@@ -37,9 +37,9 @@ persistent actor {
 `;
 
 exports[`check --fix M0236: fix output 1`] = `
-"Fixed run/M0236.mo (2 fixes: M0236)
+"Fixed run/M0236.mo (1 fix: M0236)
 
-✓ 2 fixes applied to 1 file"
+✓ 1 fix applied to 1 file"
 `;
 
 exports[`check --fix M0237 1`] = `
@@ -64,7 +64,8 @@ exports[`check --fix M0237: fix output 1`] = `
 `;
 
 exports[`check --fix edit-suggestions 1`] = `
-"import Map "mo:core/Map";
+"import Array "mo:core/Array";
+import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import Text "mo:core/Text";
 import { type Order } "mo:core/Order";
@@ -173,7 +174,7 @@ do {
   ignore data.put(1, "a");
 
   // implicit at the end -> M0236 + M0237
-  ignore data.find(1, );
+  ignore Impl.find(data, 1, );
   ignore data.sort1(); // -> M0236 + M0237
   ignore Impl.sort2(data, ); // no dot suggestion (notSelf), M0237 only
 
@@ -199,20 +200,28 @@ do {
     "John",
   ); // warn M0223 + M0236 + M0237
 };
+
+// Overlapping fixable errors
+do {
+  let ar = [1, 2, 3];
+  let _ = ar.filter(func(x) { x > 0 }).filter(
+    func(x) { x > 0 },
+  );
+};
 "
 `;
 
 exports[`check --fix edit-suggestions: fix output 1`] = `
-"Fixed run/edit-suggestions.mo (41 fixes: M0223, M0236, M0237)
+"Fixed run/edit-suggestions.mo (33 fixes: M0223, M0236, M0237)
 
-✓ 41 fixes applied to 1 file"
+✓ 33 fixes applied to 1 file"
 `;
 
 exports[`check --fix transitive imports: fix output 1`] = `
-"Fixed run/transitive-lib.mo (2 fixes: M0236)
+"Fixed run/transitive-lib.mo (1 fix: M0236)
 Fixed run/transitive-main.mo (1 fix: M0223)
 
-✓ 3 fixes applied to 2 files"
+✓ 2 fixes applied to 2 files"
 `;
 
 exports[`check --fix transitive imports: lib file 1`] = `

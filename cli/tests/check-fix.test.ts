@@ -74,8 +74,8 @@ describe("check --fix", () => {
 
   test("edit-suggestions", async () => {
     await testCheckFix("edit-suggestions.mo", {
-      M0223: 2,
-      M0236: 11,
+      M0223: 3,
+      M0236: 12,
       M0237: 17,
     });
   });
@@ -98,6 +98,25 @@ describe("check --fix", () => {
       { cwd: fixDir },
     );
     expect(countCodes(afterResult.stdout)).toEqual({});
+  });
+
+  test("--error-format=human does not break --fix", async () => {
+    const runFilePath = copyFixture("M0223.mo");
+
+    const fixResult = await cli(
+      [
+        "check",
+        runFilePath,
+        "--fix",
+        "--",
+        warningFlags,
+        "--error-format=human",
+      ],
+      { cwd: fixDir },
+    );
+
+    expect(fixResult.stdout).toContain("1 fix applied");
+    expect(readFileSync(runFilePath, "utf-8")).not.toContain("<Nat>");
   });
 
   test("verbose", async () => {

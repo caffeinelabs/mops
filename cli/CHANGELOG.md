@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Fix `mops check --fix` crash on overlapping diagnostic edits (e.g., nested function calls)
 
 ## 2.1.0
 - Add `mops check --fix` subcommand (for Motoko files) with autofix logic
