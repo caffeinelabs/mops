@@ -81,7 +81,7 @@ describe("check --fix", () => {
   });
 
   test("overlapping edits", async () => {
-    await testCheckFix("overlapping.mo", { M0223: 1, M0236: 2 }, { M0194: 1 });
+    await testCheckFix("overlapping.mo", { M0223: 1, M0236: 2 });
   });
 
   test("transitive imports", async () => {

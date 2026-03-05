@@ -210,7 +210,6 @@ exports[`check --fix edit-suggestions: fix output 1`] = `
 
 exports[`check --fix overlapping edits 1`] = `
 "import Array "mo:core/Array";
-import Nat "mo:core/Nat";
 
 // Overlapping fixable errors (nested calls produce overlapping M0223 + M0236 edits)
 do {
