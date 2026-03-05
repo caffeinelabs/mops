@@ -4,12 +4,12 @@ import { exists } from "fs-extra";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { cliError } from "../error.js";
-import { getMocPath } from "../helpers/get-moc-path.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { getGlobalMocArgs, readConfig } from "../mops.js";
 import { CanisterConfig } from "../types.js";
 import { sourcesArgs } from "./sources.js";
+import { toolchain } from "./toolchain/index.js";
 
 export interface BuildOptions {
   outputDir: string;
@@ -28,7 +28,7 @@ export async function build(
   }
 
   let outputDir = options.outputDir ?? DEFAULT_BUILD_OUTPUT_DIR;
-  let mocPath = getMocPath();
+  let mocPath = await toolchain.bin("moc", { fallback: true });
   let canisters: Record<string, CanisterConfig> = {};
   let config = readConfig();
   if (config.canisters) {

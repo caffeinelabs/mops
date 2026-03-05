@@ -4,19 +4,14 @@ import chalk from "chalk";
 
 import { getDependencyType, getRootDir, readConfig } from "./mops.js";
 import { resolvePackages } from "./resolve-packages.js";
-import { getMocVersion } from "./helpers/get-moc-version.js";
+import { getMocSemVer } from "./helpers/get-moc-version.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 
 export async function checkRequirements({ verbose = false } = {}) {
-  let config = readConfig();
-  let mocVersion = config.toolchain?.moc;
-  if (!mocVersion) {
-    mocVersion = getMocVersion(false);
-  }
-  if (!mocVersion) {
+  let installedMoc = getMocSemVer();
+  if (!installedMoc) {
     return;
   }
-  let installedMoc = new SemVer(mocVersion);
   let highestRequiredMoc = new SemVer("0.0.0");
   let highestRequiredMocPkgId = "";
   let rootDir = getRootDir();

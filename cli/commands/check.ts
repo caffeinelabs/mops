@@ -1,12 +1,23 @@
+import { relative } from "node:path";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
 import { getGlobalMocArgs, readConfig } from "../mops.js";
-import { getMocPath } from "../helpers/get-moc-path.js";
+import { autofixMotoko } from "../helpers/autofix-motoko.js";
+import { getMocSemVer } from "../helpers/get-moc-version.js";
 import { sourcesArgs } from "./sources.js";
+import { toolchain } from "./toolchain/index.js";
+
+const MOC_ALL_LIBS_MIN_VERSION = "1.3.0";
+
+function supportsAllLibsFlag(): boolean {
+  const version = getMocSemVer();
+  return version ? version.compare(MOC_ALL_LIBS_MIN_VERSION) >= 0 : false;
+}
 
 export interface CheckOptions {
   verbose: boolean;
+  fix: boolean;
   extraArgs: string[];
 }
 
@@ -20,16 +31,64 @@ export async function check(
     cliError("No Motoko files specified for checking");
   }
 
-  let config = readConfig();
-  let mocPath = getMocPath();
-  let sources = await sourcesArgs();
+  const config = readConfig();
+  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const sources = await sourcesArgs();
   const globalMocArgs = getGlobalMocArgs(config);
+
+  // --all-libs enables richer diagnostics with edit suggestions from moc (requires moc >= 1.3.0)
+  const allLibs = supportsAllLibsFlag();
+
+  if (!allLibs) {
+    console.log(
+      chalk.yellow(
+        `moc < ${MOC_ALL_LIBS_MIN_VERSION}: some diagnostic hints may be missing`,
+      ),
+    );
+  } else if (options.verbose) {
+    console.log(
+      chalk.blue("check"),
+      chalk.gray("Using --all-libs for richer diagnostics"),
+    );
+  }
+
   const mocArgs = [
     "--check",
+    ...(allLibs ? ["--all-libs"] : []),
     ...sources.flat(),
     ...globalMocArgs,
     ...(options.extraArgs ?? []),
   ];
+
+  if (options.fix) {
+    if (options.verbose) {
+      console.log(chalk.blue("check"), chalk.gray("Attempting to fix files"));
+    }
+
+    const fixResult = await autofixMotoko(mocPath, fileList, mocArgs);
+    if (fixResult) {
+      for (const [file, codes] of fixResult.fixedFiles) {
+        const unique = [...new Set(codes)].sort();
+        const n = codes.length;
+        const rel = relative(process.cwd(), file);
+        console.log(
+          chalk.green(
+            `Fixed ${rel} (${n} ${n === 1 ? "fix" : "fixes"}: ${unique.join(", ")})`,
+          ),
+        );
+      }
+      const fileCount = fixResult.fixedFiles.size;
+      console.log(
+        chalk.green(
+          `\n✓ ${fixResult.totalFixCount} ${fixResult.totalFixCount === 1 ? "fix" : "fixes"} applied to ${fileCount} ${fileCount === 1 ? "file" : "files"}`,
+        ),
+      );
+    } else {
+      if (options.verbose) {
+        console.log(chalk.yellow("No fixes were needed"));
+      }
+    }
+  }
 
   for (const file of fileList) {
     try {
@@ -50,7 +109,9 @@ export async function check(
         );
       }
 
-      console.log(chalk.green(`✓ ${file}`));
+      if (!options.fix) {
+        console.log(chalk.green(`✓ ${file}`));
+      }
     } catch (err: any) {
       cliError(
         `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,

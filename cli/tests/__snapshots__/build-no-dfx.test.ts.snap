@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`build without dfx builds using mops toolchain moc 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "build canister main
+
+✓ Built 1 canister successfully",
+}
+`;
