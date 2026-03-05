@@ -83,7 +83,12 @@ export class WarningChecker {
 
       let { stderr } = await promisify(execFile)(
         mocPath,
-        ["--check", ...deps.flatMap((x) => x.split(" ")), ...globalMocArgs, file],
+        [
+          "--check",
+          ...deps.flatMap((x) => x.split(" ")),
+          ...globalMocArgs,
+          file,
+        ],
         { cwd: rootDir, signal },
       ).catch((error) => {
         if (error.code === "ABORT_ERR") {

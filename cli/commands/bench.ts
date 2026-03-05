@@ -12,7 +12,12 @@ import { filesize } from "filesize";
 import terminalSize from "terminal-size";
 import { SemVer } from "semver";
 
-import { getGlobalMocArgs, getRootDir, readConfig, readDfxJson } from "../mops.js";
+import {
+  getGlobalMocArgs,
+  getRootDir,
+  readConfig,
+  readDfxJson,
+} from "../mops.js";
 import { parallel } from "../parallel.js";
 import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";

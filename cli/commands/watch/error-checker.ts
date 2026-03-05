@@ -55,7 +55,12 @@ export class ErrorChecker {
       try {
         await promisify(execFile)(
           mocPath,
-          ["--check", ...deps.flatMap((x) => x.split(" ")), ...globalMocArgs, file],
+          [
+            "--check",
+            ...deps.flatMap((x) => x.split(" ")),
+            ...globalMocArgs,
+            file,
+          ],
           { cwd: rootDir },
         );
       } catch (error: any) {
