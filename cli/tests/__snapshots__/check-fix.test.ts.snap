@@ -64,8 +64,7 @@ exports[`check --fix M0237: fix output 1`] = `
 `;
 
 exports[`check --fix edit-suggestions 1`] = `
-"import Array "mo:core/Array";
-import Map "mo:core/Map";
+"import Map "mo:core/Map";
 import Nat "mo:core/Nat";
 import Text "mo:core/Text";
 import { type Order } "mo:core/Order";
@@ -174,7 +173,7 @@ do {
   ignore data.put(1, "a");
 
   // implicit at the end -> M0236 + M0237
-  ignore Impl.find(data, 1, );
+  ignore data.find(1, );
   ignore data.sort1(); // -> M0236 + M0237
   ignore Impl.sort2(data, ); // no dot suggestion (notSelf), M0237 only
 
@@ -200,8 +199,20 @@ do {
     "John",
   ); // warn M0223 + M0236 + M0237
 };
+"
+`;
 
-// Overlapping fixable errors
+exports[`check --fix edit-suggestions: fix output 1`] = `
+"Fixed run/edit-suggestions.mo (30 fixes: M0223, M0236, M0237)
+
+✓ 30 fixes applied to 1 file"
+`;
+
+exports[`check --fix overlapping edits 1`] = `
+"import Array "mo:core/Array";
+import Nat "mo:core/Nat";
+
+// Overlapping fixable errors (nested calls produce overlapping M0223 + M0236 edits)
 do {
   let ar = [1, 2, 3];
   let _ = ar.filter(func(x) { x > 0 }).filter(
@@ -211,10 +222,10 @@ do {
 "
 `;
 
-exports[`check --fix edit-suggestions: fix output 1`] = `
-"Fixed run/edit-suggestions.mo (33 fixes: M0223, M0236, M0237)
+exports[`check --fix overlapping edits: fix output 1`] = `
+"Fixed run/overlapping.mo (4 fixes: M0223, M0236)
 
-✓ 33 fixes applied to 1 file"
+✓ 4 fixes applied to 1 file"
 `;
 
 exports[`check --fix transitive imports: fix output 1`] = `
