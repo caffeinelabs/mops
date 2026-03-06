@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.0.1"
+    "latest": "2.1.0"
   },
   "versions": {
     "0.41.0": {
@@ -264,6 +264,14 @@
       "commitHash": "7dd0d5a05e21924c80087f94dfe255b8f23d3029",
       "url": "https://cli.mops.one/versions/2.0.1.tgz",
       "hash": "6a3db2988dd345406623c5c77f5183e6e386e53ed59bf330db056e50d983d567"
+    },
+    "2.1.0": {
+      "time": 1772654033785,
+      "size": 2544391,
+      "relseaseNotes": "* Add `mops check --fix` subcommand (for Motoko files) with autofix logic\n* Add `mops check` subcommand for type-checking Motoko files\n* Warn for `dfx` projects instead of requiring `mops toolchain init`\n* Allow specifying toolchain file paths in `mops.toml`\n* Add `mops lint` subcommand and `lintoko` toolchain management\n* Improve bench-canister Bench type to be less restrictive (by @timohanke)\n",
+      "commitHash": "8a7642e1a19015e721298daab3ea5bfa6c6c61f1",
+      "url": "https://cli.mops.one/versions/2.1.0.tgz",
+      "hash": "ba39a7bd0e3eebee5b7737255e29cba6e564fcb0cba8e17771b9ae254ff7a91a"
     }
   }
 }

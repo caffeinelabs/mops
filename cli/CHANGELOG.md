@@ -1,10 +1,15 @@
 # Mops CLI Changelog
 
 ## Next
+- Fix `mops check --fix` crash on overlapping diagnostic edits (e.g., nested function calls)
+
+## 2.1.0
+- Add `mops check --fix` subcommand (for Motoko files) with autofix logic
 - Add `mops check` subcommand for type-checking Motoko files
 - Warn for `dfx` projects instead of requiring `mops toolchain init`
 - Allow specifying toolchain file paths in `mops.toml`
 - Add `mops lint` subcommand and `lintoko` toolchain management
+- Improve bench-canister Bench type to be less restrictive (by @timohanke)
 
 ## 2.0.1
 - Patch vulnerability in `tar` dependency

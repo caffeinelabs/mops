@@ -34,7 +34,16 @@
     "check:cli": "npm run --prefix ./cli check",
     "check:frontend": "npm run --prefix ./frontend check",
     "check": "run-p check:cli check:frontend",
-    "precommit": "run-p lint check"
+    "precommit": "lint-staged && npm run check"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,html,mo}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "1.7.0",
@@ -46,6 +55,7 @@
     "eslint-plugin-prettier": "5.5.4",
     "eslint-plugin-svelte": "2.35.1",
     "husky": "9.0.11",
+    "lint-staged": "16.3.1",
     "npm-run-all": "4.1.5",
     "prettier-eslint": "16.4.2",
     "prettier-plugin-motoko": "0.12.1",
