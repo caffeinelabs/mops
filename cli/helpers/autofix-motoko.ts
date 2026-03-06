@@ -6,12 +6,6 @@ import {
   type TextEdit,
 } from "vscode-languageserver-textdocument";
 
-interface Fix {
-  file: string;
-  code: string;
-  edit: TextEdit;
-}
-
 interface MocSpan {
   file: string;
   line_start: number;
@@ -46,35 +40,127 @@ export function parseDiagnostics(stdout: string): MocDiagnostic[] {
     .filter((d) => d !== null);
 }
 
-function extractFixes(diagnostics: MocDiagnostic[]): Fix[] {
-  const fixes: Fix[] = [];
+interface DiagnosticFix {
+  code: string;
+  edits: TextEdit[];
+}
+
+function extractDiagnosticFixes(
+  diagnostics: MocDiagnostic[],
+): Map<string, DiagnosticFix[]> {
+  const result = new Map<string, DiagnosticFix[]>();
+
   for (const diag of diagnostics) {
+    const editsByFile = new Map<string, TextEdit[]>();
+
     for (const span of diag.spans) {
       if (
         span.suggestion_applicability === "MachineApplicable" &&
         span.suggested_replacement !== null
       ) {
-        fixes.push({
-          file: span.file,
-          code: diag.code,
-          edit: {
-            range: {
-              start: {
-                line: span.line_start - 1,
-                character: span.column_start - 1,
-              },
-              end: {
-                line: span.line_end - 1,
-                character: span.column_end - 1,
-              },
+        const file = resolve(span.file);
+        const edits = editsByFile.get(file) ?? [];
+        edits.push({
+          range: {
+            start: {
+              line: span.line_start - 1,
+              character: span.column_start - 1,
             },
-            newText: span.suggested_replacement,
+            end: {
+              line: span.line_end - 1,
+              character: span.column_end - 1,
+            },
           },
+          newText: span.suggested_replacement,
         });
+        editsByFile.set(file, edits);
       }
     }
+
+    for (const [file, edits] of editsByFile) {
+      const existing = result.get(file) ?? [];
+      existing.push({ code: diag.code, edits });
+      result.set(file, existing);
+    }
   }
-  return fixes;
+
+  return result;
+}
+
+type Range = TextEdit["range"];
+
+function normalizeRange(range: Range): Range {
+  const { start, end } = range;
+  if (
+    start.line > end.line ||
+    (start.line === end.line && start.character > end.character)
+  ) {
+    return { start: end, end: start };
+  }
+  return range;
+}
+
+interface OffsetEdit {
+  start: number;
+  end: number;
+  newText: string;
+}
+
+/**
+ * Applies diagnostic fixes to a document, processing each diagnostic as
+ * an atomic unit. If any edit from a diagnostic overlaps with an already-accepted
+ * edit, the entire diagnostic is skipped (picked up in subsequent iterations).
+ * Based on vscode-languageserver-textdocument's TextDocument.applyEdits.
+ */
+function applyDiagnosticFixes(
+  doc: TextDocument,
+  fixes: DiagnosticFix[],
+): { text: string; appliedCodes: string[] } {
+  const acceptedEdits: OffsetEdit[] = [];
+  const appliedCodes: string[] = [];
+
+  for (const fix of fixes) {
+    const offsets: OffsetEdit[] = fix.edits.map((e) => {
+      const range = normalizeRange(e.range);
+      return {
+        start: doc.offsetAt(range.start),
+        end: doc.offsetAt(range.end),
+        newText: e.newText,
+      };
+    });
+
+    const overlaps = offsets.some((o) =>
+      acceptedEdits.some((a) => o.start < a.end && o.end > a.start),
+    );
+    if (overlaps) {
+      continue;
+    }
+
+    acceptedEdits.push(...offsets);
+    appliedCodes.push(fix.code);
+  }
+
+  acceptedEdits.sort((a, b) => a.start - b.start);
+
+  const text = doc.getText();
+  const spans: string[] = [];
+  let lastOffset = 0;
+
+  for (const edit of acceptedEdits) {
+    if (edit.start < lastOffset) {
+      continue;
+    }
+    if (edit.start > lastOffset) {
+      spans.push(text.substring(lastOffset, edit.start));
+    }
+    if (edit.newText.length) {
+      spans.push(edit.newText);
+    }
+    lastOffset = edit.end;
+  }
+
+  spans.push(text.substring(lastOffset));
+  return { text: spans.join(""), appliedCodes };
 }
 
 const MAX_FIX_ITERATIONS = 10;
@@ -93,29 +179,25 @@ export async function autofixMotoko(
   const fixedFilesCodes = new Map<string, string[]>();
 
   for (let iteration = 0; iteration < MAX_FIX_ITERATIONS; iteration++) {
-    const allFixes: Fix[] = [];
+    const fixesByFile = new Map<string, DiagnosticFix[]>();
 
     for (const file of files) {
       const result = await execa(
         mocPath,
-        [file, "--error-format=json", ...mocArgs],
+        [file, ...mocArgs, "--error-format=json"],
         { stdio: "pipe", reject: false },
       );
 
       const diagnostics = parseDiagnostics(result.stdout);
-      allFixes.push(...extractFixes(diagnostics));
+      for (const [targetFile, fixes] of extractDiagnosticFixes(diagnostics)) {
+        const existing = fixesByFile.get(targetFile) ?? [];
+        existing.push(...fixes);
+        fixesByFile.set(targetFile, existing);
+      }
     }
 
-    if (allFixes.length === 0) {
+    if (fixesByFile.size === 0) {
       break;
-    }
-
-    const fixesByFile = new Map<string, Fix[]>();
-    for (const fix of allFixes) {
-      const normalizedPath = resolve(fix.file);
-      const existing = fixesByFile.get(normalizedPath) ?? [];
-      existing.push(fix);
-      fixesByFile.set(normalizedPath, existing);
     }
 
     let progress = false;
@@ -123,17 +205,7 @@ export async function autofixMotoko(
     for (const [file, fixes] of fixesByFile) {
       const original = await readFile(file, "utf-8");
       const doc = TextDocument.create(`file://${file}`, "motoko", 0, original);
-
-      let result: string;
-      try {
-        result = TextDocument.applyEdits(
-          doc,
-          fixes.map((f) => f.edit),
-        );
-      } catch (err) {
-        console.warn(`Warning: could not apply fixes to ${file}: ${err}`);
-        continue;
-      }
+      const { text: result, appliedCodes } = applyDiagnosticFixes(doc, fixes);
 
       if (result === original) {
         continue;
@@ -143,9 +215,7 @@ export async function autofixMotoko(
       progress = true;
 
       const existing = fixedFilesCodes.get(file) ?? [];
-      for (const fix of fixes) {
-        existing.push(fix.code);
-      }
+      existing.push(...appliedCodes);
       fixedFilesCodes.set(file, existing);
     }
 
