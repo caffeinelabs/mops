@@ -37,9 +37,9 @@ persistent actor {
 `;
 
 exports[`check --fix M0236: fix output 1`] = `
-"Fixed run/M0236.mo (2 fixes: M0236)
+"Fixed run/M0236.mo (1 fix: M0236)
 
-✓ 2 fixes applied to 1 file"
+✓ 1 fix applied to 1 file"
 `;
 
 exports[`check --fix M0237 1`] = `
@@ -203,16 +203,35 @@ do {
 `;
 
 exports[`check --fix edit-suggestions: fix output 1`] = `
-"Fixed run/edit-suggestions.mo (41 fixes: M0223, M0236, M0237)
+"Fixed run/edit-suggestions.mo (30 fixes: M0223, M0236, M0237)
 
-✓ 41 fixes applied to 1 file"
+✓ 30 fixes applied to 1 file"
+`;
+
+exports[`check --fix overlapping edits 1`] = `
+"import Array "mo:core/Array";
+
+// Overlapping fixable errors (nested calls produce overlapping M0223 + M0236 edits)
+do {
+  let ar = [1, 2, 3];
+  let _ = ar.filter(func(x) { x > 0 }).filter(
+    func(x) { x > 0 },
+  );
+};
+"
+`;
+
+exports[`check --fix overlapping edits: fix output 1`] = `
+"Fixed run/overlapping.mo (4 fixes: M0223, M0236)
+
+✓ 4 fixes applied to 1 file"
 `;
 
 exports[`check --fix transitive imports: fix output 1`] = `
-"Fixed run/transitive-lib.mo (2 fixes: M0236)
+"Fixed run/transitive-lib.mo (1 fix: M0236)
 Fixed run/transitive-main.mo (1 fix: M0223)
 
-✓ 3 fixes applied to 2 files"
+✓ 2 fixes applied to 2 files"
 `;
 
 exports[`check --fix transitive imports: lib file 1`] = `

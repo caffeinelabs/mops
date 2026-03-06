@@ -80,6 +80,10 @@ describe("check --fix", () => {
     });
   });
 
+  test("overlapping edits", async () => {
+    await testCheckFix("overlapping.mo", { M0223: 1, M0236: 2 });
+  });
+
   test("transitive imports", async () => {
     const runMainPath = copyFixture("transitive-main.mo");
     const runLibPath = copyFixture("transitive-lib.mo");
@@ -98,6 +102,25 @@ describe("check --fix", () => {
       { cwd: fixDir },
     );
     expect(countCodes(afterResult.stdout)).toEqual({});
+  });
+
+  test("--error-format=human does not break --fix", async () => {
+    const runFilePath = copyFixture("M0223.mo");
+
+    const fixResult = await cli(
+      [
+        "check",
+        runFilePath,
+        "--fix",
+        "--",
+        warningFlags,
+        "--error-format=human",
+      ],
+      { cwd: fixDir },
+    );
+
+    expect(fixResult.stdout).toContain("1 fix applied");
+    expect(readFileSync(runFilePath, "utf-8")).not.toContain("<Nat>");
   });
 
   test("verbose", async () => {
