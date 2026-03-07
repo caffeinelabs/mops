@@ -43,4 +43,9 @@ describe("check", () => {
     expect(result.stderr).toMatch(/warning \[M0194\]/);
     expect(result.stderr).toMatch(/unused identifier/);
   });
+
+  test("[moc] args are passed to moc", async () => {
+    const cwd = path.join(import.meta.dirname, "check/moc-args");
+    await cliSnapshot(["check", "Warning.mo"], { cwd }, 1);
+  });
 });

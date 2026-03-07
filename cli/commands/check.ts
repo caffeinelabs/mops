@@ -2,6 +2,7 @@ import { relative } from "node:path";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
+import { getGlobalMocArgs, readConfig } from "../mops.js";
 import { autofixMotoko } from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import { sourcesArgs } from "./sources.js";
@@ -30,8 +31,10 @@ export async function check(
     cliError("No Motoko files specified for checking");
   }
 
+  const config = readConfig();
   const mocPath = await toolchain.bin("moc", { fallback: true });
   const sources = await sourcesArgs();
+  const globalMocArgs = getGlobalMocArgs(config);
 
   // --all-libs enables richer diagnostics with edit suggestions from moc (requires moc >= 1.3.0)
   const allLibs = supportsAllLibsFlag();
@@ -53,6 +56,7 @@ export async function check(
     "--check",
     ...(allLibs ? ["--all-libs"] : []),
     ...sources.flat(),
+    ...globalMocArgs,
     ...(options.extraArgs ?? []),
   ];
 
