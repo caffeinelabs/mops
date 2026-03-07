@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { cliError } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
-import { readConfig } from "../mops.js";
+import { getGlobalMocArgs, readConfig } from "../mops.js";
 import { CanisterConfig } from "../types.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
@@ -82,8 +82,8 @@ export async function build(
       "-o",
       wasmPath,
       motokoPath,
-      ...(options.extraArgs ?? []),
       ...(await sourcesArgs()).flat(),
+      ...getGlobalMocArgs(config),
     ];
     if (config.build?.args) {
       if (typeof config.build.args === "string") {
@@ -101,6 +101,7 @@ export async function build(
       }
       args.push(...canister.args);
     }
+    args.push(...(options.extraArgs ?? []));
     const isPublicCandid = true; // always true for now to reduce corner cases
     const candidVisibility = isPublicCandid ? "icp:public" : "icp:private";
     if (isPublicCandid) {

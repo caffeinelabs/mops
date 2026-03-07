@@ -19,6 +19,9 @@ export type Config = {
   "dev-dependencies"?: Dependencies;
   toolchain?: Toolchain;
   requirements?: Requirements;
+  moc?: {
+    args?: string[];
+  };
   canisters?: Record<string, string | CanisterConfig>;
   build?: {
     outputDir?: string;
