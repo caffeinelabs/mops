@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.2.0
 - Add `[moc]` config section for global `moc` compiler flags (applied to `check`, `build`, `test`, `bench`, `watch`)
 - Add `mops moc-args` command to print global `moc` flags from `[moc]` config section
 - Fix `mops check --fix` crash on overlapping diagnostic edits (e.g., nested function calls)
