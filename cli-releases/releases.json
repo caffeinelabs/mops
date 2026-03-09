@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.1.0"
+    "latest": "2.2.0"
   },
   "versions": {
     "0.41.0": {
@@ -272,6 +272,14 @@
       "commitHash": "8a7642e1a19015e721298daab3ea5bfa6c6c61f1",
       "url": "https://cli.mops.one/versions/2.1.0.tgz",
       "hash": "ba39a7bd0e3eebee5b7737255e29cba6e564fcb0cba8e17771b9ae254ff7a91a"
+    },
+    "2.2.0": {
+      "time": 1773049166037,
+      "size": 2545193,
+      "relseaseNotes": "* Add `[moc]` config section for global `moc` compiler flags (applied to `check`, `build`, `test`, `bench`, `watch`)\n* Add `mops moc-args` command to print global `moc` flags from `[moc]` config section\n* Fix `mops check --fix` crash on overlapping diagnostic edits (e.g., nested function calls)\n",
+      "commitHash": "0081c5edb69f2545e3497a56eeb4a7b2315e2169",
+      "url": "https://cli.mops.one/versions/2.2.0.tgz",
+      "hash": "249e3be491388cc0363c861a7c8b67a7b81cc84881bf605042fd9b066c5dda6e"
     }
   }
 }
