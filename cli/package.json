@@ -84,7 +84,7 @@
     "pic-ic": "0.5.4",
     "pic-js-mops": "0.14.8",
     "prettier": "3.5.3",
-    "prettier-plugin-motoko": "0.12.5",
+    "prettier-plugin-motoko": "0.13.0",
     "promisify-child-process": "4.1.2",
     "prompts": "2.4.2",
     "semver": "7.7.1",

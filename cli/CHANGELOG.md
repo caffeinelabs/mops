@@ -4,6 +4,7 @@
 
 ## 2.2.1
 - Fix `mops toolchain` when toolchain version is a local file path with subdirectories.
+- Update Motoko formatter (`prettier-plugin-motoko`).
 
 ## 2.2.0
 - Add `[moc]` config section for global `moc` compiler flags (applied to `check`, `build`, `test`, `bench`, `watch`)
