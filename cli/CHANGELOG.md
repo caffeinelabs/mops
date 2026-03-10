@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.2.1
 - Fix `mops toolchain` when toolchain version is a local file path with subdirectories.
 
 ## 2.2.0
