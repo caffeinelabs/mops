@@ -174,6 +174,10 @@ async function download(
   version: string,
   { silent = false, verbose = false } = {},
 ) {
+  if (version.match(FILE_PATH_REGEX)) {
+    return;
+  }
+
   let toolUtils = getToolUtils(tool);
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
