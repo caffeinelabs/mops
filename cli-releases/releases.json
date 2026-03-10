@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.2.0"
+    "latest": "2.2.1"
   },
   "versions": {
     "0.41.0": {
@@ -280,6 +280,14 @@
       "commitHash": "0081c5edb69f2545e3497a56eeb4a7b2315e2169",
       "url": "https://cli.mops.one/versions/2.2.0.tgz",
       "hash": "249e3be491388cc0363c861a7c8b67a7b81cc84881bf605042fd9b066c5dda6e"
+    },
+    "2.2.1": {
+      "time": 1773166687524,
+      "size": 2837516,
+      "relseaseNotes": "* Fix `mops toolchain` when toolchain version is a local file path with subdirectories.\n* Update Motoko formatter (`prettier-plugin-motoko`).\n",
+      "commitHash": "a0916c0213e73745e5f5eb1fa076289841042907",
+      "url": "https://cli.mops.one/versions/2.2.1.tgz",
+      "hash": "7238c839c52a79efa3b26b9d2bdfb4cfbb4292247f1cffbcd78941e1a11f90a4"
     }
   }
 }
