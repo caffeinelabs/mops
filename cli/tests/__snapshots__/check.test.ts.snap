@@ -54,7 +54,7 @@ exports[`check ok 2`] = `
   "stderr": "",
   "stdout": "check Using --all-libs for richer diagnostics
 check Running moc:
-<CACHE>moc-wrapper ["Ok.mo","--check","--all-libs","--package","core",".mops/core@2.0.0/src","--default-persistent-actors"]
+<CACHE>moc-wrapper ["Ok.mo","--check","--all-libs","--default-persistent-actors"]
 ✓ Ok.mo",
 }
 `;
@@ -75,7 +75,7 @@ exports[`check warning verbose 1`] = `
 help: if this is intentional, prefix it with an underscore: \`_unused\`",
   "stdout": "check Using --all-libs for richer diagnostics
 check Running moc:
-<CACHE>moc-wrapper ["Warning.mo","--check","--all-libs","--package","core",".mops/core@2.0.0/src","--default-persistent-actors"]
+<CACHE>moc-wrapper ["Warning.mo","--check","--all-libs","--default-persistent-actors"]
 ✓ Warning.mo",
 }
 `;
