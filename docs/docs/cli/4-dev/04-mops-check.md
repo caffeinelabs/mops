@@ -45,6 +45,14 @@ One or more paths to Motoko files to check. At least one file is required.
 
 ## Options
 
+### `--fix`
+
+Automatically apply fixes for supported diagnostics, including transitively imported files. Fixed files and the applied fix codes are printed to the console.
+
+```
+mops check --fix src/main.mo
+```
+
 ### `--verbose`
 
 Print the full `moc` invocation before running it.
