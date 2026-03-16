@@ -27,9 +27,6 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: 1.2.17
 
       - uses: dfinity/setup-dfx@main
 
@@ -45,7 +42,14 @@ jobs:
             ~/Library/Caches/mops
 
       - name: Install npm packages
-        run: bun install
+        run: |
+          npm ci --ignore-scripts &
+          (cd frontend && npm ci) &
+          (cd cli && npm ci) &
+          (cd docs && npm ci) &
+          (cd blog && npm ci) &
+          (cd cli-releases && npm ci) &
+          wait
 
       - name: Build local cli
         if: ${{ matrix.mops-version == './cli/dist' }}
@@ -66,17 +70,13 @@ jobs:
       - name: Deploy backend
         run: npm run deploy-local
 
-      - name: Build frontend
-        run: npm run build-frontend
-
-      - name: Build docs
-        run: npm run build-docs
-
-      - name: Build blog
-        run: npm run build-blog
-
-      - name: Build CLI releases
-        run: npm run build-cli-releases
+      - name: Build frontend, docs, blog, and CLI releases
+        run: |
+          npm run build-frontend &
+          npm run build-docs &
+          npm run build-blog &
+          npm run build-cli-releases &
+          wait
 
       # Jest runs test suites in parallel. Toolchain binaries and package
       # dependencies used by test fixtures must be pre-installed here so

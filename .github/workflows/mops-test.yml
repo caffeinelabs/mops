@@ -16,16 +16,45 @@ jobs:
         mops-version:
           [
             ./cli/dist,
-            ic-mops,
-            ic-mops@1.0.0,
-            "https://cli.mops.one/versions/latest.tgz",
           ]
         moc-version: [0.14.13]
         node-version: [20, 24]
         runner: [ubuntu-latest]
+        include:
+          - mops-version: ic-mops
+            moc-version: 0.14.13
+            node-version: 20
+            runner: ubuntu-latest
+            push-only: true
+          - mops-version: ic-mops
+            moc-version: 0.14.13
+            node-version: 24
+            runner: ubuntu-latest
+            push-only: true
+          - mops-version: ic-mops@1.0.0
+            moc-version: 0.14.13
+            node-version: 20
+            runner: ubuntu-latest
+            push-only: true
+          - mops-version: ic-mops@1.0.0
+            moc-version: 0.14.13
+            node-version: 24
+            runner: ubuntu-latest
+            push-only: true
+          - mops-version: "https://cli.mops.one/versions/latest.tgz"
+            moc-version: 0.14.13
+            node-version: 20
+            runner: ubuntu-latest
+            push-only: true
+          - mops-version: "https://cli.mops.one/versions/latest.tgz"
+            moc-version: 0.14.13
+            node-version: 24
+            runner: ubuntu-latest
+            push-only: true
 
     runs-on: ${{ matrix.runner }}
     name: ${{ matrix.runner }}, node ${{ matrix.node-version }}, moc ${{ matrix.moc-version }}, ${{ matrix.mops-version }}
+    if: ${{ !matrix.push-only || github.event_name == 'push' }}
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -51,7 +80,7 @@ jobs:
 
       - name: Install npm packages
         if: ${{ matrix.mops-version == './cli/dist' }}
-        run: cd cli && npm install
+        run: cd cli && npm ci
 
       - name: Build local cli
         if: ${{ matrix.mops-version == './cli/dist' }}
