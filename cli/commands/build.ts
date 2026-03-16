@@ -5,9 +5,9 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { cliError } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
+import { resolveCanisterConfigs } from "../helpers/resolve-canisters.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { getGlobalMocArgs, readConfig } from "../mops.js";
-import { CanisterConfig } from "../types.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -29,16 +29,8 @@ export async function build(
 
   let outputDir = options.outputDir ?? DEFAULT_BUILD_OUTPUT_DIR;
   let mocPath = await toolchain.bin("moc", { fallback: true });
-  let canisters: Record<string, CanisterConfig> = {};
   let config = readConfig();
-  if (config.canisters) {
-    canisters =
-      Object.fromEntries(
-        Object.entries(config.canisters).map(([name, c]) =>
-          typeof c === "string" ? [name, { main: c }] : [name, c],
-        ),
-      ) ?? {};
-  }
+  let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {
     cliError(`No Motoko canisters found in mops.toml configuration`);
   }

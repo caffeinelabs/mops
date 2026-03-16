@@ -12,6 +12,7 @@ import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
 import { bump } from "./commands/bump.js";
 import { check } from "./commands/check.js";
 import { checkCandid } from "./commands/check-candid.js";
+import { checkStable } from "./commands/check-stable.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
@@ -322,9 +323,9 @@ program
 
 // check
 program
-  .command("check <files...>")
+  .command("check [files...]")
   .description(
-    "Check Motoko entrypoint files for syntax errors and type issues (including transitively imported files)",
+    "Check Motoko files for syntax errors and type issues. If no files are specified, checks all canister entrypoints from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured",
   )
   .option("--verbose", "Verbose console output")
   .addOption(
@@ -360,6 +361,28 @@ program
       installFromLockFile: true,
     });
     await checkCandid(newCandid, originalCandid);
+  });
+
+// check-stable
+program
+  .command("check-stable <old-file> [canister]")
+  .description(
+    "Check stable variable compatibility between an old version (.mo or .most file) and the current canister entrypoint",
+  )
+  .option("--verbose", "Verbose console output")
+  .allowUnknownOption(true)
+  .action(async (oldFile, canister, options) => {
+    checkConfigFile(true);
+    const { extraArgs } = parseExtraArgs();
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await checkStable(oldFile, canister, {
+      ...options,
+      extraArgs,
+    });
   });
 
 // test

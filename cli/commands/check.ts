@@ -1,10 +1,16 @@
 import { relative } from "node:path";
+import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
 import { getGlobalMocArgs, readConfig } from "../mops.js";
 import { autofixMotoko } from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
+import {
+  resolveCanisterConfigs,
+  resolveCanisterEntrypoints,
+} from "../helpers/resolve-canisters.js";
+import { runStableCheck } from "./check-stable.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -25,13 +31,23 @@ export async function check(
   files: string | string[],
   options: Partial<CheckOptions> = {},
 ): Promise<void> {
-  const fileList = Array.isArray(files) ? files : [files];
-
-  if (fileList.length === 0) {
-    cliError("No Motoko files specified for checking");
-  }
+  let fileList = Array.isArray(files) ? files : files ? [files] : [];
 
   const config = readConfig();
+
+  if (fileList.length === 0) {
+    fileList = resolveCanisterEntrypoints(config);
+  }
+
+  if (fileList.length === 0) {
+    cliError(
+      "No Motoko files specified and no canisters defined in mops.toml.\n" +
+        "Either pass files: mops check <files...>\n" +
+        "Or define canisters in mops.toml:\n\n" +
+        "  [canisters.backend]\n" +
+        '  main = "src/main.mo"',
+    );
+  }
   const mocPath = await toolchain.bin("moc", { fallback: true });
   const sources = await sourcesArgs();
   const globalMocArgs = getGlobalMocArgs(config);
@@ -109,13 +125,44 @@ export async function check(
         );
       }
 
-      if (!options.fix) {
-        console.log(chalk.green(`✓ ${file}`));
-      }
+      console.log(chalk.green(`✓ ${file}`));
     } catch (err: any) {
       cliError(
         `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,
       );
     }
+  }
+
+  const canisters = resolveCanisterConfigs(config);
+  for (const [name, canister] of Object.entries(canisters)) {
+    const stableConfig = canister["check-stable"];
+    if (!stableConfig) {
+      continue;
+    }
+
+    if (!canister.main) {
+      cliError(`No main file specified for canister '${name}' in mops.toml`);
+    }
+
+    if (!existsSync(stableConfig.path)) {
+      if (stableConfig.skipIfMissing) {
+        continue;
+      }
+      cliError(
+        `Deployed file not found: ${stableConfig.path} (canister '${name}')\n` +
+          "Set skipIfMissing = true in [canisters." +
+          name +
+          ".check-stable] to skip this check when the file is missing.",
+      );
+    }
+
+    await runStableCheck({
+      oldFile: stableConfig.path,
+      canisterMain: canister.main,
+      canisterName: name,
+      mocPath,
+      globalMocArgs,
+      options: { verbose: options.verbose, extraArgs: options.extraArgs },
+    });
   }
 }

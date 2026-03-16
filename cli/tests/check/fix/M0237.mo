@@ -3,7 +3,7 @@
 import List "mo:core/List";
 import Nat "mo:core/Nat";
 
-persistent actor {
+actor {
   public func testM0237() : async () {
     let list = List.fromArray<Nat>([3, 2, 1]);
     list.sortInPlace(Nat.compare);
