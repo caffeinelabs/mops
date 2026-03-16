@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "path";
 import { cli, cliSnapshot } from "./helpers";
@@ -36,10 +36,21 @@ describe("check-stable", () => {
   test("compatible upgrade from .most file", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/compatible");
     const tempDir = await mkdtemp(path.join(tmpdir(), "mops-test-most-"));
-    const mostPath = path.join(tempDir, "old.most");
-    await writeFile(mostPath, "actor {\n  stable var counter : Nat\n};\n");
-    const result = await cli(["check-stable", mostPath], { cwd });
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+    try {
+      const mostPath = path.join(tempDir, "old.most");
+      await writeFile(mostPath, "actor {\n  stable var counter : Nat\n};\n");
+      const result = await cli(["check-stable", mostPath], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toMatch(/Stable compatibility check passed/);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("errors when old file does not exist", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/compatible");
+    const result = await cli(["check-stable", "nonexistent.mo"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/File not found/);
   });
 });
