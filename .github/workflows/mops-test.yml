@@ -13,7 +13,13 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        mops-version: [./cli/dist]
+        mops-version:
+          [
+            ./cli/dist,
+            ic-mops,
+            ic-mops@1.0.0,
+            "https://cli.mops.one/versions/latest.tgz",
+          ]
         moc-version: [0.14.13]
         node-version: [20, 24]
         runner: [ubuntu-latest]
@@ -50,58 +56,6 @@ jobs:
       - name: Build local cli
         if: ${{ matrix.mops-version == './cli/dist' }}
         run: cd cli && npm run prepare
-
-      - name: Install mops
-        run: npm i -g ${{ matrix.mops-version }}
-
-      - name: Install mops packages
-        run: mops install
-
-      - name: Print resolved mops packages
-        run: mops sources
-
-      - name: Select moc version
-        run: mops toolchain use moc ${{ matrix.moc-version }}
-
-      - name: Run tests
-        run: mops test
-
-  test-published:
-    if: github.event_name == 'push'
-    strategy:
-      max-parallel: 4
-      fail-fast: false
-      matrix:
-        mops-version:
-          [ic-mops, ic-mops@1.0.0, "https://cli.mops.one/versions/latest.tgz"]
-        moc-version: [0.14.13]
-        node-version: [20, 24]
-        runner: [ubuntu-latest]
-
-    runs-on: ${{ matrix.runner }}
-    name: ${{ matrix.runner }}, node ${{ matrix.node-version }}, moc ${{ matrix.moc-version }}, ${{ matrix.mops-version }}
-
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: 1.2.17
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: "npm"
-      - uses: dfinity/setup-dfx@main
-      - run: dfx cache install
-      - name: Cache mops packages
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          key: mops-packages-${{ runner.os }}-${{ hashFiles('mops.toml') }}
-          restore-keys: |
-            mops-packages-${{ runner.os }}-${{ hashFiles('mops.toml') }}
-            mops-packages-${{ runner.os }}
-          path: |
-            ~/.cache/mops
-            ~/Library/Caches/mops
 
       - name: Install mops
         run: npm i -g ${{ matrix.mops-version }}
