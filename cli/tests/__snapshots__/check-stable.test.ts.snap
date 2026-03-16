@@ -1,0 +1,29 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`check-stable compatible upgrade from .mo file 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Stable compatibility check passed for canister 'backend'",
+}
+`;
+
+exports[`check-stable incompatible upgrade from .mo file 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "(unknown location): Compatibility error [M0170], the new type of stable variable \`counter\` is not compatible with the previous version.
+ The previous type
+  var Nat
+ is not a subtype of
+  var Text
+ because: The type 
+  Nat
+ is not compatible with type 
+  Text
+ in counter.
+ Write an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function.
+(unknown location): Compatibility error [M0169], the stable variable \`name\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
+✖ Stable compatibility check failed for canister 'backend'",
+  "stdout": "",
+}
+`;

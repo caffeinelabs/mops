@@ -31,6 +31,15 @@ exports[`check error 2`] = `
 }
 `;
 
+exports[`check no args falls back to [canisters] entrypoints 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "moc < 1.3.0: some diagnostic hints may be missing
+✓ Ok.mo",
+}
+`;
+
 exports[`check ok 1`] = `
 {
   "exitCode": 0,

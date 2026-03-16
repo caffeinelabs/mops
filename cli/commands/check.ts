@@ -5,6 +5,7 @@ import { cliError } from "../error.js";
 import { getGlobalMocArgs, readConfig } from "../mops.js";
 import { autofixMotoko } from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
+import { resolveCanisterEntrypoints } from "../helpers/resolve-canisters.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -25,13 +26,23 @@ export async function check(
   files: string | string[],
   options: Partial<CheckOptions> = {},
 ): Promise<void> {
-  const fileList = Array.isArray(files) ? files : [files];
-
-  if (fileList.length === 0) {
-    cliError("No Motoko files specified for checking");
-  }
+  let fileList = Array.isArray(files) ? files : files ? [files] : [];
 
   const config = readConfig();
+
+  if (fileList.length === 0) {
+    fileList = resolveCanisterEntrypoints(config);
+  }
+
+  if (fileList.length === 0) {
+    cliError(
+      "No Motoko files specified and no canisters defined in mops.toml.\n" +
+        "Either pass files: mops check <files...>\n" +
+        "Or define canisters in mops.toml:\n\n" +
+        "  [canisters.backend]\n" +
+        '  main = "src/main.mo"',
+    );
+  }
   const mocPath = await toolchain.bin("moc", { fallback: true });
   const sources = await sourcesArgs();
   const globalMocArgs = getGlobalMocArgs(config);

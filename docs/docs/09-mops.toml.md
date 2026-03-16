@@ -88,7 +88,7 @@ Use `mops moc-args` to print the moc flags defined in `mops.toml` (useful when i
 
 ## [canisters]
 
-Define Motoko canisters for [`mops build`](/cli/mops-build).
+Define Motoko canisters for [`mops build`](/cli/mops-build), [`mops check`](/cli/mops-check), and [`mops check-stable`](/cli/mops-check-stable).
 
 Each canister entry specifies the entrypoint file and optional compiler settings.
 
