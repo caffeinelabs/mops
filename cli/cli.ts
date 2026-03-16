@@ -325,7 +325,7 @@ program
 program
   .command("check [files...]")
   .description(
-    "Check Motoko files for syntax errors and type issues. If no files are specified, checks all canister entrypoints from mops.toml",
+    "Check Motoko files for syntax errors and type issues. If no files are specified, checks all canister entrypoints from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured",
   )
   .option("--verbose", "Verbose console output")
   .addOption(
