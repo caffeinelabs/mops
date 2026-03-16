@@ -13,10 +13,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
       matrix:
-        mops-version:
-          [
-            ./cli/dist,
-          ]
+        mops-version: [./cli/dist]
         moc-version: [0.14.13]
         node-version: [20, 24]
         runner: [ubuntu-latest]
