@@ -108,6 +108,22 @@ candid = "candid/backend.did"
 initArg = "(\"Hello\")"
 ```
 
+### `[canisters.<name>.check-stable]`
+
+Configure automatic stable variable compatibility checking for a canister. When set, [`mops check`](/cli/mops-check) will verify that the current canister is compatible with the deployed version.
+
+| Field         | Description                                                     |
+| ------------- | --------------------------------------------------------------- |
+| path          | Path to the deployed version's `.most` or `.mo` file (required). A `.most` file is preferred; when a `.mo` file is provided, stable types are generated from it (the file must compile successfully) |
+| skipIfMissing | If `true`, skip the stable check with a warning when the file doesn't exist (default: `false`) |
+
+Example:
+```toml
+[canisters.backend.check-stable]
+path = ".old/src/main.most"
+skipIfMissing = true
+```
+
 Shorthand — when only the entrypoint is needed:
 ```toml
 [canisters]

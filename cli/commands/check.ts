@@ -1,11 +1,16 @@
 import { relative } from "node:path";
+import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
 import { getGlobalMocArgs, readConfig } from "../mops.js";
 import { autofixMotoko } from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
-import { resolveCanisterEntrypoints } from "../helpers/resolve-canisters.js";
+import {
+  resolveCanisterConfigs,
+  resolveCanisterEntrypoints,
+} from "../helpers/resolve-canisters.js";
+import { runStableCheck } from "./check-stable.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -128,5 +133,40 @@ export async function check(
         `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,
       );
     }
+  }
+
+  const canisters = resolveCanisterConfigs(config);
+  for (const [name, canister] of Object.entries(canisters)) {
+    const stableConfig = canister["check-stable"];
+    if (!stableConfig) {
+      continue;
+    }
+
+    if (!existsSync(stableConfig.path)) {
+      if (stableConfig.skipIfMissing) {
+        console.log(
+          chalk.yellow(
+            `⚠ Deployed file not found at ${stableConfig.path} — skipping stable check for canister '${name}' (expected for initial deployments)`,
+          ),
+        );
+        continue;
+      }
+      cliError(
+        `Deployed file not found: ${stableConfig.path} (canister '${name}')\n` +
+          "Set skipIfMissing = true in [canisters." +
+          name +
+          ".check-stable] to skip this check when the file is missing.",
+      );
+    }
+
+    await runStableCheck({
+      oldFile: stableConfig.path,
+      canisterMain: canister.main,
+      canisterName: name,
+      mocPath,
+      rawSources: sources,
+      globalMocArgs,
+      options: { verbose: options.verbose, extraArgs: options.extraArgs },
+    });
   }
 }

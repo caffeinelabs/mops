@@ -76,6 +76,28 @@ mops check -- -Werror
 Global `moc` flags can be configured in `mops.toml` under `[moc].args` so they don't need to be passed on every invocation. See [`mops.toml` reference](/mops.toml#moc).
 :::
 
+## Stable compatibility checking
+
+When a canister has a `[canisters.<name>.check-stable]` section in `mops.toml`, `mops check` automatically runs a stable compatibility check after type-checking. This compares the deployed version against the current canister entrypoint to catch breaking changes to stable variables before deployment.
+
+```toml
+[canisters.backend]
+main = "src/main.mo"
+
+[canisters.backend.check-stable]
+path = ".old/src/main.most"
+```
+
+If the file at `path` doesn't exist, the check fails with an error. To skip the stable check when the file is missing (useful for initial deployments where no previous version exists), set `skipIfMissing = true`:
+
+```toml
+[canisters.backend.check-stable]
+path = ".old/src/main.most"
+skipIfMissing = true
+```
+
+For more details, see [`mops check-stable`](/cli/mops-check-stable).
+
 :::info
 `mops check` only type-checks files — it does not produce any compiled output. To compile canisters, use [`mops build`](/cli/mops-build).
 :::

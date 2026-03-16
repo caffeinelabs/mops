@@ -29,13 +29,49 @@ export async function checkStable(
 
   const mocPath = await toolchain.bin("moc", { fallback: true });
   const rawSources = await sourcesArgs();
-  for (const entry of rawSources) {
-    if (entry[2]) {
-      entry[2] = resolve(entry[2]);
-    }
-  }
-  const sources = rawSources.flat();
   const globalMocArgs = getGlobalMocArgs(config);
+
+  await runStableCheck({
+    oldFile,
+    canisterMain: canister.main,
+    canisterName: name,
+    mocPath,
+    rawSources,
+    globalMocArgs,
+    options,
+  });
+}
+
+export interface RunStableCheckParams {
+  oldFile: string;
+  canisterMain: string;
+  canisterName: string;
+  mocPath: string;
+  rawSources: string[][];
+  globalMocArgs: string[];
+  options?: Partial<CheckStableOptions>;
+}
+
+export async function runStableCheck(
+  params: RunStableCheckParams,
+): Promise<void> {
+  const {
+    oldFile,
+    canisterMain,
+    canisterName,
+    mocPath,
+    rawSources,
+    globalMocArgs,
+    options = {},
+  } = params;
+
+  const sources = rawSources.flatMap((entry) => {
+    if (entry[2]) {
+      return [entry[0]!, entry[1]!, resolve(entry[2])];
+    }
+    return [...entry];
+  });
+
   const isOldMostFile = oldFile.endsWith(".most");
 
   if (!existsSync(oldFile)) {
@@ -58,7 +94,7 @@ export async function checkStable(
 
     const newMostPath = await generateStableTypes(
       mocPath,
-      canister.main,
+      canisterMain,
       join(tempDir, "new.most"),
       tempDir,
       sources,
@@ -87,11 +123,15 @@ export async function checkStable(
       if (result.stderr) {
         console.error(result.stderr);
       }
-      cliError(`✖ Stable compatibility check failed for canister '${name}'`);
+      cliError(
+        `✖ Stable compatibility check failed for canister '${canisterName}'`,
+      );
     }
 
     console.log(
-      chalk.green(`✓ Stable compatibility check passed for canister '${name}'`),
+      chalk.green(
+        `✓ Stable compatibility check passed for canister '${canisterName}'`,
+      ),
     );
   } finally {
     await rm(tempDir, { recursive: true, force: true });

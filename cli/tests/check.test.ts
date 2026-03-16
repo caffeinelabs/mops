@@ -73,4 +73,27 @@ describe("check", () => {
     const result = await cli(["check", "--fix"], { cwd });
     expect(result.exitCode).toBe(0);
   });
+
+  test("deployed: runs stable check when deployed file exists", async () => {
+    const cwd = path.join(import.meta.dirname, "check/deployed-compatible");
+    const result = await cli(["check"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
+  test("deployed: warns and skips when file missing and deployedSkipIfFileMissing", async () => {
+    const cwd = path.join(import.meta.dirname, "check/deployed-missing-skip");
+    const result = await cli(["check"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/skipping stable check/i);
+    expect(result.stdout).toMatch(/initial deployments/);
+  });
+
+  test("deployed: errors when file missing without deployedSkipIfFileMissing", async () => {
+    const cwd = path.join(import.meta.dirname, "check/deployed-missing-error");
+    const result = await cli(["check"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/Deployed file not found/);
+    expect(result.stderr).toMatch(/skipIfMissing/);
+  });
 });
