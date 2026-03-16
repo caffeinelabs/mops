@@ -1,4 +1,5 @@
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { mkdtemp, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import chalk from "chalk";
@@ -27,9 +28,19 @@ export async function checkStable(
   }
 
   const mocPath = await toolchain.bin("moc", { fallback: true });
-  const sources = (await sourcesArgs()).flat();
+  const rawSources = await sourcesArgs();
+  for (const entry of rawSources) {
+    if (entry[2]) {
+      entry[2] = resolve(entry[2]);
+    }
+  }
+  const sources = rawSources.flat();
   const globalMocArgs = getGlobalMocArgs(config);
   const isOldMostFile = oldFile.endsWith(".most");
+
+  if (!existsSync(oldFile)) {
+    cliError(`File not found: ${oldFile}`);
+  }
 
   const tempDir = await mkdtemp(join(tmpdir(), "mops-check-stable-"));
   try {
@@ -39,6 +50,7 @@ export async function checkStable(
           mocPath,
           oldFile,
           join(tempDir, "old.most"),
+          tempDir,
           sources,
           globalMocArgs,
           options,
@@ -48,6 +60,7 @@ export async function checkStable(
       mocPath,
       canister.main,
       join(tempDir, "new.most"),
+      tempDir,
       sources,
       globalMocArgs,
       options,
@@ -89,13 +102,15 @@ async function generateStableTypes(
   mocPath: string,
   moFile: string,
   outputPath: string,
+  tempDir: string,
   sources: string[],
   globalMocArgs: string[],
   options: Partial<CheckStableOptions>,
 ): Promise<string> {
+  const absFile = resolve(moFile);
   const args = [
     "--stable-types",
-    moFile,
+    absFile,
     ...sources,
     ...globalMocArgs,
     ...(options.extraArgs ?? []),
@@ -110,6 +125,7 @@ async function generateStableTypes(
   }
 
   const result = await execa(mocPath, args, {
+    cwd: tempDir,
     stdio: "pipe",
     reject: false,
   });
@@ -123,10 +139,9 @@ async function generateStableTypes(
     );
   }
 
-  // moc --stable-types writes <basename>.most and <basename>.wasm to CWD
   const base = basename(moFile, ".mo");
-  await rename(base + ".most", outputPath);
-  await rm(base + ".wasm", { force: true });
+  await rename(join(tempDir, base + ".most"), outputPath);
+  await rm(join(tempDir, base + ".wasm"), { force: true });
 
   return outputPath;
 }

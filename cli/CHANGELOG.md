@@ -1,6 +1,10 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops check-stable` command for stable variable compatibility checking
+- `mops check` now falls back to canister entrypoints from `mops.toml` when no files are specified
+- Add docs for `mops lint`, `mops moc-args`, `[canisters]`, `[build]`, and `[lint]` config sections
+- Add docs canister deployment step to release process
 
 ## 2.2.1
 - Fix `mops toolchain` when toolchain version is a local file path with subdirectories.
