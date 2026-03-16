@@ -66,10 +66,12 @@ export async function runStableCheck(
     options = {},
   } = params;
 
-  // Resolve package paths to absolute since moc runs from CHECK_STABLE_DIR
+  // sourcesArgs() returns ["--package", name, path] triples.
+  // Resolve path to absolute since moc runs from CHECK_STABLE_DIR.
   const sources = rawSources.flatMap((entry) => {
-    if (entry[2]) {
-      return [entry[0]!, entry[1]!, resolve(entry[2])];
+    const [flag, name, pkgPath] = entry;
+    if (pkgPath) {
+      return [flag!, name!, resolve(pkgPath)];
     }
     return [...entry];
   });
@@ -79,6 +81,7 @@ export async function runStableCheck(
     cliError(`File not found: ${oldFile}`);
   }
 
+  await rm(CHECK_STABLE_DIR, { recursive: true, force: true });
   mkdirSync(CHECK_STABLE_DIR, { recursive: true });
   try {
     const oldMostPath = isOldMostFile
@@ -123,7 +126,7 @@ export async function runStableCheck(
         console.error(result.stderr);
       }
       cliError(
-        `✖ Stable compatibility check failed for canister '${canisterName}'`,
+        `✗ Stable compatibility check failed for canister '${canisterName}'`,
       );
     }
 

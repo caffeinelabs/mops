@@ -18,7 +18,7 @@ export function resolveCanisterEntrypoints(config: Config): string[] {
   const canisters = resolveCanisterConfigs(config);
   return Object.values(canisters)
     .map((c) => c.main)
-    .filter(Boolean);
+    .filter((main): main is string => Boolean(main));
 }
 
 export function resolveSingleCanister(

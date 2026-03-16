@@ -33,11 +33,11 @@ export type Config = {
 };
 
 export type CanisterConfig = {
-  main: string;
+  main?: string;
   args?: string[];
   candid?: string;
   initArg?: string;
-  "check-stable"?: {
+  checkStable?: {
     path: string;
     skipIfMissing?: boolean;
   };
