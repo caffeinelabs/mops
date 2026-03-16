@@ -17,7 +17,12 @@ jobs:
           node-version: 20
           cache: "npm"
       - name: Install
-        run: npm ci --ignore-scripts
+        run: |
+          npm ci --ignore-scripts &
+          (cd frontend && npm ci) &
+          (cd cli && npm ci) &
+          (cd cli-releases && npm ci) &
+          wait
       - name: Lint
         run: npm run lint
       - name: Format
