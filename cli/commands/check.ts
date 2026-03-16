@@ -125,18 +125,12 @@ export async function check(
         );
       }
 
-      if (!options.fix) {
-        console.log(chalk.green(`✓ ${file}`));
-      }
+      console.log(chalk.green(`✓ ${file}`));
     } catch (err: any) {
       cliError(
         `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,
       );
     }
-  }
-
-  if (options.fix) {
-    return;
   }
 
   const canisters = resolveCanisterConfigs(config);

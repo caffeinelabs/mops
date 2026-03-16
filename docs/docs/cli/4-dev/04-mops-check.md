@@ -60,7 +60,7 @@ Automatically apply fixes for supported diagnostics, including transitively impo
 mops check --fix
 ```
 
-Note: `--fix` does not run stable compatibility checks — only type-checking and auto-fixing are performed.
+After applying fixes, `--fix` re-checks all files and runs stable compatibility checks (if configured). If type-checking fails after fixing, stable checks are skipped.
 
 ### `--verbose`
 

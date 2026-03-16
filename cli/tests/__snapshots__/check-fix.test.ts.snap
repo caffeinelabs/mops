@@ -18,7 +18,8 @@ actor {
 exports[`check --fix M0223: fix output 1`] = `
 "Fixed run/M0223.mo (1 fix: M0223)
 
-✓ 1 fix applied to 1 file"
+✓ 1 fix applied to 1 file
+✓ <TEST_DIR>/check/fix/run/M0223.mo"
 `;
 
 exports[`check --fix M0236 1`] = `
@@ -39,7 +40,8 @@ actor {
 exports[`check --fix M0236: fix output 1`] = `
 "Fixed run/M0236.mo (1 fix: M0236)
 
-✓ 1 fix applied to 1 file"
+✓ 1 fix applied to 1 file
+✓ <TEST_DIR>/check/fix/run/M0236.mo"
 `;
 
 exports[`check --fix M0237 1`] = `
@@ -60,7 +62,8 @@ actor {
 exports[`check --fix M0237: fix output 1`] = `
 "Fixed run/M0237.mo (1 fix: M0237)
 
-✓ 1 fix applied to 1 file"
+✓ 1 fix applied to 1 file
+✓ <TEST_DIR>/check/fix/run/M0237.mo"
 `;
 
 exports[`check --fix edit-suggestions 1`] = `
@@ -205,7 +208,8 @@ do {
 exports[`check --fix edit-suggestions: fix output 1`] = `
 "Fixed run/edit-suggestions.mo (30 fixes: M0223, M0236, M0237)
 
-✓ 30 fixes applied to 1 file"
+✓ 30 fixes applied to 1 file
+✓ <TEST_DIR>/check/fix/run/edit-suggestions.mo"
 `;
 
 exports[`check --fix overlapping edits 1`] = `
@@ -224,14 +228,16 @@ do {
 exports[`check --fix overlapping edits: fix output 1`] = `
 "Fixed run/overlapping.mo (4 fixes: M0223, M0236)
 
-✓ 4 fixes applied to 1 file"
+✓ 4 fixes applied to 1 file
+✓ <TEST_DIR>/check/fix/run/overlapping.mo"
 `;
 
 exports[`check --fix transitive imports: fix output 1`] = `
 "Fixed run/transitive-lib.mo (1 fix: M0236)
 Fixed run/transitive-main.mo (1 fix: M0223)
 
-✓ 2 fixes applied to 2 files"
+✓ 2 fixes applied to 2 files
+✓ <TEST_DIR>/check/fix/run/transitive-main.mo"
 `;
 
 exports[`check --fix transitive imports: lib file 1`] = `

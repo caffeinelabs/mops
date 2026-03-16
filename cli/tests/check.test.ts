@@ -95,4 +95,19 @@ describe("check", () => {
     expect(result.stderr).toMatch(/Deployed file not found/);
     expect(result.stderr).toMatch(/skipIfMissing/);
   });
+
+  test("--fix runs stable check after fixing", async () => {
+    const cwd = path.join(import.meta.dirname, "check/deployed-compatible");
+    const result = await cli(["check", "--fix"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
+  test("stable check is skipped when type-checking fails", async () => {
+    const cwd = path.join(import.meta.dirname, "check/deployed-compile-error");
+    const result = await cli(["check"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/error/i);
+    expect(result.stdout).not.toMatch(/Stable compatibility/);
+  });
 });
