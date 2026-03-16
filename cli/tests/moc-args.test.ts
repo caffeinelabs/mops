@@ -7,13 +7,13 @@ describe("moc-args", () => {
     const cwd = path.join(import.meta.dirname, "check/moc-args");
     const result = await cli(["moc-args"], { cwd });
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBe("-Werror");
+    expect(result.stdout).toBe("--default-persistent-actors\n-Werror");
   });
 
-  test("prints nothing when no [moc] config", async () => {
+  test("prints only global args when no extra [moc] args", async () => {
     const cwd = path.join(import.meta.dirname, "check/success");
     const result = await cli(["moc-args"], { cwd });
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toBe("");
+    expect(result.stdout).toBe("--default-persistent-actors");
   });
 });

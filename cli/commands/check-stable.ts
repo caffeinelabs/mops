@@ -1,7 +1,6 @@
 import { basename, join, resolve } from "node:path";
-import { existsSync } from "node:fs";
-import { mkdtemp, rename, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync } from "node:fs";
+import { rename, rm } from "node:fs/promises";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
@@ -9,6 +8,8 @@ import { getGlobalMocArgs, readConfig } from "../mops.js";
 import { resolveSingleCanister } from "../helpers/resolve-canisters.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
+
+const CHECK_STABLE_DIR = ".mops/.check-stable";
 
 export interface CheckStableOptions {
   verbose: boolean;
@@ -65,28 +66,27 @@ export async function runStableCheck(
     options = {},
   } = params;
 
+  // Resolve package paths to absolute since moc runs from CHECK_STABLE_DIR
   const sources = rawSources.flatMap((entry) => {
     if (entry[2]) {
       return [entry[0]!, entry[1]!, resolve(entry[2])];
     }
     return [...entry];
   });
-
   const isOldMostFile = oldFile.endsWith(".most");
 
   if (!existsSync(oldFile)) {
     cliError(`File not found: ${oldFile}`);
   }
 
-  const tempDir = await mkdtemp(join(tmpdir(), "mops-check-stable-"));
+  mkdirSync(CHECK_STABLE_DIR, { recursive: true });
   try {
     const oldMostPath = isOldMostFile
       ? oldFile
       : await generateStableTypes(
           mocPath,
           oldFile,
-          join(tempDir, "old.most"),
-          tempDir,
+          join(CHECK_STABLE_DIR, "old.most"),
           sources,
           globalMocArgs,
           options,
@@ -95,8 +95,7 @@ export async function runStableCheck(
     const newMostPath = await generateStableTypes(
       mocPath,
       canisterMain,
-      join(tempDir, "new.most"),
-      tempDir,
+      join(CHECK_STABLE_DIR, "new.most"),
       sources,
       globalMocArgs,
       options,
@@ -134,7 +133,7 @@ export async function runStableCheck(
       ),
     );
   } finally {
-    await rm(tempDir, { recursive: true, force: true });
+    await rm(CHECK_STABLE_DIR, { recursive: true, force: true });
   }
 }
 
@@ -142,7 +141,6 @@ async function generateStableTypes(
   mocPath: string,
   moFile: string,
   outputPath: string,
-  tempDir: string,
   sources: string[],
   globalMocArgs: string[],
   options: Partial<CheckStableOptions>,
@@ -165,7 +163,7 @@ async function generateStableTypes(
   }
 
   const result = await execa(mocPath, args, {
-    cwd: tempDir,
+    cwd: CHECK_STABLE_DIR,
     stdio: "pipe",
     reject: false,
   });
@@ -180,8 +178,8 @@ async function generateStableTypes(
   }
 
   const base = basename(moFile, ".mo");
-  await rename(join(tempDir, base + ".most"), outputPath);
-  await rm(join(tempDir, base + ".wasm"), { force: true });
+  await rename(join(CHECK_STABLE_DIR, base + ".most"), outputPath);
+  await rm(join(CHECK_STABLE_DIR, base + ".wasm"), { force: true });
 
   return outputPath;
 }
