@@ -69,4 +69,6 @@ Extra `lintoko` flags can be set in `mops.toml`:
 args = ["--severity", "warning"]
 ```
 
+Exits with a non-zero code if any lint errors are found.
+
 See also: [toolchain management](/cli/toolchain) to pin a `lintoko` version.

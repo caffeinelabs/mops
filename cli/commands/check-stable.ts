@@ -70,6 +70,7 @@ export async function runStableCheck(
     cliError(`File not found: ${oldFile}`);
   }
 
+  await rm(CHECK_STABLE_DIR, { recursive: true, force: true });
   mkdirSync(CHECK_STABLE_DIR, { recursive: true });
   try {
     const oldMostPath = isOldMostFile
@@ -114,7 +115,7 @@ export async function runStableCheck(
         console.error(result.stderr);
       }
       cliError(
-        `✖ Stable compatibility check failed for canister '${canisterName}'`,
+        `✗ Stable compatibility check failed for canister '${canisterName}'`,
       );
     }
 

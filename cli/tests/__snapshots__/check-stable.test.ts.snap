@@ -23,7 +23,7 @@ exports[`check-stable incompatible upgrade from .mo file 1`] = `
  in \`counter\`.
  Write an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function.
 (unknown location): Compatibility error [M0169], the stable variable \`name\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
-✖ Stable compatibility check failed for canister 'backend'",
+✗ Stable compatibility check failed for canister 'backend'",
   "stdout": "",
 }
 `;
