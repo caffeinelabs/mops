@@ -115,7 +115,7 @@ Configure automatic stable variable compatibility checking for a canister. When 
 | Field         | Description                                                     |
 | ------------- | --------------------------------------------------------------- |
 | path          | Path to the deployed version's `.most` or `.mo` file (required). A `.most` file is preferred; when a `.mo` file is provided, stable types are generated from it (the file must compile successfully) |
-| skipIfMissing | If `true`, skip the stable check with a warning when the file doesn't exist (default: `false`) |
+| skipIfMissing | If `true`, silently skip the stable check when the file doesn't exist (default: `false`) |
 
 Example:
 ```toml

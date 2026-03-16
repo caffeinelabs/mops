@@ -60,6 +60,8 @@ Automatically apply fixes for supported diagnostics, including transitively impo
 mops check --fix
 ```
 
+Note: `--fix` does not run stable compatibility checks — only type-checking and auto-fixing are performed.
+
 ### `--verbose`
 
 Print the full `moc` invocation before running it.
@@ -88,7 +90,7 @@ main = "src/main.mo"
 path = ".old/src/main.most"
 ```
 
-If the file at `path` doesn't exist, the check fails with an error. To skip the stable check when the file is missing (useful for initial deployments where no previous version exists), set `skipIfMissing = true`:
+If the file at `path` doesn't exist, the check fails with an error. To silently skip the stable check when the file is missing (useful for initial deployments where no previous version exists), set `skipIfMissing = true`:
 
 ```toml
 [canisters.backend.check-stable]

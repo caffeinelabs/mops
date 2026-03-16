@@ -1,3 +1,3 @@
-persistent actor {
-  stable var counter : Nat = 0;
+actor {
+  var counter : Nat = 0;
 };

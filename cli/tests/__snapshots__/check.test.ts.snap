@@ -3,9 +3,10 @@
 exports[`check [moc] args are passed to moc 1`] = `
 {
   "exitCode": 1,
-  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier: \`unused\`
+help: if this is intentional, prefix it with an underscore: \`_unused\`
 ✗ Check failed for file Warning.mo (exit code: 1)",
-  "stdout": "moc < 1.3.0: some diagnostic hints may be missing",
+  "stdout": "",
 }
 `;
 
@@ -18,7 +19,7 @@ cannot produce expected type
   ()
 Error.mo:7.1-7.21: type error [M0057], unbound variable thisshouldnotcompile
 ✗ Check failed for file Error.mo (exit code: 1)",
-  "stdout": "moc < 1.3.0: some diagnostic hints may be missing",
+  "stdout": "",
 }
 `;
 
@@ -27,7 +28,7 @@ exports[`check error 2`] = `
   "exitCode": 1,
   "stderr": "Ok.mo: No such file or directory
 ✗ Check failed for file Ok.mo (exit code: 1)",
-  "stdout": "moc < 1.3.0: some diagnostic hints may be missing",
+  "stdout": "",
 }
 `;
 
@@ -35,8 +36,7 @@ exports[`check no args falls back to [canisters] entrypoints 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "moc < 1.3.0: some diagnostic hints may be missing
-✓ Ok.mo",
+  "stdout": "✓ Ok.mo",
 }
 `;
 
@@ -44,8 +44,7 @@ exports[`check ok 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "moc < 1.3.0: some diagnostic hints may be missing
-✓ Ok.mo",
+  "stdout": "✓ Ok.mo",
 }
 `;
 
@@ -53,9 +52,9 @@ exports[`check ok 2`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "moc < 1.3.0: some diagnostic hints may be missing
+  "stdout": "check Using --all-libs for richer diagnostics
 check Running moc:
-moc-wrapper ["Ok.mo","--check","--package","core",".mops/core@2.0.0/src"]
+<CACHE>moc-wrapper ["Ok.mo","--check","--all-libs","--package","core",".mops/core@2.0.0/src","--default-persistent-actors"]
 ✓ Ok.mo",
 }
 `;
@@ -63,19 +62,20 @@ moc-wrapper ["Ok.mo","--check","--package","core",".mops/core@2.0.0/src"]
 exports[`check warning 1`] = `
 {
   "exitCode": 0,
-  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)",
-  "stdout": "moc < 1.3.0: some diagnostic hints may be missing
-✓ Warning.mo",
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier: \`unused\`
+help: if this is intentional, prefix it with an underscore: \`_unused\`",
+  "stdout": "✓ Warning.mo",
 }
 `;
 
 exports[`check warning verbose 1`] = `
 {
   "exitCode": 0,
-  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)",
-  "stdout": "moc < 1.3.0: some diagnostic hints may be missing
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier: \`unused\`
+help: if this is intentional, prefix it with an underscore: \`_unused\`",
+  "stdout": "check Using --all-libs for richer diagnostics
 check Running moc:
-moc-wrapper ["Warning.mo","--check","--package","core",".mops/core@2.0.0/src"]
+<CACHE>moc-wrapper ["Warning.mo","--check","--all-libs","--package","core",".mops/core@2.0.0/src","--default-persistent-actors"]
 ✓ Warning.mo",
 }
 `;
@@ -83,8 +83,9 @@ moc-wrapper ["Warning.mo","--check","--package","core",".mops/core@2.0.0/src"]
 exports[`check warning with -Werror flag 1`] = `
 {
   "exitCode": 1,
-  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier unused (delete or rename to wildcard \`_\` or \`_unused\`)
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier: \`unused\`
+help: if this is intentional, prefix it with an underscore: \`_unused\`
 ✗ Check failed for file Warning.mo (exit code: 1)",
-  "stdout": "moc < 1.3.0: some diagnostic hints may be missing",
+  "stdout": "",
 }
 `;

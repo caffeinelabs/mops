@@ -4,7 +4,7 @@ exports[`check --fix M0223 1`] = `
 "// M0223: Redundant type instantiation
 // The type annotation is not needed when it can be inferred
 
-persistent actor {
+actor {
   public func testM0223() : async () {
     func identity<T>(x : T) : T = x;
     let varArray : [var Nat] = [var 1];
@@ -27,7 +27,7 @@ exports[`check --fix M0236 1`] = `
 import List "mo:core/List";
 import Nat "mo:core/Nat";
 
-persistent actor {
+actor {
   public func testM0236() : async () {
     let list = List.fromArray<Nat>([1, 2, 3]);
     list.sortInPlace();
@@ -48,7 +48,7 @@ exports[`check --fix M0237 1`] = `
 import List "mo:core/List";
 import Nat "mo:core/Nat";
 
-persistent actor {
+actor {
   public func testM0237() : async () {
     let list = List.fromArray<Nat>([3, 2, 1]);
     list.sortInPlace();
@@ -250,7 +250,7 @@ module {
 exports[`check --fix transitive imports: main file 1`] = `
 "import Lib "./transitive-lib";
 
-persistent actor {
+actor {
   public func run() : async () {
     func identity<T>(x : T) : T = x;
     let _ = identity(1);

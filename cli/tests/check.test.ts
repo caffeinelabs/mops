@@ -81,12 +81,11 @@ describe("check", () => {
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
-  test("deployed: warns and skips when file missing and deployedSkipIfFileMissing", async () => {
+  test("deployed: silently skips when file missing and skipIfMissing", async () => {
     const cwd = path.join(import.meta.dirname, "check/deployed-missing-skip");
     const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/skipping stable check/i);
-    expect(result.stdout).toMatch(/initial deployments/);
+    expect(result.stdout).not.toMatch(/stable/i);
   });
 
   test("deployed: errors when file missing without deployedSkipIfFileMissing", async () => {

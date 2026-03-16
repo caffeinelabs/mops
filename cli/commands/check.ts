@@ -135,6 +135,10 @@ export async function check(
     }
   }
 
+  if (options.fix) {
+    return;
+  }
+
   const canisters = resolveCanisterConfigs(config);
   for (const [name, canister] of Object.entries(canisters)) {
     const stableConfig = canister["check-stable"];
@@ -142,13 +146,12 @@ export async function check(
       continue;
     }
 
+    if (!canister.main) {
+      cliError(`No main file specified for canister '${name}' in mops.toml`);
+    }
+
     if (!existsSync(stableConfig.path)) {
       if (stableConfig.skipIfMissing) {
-        console.log(
-          chalk.yellow(
-            `⚠ Deployed file not found at ${stableConfig.path} — skipping stable check for canister '${name}' (expected for initial deployments)`,
-          ),
-        );
         continue;
       }
       cliError(

@@ -4,6 +4,8 @@
 - Add `mops check-stable` command for stable variable compatibility checking
 - `mops check` now falls back to canister entrypoints from `mops.toml` when no files are specified
 - `mops check` automatically runs stable compatibility when `[canisters.<name>.check-stable]` is configured
+- `mops check --fix` skips stable compatibility checks (nothing to fix there)
+- `skipIfMissing` in `[canisters.<name>.check-stable]` silently skips when the file doesn't exist
 - Add docs for `mops lint`, `mops moc-args`, `[canisters]`, `[build]`, and `[lint]` config sections
 - Add docs canister deployment step to release process
 
