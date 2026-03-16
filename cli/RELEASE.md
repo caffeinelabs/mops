@@ -130,7 +130,15 @@ dfx deploy --network ic --no-wallet cli --identity mops
 
 This deploys the `cli-releases` canister (serving `cli.mops.one`) to the Internet Computer mainnet.
 
-### 10. Commit and push release artifacts
+### 10. Deploy the docs canister
+
+```bash
+dfx deploy --network ic --no-wallet docs --identity mops
+```
+
+This builds the Docusaurus site (`docs/`) and deploys the `docs` assets canister (serving `docs.mops.one`). Docs are not auto-deployed, so this step ensures any documentation changes from the release are published.
+
+### 11. Commit and push release artifacts
 
 Step 8 generates files in `cli-releases/` that must be committed and pushed:
 
