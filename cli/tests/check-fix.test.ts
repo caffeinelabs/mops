@@ -131,4 +131,29 @@ describe("check --fix", () => {
     expect(result.stdout).toContain("Attempting to fix files");
     expect(result.stdout).toContain("No fixes were needed");
   });
+
+  test("fix with remaining warnings", async () => {
+    const runFilePath = copyFixture("fix-with-warning.mo");
+    const result = await cli(
+      ["check", runFilePath, "--fix", "--", warningFlags],
+      { cwd: fixDir },
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("1 fix applied");
+    expect(result.stdout).toMatch(/✓/);
+    expect(result.stderr).toMatch(/warning \[M0194\]/);
+    expect(result.stderr).toMatch(/unused identifier/);
+  });
+
+  test("fix with remaining errors", async () => {
+    const runFilePath = copyFixture("fix-with-error.mo");
+    const result = await cli(
+      ["check", runFilePath, "--fix", "--", warningFlags],
+      { cwd: fixDir },
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain("1 fix applied");
+    expect(result.stderr).toMatch(/error/i);
+    expect(result.stdout).not.toMatch(/✓ run/);
+  });
 });
