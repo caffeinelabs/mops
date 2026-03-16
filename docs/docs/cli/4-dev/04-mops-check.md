@@ -80,20 +80,20 @@ Global `moc` flags can be configured in `mops.toml` under `[moc].args` so they d
 
 ## Stable compatibility checking
 
-When a canister has a `[canisters.<name>.checkStable]` section in `mops.toml`, `mops check` automatically runs a stable compatibility check after type-checking. This compares the deployed version against the current canister entrypoint to catch breaking changes to stable variables before deployment.
+When a canister has a `[canisters.<name>.check-stable]` section in `mops.toml`, `mops check` automatically runs a stable compatibility check after type-checking. This compares the deployed version against the current canister entrypoint to catch breaking changes to stable variables before deployment.
 
 ```toml
 [canisters.backend]
 main = "src/main.mo"
 
-[canisters.backend.checkStable]
+[canisters.backend.check-stable]
 path = ".old/src/main.most"
 ```
 
 If the file at `path` doesn't exist, the check fails with an error. To silently skip the stable check when the file is missing (useful for initial deployments where no previous version exists), set `skipIfMissing = true`:
 
 ```toml
-[canisters.backend.checkStable]
+[canisters.backend.check-stable]
 path = ".old/src/main.most"
 skipIfMissing = true
 ```

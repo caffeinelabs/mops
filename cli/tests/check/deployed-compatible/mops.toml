@@ -7,5 +7,5 @@ args = ["--default-persistent-actors"]
 [canisters.backend]
 main = "main.mo"
 
-[canisters.backend.checkStable]
+[canisters.backend.check-stable]
 path = "old.mo"

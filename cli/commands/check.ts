@@ -135,7 +135,7 @@ export async function check(
 
   const canisters = resolveCanisterConfigs(config);
   for (const [name, canister] of Object.entries(canisters)) {
-    const stableConfig = canister.checkStable;
+    const stableConfig = canister["check-stable"];
     if (!stableConfig) {
       continue;
     }
@@ -152,7 +152,7 @@ export async function check(
         `Deployed file not found: ${stableConfig.path} (canister '${name}')\n` +
           "Set skipIfMissing = true in [canisters." +
           name +
-          ".checkStable] to skip this check when the file is missing.",
+          ".check-stable] to skip this check when the file is missing.",
       );
     }
 

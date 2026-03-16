@@ -37,7 +37,7 @@ export type CanisterConfig = {
   args?: string[];
   candid?: string;
   initArg?: string;
-  checkStable?: {
+  "check-stable"?: {
     path: string;
     skipIfMissing?: boolean;
   };
