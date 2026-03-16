@@ -1,4 +1,4 @@
-import { basename, join, resolve } from "node:path";
+import { basename, join, relative, resolve } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
 import chalk from "chalk";
@@ -29,7 +29,6 @@ export async function checkStable(
   }
 
   const mocPath = await toolchain.bin("moc", { fallback: true });
-  const rawSources = await sourcesArgs();
   const globalMocArgs = getGlobalMocArgs(config);
 
   await runStableCheck({
@@ -37,7 +36,6 @@ export async function checkStable(
     canisterMain: canister.main,
     canisterName: name,
     mocPath,
-    rawSources,
     globalMocArgs,
     options,
   });
@@ -48,7 +46,6 @@ export interface RunStableCheckParams {
   canisterMain: string;
   canisterName: string;
   mocPath: string;
-  rawSources: string[][];
   globalMocArgs: string[];
   options?: Partial<CheckStableOptions>;
 }
@@ -61,20 +58,12 @@ export async function runStableCheck(
     canisterMain,
     canisterName,
     mocPath,
-    rawSources,
     globalMocArgs,
     options = {},
   } = params;
 
-  // sourcesArgs() returns ["--package", name, path] triples.
-  // Resolve path to absolute since moc runs from CHECK_STABLE_DIR.
-  const sources = rawSources.flatMap((entry) => {
-    const [flag, name, pkgPath] = entry;
-    if (pkgPath) {
-      return [flag!, name!, resolve(pkgPath)];
-    }
-    return [...entry];
-  });
+  const checkStableDir = resolve(CHECK_STABLE_DIR);
+  const sources = (await sourcesArgs({ cwd: checkStableDir })).flat();
   const isOldMostFile = oldFile.endsWith(".most");
 
   if (!existsSync(oldFile)) {
@@ -148,10 +137,10 @@ async function generateStableTypes(
   globalMocArgs: string[],
   options: Partial<CheckStableOptions>,
 ): Promise<string> {
-  const absFile = resolve(moFile);
+  const relFile = relative(resolve(CHECK_STABLE_DIR), resolve(moFile));
   const args = [
     "--stable-types",
-    absFile,
+    relFile,
     ...sources,
     ...globalMocArgs,
     ...(options.extraArgs ?? []),

@@ -78,5 +78,15 @@ jobs:
       - name: Build CLI releases
         run: npm run build-cli-releases
 
+      # Jest runs test suites in parallel. Toolchain binaries and package
+      # dependencies used by test fixtures must be pre-installed here so
+      # parallel workers don't race on the same downloads.
+      # When adding a new fixture with [toolchain] or [dependencies],
+      # add the corresponding download/install command below.
+      - name: Pre-cache moc 1.3.0 and test fixture dependencies
+        run: |
+          mops toolchain use moc 1.3.0 && mops toolchain use moc ${{ matrix.moc-version }}
+          cd cli/tests/check/fix && mops install
+
       - name: Run CLI tests
         run: cd cli && npm test

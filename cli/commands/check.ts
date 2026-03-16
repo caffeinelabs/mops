@@ -161,7 +161,6 @@ export async function check(
       canisterMain: canister.main,
       canisterName: name,
       mocPath,
-      rawSources: sources,
       globalMocArgs,
       options: { verbose: options.verbose, extraArgs: options.extraArgs },
     });
