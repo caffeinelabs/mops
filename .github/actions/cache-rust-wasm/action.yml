@@ -6,7 +6,7 @@ runs:
   steps:
     - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
-        key: rust-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'cli/wasm/src/**') }}
+        key: rust-wasm-${{ runner.os }}-${{ hashFiles('Cargo.toml', 'cli/wasm/Cargo.toml', 'Cargo.lock', 'cli/wasm/src/**') }}
         restore-keys: |
           rust-wasm-${{ runner.os }}-
         path: target
