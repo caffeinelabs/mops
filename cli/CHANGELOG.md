@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Fix `mops check`, `mops build`, and `mops check-stable` failing to find canister entrypoints when run from a subdirectory
 
 ## 2.3.1
 - Fix `mops build` and `mops check-candid` failing with "Wasm bindings have not been set" when installed via `npm i -g ic-mops`

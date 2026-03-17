@@ -100,6 +100,14 @@ export function getRootDir() {
   return path.dirname(configFile);
 }
 
+/**
+ * Resolve a path from mops.toml config (relative to project root)
+ * into a path relative to the current working directory.
+ */
+export function resolveConfigPath(configPath: string): string {
+  return path.relative(process.cwd(), path.resolve(getRootDir(), configPath));
+}
+
 export function checkConfigFile(exit = false) {
   let configFile = getClosestConfigFile();
   if (!configFile) {
