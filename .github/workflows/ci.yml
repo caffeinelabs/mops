@@ -44,10 +44,6 @@ jobs:
           npm ci --ignore-scripts
           npm run ci:postinstall
 
-      - name: Build local cli
-        if: ${{ matrix.mops-version == './cli/dist' }}
-        run: cd cli && npm run prepare
-
       - name: Install mops
         run: npm i -g ${{ matrix.mops-version }}
 

@@ -30,7 +30,7 @@
     "build-cli": "npm run prepare-cli && npm run release-cli",
     "prepare": "husky",
     "postinstall": "(cd frontend && npm install) && (cd cli && npm install) && (cd docs && npm install) && (cd blog && npm install) && (cd cli-releases && npm install)",
-    "ci:postinstall": "(cd frontend && npm ci) & p1=$!; (cd cli && npm ci --ignore-scripts) & p2=$!; (cd docs && npm ci) & p3=$!; (cd blog && npm ci) & p4=$!; (cd cli-releases && npm ci) & p5=$!; wait $p1 && wait $p2 && wait $p3 && wait $p4 && wait $p5",
+    "ci:postinstall": "(cd frontend && npm ci) & p1=$!; (cd cli && npm ci) & p2=$!; (cd docs && npm ci) & p3=$!; (cd blog && npm ci) & p4=$!; (cd cli-releases && npm ci) & p5=$!; wait $p1 && wait $p2 && wait $p3 && wait $p4 && wait $p5",
     "test": "mops test && npm --prefix cli test",
     "check:cli": "npm run --prefix ./cli check",
     "check:frontend": "npm run --prefix ./frontend check",
