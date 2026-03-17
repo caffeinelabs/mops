@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.3.1
 - Fix `mops build` and `mops check-candid` failing with "Wasm bindings have not been set" when installed via `npm i -g ic-mops`
 
 ## 2.3.0
