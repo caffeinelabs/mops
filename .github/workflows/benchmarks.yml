@@ -49,7 +49,7 @@ jobs:
           key: rust-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'cli/wasm/src/**') }}
           restore-keys: |
             rust-wasm-${{ runner.os }}-
-          path: cli/wasm/target
+          path: target
 
       - name: Install npm packages
         run: cd cli && npm install
