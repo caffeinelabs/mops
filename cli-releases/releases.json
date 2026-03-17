@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.3.0"
+    "latest": "2.3.1"
   },
   "versions": {
     "0.41.0": {
@@ -296,6 +296,14 @@
       "commitHash": "4610376b0bf8cd8bad05a2c7864d445698cf5bba",
       "url": "https://cli.mops.one/versions/2.3.0.tgz",
       "hash": "0efabebb328006139f7ebe15e294e66cef2ab839d4b75083eb8fb291a3776a5c"
+    },
+    "2.3.1": {
+      "time": 1773763091148,
+      "size": 2843803,
+      "relseaseNotes": "* Fix `mops build` and `mops check-candid` failing with \"Wasm bindings have not been set\" when installed via `npm i -g ic-mops`\n",
+      "commitHash": "420f07811384fb2dc3dc1553ca72368c65c3e619",
+      "url": "https://cli.mops.one/versions/2.3.1.tgz",
+      "hash": "aa45dafa8d949d9614ca8ff7befc946de54162eea80d48d9c0a8b148bf766c52"
     }
   }
 }
