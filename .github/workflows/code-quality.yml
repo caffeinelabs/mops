@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: 20
           cache: "npm"
+      - uses: ./.github/actions/cache-rust-wasm
       - name: Install
         run: |
           npm ci --ignore-scripts
