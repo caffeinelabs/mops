@@ -27,8 +27,15 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-
       - uses: dfinity/setup-dfx@main
+
+      - name: Cache Rust wasm build
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          key: rust-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'cli/wasm/src/**') }}
+          restore-keys: |
+            rust-wasm-${{ runner.os }}-
+          path: cli/wasm/target
 
       - name: Cache mops packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -42,14 +49,7 @@ jobs:
             ~/Library/Caches/mops
 
       - name: Install npm packages
-        run: |
-          npm ci --ignore-scripts &
-          (cd frontend && npm ci) &
-          (cd cli && npm ci) &
-          (cd docs && npm ci) &
-          (cd blog && npm ci) &
-          (cd cli-releases && npm ci) &
-          wait
+        run: bun install
 
       - name: Build local cli
         if: ${{ matrix.mops-version == './cli/dist' }}
@@ -70,13 +70,17 @@ jobs:
       - name: Deploy backend
         run: npm run deploy-local
 
-      - name: Build frontend, docs, blog, and CLI releases
-        run: |
-          npm run build-frontend &
-          npm run build-docs &
-          npm run build-blog &
-          npm run build-cli-releases &
-          wait
+      - name: Build frontend
+        run: npm run build-frontend
+
+      - name: Build docs
+        run: npm run build-docs
+
+      - name: Build blog
+        run: npm run build-blog
+
+      - name: Build CLI releases
+        run: npm run build-cli-releases
 
       # Jest runs test suites in parallel. Toolchain binaries and package
       # dependencies used by test fixtures must be pre-installed here so
