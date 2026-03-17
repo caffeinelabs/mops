@@ -1,9 +1,9 @@
-import { relative } from "node:path";
+import path from "node:path";
 import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
-import { getGlobalMocArgs, readConfig } from "../mops.js";
+import { getGlobalMocArgs, getRootDir, readConfig } from "../mops.js";
 import { autofixMotoko } from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import {
@@ -34,9 +34,12 @@ export async function check(
   let fileList = Array.isArray(files) ? files : files ? [files] : [];
 
   const config = readConfig();
+  const rootDir = getRootDir();
 
   if (fileList.length === 0) {
-    fileList = resolveCanisterEntrypoints(config);
+    fileList = resolveCanisterEntrypoints(config).map((f) =>
+      path.relative(process.cwd(), path.resolve(rootDir, f)),
+    );
   }
 
   if (fileList.length === 0) {
@@ -86,7 +89,7 @@ export async function check(
       for (const [file, codes] of fixResult.fixedFiles) {
         const unique = [...new Set(codes)].sort();
         const n = codes.length;
-        const rel = relative(process.cwd(), file);
+        const rel = path.relative(process.cwd(), file);
         console.log(
           chalk.green(
             `Fixed ${rel} (${n} ${n === 1 ? "fix" : "fixes"}: ${unique.join(", ")})`,
@@ -144,12 +147,16 @@ export async function check(
       cliError(`No main file specified for canister '${name}' in mops.toml`);
     }
 
-    if (!existsSync(stableConfig.path)) {
+    const stablePath = path.relative(
+      process.cwd(),
+      path.resolve(rootDir, stableConfig.path),
+    );
+    if (!existsSync(stablePath)) {
       if (stableConfig.skipIfMissing) {
         continue;
       }
       cliError(
-        `Deployed file not found: ${stableConfig.path} (canister '${name}')\n` +
+        `Deployed file not found: ${stablePath} (canister '${name}')\n` +
           "Set skipIfMissing = true in [canisters." +
           name +
           ".check-stable] to skip this check when the file is missing.",
@@ -157,8 +164,11 @@ export async function check(
     }
 
     await runStableCheck({
-      oldFile: stableConfig.path,
-      canisterMain: canister.main,
+      oldFile: stablePath,
+      canisterMain: path.relative(
+        process.cwd(),
+        path.resolve(rootDir, canister.main),
+      ),
       canisterName: name,
       mocPath,
       globalMocArgs,

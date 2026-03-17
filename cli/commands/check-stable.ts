@@ -4,7 +4,7 @@ import { rename, rm } from "node:fs/promises";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
-import { getGlobalMocArgs, readConfig } from "../mops.js";
+import { getGlobalMocArgs, getRootDir, readConfig } from "../mops.js";
 import { resolveSingleCanister } from "../helpers/resolve-canisters.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
@@ -33,7 +33,7 @@ export async function checkStable(
 
   await runStableCheck({
     oldFile,
-    canisterMain: canister.main,
+    canisterMain: relative(process.cwd(), resolve(getRootDir(), canister.main)),
     canisterName: name,
     mocPath,
     globalMocArgs,

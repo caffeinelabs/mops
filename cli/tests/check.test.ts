@@ -54,6 +54,17 @@ describe("check", () => {
     await cliSnapshot(["check"], { cwd }, 0);
   });
 
+  test("canister entrypoint resolved relative to config root when run from subdirectory", async () => {
+    const fixtureRoot = path.join(
+      import.meta.dirname,
+      "check/canisters-subdir",
+    );
+    const subdir = path.join(fixtureRoot, "src/backend");
+    const result = await cli(["check"], { cwd: subdir });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/✓/);
+  });
+
   test("[moc] args applied when using canister fallback", async () => {
     const cwd = path.join(import.meta.dirname, "check/canisters-moc-args");
     const result = await cli(["check"], { cwd });

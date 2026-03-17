@@ -2,12 +2,12 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { exists } from "fs-extra";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { cliError } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import { resolveCanisterConfigs } from "../helpers/resolve-canisters.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
-import { getGlobalMocArgs, readConfig } from "../mops.js";
+import { getGlobalMocArgs, getRootDir, readConfig } from "../mops.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -30,6 +30,7 @@ export async function build(
   let outputDir = options.outputDir ?? DEFAULT_BUILD_OUTPUT_DIR;
   let mocPath = await toolchain.bin("moc", { fallback: true });
   let config = readConfig();
+  let rootDir = getRootDir();
   let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {
     cliError(`No Motoko canisters found in mops.toml configuration`);
@@ -67,6 +68,7 @@ export async function build(
     if (!motokoPath) {
       cliError(`No main file is specified for canister ${canisterName}`);
     }
+    motokoPath = relative(process.cwd(), resolve(rootDir, motokoPath));
     const wasmPath = join(outputDir, `${canisterName}.wasm`);
     let args = [
       "-c",
@@ -129,13 +131,15 @@ export async function build(
       }
 
       const generatedDidPath = join(outputDir, `${canisterName}.did`);
-      if (canister.candid) {
-        const originalCandidPath = canister.candid;
+      const resolvedCandidPath = canister.candid
+        ? relative(process.cwd(), resolve(rootDir, canister.candid))
+        : null;
 
+      if (resolvedCandidPath) {
         try {
           const compatible = await isCandidCompatible(
             generatedDidPath,
-            originalCandidPath,
+            resolvedCandidPath,
           );
 
           if (!compatible) {
@@ -160,7 +164,7 @@ export async function build(
 
       options.verbose &&
         console.log(chalk.gray(`Adding metadata to ${wasmPath}`));
-      const candidPath = canister.candid ?? generatedDidPath;
+      const candidPath = resolvedCandidPath ?? generatedDidPath;
       const candidText = await readFile(candidPath, "utf-8");
       const customSections: CustomSection[] = [
         { name: `${candidVisibility} candid:service`, data: candidText },
