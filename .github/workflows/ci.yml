@@ -45,7 +45,7 @@ jobs:
       - name: Install npm packages
         run: |
           npm ci --ignore-scripts
-          npm run ci:install
+          npm run ci:postinstall
 
       - name: Build local cli
         run: cd cli && npm run prepare

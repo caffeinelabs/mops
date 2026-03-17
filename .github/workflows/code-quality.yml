@@ -19,7 +19,7 @@ jobs:
       - name: Install
         run: |
           npm ci --ignore-scripts
-          npm run ci:install
+          npm run ci:postinstall
       - name: Lint
         run: npm run lint
       - name: Format
