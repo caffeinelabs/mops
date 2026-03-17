@@ -43,10 +43,11 @@ jobs:
             ~/Library/Caches/mops
 
       - name: Install npm packages
-        run: bun install
+        run: |
+          npm ci --ignore-scripts
+          npm run ci:install
 
       - name: Build local cli
-        if: ${{ matrix.mops-version == './cli/dist' }}
         run: cd cli && npm run prepare
 
       - name: Install mops
