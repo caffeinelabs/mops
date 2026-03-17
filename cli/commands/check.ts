@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
-import { getGlobalMocArgs, getRootDir, readConfig } from "../mops.js";
+import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
 import { autofixMotoko } from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import {
@@ -34,12 +34,9 @@ export async function check(
   let fileList = Array.isArray(files) ? files : files ? [files] : [];
 
   const config = readConfig();
-  const rootDir = getRootDir();
 
   if (fileList.length === 0) {
-    fileList = resolveCanisterEntrypoints(config).map((f) =>
-      path.relative(process.cwd(), path.resolve(rootDir, f)),
-    );
+    fileList = resolveCanisterEntrypoints(config).map(resolveConfigPath);
   }
 
   if (fileList.length === 0) {
@@ -147,10 +144,7 @@ export async function check(
       cliError(`No main file specified for canister '${name}' in mops.toml`);
     }
 
-    const stablePath = path.relative(
-      process.cwd(),
-      path.resolve(rootDir, stableConfig.path),
-    );
+    const stablePath = resolveConfigPath(stableConfig.path);
     if (!existsSync(stablePath)) {
       if (stableConfig.skipIfMissing) {
         continue;
@@ -165,10 +159,7 @@ export async function check(
 
     await runStableCheck({
       oldFile: stablePath,
-      canisterMain: path.relative(
-        process.cwd(),
-        path.resolve(rootDir, canister.main),
-      ),
+      canisterMain: resolveConfigPath(canister.main),
       canisterName: name,
       mocPath,
       globalMocArgs,
