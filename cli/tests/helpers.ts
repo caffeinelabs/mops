@@ -13,17 +13,11 @@ export interface CliOptions {
 const useGlobalBinary = Boolean(process.env.MOPS_TEST_GLOBAL);
 
 export const cli = async (args: string[], { cwd }: CliOptions = {}) => {
-  const env = { ...process.env, ...(cwd != null && { MOPS_CWD: cwd }) };
-  if (useGlobalBinary) {
-    return await execa("mops", args, {
-      env,
-      ...(cwd != null && { cwd }),
-      stdio: "pipe",
-      reject: false,
-    });
-  }
-  return await execa("npm", ["run", "--silent", "mops", "--", ...args], {
-    env,
+  const [cmd, cmdArgs] = useGlobalBinary
+    ? ["mops", args]
+    : ["npm", ["run", "--silent", "mops", "--", ...args]];
+  return await execa(cmd, cmdArgs, {
+    env: { ...process.env, ...(cwd != null && { MOPS_CWD: cwd }) },
     ...(cwd != null && { cwd }),
     stdio: "pipe",
     reject: false,
