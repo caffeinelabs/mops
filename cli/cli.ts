@@ -317,6 +317,7 @@ program
     });
     await build(args.length ? args : undefined, {
       ...options,
+      outputDir: options.output,
       extraArgs,
     });
   });

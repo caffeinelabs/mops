@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { exists } from "fs-extra";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, parse } from "node:path";
 import { cliError } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import { resolveCanisterConfigs } from "../helpers/resolve-canisters.js";
@@ -68,7 +68,7 @@ export async function build(
       cliError(`No main file is specified for canister ${canisterName}`);
     }
     motokoPath = resolveConfigPath(motokoPath);
-    const wasmPath = join(outputDir, `${canisterName}.wasm`);
+    let wasmPath = join(outputDir, `${canisterName}.wasm`);
     let args = [
       "-c",
       "--idl",
@@ -95,6 +95,15 @@ export async function build(
       args.push(...canister.args);
     }
     args.push(...(options.extraArgs ?? []));
+
+    // moc uses the last -o value; if user args override it, update our paths
+    for (let i = args.length - 1; i >= 0; i--) {
+      if (args[i] === "-o" && i + 1 < args.length) {
+        wasmPath = args[i + 1]!;
+        break;
+      }
+    }
+
     const isPublicCandid = true; // always true for now to reduce corner cases
     const candidVisibility = isPublicCandid ? "icp:public" : "icp:private";
     if (isPublicCandid) {
@@ -129,7 +138,8 @@ export async function build(
         console.log(result.stdout);
       }
 
-      const generatedDidPath = join(outputDir, `${canisterName}.did`);
+      const { dir: wasmDir, name: wasmBaseName } = parse(wasmPath);
+      const generatedDidPath = join(wasmDir, `${wasmBaseName}.did`);
       const resolvedCandidPath = canister.candid
         ? resolveConfigPath(canister.candid)
         : null;
