@@ -178,10 +178,11 @@ jobs:
       - name: Deploy CLI canister
         run: |
           for i in 1 2 3; do
-            dfx deploy --network ic --no-wallet cli --identity mops && break
-            echo "::warning::CLI canister deploy attempt $i failed, retrying in 30s..."
-            sleep 30
+            dfx deploy --network ic --no-wallet cli --identity mops && exit 0
+            echo "::warning::CLI canister deploy attempt $i/3 failed"
+            [ "$i" -lt 3 ] && sleep 30
           done
+          exit 1
 
       - name: Install docs dependencies
         working-directory: docs
@@ -190,10 +191,11 @@ jobs:
       - name: Deploy docs canister
         run: |
           for i in 1 2 3; do
-            dfx deploy --network ic --no-wallet docs --identity mops && break
-            echo "::warning::Docs canister deploy attempt $i failed, retrying in 30s..."
-            sleep 30
+            dfx deploy --network ic --no-wallet docs --identity mops && exit 0
+            echo "::warning::Docs canister deploy attempt $i/3 failed"
+            [ "$i" -lt 3 ] && sleep 30
           done
+          exit 1
 
       # --- Commit release artifacts ---
 
