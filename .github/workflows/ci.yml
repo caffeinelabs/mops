@@ -91,6 +91,8 @@ jobs:
         run: |
           mops toolchain use moc 1.3.0 && mops toolchain use moc ${{ matrix.moc-version }}
           cd cli/tests/check/fix && mops install
+          cd cli/tests/build/success && mops install
+          cd cli/tests/build/error && mops install
 
       - name: Run CLI tests
         env:
