@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.3.1"
+    "latest": "2.3.2"
   },
   "versions": {
     "0.41.0": {
@@ -304,6 +304,14 @@
       "commitHash": "420f07811384fb2dc3dc1553ca72368c65c3e619",
       "url": "https://cli.mops.one/versions/2.3.1.tgz",
       "hash": "aa45dafa8d949d9614ca8ff7befc946de54162eea80d48d9c0a8b148bf766c52"
+    },
+    "2.3.2": {
+      "time": 1773825116772,
+      "size": 2838416,
+      "relseaseNotes": "* Fix `mops check`, `mops build`, and `mops check-stable` failing to find canister entrypoints when run from a subdirectory\n",
+      "commitHash": "130ddb3a7b7059b7ed88f5fe9cb82e65c396f290",
+      "url": "https://cli.mops.one/versions/2.3.2.tgz",
+      "hash": "69ff29aa59e9347a5e660cb8fc33b4241beb077fd0196c34617a144c463a7759"
     }
   }
 }
