@@ -135,7 +135,7 @@ jobs:
 
       - name: Publish to npm
         working-directory: cli
-        run: npm publish --provenance --ignore-scripts
+        run: npm publish --provenance --ignore-scripts || echo "::warning::npm publish failed (version may already exist)"
 
       # --- GitHub Release ---
 
@@ -148,7 +148,7 @@ jobs:
           gh release create "$TAG" \
             cli/bundle/cli.tgz#cli.tgz \
             --title "CLI v${VERSION}" \
-            --notes-file /tmp/release-notes.md
+            --notes-file /tmp/release-notes.md || echo "::warning::GitHub Release may already exist"
 
       # --- On-chain release artifacts ---
 

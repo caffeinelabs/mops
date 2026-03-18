@@ -13,6 +13,10 @@ let __dirname = new URL(".", import.meta.url).pathname;
 
 if (!process.env.SKIP_BUILD) {
   execSync("./build.sh", { stdio: "inherit", cwd: __dirname });
+} else if (!fs.existsSync(path.resolve(__dirname, "bundle/cli.tgz"))) {
+  throw new Error(
+    "SKIP_BUILD is set but bundle/cli.tgz does not exist. Run build.sh first.",
+  );
 }
 
 let commitHash =
