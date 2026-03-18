@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Support pocket-ic versions beyond 9.x.x (fixes #410)
 
 ## 2.3.2
 - Fix `mops check`, `mops build`, and `mops check-stable` failing to find canister entrypoints when run from a subdirectory
