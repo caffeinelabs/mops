@@ -1,8 +1,8 @@
 import { describe, expect, test } from "@jest/globals";
 import { execa } from "execa";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import path from "path";
-import { cliSnapshot } from "./helpers";
+import { cli, cliSnapshot } from "./helpers";
 
 const distBin = path.resolve(import.meta.dirname, "../dist/bin/mops.js");
 
@@ -24,6 +24,25 @@ describe("build", () => {
     expect(
       (await cliSnapshot(["build", "foo", "bar"], { cwd }, 1)).stderr,
     ).toMatch("Candid compatibility check failed for canister bar");
+  });
+
+  // Regression: user-provided -o in canister args caused ENOENT because
+  // mops looked for .did/.wasm at the hardcoded .mops/.build/ path
+  test("custom output path via canister args", async () => {
+    const cwd = path.join(import.meta.dirname, "build/custom-output");
+    const customWasm = path.join(cwd, "custom-out/main.wasm");
+    const customDid = path.join(cwd, "custom-out/main.did");
+    const defaultDid = path.join(cwd, ".mops/.build/main.did");
+
+    // Clean up from previous runs
+    rmSync(path.join(cwd, "custom-out"), { recursive: true, force: true });
+    rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+
+    const result = await cli(["build"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(customWasm)).toBe(true);
+    expect(existsSync(customDid)).toBe(true);
+    expect(existsSync(defaultDid)).toBe(false);
   });
 
   // Regression: bin/mops.js must route through environments/nodejs/cli.js

@@ -104,6 +104,11 @@ export async function build(
       }
     }
 
+    const wasmDir = parse(wasmPath).dir;
+    if (wasmDir && !(await exists(wasmDir))) {
+      await mkdir(wasmDir, { recursive: true });
+    }
+
     const isPublicCandid = true; // always true for now to reduce corner cases
     const candidVisibility = isPublicCandid ? "icp:public" : "icp:private";
     if (isPublicCandid) {
