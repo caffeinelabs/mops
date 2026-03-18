@@ -1,37 +1,8 @@
 # Mops CLI Release
 
-## Prerequisites
+## 1. Update changelog
 
-### macOS: GNU tar
-
-```bash
-brew install gnu-tar
-```
-
-Add to `~/.zshrc` or `~/.bashrc`:
-```bash
-export PATH="$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin:$PATH"
-```
-
-### Docker
-
-Docker (or OrbStack) must be installed and running. The CLI build happens inside a Docker container (`zenvoich/mops-builder:1.1.0`) for reproducibility.
-
-### dfx
-
-`dfx` must be installed with the `mops` identity configured (see [Adding the `mops` identity to dfx](#adding-the-mops-identity-to-dfx)).
-
-## Release Steps
-
-### 1. Install dependencies
-
-```bash
-cd cli && bun install
-```
-
-### 2. Update changelog
-
-Move items from the `## Next` section in `CHANGELOG.md` into a new version heading:
+Move items from `## Next` in `CHANGELOG.md` into a new version heading:
 
 ```markdown
 ## Next
@@ -41,166 +12,49 @@ Move items from the `## Next` section in `CHANGELOG.md` into a new version headi
 - Change 2
 ```
 
-The heading must contain the exact version string — `release-cli.ts` parses it to extract release notes.
+The heading must match the exact version string — the release workflow parses it to extract release notes.
 
-### 3. Create a release branch and PR
-
-Direct pushes to `main` are not allowed. Create a branch and PR:
-
-```bash
-git checkout -b <username>/release-X.Y.Z
-```
-
-### 4. Bump version
-
-Use `--no-git-tag-version` since the version bump will be committed as part of the PR (not directly on `main`):
+## 2. Bump version
 
 ```bash
 cd cli
-npm version minor --no-git-tag-version  # or: patch / major
+npm version patch --no-git-tag-version  # or: minor / major
 ```
 
-### 5. Commit, push, and open PR
+## 3. Create a release PR
 
 ```bash
+git checkout -b <username>/release-X.Y.Z
 git add cli/CHANGELOG.md cli/package.json cli/package-lock.json
 git commit -m "release: CLI vX.Y.Z"
 git push -u origin <username>/release-X.Y.Z
 gh pr create --title "release: CLI vX.Y.Z" --body "..."
 ```
 
-Wait for CI to pass, then merge the PR.
+Wait for CI to pass, then merge.
 
-### 6. Check reproducibility of the build
-
-After the PR is merged to `main`, check the SHA256 hash from the latest [build-hash workflow](https://github.com/caffeinelabs/mops/actions/workflows/build-hash.yml) run.
-
-**Important**: The CI hash is written to the GitHub Actions **Step Summary** — it is only visible on the **Summary tab** of the workflow run page. It does **not** appear in the downloadable logs (`gh run view --log` will not find it). You must open the run URL in a browser to see it.
-
-Build the same version locally:
-```bash
-cd cli
-MOPS_VERSION=0.0.0 ./build.sh
-```
-
-`build.sh` does the following:
-1. Reads `COMMIT_HASH` (defaults to `git rev-parse HEAD`) and `MOPS_VERSION`
-2. Runs `docker build` using `cli/Dockerfile` with those as build args
-3. The Dockerfile clones the repo at that commit, runs `bun install`, sets the version, and runs `npm run build`
-4. Prints the SHA256 hash of `cli.tgz`
-5. Copies `cli.tgz` out of the container into `cli/bundle/cli.tgz`
-
-Compare the locally printed hash with the one from the CI Step Summary. If they don't match, do not proceed.
-
-**Notes on the local build output:**
-- The "Verification failed" message at the end is **expected** — it happens because no `SHASUM` env var is passed for comparison. The important output is the `Actual shasum: <hash>` line.
-
-### 7. Publish to npm
-
-After the PR is merged and the build hash is verified:
+## 4. Tag and push
 
 ```bash
 git checkout main && git pull
-cd cli
-npm publish
+git tag cli-vX.Y.Z
+git push origin cli-vX.Y.Z
 ```
 
-### 8. Prepare on-chain release
+This triggers the [`release.yml`](../.github/workflows/release.yml) workflow which builds, publishes to npm, creates a GitHub Release, deploys canisters (`cli.mops.one` and `docs.mops.one`), and opens a PR with on-chain release artifacts.
 
-Run from the **repo root** (not `cli/`), with Docker running:
+Monitor at [Actions → Release CLI](https://github.com/caffeinelabs/mops/actions/workflows/release.yml).
 
-```bash
-npm run release-cli
-```
+## 5. Merge artifacts PR
 
-This runs `cli/release-cli.ts`, which:
-1. Calls `./build.sh` — full Docker build with the real version from `cli/package.json`
-2. Extracts release notes from `CHANGELOG.md` for that version
-3. Computes SHA256 of `bundle/cli.tgz`
-4. Copies the tarball to `cli-releases/versions/<version>.tgz`
-5. Creates tag copies: `latest.tgz` and `<major>.tgz`
-6. Updates `cli-releases/tags/latest` to the new version
-7. Updates `cli-releases/releases.json` with metadata (timestamp, size, hash, commit hash, download URL, release notes)
-
-### 9. Deploy the canister
-
-```bash
-dfx deploy --network ic --no-wallet cli --identity mops
-```
-
-This deploys the `cli-releases` canister (serving `cli.mops.one`) to the Internet Computer mainnet.
-
-### 10. Deploy the docs canister
-
-```bash
-dfx deploy --network ic --no-wallet docs --identity mops
-```
-
-This builds the Docusaurus site (`docs/`) and deploys the `docs` assets canister (serving `docs.mops.one`). Docs are not auto-deployed, so this step ensures any documentation changes from the release are published.
-
-### 11. Commit and push release artifacts
-
-Step 8 generates files in `cli-releases/` that must be committed and pushed:
-
-```bash
-git add cli-releases/
-git commit -m "cli-releases: v<version> artifacts"
-```
-
-Since direct pushes to `main` are not allowed, create a branch and PR:
-
-```bash
-git checkout -b <username>/release-X.Y.Z-artifacts
-git push -u origin <username>/release-X.Y.Z-artifacts
-gh pr create --title "cli-releases: vX.Y.Z artifacts" --body "Release artifacts generated by \`npm run release-cli\` for CLI vX.Y.Z."
-```
-
-Merge this PR after approval.
+After the workflow completes, merge the `cli-releases: vX.Y.Z artifacts` PR.
 
 ## Verify build
 
-Anyone can verify a released version by rebuilding from source:
+Anyone can verify a released version by rebuilding from source. Instructions are included in each [GitHub Release](https://github.com/caffeinelabs/mops/releases).
 
 ```bash
 cd cli
 docker build . --build-arg COMMIT_HASH=<commit_hash> --build-arg MOPS_VERSION=<mops_version> -t mops
 docker run --rm --env SHASUM=<build_hash> mops
-```
-
-## Adding the `mops` identity to dfx
-
-Check if the identity already exists:
-```bash
-dfx identity list
-```
-
-If `mops` appears, verify it's the correct one:
-```bash
-dfx identity get-principal --identity mops
-```
-
-If it doesn't exist, import it from the PEM file stored in Bitwarden (`Mops identity (canisters and packages)`):
-
-1. Save the PEM key to a temporary file:
-```bash
-cat > /tmp/mops-identity.pem << 'EOF'
------BEGIN EC PRIVATE KEY-----
-<paste key from Bitwarden>
------END EC PRIVATE KEY-----
-EOF
-```
-
-2. Import into dfx:
-```bash
-dfx identity import mops /tmp/mops-identity.pem
-```
-
-3. Delete the temporary file:
-```bash
-rm /tmp/mops-identity.pem
-```
-
-4. Verify:
-```bash
-dfx identity get-principal --identity mops
 ```

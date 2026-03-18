@@ -7,7 +7,7 @@ import { cliError } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import { resolveCanisterConfigs } from "../helpers/resolve-canisters.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
-import { getGlobalMocArgs, readConfig } from "../mops.js";
+import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -67,6 +67,7 @@ export async function build(
     if (!motokoPath) {
       cliError(`No main file is specified for canister ${canisterName}`);
     }
+    motokoPath = resolveConfigPath(motokoPath);
     const wasmPath = join(outputDir, `${canisterName}.wasm`);
     let args = [
       "-c",
@@ -129,13 +130,15 @@ export async function build(
       }
 
       const generatedDidPath = join(outputDir, `${canisterName}.did`);
-      if (canister.candid) {
-        const originalCandidPath = canister.candid;
+      const resolvedCandidPath = canister.candid
+        ? resolveConfigPath(canister.candid)
+        : null;
 
+      if (resolvedCandidPath) {
         try {
           const compatible = await isCandidCompatible(
             generatedDidPath,
-            originalCandidPath,
+            resolvedCandidPath,
           );
 
           if (!compatible) {
@@ -160,7 +163,7 @@ export async function build(
 
       options.verbose &&
         console.log(chalk.gray(`Adding metadata to ${wasmPath}`));
-      const candidPath = canister.candid ?? generatedDidPath;
+      const candidPath = resolvedCandidPath ?? generatedDidPath;
       const candidText = await readFile(candidPath, "utf-8");
       const customSections: CustomSection[] = [
         { name: `${candidVisibility} candid:service`, data: candidText },
