@@ -1,0 +1,153 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - "cli-v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-cli
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Abort if tag is not on main
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "Tag commit ${GITHUB_SHA} is reachable from main."
+          else
+            echo "::error::Tag commit ${GITHUB_SHA} is not on main. Aborting."
+            exit 1
+          fi
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#cli-v}"
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "::error::Could not extract a valid version from tag '${GITHUB_REF_NAME}'"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
+      - name: Validate version matches package.json
+        working-directory: cli
+        env:
+          TAG_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json ($PKG_VERSION)"
+            exit 1
+          fi
+
+      # --- Docker build ---
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@efe9e3891a4f7307e689f2100b33a155b900a608 # v4.5.0
+
+      - name: Build CLI tarball using Docker
+        working-directory: cli
+        env:
+          COMMIT_HASH: ${{ github.sha }}
+          MOPS_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker build . \
+            --build-arg COMMIT_HASH="$COMMIT_HASH" \
+            --build-arg MOPS_VERSION="$MOPS_VERSION" \
+            -t mops
+
+      - name: Extract tarball from container
+        working-directory: cli
+        run: |
+          cid=$(docker create mops)
+          mkdir -p bundle
+          docker cp "$cid:/mops/cli/bundle/cli.tgz" ./bundle/cli.tgz
+          docker rm "$cid"
+
+      - name: Compute SHA256
+        id: hash
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          HASH=$(sha256sum bundle/cli.tgz | awk '{print $1}')
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "### CLI Release v${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**SHA256:** \`$HASH\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # --- npm publish ---
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@11.4.0
+
+      - uses: ./.github/actions/cache-rust-wasm
+
+      - name: Install dependencies
+        working-directory: cli
+        run: npm ci
+
+      - name: Extract changelog
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_HASH: ${{ steps.hash.outputs.hash }}
+          COMMIT_HASH: ${{ github.sha }}
+        run: |
+          ESCAPED=$(echo "$VERSION" | sed 's/\./\\./g')
+          awk "/^##? ${ESCAPED}$/{found=1; next} found && /^##? [0-9]/{exit} found && /^##? Next/{exit} found" \
+            CHANGELOG.md > /tmp/release-notes.md
+
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "::error::No changelog entry found for version ${VERSION}"
+            exit 1
+          fi
+
+          {
+            echo ""
+            echo "---"
+            echo "**SHA256:** \`${BUILD_HASH}\`"
+            echo ""
+            echo "**Verify build:**"
+            echo '```bash'
+            echo "cd cli"
+            echo "docker build . --build-arg COMMIT_HASH=${COMMIT_HASH} --build-arg MOPS_VERSION=${VERSION} -t mops"
+            echo "docker run --rm --env SHASUM=${BUILD_HASH} mops"
+            echo '```'
+          } >> /tmp/release-notes.md
+
+      - name: Publish to npm
+        working-directory: cli
+        run: npm publish --provenance --ignore-scripts
+
+      # --- GitHub Release ---
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$TAG" \
+            cli/bundle/cli.tgz#cli.tgz \
+            --title "CLI v${VERSION}" \
+            --notes-file /tmp/release-notes.md
