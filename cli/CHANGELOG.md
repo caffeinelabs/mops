@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.3.2
 - Fix `mops check`, `mops build`, and `mops check-stable` failing to find canister entrypoints when run from a subdirectory
 
 ## 2.3.1
