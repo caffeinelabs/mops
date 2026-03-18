@@ -11,6 +11,7 @@ permissions:
 
 concurrency:
   group: release-cli
+  cancel-in-progress: false
 
 jobs:
   release:
