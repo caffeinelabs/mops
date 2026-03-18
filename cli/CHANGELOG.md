@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+- Fix `mops build` failing with `ENOENT` when canister `args` override the output path with `-o`
+- Fix `mops build --output` CLI option being silently ignored
 
 ## 2.3.2
 - Fix `mops check`, `mops build`, and `mops check-stable` failing to find canister entrypoints when run from a subdirectory

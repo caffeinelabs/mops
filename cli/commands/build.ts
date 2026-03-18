@@ -104,7 +104,7 @@ export async function build(
       }
     }
 
-    const wasmDir = parse(wasmPath).dir;
+    const { dir: wasmDir, name: wasmBaseName } = parse(wasmPath);
     if (wasmDir && !(await exists(wasmDir))) {
       await mkdir(wasmDir, { recursive: true });
     }
@@ -143,7 +143,6 @@ export async function build(
         console.log(result.stdout);
       }
 
-      const { dir: wasmDir, name: wasmBaseName } = parse(wasmPath);
       const generatedDidPath = join(wasmDir, `${wasmBaseName}.did`);
       const resolvedCandidPath = canister.candid
         ? resolveConfigPath(canister.candid)

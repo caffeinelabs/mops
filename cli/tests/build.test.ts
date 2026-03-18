@@ -45,6 +45,22 @@ describe("build", () => {
     expect(existsSync(defaultDid)).toBe(false);
   });
 
+  // Regression: --output CLI option was silently ignored due to
+  // Commander storing it as options.output while build() read options.outputDir
+  test("--output CLI option", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    const outputDir = path.join(cwd, "cli-output-test");
+
+    rmSync(outputDir, { recursive: true, force: true });
+
+    const result = await cli(["build", "foo", "--output", outputDir], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(path.join(outputDir, "foo.wasm"))).toBe(true);
+    expect(existsSync(path.join(outputDir, "foo.did"))).toBe(true);
+
+    rmSync(outputDir, { recursive: true, force: true });
+  });
+
   // Regression: bin/mops.js must route through environments/nodejs/cli.js
   // so that setWasmBindings() is called before any command runs.
   // The dev entry point (npm run mops) uses tsx and always worked;
