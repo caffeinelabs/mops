@@ -11,7 +11,7 @@ jobs:
   build:
     strategy:
       matrix:
-        mops-version: [ic-mops@1.0.0, ./cli/dist]
+        mops-version: [ic-mops@1.0.0, ./cli/dist, global]
         moc-version: [0.14.13]
         node-version: [20]
 
@@ -40,12 +40,17 @@ jobs:
             ~/Library/Caches/mops
 
       - name: Install npm packages
+        if: matrix.mops-version != 'global'
         run: |
           npm ci --ignore-scripts
           npm run ci:postinstall
 
+      - name: Install CLI and build dist
+        if: matrix.mops-version == 'global'
+        run: cd cli && npm ci
+
       - name: Install mops
-        run: npm i -g ${{ matrix.mops-version }}
+        run: npm i -g ${{ matrix.mops-version == 'global' && './cli/dist' || matrix.mops-version }}
 
       - name: Install mops packages
         run: mops install
@@ -54,21 +59,27 @@ jobs:
         run: mops toolchain use moc ${{ matrix.moc-version }}
 
       - name: Run replica
+        if: matrix.mops-version != 'global'
         run: npm run replica
 
       - name: Deploy backend
+        if: matrix.mops-version != 'global'
         run: npm run deploy-local
 
       - name: Build frontend
+        if: matrix.mops-version != 'global'
         run: npm run build-frontend
 
       - name: Build docs
+        if: matrix.mops-version != 'global'
         run: npm run build-docs
 
       - name: Build blog
+        if: matrix.mops-version != 'global'
         run: npm run build-blog
 
       - name: Build CLI releases
+        if: matrix.mops-version != 'global'
         run: npm run build-cli-releases
 
       # Jest runs test suites in parallel. Toolchain binaries and package
@@ -82,4 +93,6 @@ jobs:
           cd cli/tests/check/fix && mops install
 
       - name: Run CLI tests
+        env:
+          MOPS_TEST_GLOBAL: ${{ matrix.mops-version == 'global' && '1' || '' }}
         run: cd cli && npm test
