@@ -1,0 +1,12 @@
+{
+  "canisters": {
+    "foo": {
+      "type": "motoko",
+      "main": "src/Foo.mo"
+    },
+    "bar": {
+      "type": "motoko",
+      "main": "src/Bar.mo"
+    }
+  }
+}

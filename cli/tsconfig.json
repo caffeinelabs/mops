@@ -6,7 +6,8 @@
     "dist",
     "bundle",
     "dist.js",
-    "declarations/**/*.js"
+    "declarations/**/*.js",
+    "wasm/**/*.js"
   ],
   "compilerOptions": {
     "target": "ES2022",

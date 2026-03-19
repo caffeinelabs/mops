@@ -1,8 +1,19 @@
 import { execFileSync } from "node:child_process";
+import { type SemVer, parse } from "semver";
+import { readConfig } from "../mops.js";
 import { getMocPath } from "./get-moc-path.js";
 
+export function getMocSemVer(): SemVer | null {
+  return parse(getMocVersion(false));
+}
+
 export function getMocVersion(throwOnError = false): string {
-  let mocPath = getMocPath(false);
+  let configVersion = readConfig().toolchain?.moc;
+  if (configVersion) {
+    return configVersion;
+  }
+
+  const mocPath = getMocPath(false);
   if (!mocPath) {
     return "";
   }

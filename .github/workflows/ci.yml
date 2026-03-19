@@ -7,6 +7,9 @@ on:
       - master
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
@@ -20,18 +23,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: 1.2.17
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-      - uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: 1.2.17
-
       - uses: dfinity/setup-dfx@main
+
+      - uses: ./.github/actions/cache-rust-wasm
 
       - name: Cache mops packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
@@ -45,11 +43,9 @@ jobs:
             ~/Library/Caches/mops
 
       - name: Install npm packages
-        run: bun install
-
-      - name: Build local cli
-        if: ${{ matrix.mops-version == './cli/dist' }}
-        run: cd cli && npm run prepare
+        run: |
+          npm ci --ignore-scripts
+          npm run ci:postinstall
 
       - name: Install mops
         run: npm i -g ${{ matrix.mops-version }}
@@ -77,3 +73,24 @@ jobs:
 
       - name: Build CLI releases
         run: npm run build-cli-releases
+
+      # Jest runs test suites in parallel. Toolchain binaries and package
+      # dependencies used by test fixtures must be pre-installed here so
+      # parallel workers don't race on the same downloads.
+      # When adding a new fixture with [toolchain] or [dependencies],
+      # add the corresponding download/install command below.
+      - name: Pre-cache moc 1.3.0 and test fixture dependencies
+        run: |
+          mops toolchain use moc 1.3.0 && mops toolchain use moc ${{ matrix.moc-version }}
+          cd cli/tests/check/fix && mops install
+
+      - name: Run CLI tests
+        run: cd cli && npm test
+
+  ci-ok:
+    if: always()
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

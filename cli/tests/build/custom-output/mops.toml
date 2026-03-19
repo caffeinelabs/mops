@@ -1,0 +1,8 @@
+[dependencies]
+core = "1.0.0"
+
+[canisters.main]
+main = "src/Main.mo"
+
+[build]
+outputDir = "custom-out"
