@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.3.2"
+    "latest": "2.4.0"
   },
   "versions": {
     "0.41.0": {
@@ -312,6 +312,14 @@
       "commitHash": "130ddb3a7b7059b7ed88f5fe9cb82e65c396f290",
       "url": "https://cli.mops.one/versions/2.3.2.tgz",
       "hash": "69ff29aa59e9347a5e660cb8fc33b4241beb077fd0196c34617a144c463a7759"
+    },
+    "2.4.0": {
+      "time": 1773909659658,
+      "size": 2844336,
+      "relseaseNotes": "* Support `[build].outputDir` config in `mops.toml` for custom build output directory\n* Fix `mops build --output` CLI option being silently ignored\n* Warn when canister `args` contain flags managed by `mops build` (e.g. `-o`, `-c`, `--idl`)\n* Support pocket-ic versions beyond 9.x.x (fixes #410)\n",
+      "commitHash": "9e15850474bfaaf0a93f641d41d5db267a1254c2",
+      "url": "https://cli.mops.one/versions/2.4.0.tgz",
+      "hash": "37a95a008156ae0ad8204d8ea39d06abcf245c7f8cc6c957e2683dfc8d8d7338"
     }
   }
 }

@@ -71,7 +71,7 @@ jobs:
       - name: Run tests
         run: mops test
 
-  ci-ok:
+  ci-ok-mops:
     if: always()
     needs: [test]
     runs-on: ubuntu-latest
