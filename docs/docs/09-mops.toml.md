@@ -20,6 +20,9 @@ sidebar_label: mops.toml
 | documentation | Documentation URL for the package                |
 | moc           | Motoko compiler version used to build the package |
 | donation      | Donation address                                 |
+| baseDir       | Base directory for package sources (default `src`). Used by `mops sources` to resolve the package entrypoint |
+| readme        | Path to README file (default `README.md`)        |
+| dfx           | dfx version used to build the package            |
 
 :::note
 Repository URL can include subdirectory when the package is located not in the root of the repository.

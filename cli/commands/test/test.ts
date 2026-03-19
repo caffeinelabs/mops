@@ -12,7 +12,7 @@ import debounce from "debounce";
 import { SemVer } from "semver";
 import { ActorMethod } from "@icp-sdk/core/agent";
 
-import { sources } from "../sources.js";
+import { sourcesArgs } from "../sources.js";
 import { getGlobalMocArgs, getRootDir, readConfig } from "../../mops.js";
 import { parallel } from "../../parallel.js";
 
@@ -231,7 +231,7 @@ export async function testWithReporter(
   reporter.addFiles(files);
 
   let config = readConfig();
-  let sourcesArr = await sources();
+  let sourcesArr = (await sourcesArgs()).flat();
   let globalMocArgs = getGlobalMocArgs(config);
 
   if (!mocPath) {
@@ -298,7 +298,7 @@ export async function testWithReporter(
       let mocArgs = [
         "--hide-warnings",
         "--error-detail=2",
-        ...sourcesArr.join(" ").split(" "),
+        ...sourcesArr,
         ...globalMocArgs,
         file,
       ].filter((x) => x);

@@ -50,6 +50,12 @@ You can also specify file paths to toolchain binaries. This is useful when build
 ```toml
 [toolchain]
 moc = "./tools/moc"
+```
+
+or
+
+```toml
+[toolchain]
 moc = "/usr/local/bin/moc"
 lintoko = "../custom-lintoko/bin/lintoko"
 ```

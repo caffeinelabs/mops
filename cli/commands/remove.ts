@@ -65,7 +65,10 @@ export async function remove(
     let config = readConfig(configFile);
     let deps: Dependency[] = Object.values(config.dependencies || {})
       .map((dep) => {
-        return [dep, ...getTransitiveDependenciesOf(dep.name, dep.version)];
+        return [
+          dep,
+          ...getTransitiveDependenciesOf(dep.name, dep.version, dep.repo),
+        ];
       })
       .flat();
     return deps;
@@ -97,7 +100,7 @@ export async function remove(
   // transitive deps of this package (including itself)
   let transitiveDepsOfPackage = [
     pkgDetails,
-    ...getTransitiveDependenciesOf(name, version),
+    ...getTransitiveDependenciesOf(name, version, pkgDetails.repo),
   ];
 
   // remove local cache

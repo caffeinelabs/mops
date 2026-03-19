@@ -41,12 +41,12 @@ export async function resolvePackages({
   > = {};
 
   let compareVersions = (a: string = "0.0.0", b: string = "0.0.0") => {
-    let ap = a.split(".").map((x: string) => parseInt(x)) as [
+    let ap = a.split(".").map((x: string) => parseInt(x) || 0) as [
       number,
       number,
       number,
     ];
-    let bp = b.split(".").map((x: string) => parseInt(x)) as [
+    let bp = b.split(".").map((x: string) => parseInt(x) || 0) as [
       number,
       number,
       number,
@@ -138,7 +138,9 @@ export async function resolvePackages({
         }
       } else if (version) {
         let cacheDir = getDepCacheName(name, version);
-        nestedConfig = readConfig(getDepCacheDir(cacheDir) + "/mops.toml");
+        nestedConfig = readConfig(
+          path.join(getDepCacheDir(cacheDir), "mops.toml"),
+        );
       }
 
       // collect nested deps
@@ -193,7 +195,7 @@ export async function resolvePackages({
           `Conflicting versions of dependency "${dep}"`,
         );
 
-        for (let { version, dependencyOf } of vers.reverse()) {
+        for (let { version, dependencyOf } of [...vers].reverse()) {
           console.error(
             chalk.reset("  ") +
               `${dep} ${chalk.bold.red(version.split(".")[0])}.${version.split(".").slice(1).join(".")} is dependency of ${chalk.bold(dependencyOf)}`,

@@ -398,11 +398,11 @@ export async function publish(
     console.log(chalk.red("Error: ") + publishing.err);
     process.exit(1);
   }
-  let puiblishingId = publishing.ok;
+  let publishingId = publishing.ok;
 
   // upload test stats
   if (options.test) {
-    await actor.uploadTestStats(puiblishingId, {
+    await actor.uploadTestStats(publishingId, {
       passed: BigInt(reporter.passed),
       passedNames: reporter.passedNamesFlat,
     });
@@ -410,17 +410,17 @@ export async function publish(
 
   // upload benchmarks
   if (options.bench) {
-    await actor.uploadBenchmarks(puiblishingId, benchmarks);
+    await actor.uploadBenchmarks(publishingId, benchmarks);
   }
 
   // upload changelog
   if (changelog) {
-    await actor.uploadNotes(puiblishingId, changelog);
+    await actor.uploadNotes(publishingId, changelog);
   }
 
   // upload docs coverage
   if (options.docs) {
-    await actor.uploadDocsCoverage(puiblishingId, docsCov);
+    await actor.uploadDocsCoverage(publishingId, docsCov);
   }
 
   // upload files
@@ -438,7 +438,7 @@ export async function publish(
     }
 
     let res = await actor.startFileUpload(
-      puiblishingId,
+      publishingId,
       file,
       BigInt(chunkCount),
       firstChunk,
@@ -453,7 +453,7 @@ export async function publish(
       let start = i * chunkSize;
       let chunk = Array.from(content.slice(start, start + chunkSize));
       let res = await actor.uploadFileChunk(
-        puiblishingId,
+        publishingId,
         fileId,
         BigInt(i),
         chunk,
@@ -474,7 +474,7 @@ export async function publish(
   progress();
   logUpdate.done();
 
-  let res = await actor.finishPublish(puiblishingId);
+  let res = await actor.finishPublish(publishingId);
   if ("err" in res) {
     console.log(chalk.red("Error: ") + res.err);
     process.exit(1);
