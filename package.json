@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "mops": "npx --no tsx --prefix cli ./cli/cli",
+    "mops": "npx --no tsx --prefix cli ./cli/environments/nodejs/cli",
     "start": "npm run replica && npm run deploy-local && npm run decl && npm run frontends",
     "frontends": "npm run start-registry & npm run start-docs & npm run start-blog & npm run start-cli-releases",
     "start-registry": "cd frontend && npm run start",
@@ -30,11 +30,21 @@
     "build-cli": "npm run prepare-cli && npm run release-cli",
     "prepare": "husky",
     "postinstall": "(cd frontend && npm install) && (cd cli && npm install) && (cd docs && npm install) && (cd blog && npm install) && (cd cli-releases && npm install)",
-    "test": "mops test",
+    "ci:postinstall": "(cd frontend && npm ci) & p1=$!; (cd cli && npm ci) & p2=$!; (cd docs && npm ci) & p3=$!; (cd blog && npm ci) & p4=$!; (cd cli-releases && npm ci) & p5=$!; wait $p1 && wait $p2 && wait $p3 && wait $p4 && wait $p5",
+    "test": "mops test && npm --prefix cli test",
     "check:cli": "npm run --prefix ./cli check",
     "check:frontend": "npm run --prefix ./frontend check",
     "check": "run-p check:cli check:frontend",
-    "precommit": "run-p lint check"
+    "precommit": "lint-staged && npm run check"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,html,mo}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "1.7.0",
@@ -46,6 +56,7 @@
     "eslint-plugin-prettier": "5.5.4",
     "eslint-plugin-svelte": "2.35.1",
     "husky": "9.0.11",
+    "lint-staged": "16.3.1",
     "npm-run-all": "4.1.5",
     "prettier-eslint": "16.4.2",
     "prettier-plugin-motoko": "0.12.1",

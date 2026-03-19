@@ -3,12 +3,13 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 import { execaCommand } from "execa";
-import { PocketIc, PocketIcServer } from "pic-ic";
+import { getRootDir } from "../mops.js";
 import {
-  PocketIc as PocketIcMops,
-  PocketIcServer as PocketIcServerMops,
-} from "pic-js-mops";
-import { getRootDir, readConfig } from "../mops.js";
+  type AnyPocketIcServer,
+  type AnyPocketIc,
+  type AnySetupCanister,
+  startPocketIc,
+} from "../helpers/pocket-ic-client.js";
 import { createActor, idlFactory } from "../declarations/bench/index.js";
 import { toolchain } from "./toolchain/index.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
@@ -18,8 +19,8 @@ export class BenchReplica {
   verbose = false;
   canisters: Record<string, { cwd: string; canisterId: string; actor: any }> =
     {};
-  pocketIcServer?: PocketIcServer | PocketIcServerMops;
-  pocketIc?: PocketIc | PocketIcMops;
+  pocketIcServer?: AnyPocketIcServer;
+  pocketIc?: AnyPocketIc;
 
   constructor(type: "dfx" | "pocket-ic" | "dfx-pocket-ic", verbose = false) {
     this.type = type;
@@ -49,30 +50,10 @@ export class BenchReplica {
       );
     } else {
       let pocketIcBin = await toolchain.bin("pocket-ic");
-      let config = readConfig();
-      if (
-        config.toolchain?.["pocket-ic"] !== "4.0.0" &&
-        !config.toolchain?.["pocket-ic"]?.startsWith("9.")
-      ) {
-        console.error(
-          "Current Mops CLI only supports pocket-ic 9.x.x and 4.0.0",
-        );
-        process.exit(1);
-      }
-      // pocket-ic 9.x.x
-      if (config.toolchain?.["pocket-ic"]?.startsWith("9.")) {
-        this.pocketIcServer = await PocketIcServerMops.start({
-          binPath: pocketIcBin,
-        });
-        this.pocketIc = await PocketIcMops.create(this.pocketIcServer.getUrl());
-      }
-      // pocket-ic 4.0.0
-      else {
-        this.pocketIcServer = await PocketIcServer.start({
-          binPath: pocketIcBin,
-        });
-        this.pocketIc = await PocketIc.create(this.pocketIcServer.getUrl());
-      }
+
+      let pic = await startPocketIc({ binPath: pocketIcBin });
+      this.pocketIcServer = pic.server;
+      this.pocketIc = pic.client;
     }
   }
 
@@ -105,10 +86,8 @@ export class BenchReplica {
       });
       this.canisters[name] = { cwd, canisterId, actor };
     } else if (this.pocketIc) {
-      type PocketIcSetupCanister = PocketIcMops["setupCanister"] &
-        PocketIc["setupCanister"];
       let { canisterId, actor } = await (
-        this.pocketIc.setupCanister as PocketIcSetupCanister
+        this.pocketIc.setupCanister as AnySetupCanister
       )({ idlFactory, wasm });
       this.canisters[name] = {
         cwd,

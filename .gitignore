@@ -1,5 +1,7 @@
-node_modules
-dist
-.dfx
-.mops
+node_modules/
+target/
+dist/
+.dfx/
+.mops/
+
 .DS_Store

@@ -42,7 +42,7 @@ const config = {
 					sidebarPath: require.resolve('./sidebars.js'),
 					// Please change this to your repo.
 					// Remove this to remove the "edit this page" links.
-					editUrl: 'https://github.com/dfinity/mops/edit/main/docs/',
+					editUrl: 'https://github.com/caffeinelabs/mops/edit/main/docs/',
 				},
 				blog: false,
 				theme: {
@@ -74,7 +74,7 @@ const config = {
 						items: [
 							{
 								label: 'GitHub',
-								href: 'https://github.com/dfinity/mops',
+								href: 'https://github.com/caffeinelabs/mops',
 							},
 							{
 								label: 'Twitter',

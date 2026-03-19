@@ -28,6 +28,11 @@ Print path to the `pocket-ic` binary:
 mops toolchain bin pocket-ic
 ```
 
+Print path to the `lintoko` binary:
+```
+mops toolchain bin lintoko
+```
+
 ### Run tool
 
 You can run the version of the tool defined in `mops.toml` by running:

@@ -1,0 +1,5 @@
+type ReturnValue = text;
+
+service : {
+  call: () -> (ReturnValue);
+}
