@@ -301,11 +301,7 @@ program
   .command("build [canisters...]")
   .description("Build a canister")
   .addOption(new Option("--verbose", "Verbose console output"))
-  .addOption(
-    new Option("--output, -o <output>", "Output directory").default(
-      DEFAULT_BUILD_OUTPUT_DIR,
-    ),
-  )
+  .addOption(new Option("--output, -o <output>", "Output directory"))
   .allowUnknownOption(true) // TODO: restrict unknown before "--"
   .action(async (canisters, options) => {
     checkConfigFile(true);
@@ -317,6 +313,7 @@ program
     });
     await build(args.length ? args : undefined, {
       ...options,
+      outputDir: options.output,
       extraArgs,
     });
   });

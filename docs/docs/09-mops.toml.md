@@ -135,13 +135,15 @@ backend = "src/main.mo"
 
 Global build settings used by [`mops build`](/cli/mops-build).
 
-| Field | Description                                                     |
-| ----- | --------------------------------------------------------------- |
-| args  | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
+| Field     | Description                                                     |
+| --------- | --------------------------------------------------------------- |
+| outputDir | Output directory for compiled Wasm and Candid files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
+| args      | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
 
 Example:
 ```toml
 [build]
+outputDir = "dist"
 args = ["--release", "--ai-errors"]
 ```
 

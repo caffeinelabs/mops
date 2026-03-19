@@ -1,6 +1,9 @@
 # Mops CLI Changelog
 
 ## Next
+- Support `[build].outputDir` config in `mops.toml` for custom build output directory
+- Fix `mops build --output` CLI option being silently ignored
+- Warn when canister `args` contain flags managed by `mops build` (e.g. `-o`, `-c`, `--idl`)
 - Support pocket-ic versions beyond 9.x.x (fixes #410)
 
 ## 2.3.2
