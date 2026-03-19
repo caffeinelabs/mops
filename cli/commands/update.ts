@@ -46,7 +46,7 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
     if (commit.sha !== commitHash) {
       await add(
         `https://github.com/${org}/${gitName}#${branch}@${commit.sha}`,
-        { dev },
+        { dev, lock },
         dep.name,
       );
     }
@@ -87,7 +87,7 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
           );
         }) || dep[0];
 
-      await add(`${dep[0]}@${dep[2]}`, { dev }, asName);
+      await add(`${dep[0]}@${dep[2]}`, { dev, lock }, asName);
     }
   }
 

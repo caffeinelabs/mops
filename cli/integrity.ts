@@ -87,7 +87,9 @@ export function getLocalFileHash(fileId: string): string {
 }
 
 function getMopsTomlHash(): string {
-  return bytesToHex(sha256(fs.readFileSync(getRootDir() + "/mops.toml")));
+  return bytesToHex(
+    sha256(fs.readFileSync(path.join(getRootDir(), "mops.toml"))),
+  );
 }
 
 function getMopsTomlDepsHash(): string {
@@ -137,7 +139,14 @@ export function readLockFile(): LockFile | null {
   let rootDir = getRootDir();
   let lockFile = path.join(rootDir, "mops.lock");
   if (fs.existsSync(lockFile)) {
-    return JSON.parse(fs.readFileSync(lockFile).toString()) as LockFile;
+    try {
+      return JSON.parse(fs.readFileSync(lockFile).toString()) as LockFile;
+    } catch {
+      console.error(
+        "mops.lock is corrupted. Delete it and run `mops install` to regenerate.",
+      );
+      process.exit(1);
+    }
   }
   return null;
 }
@@ -290,7 +299,7 @@ export async function checkLockFile(force = false) {
 
     for (let [fileId, lockedHash] of Object.entries(hashes)) {
       // check if file belongs to package
-      if (!fileId.startsWith(packageId)) {
+      if (!fileId.startsWith(packageId + "/")) {
         console.error("Integrity check failed");
         console.error(
           `File ${fileId} in lock file does not belong to package ${packageId}`,

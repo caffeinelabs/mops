@@ -20,12 +20,11 @@ export async function installDep(
   parentPkgPath?: string,
 ): Promise<boolean> {
   if (dep.repo) {
-    await installFromGithub(dep.name, dep.repo, {
+    return installFromGithub(dep.name, dep.repo, {
       silent,
       verbose,
       ignoreTransitive,
     });
-    return true;
   } else if (dep.path) {
     let depPath = dep.path;
     parentPkgPath = parentPkgPath || getRootDir();
@@ -46,5 +45,8 @@ export async function installDep(
     });
   }
 
-  return true;
+  console.warn(
+    `Warning: dependency "${dep.name}" has no version, repo, or path`,
+  );
+  return false;
 }

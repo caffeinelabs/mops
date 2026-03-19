@@ -31,7 +31,6 @@ Add `.prettierrc` file to the root of the project.
   "overrides": [{
     "files": "*.mo",
     "options": {
-      # your custom options...
       "useTabs": true
     }
   }]
