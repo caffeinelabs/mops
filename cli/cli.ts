@@ -10,7 +10,9 @@ import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
 import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
 import { bump } from "./commands/bump.js";
+import { check } from "./commands/check.js";
 import { checkCandid } from "./commands/check-candid.js";
+import { checkStable } from "./commands/check-stable.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
@@ -45,7 +47,9 @@ import {
   apiVersion,
   checkApiCompatibility,
   checkConfigFile,
+  getGlobalMocArgs,
   getNetworkFile,
+  readConfig,
   setNetwork,
   version,
 } from "./mops.js";
@@ -74,6 +78,22 @@ if (fs.existsSync(networkFile)) {
 }
 
 let program = new Command();
+
+function parseExtraArgs(variadicArgs?: string[]): {
+  extraArgs: string[];
+  args: string[];
+} {
+  const rawArgs = process.argv.slice(2);
+  const dashDashIndex = rawArgs.indexOf("--");
+  const extraArgs =
+    dashDashIndex !== -1 ? rawArgs.slice(dashDashIndex + 1) : [];
+  const args = variadicArgs
+    ? extraArgs.length > 0
+      ? variadicArgs.slice(0, variadicArgs.length - extraArgs.length)
+      : variadicArgs
+    : [];
+  return { extraArgs, args };
+}
 
 program.name("mops");
 
@@ -154,7 +174,7 @@ program
     }
 
     if (options.toolchain) {
-      await toolchain.ensureToolchainInited({ strict: false });
+      await toolchain.checkToolchainInited({ strict: false });
     }
 
     let ok = await installAll(options);
@@ -233,9 +253,22 @@ program
         installFromLockFile: true,
       });
     }
-    await toolchain.ensureToolchainInited({ strict: false });
+    await toolchain.checkToolchainInited({ strict: false });
     let sourcesArr = await sources(options);
     console.log(sourcesArr.join("\n"));
+  });
+
+// moc-args
+program
+  .command("moc-args")
+  .description("Print global moc compiler flags from [moc] config section")
+  .action(async () => {
+    checkConfigFile(true);
+    let config = readConfig();
+    let args = getGlobalMocArgs(config);
+    if (args.length) {
+      console.log(args.join("\n"));
+    }
   });
 
 // search
@@ -268,24 +301,48 @@ program
   .command("build [canisters...]")
   .description("Build a canister")
   .addOption(new Option("--verbose", "Verbose console output"))
-  .addOption(
-    new Option("--output, -o <output>", "Output directory").default(
-      DEFAULT_BUILD_OUTPUT_DIR,
-    ),
-  )
+  .addOption(new Option("--output, -o <output>", "Output directory"))
   .allowUnknownOption(true) // TODO: restrict unknown before "--"
-  .action(async (canisters, options, command) => {
+  .action(async (canisters, options) => {
     checkConfigFile(true);
-    const extraArgsIndex = command.args.indexOf("--");
+    const { extraArgs, args } = parseExtraArgs(canisters);
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await build(canisters.length ? canisters : undefined, {
+    await build(args.length ? args : undefined, {
       ...options,
-      extraArgs:
-        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+      outputDir: options.output,
+      extraArgs,
+    });
+  });
+
+// check
+program
+  .command("check [files...]")
+  .description(
+    "Check Motoko files for syntax errors and type issues. If no files are specified, checks all canister entrypoints from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured",
+  )
+  .option("--verbose", "Verbose console output")
+  .addOption(
+    new Option(
+      "--fix",
+      "Apply autofixes to all files, including transitively imported ones",
+    ),
+  )
+  .allowUnknownOption(true)
+  .action(async (files, options) => {
+    checkConfigFile(true);
+    const { extraArgs, args: fileList } = parseExtraArgs(files);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await check(fileList, {
+      ...options,
+      extraArgs,
     });
   });
 
@@ -301,6 +358,28 @@ program
       installFromLockFile: true,
     });
     await checkCandid(newCandid, originalCandid);
+  });
+
+// check-stable
+program
+  .command("check-stable <old-file> [canister]")
+  .description(
+    "Check stable variable compatibility between an old version (.mo or .most file) and the current canister entrypoint",
+  )
+  .option("--verbose", "Verbose console output")
+  .allowUnknownOption(true)
+  .action(async (oldFile, canister, options) => {
+    checkConfigFile(true);
+    const { extraArgs } = parseExtraArgs();
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await checkStable(oldFile, canister, {
+      ...options,
+      extraArgs,
+    });
   });
 
 // test
@@ -686,13 +765,12 @@ program
     ),
   )
   .allowUnknownOption(true)
-  .action(async (filter, options, command) => {
+  .action(async (filter, options) => {
     checkConfigFile(true);
-    const extraArgsIndex = command.args.indexOf("--");
+    const { extraArgs } = parseExtraArgs();
     await lint(filter, {
       ...options,
-      extraArgs:
-        extraArgsIndex !== -1 ? command.args.slice(extraArgsIndex + 1) : [],
+      extraArgs,
     });
   });
 

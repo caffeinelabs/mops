@@ -1,8 +1,44 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.4.0
+- Support `[build].outputDir` config in `mops.toml` for custom build output directory
+- Fix `mops build --output` CLI option being silently ignored
+- Warn when canister `args` contain flags managed by `mops build` (e.g. `-o`, `-c`, `--idl`)
+- Support pocket-ic versions beyond 9.x.x (fixes #410)
+
+## 2.3.2
+- Fix `mops check`, `mops build`, and `mops check-stable` failing to find canister entrypoints when run from a subdirectory
+
+## 2.3.1
+- Fix `mops build` and `mops check-candid` failing with "Wasm bindings have not been set" when installed via `npm i -g ic-mops`
+
+## 2.3.0
+- Add `mops check-stable` command for stable variable compatibility checking
+- `mops check` now falls back to canister entrypoints from `mops.toml` when no files are specified
+- `mops check` automatically runs stable compatibility when `[canisters.<name>.check-stable]` is configured
+- `mops check --fix` now behaves like fix + `mops check` — reports changed files, then type-checks and runs stable compatibility if configured
+- `skipIfMissing` in `[canisters.<name>.check-stable]` silently skips when the file doesn't exist
+- Add docs for `mops lint`, `mops moc-args`, `[canisters]`, `[build]`, and `[lint]` config sections
+- Add docs canister deployment step to release process
+
+## 2.2.1
+- Fix `mops toolchain` when toolchain version is a local file path with subdirectories.
+- Update Motoko formatter (`prettier-plugin-motoko`).
+
+## 2.2.0
+- Add `[moc]` config section for global `moc` compiler flags (applied to `check`, `build`, `test`, `bench`, `watch`)
+- Add `mops moc-args` command to print global `moc` flags from `[moc]` config section
+- Fix `mops check --fix` crash on overlapping diagnostic edits (e.g., nested function calls)
+
+## 2.1.0
+- Add `mops check --fix` subcommand (for Motoko files) with autofix logic
+- Add `mops check` subcommand for type-checking Motoko files
+- Warn for `dfx` projects instead of requiring `mops toolchain init`
 - Allow specifying toolchain file paths in `mops.toml`
 - Add `mops lint` subcommand and `lintoko` toolchain management
+- Improve bench-canister Bench type to be less restrictive (by @timohanke)
 
 ## 2.0.1
 - Patch vulnerability in `tar` dependency

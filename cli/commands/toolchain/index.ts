@@ -37,7 +37,7 @@ function getToolUtils(tool: Tool) {
   }
 }
 
-async function ensureToolchainInited({ strict = true } = {}) {
+async function checkToolchainInited({ strict = false } = {}): Promise<boolean> {
   // auto init in CI
   if (process.env.CI) {
     await init({ silent: true });
@@ -61,10 +61,12 @@ async function ensureToolchainInited({ strict = true } = {}) {
       return true;
     }
   } catch {}
-  console.error(
-    'Toolchain management is not initialized. Run "mops toolchain init"',
+  process.stderr.write(
+    `${chalk.yellow(
+      'Toolchain management is not initialized. Run "mops toolchain init" to use with dfx.',
+    )}\n`,
   );
-  process.exit(1);
+  return false;
 }
 
 // update shell config files to set DFX_MOC_PATH to moc-wrapper
@@ -172,6 +174,10 @@ async function download(
   version: string,
   { silent = false, verbose = false } = {},
 ) {
+  if (version.match(FILE_PATH_REGEX)) {
+    return;
+  }
+
   let toolUtils = getToolUtils(tool);
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
@@ -272,7 +278,7 @@ async function promptVersion(tool: Tool): Promise<string> {
 // download binary and set version in mops.toml
 async function use(tool: Tool, version?: string) {
   if (tool === "moc") {
-    await ensureToolchainInited();
+    await checkToolchainInited();
   }
   if (!version) {
     version = await promptVersion(tool);
@@ -306,7 +312,7 @@ async function use(tool: Tool, version?: string) {
 // download latest binary and set version in mops.toml
 async function update(tool?: Tool) {
   if (tool === "moc") {
-    await ensureToolchainInited();
+    await checkToolchainInited();
   }
 
   let config = readConfig();
@@ -365,7 +371,7 @@ async function bin(tool: Tool, { fallback = false } = {}): Promise<string> {
     }
 
     if (tool === "moc") {
-      await ensureToolchainInited();
+      await checkToolchainInited();
     }
 
     await download(tool, version, { silent: true });
@@ -396,5 +402,5 @@ export let toolchain = {
   update,
   bin,
   installAll,
-  ensureToolchainInited,
+  checkToolchainInited,
 };

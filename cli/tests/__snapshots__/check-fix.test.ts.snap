@@ -1,0 +1,267 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`check --fix M0223 1`] = `
+"// M0223: Redundant type instantiation
+// The type annotation is not needed when it can be inferred
+
+actor {
+  public func testM0223() : async () {
+    func identity<T>(x : T) : T = x;
+    let varArray : [var Nat] = [var 1];
+    let nat = identity(1);
+    varArray[0] := nat;
+  };
+};
+"
+`;
+
+exports[`check --fix M0223: fix output 1`] = `
+"Fixed run/M0223.mo (1 fix: M0223)
+
+✓ 1 fix applied to 1 file
+✓ <TEST_DIR>/check/fix/run/M0223.mo"
+`;
+
+exports[`check --fix M0236 1`] = `
+"// M0236: Suggested to use dot notation
+// Function calls can be rewritten using dot notation
+import List "mo:core/List";
+import Nat "mo:core/Nat";
+
+actor {
+  public func testM0236() : async () {
+    let list = List.fromArray<Nat>([1, 2, 3]);
+    list.sortInPlace();
+  };
+};
+"
+`;
+
+exports[`check --fix M0236: fix output 1`] = `
+"Fixed run/M0236.mo (1 fix: M0236)
+
+✓ 1 fix applied to 1 file
+✓ <TEST_DIR>/check/fix/run/M0236.mo"
+`;
+
+exports[`check --fix M0237 1`] = `
+"// M0237: Redundant explicit implicit argument
+// Some arguments can be inferred and don't need to be specified
+import List "mo:core/List";
+import Nat "mo:core/Nat";
+
+actor {
+  public func testM0237() : async () {
+    let list = List.fromArray<Nat>([3, 2, 1]);
+    list.sortInPlace();
+  };
+};
+"
+`;
+
+exports[`check --fix M0237: fix output 1`] = `
+"Fixed run/M0237.mo (1 fix: M0237)
+
+✓ 1 fix applied to 1 file
+✓ <TEST_DIR>/check/fix/run/M0237.mo"
+`;
+
+exports[`check --fix edit-suggestions 1`] = `
+"import Map "mo:core/Map";
+import Nat "mo:core/Nat";
+import Text "mo:core/Text";
+import { type Order } "mo:core/Order";
+
+// --- M0223: redundant type instantiation ---
+
+do {
+  func inferred<T>(x : T) : T = x;
+  let n1 = inferred(1);
+  ignore n1;
+};
+
+// --- M0236: contextual dot notation ---
+
+do {
+  let m = Map.empty<Nat, Text>();
+  // single arg
+  ignore m.size(); // warn M0236
+
+  // multi arg with implicit -> M0236 + M0237
+  ignore m.get(1); // warn M0236 + M0237
+
+  // complex receiver
+  ignore Map.empty<Nat, Text>().size(
+    
+  ); // warn M0236
+
+  // multiline call -> M0236 + M0237
+  m.add(
+    1,
+    "John",
+  ); // warn M0236 + M0237
+};
+
+// --- M0237: implicit argument removal ---
+
+do {
+  let m = Map.empty<Nat, Text>();
+
+  // single line
+  ignore m.get(1); // warn M0237
+
+  // multiline
+  ignore m.get(
+    1,
+  ); // warn M0237
+};
+
+// --- M0237: complex implicit patterns ---
+
+module Impl {
+  // implicit in the middle: f(self, implicit, key)
+  public func get<K, V>(
+    self : [(K, V)],
+    _cmp : (implicit : (compare : (K, K) -> Order)),
+    key : K,
+  ) : ?V { ignore self; ignore key; null };
+
+  // two adjacent implicits: f(self, implicit1, implicit2, key, value)
+  public func put<K, V>(
+    self : [(K, V)],
+    _cmpK : (implicit : (compare : (K, K) -> Order)),
+    _cmpV : (implicit : (compare : (V, V) -> Order)),
+    key : K,
+    value : V,
+  ) : [(K, V)] { ignore key; ignore value; self };
+
+  // implicit at the end
+  public func find<K, V>(
+    self : [(K, V)],
+    key : K,
+    _cmp : (implicit : (compare : (K, K) -> Order)),
+  ) : ?V { ignore self; ignore key; null };
+  public func sort1<K, V>(
+    self : [(K, V)],
+    _cmp : (implicit : (compare : (K, K) -> Order)),
+  ) : [(K, V)] { self };
+  public func sort2<K, V>(
+    notSelf : [(K, V)],
+    _cmp : (implicit : (compare : (K, K) -> Order)),
+  ) : [(K, V)] { notSelf };
+
+  // all implicits: f(implicit1, implicit2)
+  public func make<K, V>(
+    _cmpK : (implicit : (compare : (K, K) -> Order)),
+    _cmpV : (implicit : (compare : (V, V) -> Order)),
+  ) : [(K, V)] { [] };
+
+  // non-adjacent implicits: f(self, implicit1, key, implicit2, value)
+  public func update<K, V>(
+    self : [(K, V)],
+    _cmpK : (implicit : (compare : (K, K) -> Order)),
+    key : K,
+    _cmpV : (implicit : (compare : (V, V) -> Order)),
+    value : V,
+  ) : [(K, V)] { ignore key; ignore value; self };
+};
+
+do {
+  let data : [(Nat, Text)] = [];
+
+  // implicit in the middle -> M0236 + M0237
+  ignore data.get(1);
+
+  // two adjacent implicits -> M0236 + M0237 x2
+  ignore data.put(1, "a");
+
+  // implicit at the end -> M0236 + M0237
+  ignore data.find(1, );
+  ignore data.sort1(); // -> M0236 + M0237
+  ignore Impl.sort2(data, ); // no dot suggestion (notSelf), M0237 only
+
+  // all implicits -> M0237 x2
+  let _ = Impl.make<Nat, Text>();
+
+  // non-adjacent implicits -> M0236 + M0237 x2
+  ignore data.update(1, "a");
+
+  // multiline: two adjacent implicits -> M0236 + M0237 x2
+  ignore data.put(
+    1,
+    "a",
+  );
+};
+
+// --- Mix: M0223 + M0236 + M0237 ---
+
+do {
+  // NB: Must use \`let _ = ...\` to get the 'redundant type instantiation' error
+  let _ = Map.empty<Nat, Text>().insert(
+    1,
+    "John",
+  ); // warn M0223 + M0236 + M0237
+};
+"
+`;
+
+exports[`check --fix edit-suggestions: fix output 1`] = `
+"Fixed run/edit-suggestions.mo (30 fixes: M0223, M0236, M0237)
+
+✓ 30 fixes applied to 1 file
+✓ <TEST_DIR>/check/fix/run/edit-suggestions.mo"
+`;
+
+exports[`check --fix overlapping edits 1`] = `
+"import Array "mo:core/Array";
+
+// Overlapping fixable errors (nested calls produce overlapping M0223 + M0236 edits)
+do {
+  let ar = [1, 2, 3];
+  let _ = ar.filter(func(x) { x > 0 }).filter(
+    func(x) { x > 0 },
+  );
+};
+"
+`;
+
+exports[`check --fix overlapping edits: fix output 1`] = `
+"Fixed run/overlapping.mo (4 fixes: M0223, M0236)
+
+✓ 4 fixes applied to 1 file
+✓ <TEST_DIR>/check/fix/run/overlapping.mo"
+`;
+
+exports[`check --fix transitive imports: fix output 1`] = `
+"Fixed run/transitive-lib.mo (1 fix: M0236)
+Fixed run/transitive-main.mo (1 fix: M0223)
+
+✓ 2 fixes applied to 2 files
+✓ <TEST_DIR>/check/fix/run/transitive-main.mo"
+`;
+
+exports[`check --fix transitive imports: lib file 1`] = `
+"import List "mo:core/List";
+import Nat "mo:core/Nat";
+
+module {
+  public func test() {
+    let list = List.fromArray<Nat>([3, 2, 1]);
+    list.sortInPlace();
+  };
+};
+"
+`;
+
+exports[`check --fix transitive imports: main file 1`] = `
+"import Lib "./transitive-lib";
+
+actor {
+  public func run() : async () {
+    func identity<T>(x : T) : T = x;
+    let _ = identity(1);
+    Lib.test();
+  };
+};
+"
+`;
