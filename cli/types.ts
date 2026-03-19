@@ -19,18 +19,28 @@ export type Config = {
   "dev-dependencies"?: Dependencies;
   toolchain?: Toolchain;
   requirements?: Requirements;
+  moc?: {
+    args?: string[];
+  };
   canisters?: Record<string, string | CanisterConfig>;
   build?: {
     outputDir?: string;
     args?: string[];
   };
+  lint?: {
+    args?: string[];
+  };
 };
 
 export type CanisterConfig = {
-  main: string;
+  main?: string;
   args?: string[];
   candid?: string;
   initArg?: string;
+  "check-stable"?: {
+    path: string;
+    skipIfMissing?: boolean;
+  };
 };
 
 export type Dependencies = Record<string, Dependency>;
@@ -46,9 +56,10 @@ export type Toolchain = {
   moc?: string;
   wasmtime?: string;
   "pocket-ic"?: string;
+  lintoko?: string;
 };
 
-export type Tool = "moc" | "wasmtime" | "pocket-ic";
+export type Tool = "moc" | "wasmtime" | "pocket-ic" | "lintoko";
 
 export type Requirements = {
   moc?: string;
