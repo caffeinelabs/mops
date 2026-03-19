@@ -18,9 +18,9 @@ export let getReleases = async () => {
   return toolchainUtils.getReleases(repo);
 };
 
-export let isCached = (version: string) => {
+export let isCached = (version: string, filename: "moc" | "moc.js") => {
   let dir = path.join(cacheDir, version);
-  return fs.existsSync(dir) && fs.existsSync(path.join(dir, "moc"));
+  return fs.existsSync(dir) && fs.existsSync(path.join(dir, filename));
 };
 
 export let download = async (
@@ -35,7 +35,32 @@ export let download = async (
     console.error("version is not defined");
     process.exit(1);
   }
-  if (isCached(version)) {
+
+  const destDir = path.join(cacheDir, version);
+
+  if (isCached(version, "moc.js")) {
+    if (verbose) {
+      console.log(`moc.js ${version} is already downloaded`);
+    }
+  } else {
+    // Download the .js artifact
+    const jsUrl = `https://github.com/dfinity/motoko/releases/download/${version}/moc-${version}.js`;
+    const jsDestPath = path.join(destDir, "moc.js");
+
+    if (verbose && !silent) {
+      console.log(`Downloading ${jsUrl}`);
+    }
+
+    const buffer = await toolchainUtils.tryDownloadFile(jsUrl);
+    if (buffer) {
+      fs.mkdirSync(destDir, { recursive: true });
+      fs.writeFileSync(jsDestPath, buffer);
+    } else if (verbose && !silent) {
+      console.log(`Warning: Could not download ${jsUrl}`);
+    }
+  }
+
+  if (isCached(version, "moc")) {
     if (verbose) {
       console.log(`moc ${version} is already installed`);
     }
@@ -64,5 +89,5 @@ export let download = async (
     console.log(`Downloading ${url}`);
   }
 
-  await toolchainUtils.downloadAndExtract(url, path.join(cacheDir, version));
+  await toolchainUtils.downloadAndExtract(url, destDir);
 };

@@ -12,31 +12,25 @@ import { filesize } from "filesize";
 import terminalSize from "terminal-size";
 import { SemVer } from "semver";
 
-import { getRootDir, readConfig, readDfxJson } from "../mops.js";
+import {
+  getGlobalMocArgs,
+  getRootDir,
+  readConfig,
+  readDfxJson,
+} from "../mops.js";
 import { parallel } from "../parallel.js";
 import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
 import { sources } from "./sources.js";
+import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
 import { BenchReplica } from "./bench-replica.js";
 
 type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
-
-let ignore = [
-  "**/node_modules/**",
-  "**/.mops/**",
-  "**/.vessel/**",
-  "**/.git/**",
-];
-
-let globConfig = {
-  nocase: true,
-  ignore: ignore,
-};
 
 type BenchOptions = {
   replica: ReplicaName;
@@ -113,7 +107,7 @@ export async function bench(
   if (filter) {
     globStr = `**/bench?(mark)/**/*${filter}*.mo`;
   }
-  let files = globSync(path.join(rootDir, globStr), globConfig);
+  let files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG);
   if (!files.length) {
     if (filter) {
       options.silent ||
@@ -149,13 +143,15 @@ export async function bench(
 
   await replica.start({ silent: options.silent });
 
+  let globalMocArgs = getGlobalMocArgs(config);
+
   if (!process.env.CI && !options.silent) {
     console.log("Deploying canisters...");
   }
 
   await parallel(os.cpus().length, files, async (file: string) => {
     try {
-      await deployBenchFile(file, options, replica);
+      await deployBenchFile(file, options, replica, globalMocArgs);
     } catch (err) {
       console.error("Unexpected error. Stopping replica...");
       await replica.stop();
@@ -278,6 +274,7 @@ async function deployBenchFile(
   file: string,
   options: BenchOptions,
   replica: BenchReplica,
+  globalMocArgs: string[],
 ): Promise<void> {
   let rootDir = getRootDir();
   let tempDir = path.join(rootDir, ".mops/.bench/", path.parse(file).name);
@@ -305,7 +302,7 @@ async function deployBenchFile(
   let mocArgs = getMocArgs(options);
   options.verbose && console.time(`build ${canisterName}`);
   await execaCommand(
-    `${mocPath} -c --idl canister.mo ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`,
+    `${mocPath} -c --idl canister.mo ${globalMocArgs.join(" ")} ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`,
     {
       cwd: tempDir,
       stdio: options.verbose ? "pipe" : ["pipe", "ignore", "pipe"],

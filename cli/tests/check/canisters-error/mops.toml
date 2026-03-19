@@ -1,0 +1,8 @@
+[toolchain]
+moc = "1.3.0"
+
+[moc]
+args = ["--default-persistent-actors"]
+
+[canisters.backend]
+main = "Error.mo"
