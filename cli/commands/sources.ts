@@ -10,10 +10,10 @@ import {
 } from "../mops.js";
 import { resolvePackages } from "../resolve-packages.js";
 
-export async function sources({
+export async function sourcesArgs({
   conflicts = "ignore" as "warning" | "error" | "ignore",
   cwd = process.cwd(),
-} = {}) {
+} = {}): Promise<string[][]> {
   if (!checkConfigFile()) {
     return [];
   }
@@ -53,7 +53,14 @@ export async function sources({
         pkgBaseDir = pkgDir;
       }
 
-      return `--package ${name} ${pkgBaseDir}`;
+      return ["--package", name, pkgBaseDir];
     })
     .filter((x) => x != null);
+}
+
+export async function sources({
+  conflicts = "ignore" as "warning" | "error" | "ignore",
+  cwd = process.cwd(),
+} = {}): Promise<string[]> {
+  return (await sourcesArgs({ conflicts, cwd })).map((args) => args.join(" "));
 }

@@ -1,6 +1,6 @@
 {
   "name": "ic-mops",
-  "version": "1.12.0",
+  "version": "2.4.0",
   "type": "module",
   "bin": {
     "mops": "dist/bin/mops.js",
@@ -15,12 +15,13 @@
     "!build.sh",
     "!DEVELOPMENT.md",
     "!.mops",
-    "/templates"
+    "/templates",
+    "/wasm"
   ],
   "homepage": "https://mops.one",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dfinity/mops.git"
+    "url": "https://github.com/caffeinelabs/mops.git"
   },
   "author": "DFINITY",
   "license": "MIT",
@@ -28,21 +29,25 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "mops": "tsx ./cli.ts",
-    "build": "npm run prepare && npm run bundle",
-    "dist": "tsc",
-    "bundle": "rm -rf ./bundle && bun build ./cli.ts --outdir ./bundle --target node --minify --external @napi-rs/lzma --external fsevents --format esm --define '__dirname=import.meta.dirname' && npm run bundle:fix && npm run bundle:copy && npm run bundle:package-json && npm run bundle:tar",
-    "bundle:fix": "rexreplace 'new URL\\(\"\\.\\./templates' 'new URL(\"./templates' bundle/cli.js && rexreplace 'resolve\\(\".*?/xhr-sync-worker\\.js\"\\)' 'resolve(\"./xhr-sync-worker.js\")' bundle/cli.js && rexreplace '\"import.meta.dirname\",\"wasm_bg.wasm\"' 'import.meta.dirname || new URL(\".\", import.meta.url).pathname,\"wasm_bg.wasm\"' bundle/cli.js",
-    "bundle:copy": "cp -r commands/bench bundle && cp -r bin declarations templates package.json bundle && cp -r node_modules/prettier-plugin-motoko/wasm/pkg/nodejs/wasm_bg.wasm node_modules/jsdom/lib/jsdom/living/xhr/xhr-sync-worker.js bundle",
+    "mops": "tsx ./environments/nodejs/cli",
+    "build": "run-s prepare bundle",
+    "build:wasm": "run-s build:wasm:nodejs build:wasm:web",
+    "build:wasm:nodejs": "wasm-pack build wasm --target nodejs --out-dir pkg/nodejs && rm wasm/pkg/nodejs/.gitignore",
+    "build:wasm:web": "wasm-pack build wasm --target web --out-dir pkg/web && rm wasm/pkg/web/.gitignore",
+    "dist": "npm run build:wasm && tsc && mkdir -p dist/wasm && cp -r wasm/pkg dist/wasm",
+    "bundle": "rm -rf ./bundle && bun build ./environments/web/cli.ts --outdir ./bundle --target node --minify --external @napi-rs/lzma --external fsevents --format esm --define '__dirname=import.meta.dirname' && run-s bundle:fix bundle:copy bundle:package-json bundle:tar",
+    "bundle:fix": "rexreplace 'new URL\\(\"\\.\\./templates' 'new URL(\"./templates' bundle/cli.js && rexreplace 'resolve\\(\".*?/xhr-sync-worker\\.js\"\\)' 'resolve(\"./xhr-sync-worker.js\")' bundle/cli.js && rexreplace '\"import.meta.dirname\",\"wasm_bg.wasm\"' 'import.meta.dirname || new URL(\".\", import.meta.url).pathname,\"wasm_bg.wasm\"' bundle/cli.js && rexreplace 'resolve\\(\"import.meta.dirname\",\".*?/default-stylesheet\\.css\"\\)' 'resolve(import.meta.dirname,\"./default-stylesheet.css\")' bundle/cli.js",
+    "bundle:copy": "cp -r commands/bench bundle && cp -r bin declarations templates package.json bundle && cp -r node_modules/prettier-plugin-motoko/wasm/pkg/nodejs/wasm_bg.wasm node_modules/jsdom/lib/jsdom/living/xhr/xhr-sync-worker.js node_modules/jsdom/lib/jsdom/browser/default-stylesheet.css bundle",
     "bundle:package-json": "tsx bundle-package-json.ts",
     "bundle:tar": "rm -f bundle/cli.tgz && touch -t 200101010101 bundle/cli.tgz && find bundle -exec touch -d '1970-01-01 00:00:00' {} + && tar --sort name --exclude bundle/cli.tgz -cvf - bundle | gzip -n > bundle/cli.tgz",
     "copy": "cp -r commands/bench dist/commands && cp -r declarations templates package.json bin dist | true",
-    "prepare": "rm -rf dist && npm run dist && npm run copy && npm run fix-dist",
+    "prepare": "rm -rf dist && run-s dist copy fix-dist",
     "fix-dist": "tsx ./fix-dist.ts",
     "release": "tsx release-cli.ts",
     "check": "tsc --project tsconfig.json --noEmit",
     "tsc": "tsc",
-    "esbuild": "esbuild"
+    "esbuild": "esbuild",
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
   },
   "dependencies": {
     "@iarna/toml": "2.2.5",
@@ -64,30 +69,30 @@
     "filesize": "10.1.6",
     "fs-extra": "11.2.0",
     "get-folder-size": "5.0.0",
-    "glob": "11.0.1",
+    "glob": "13.0.6",
     "globby": "14.0.2",
     "got": "14.4.6",
-    "jsdom": "26.1.0",
+    "jsdom": "28.1.0",
     "log-update": "6.1.0",
     "markdown-table": "3.0.4",
     "mdast-util-from-markdown": "2.0.2",
     "mdast-util-to-markdown": "2.1.2",
     "minimatch": "10.0.1",
     "ncp": "2.0.0",
-    "node-fetch": "3.3.2",
     "octokit": "3.1.2",
     "pem-file": "1.0.1",
     "pic-ic": "0.5.4",
     "pic-js-mops": "0.14.8",
     "prettier": "3.5.3",
-    "prettier-plugin-motoko": "0.11.0",
+    "prettier-plugin-motoko": "0.13.0",
     "promisify-child-process": "4.1.2",
     "prompts": "2.4.2",
     "semver": "7.7.1",
     "stream-to-promise": "3.0.0",
     "string-width": "7.2.0",
-    "tar": "7.4.3",
-    "terminal-size": "4.0.0"
+    "tar": "7.5.9",
+    "terminal-size": "4.0.0",
+    "vscode-languageserver-textdocument": "1.0.12"
   },
   "devDependencies": {
     "@tsconfig/strictest": "2.0.5",
@@ -95,7 +100,7 @@
     "@types/decompress": "4.2.7",
     "@types/fs-extra": "11.0.4",
     "@types/glob": "8.1.0",
-    "@types/jsdom": "21.1.7",
+    "@types/jsdom": "28.0.0",
     "@types/ncp": "2.0.8",
     "@types/node": "24.0.3",
     "@types/prompts": "2.4.9",
@@ -104,8 +109,11 @@
     "@types/tar": "6.1.13",
     "esbuild": "0.23.1",
     "eslint": "8.57.0",
+    "npm-run-all": "4.1.5",
     "rexreplace": "7.1.13",
+    "ts-jest": "29.4.5",
     "tsx": "4.19.2",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "wasm-pack": "0.13.1"
   }
 }

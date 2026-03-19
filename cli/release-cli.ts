@@ -11,8 +11,13 @@ import { findChangelogEntry } from "./helpers/find-changelog-entry.js";
 
 let __dirname = new URL(".", import.meta.url).pathname;
 
-// build using Docker
-execSync("./build.sh", { stdio: "inherit", cwd: __dirname });
+if (!process.env.SKIP_BUILD) {
+  execSync("./build.sh", { stdio: "inherit", cwd: __dirname });
+} else if (!fs.existsSync(path.resolve(__dirname, "bundle/cli.tgz"))) {
+  throw new Error(
+    "SKIP_BUILD is set but bundle/cli.tgz does not exist. Run build.sh first.",
+  );
+}
 
 let commitHash =
   process.env.COMMIT_HASH || execSync("git rev-parse HEAD").toString().trim();

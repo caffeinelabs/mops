@@ -1,52 +1,61 @@
-import process from "node:process";
-import fs from "node:fs";
+import { Argument, Command, Option } from "commander";
 import events from "node:events";
-import { Command, Argument, Option } from "commander";
+import fs from "node:fs";
+import process from "node:process";
 
-import { init } from "./commands/init.js";
-import { publish } from "./commands/publish.js";
-import { sources } from "./commands/sources.js";
-import {
-  checkApiCompatibility,
-  setNetwork,
-  apiVersion,
-  checkConfigFile,
-  getNetworkFile,
-  version,
-} from "./mops.js";
+import { resolve } from "node:path";
 import { getNetwork } from "./api/network.js";
-import { installAll } from "./commands/install/install-all.js";
-import { search } from "./commands/search.js";
-import { add } from "./commands/add.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
-import { test } from "./commands/test/test.js";
-import { template } from "./commands/template.js";
-import { remove } from "./commands/remove.js";
-import {
-  importPem,
-  getPrincipal,
-  getUserProp,
-  setUserProp,
-} from "./commands/user.js";
-import { bump } from "./commands/bump.js";
-import { sync } from "./commands/sync.js";
-import { outdated } from "./commands/outdated.js";
-import { update } from "./commands/update.js";
+import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
-import { toolchain } from "./commands/toolchain/index.js";
-import { Tool } from "./types.js";
-import * as self from "./commands/self.js";
-import { resolvePackages } from "./resolve-packages.js";
-import { watch } from "./commands/watch/watch.js";
-import { addOwner, printOwners, removeOwner } from "./commands/owner.js";
+import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
+import { bump } from "./commands/bump.js";
+import { check } from "./commands/check.js";
+import { checkCandid } from "./commands/check-candid.js";
+import { checkStable } from "./commands/check-stable.js";
+import { docsCoverage } from "./commands/docs-coverage.js";
+import { docs } from "./commands/docs.js";
+import { format } from "./commands/format.js";
+import { init } from "./commands/init.js";
+import { lint } from "./commands/lint.js";
+import { installAll } from "./commands/install/install-all.js";
 import {
   addMaintainer,
   printMaintainers,
   removeMaintainer,
 } from "./commands/maintainer.js";
-import { format } from "./commands/format.js";
-import { docs } from "./commands/docs.js";
-import { docsCoverage } from "./commands/docs-coverage.js";
+import { outdated } from "./commands/outdated.js";
+import { addOwner, printOwners, removeOwner } from "./commands/owner.js";
+import { publish } from "./commands/publish.js";
+import { remove } from "./commands/remove.js";
+import { search } from "./commands/search.js";
+import * as self from "./commands/self.js";
+import { sources } from "./commands/sources.js";
+import { sync } from "./commands/sync.js";
+import { template } from "./commands/template.js";
+import { test } from "./commands/test/test.js";
+import { toolchain } from "./commands/toolchain/index.js";
+import { update } from "./commands/update.js";
+import {
+  getPrincipal,
+  getUserProp,
+  importPem,
+  setUserProp,
+} from "./commands/user.js";
+import { watch } from "./commands/watch/watch.js";
+import {
+  apiVersion,
+  checkApiCompatibility,
+  checkConfigFile,
+  getGlobalMocArgs,
+  getNetworkFile,
+  readConfig,
+  setNetwork,
+  version,
+} from "./mops.js";
+import { resolvePackages } from "./resolve-packages.js";
+import { Tool } from "./types.js";
+import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -57,12 +66,34 @@ declare global {
 
 events.setMaxListeners(20);
 
+// Change working directory for `npm run mops`
+let cwd = process.env["MOPS_CWD"];
+if (cwd) {
+  process.chdir(resolve(cwd));
+}
+
 let networkFile = getNetworkFile();
 if (fs.existsSync(networkFile)) {
   globalThis.MOPS_NETWORK = fs.readFileSync(networkFile).toString() || "ic";
 }
 
 let program = new Command();
+
+function parseExtraArgs(variadicArgs?: string[]): {
+  extraArgs: string[];
+  args: string[];
+} {
+  const rawArgs = process.argv.slice(2);
+  const dashDashIndex = rawArgs.indexOf("--");
+  const extraArgs =
+    dashDashIndex !== -1 ? rawArgs.slice(dashDashIndex + 1) : [];
+  const args = variadicArgs
+    ? extraArgs.length > 0
+      ? variadicArgs.slice(0, variadicArgs.length - extraArgs.length)
+      : variadicArgs
+    : [];
+  return { extraArgs, args };
+}
 
 program.name("mops");
 
@@ -143,7 +174,7 @@ program
     }
 
     if (options.toolchain) {
-      await toolchain.ensureToolchainInited({ strict: false });
+      await toolchain.checkToolchainInited({ strict: false });
     }
 
     let ok = await installAll(options);
@@ -222,9 +253,22 @@ program
         installFromLockFile: true,
       });
     }
-    await toolchain.ensureToolchainInited({ strict: false });
+    await toolchain.checkToolchainInited({ strict: false });
     let sourcesArr = await sources(options);
     console.log(sourcesArr.join("\n"));
+  });
+
+// moc-args
+program
+  .command("moc-args")
+  .description("Print global moc compiler flags from [moc] config section")
+  .action(async () => {
+    checkConfigFile(true);
+    let config = readConfig();
+    let args = getGlobalMocArgs(config);
+    if (args.length) {
+      console.log(args.join("\n"));
+    }
   });
 
 // search
@@ -250,6 +294,92 @@ program
     } else if (sub == "show") {
       console.log(show());
     }
+  });
+
+// build
+program
+  .command("build [canisters...]")
+  .description("Build a canister")
+  .addOption(new Option("--verbose", "Verbose console output"))
+  .addOption(new Option("--output, -o <output>", "Output directory"))
+  .allowUnknownOption(true) // TODO: restrict unknown before "--"
+  .action(async (canisters, options) => {
+    checkConfigFile(true);
+    const { extraArgs, args } = parseExtraArgs(canisters);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await build(args.length ? args : undefined, {
+      ...options,
+      outputDir: options.output,
+      extraArgs,
+    });
+  });
+
+// check
+program
+  .command("check [files...]")
+  .description(
+    "Check Motoko files for syntax errors and type issues. If no files are specified, checks all canister entrypoints from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured",
+  )
+  .option("--verbose", "Verbose console output")
+  .addOption(
+    new Option(
+      "--fix",
+      "Apply autofixes to all files, including transitively imported ones",
+    ),
+  )
+  .allowUnknownOption(true)
+  .action(async (files, options) => {
+    checkConfigFile(true);
+    const { extraArgs, args: fileList } = parseExtraArgs(files);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await check(fileList, {
+      ...options,
+      extraArgs,
+    });
+  });
+
+// check-candid
+program
+  .command("check-candid <new-candid> <original-candid>")
+  .description("Check Candid interface compatibility between two Candid files")
+  .action(async (newCandid, originalCandid) => {
+    checkConfigFile(true);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await checkCandid(newCandid, originalCandid);
+  });
+
+// check-stable
+program
+  .command("check-stable <old-file> [canister]")
+  .description(
+    "Check stable variable compatibility between an old version (.mo or .most file) and the current canister entrypoint",
+  )
+  .option("--verbose", "Verbose console output")
+  .allowUnknownOption(true)
+  .action(async (oldFile, canister, options) => {
+    checkConfigFile(true);
+    const { extraArgs } = parseExtraArgs();
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await checkStable(oldFile, canister, {
+      ...options,
+      extraArgs,
+    });
   });
 
 // test
@@ -526,7 +656,7 @@ toolchainCommand
 toolchainCommand
   .command("use")
   .description("Install specified tool version and update mops.toml")
-  .addArgument(new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic"]))
+  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
   .addArgument(new Argument("[version]"))
   .action(async (tool, version) => {
     if (!checkConfigFile()) {
@@ -540,7 +670,7 @@ toolchainCommand
   .description(
     "Update specified tool or all tools to the latest version and update mops.toml",
   )
-  .addArgument(new Argument("[tool]").choices(["moc", "wasmtime", "pocket-ic"]))
+  .addArgument(new Argument("[tool]").choices(TOOLCHAINS))
   .action(async (tool?: Tool) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -551,9 +681,9 @@ toolchainCommand
 toolchainCommand
   .command("bin")
   .description(
-    'Get path to the tool binary\n<tool> can be one of "moc", "wasmtime", "pocket-ic"',
+    `Get path to the tool binary\n<tool> can be one of ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}`,
   )
-  .addArgument(new Argument("<tool>").choices(["moc", "wasmtime", "pocket-ic"]))
+  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
   .addOption(
     new Option(
       "--fallback",
@@ -622,6 +752,28 @@ program
     }
   });
 
+// lint
+program
+  .command("lint [filter]")
+  .description("Lint Motoko code")
+  .addOption(new Option("--verbose", "Verbose output"))
+  .addOption(new Option("--fix", "Apply fixes"))
+  .addOption(
+    new Option(
+      "-r, --rules <directory...>",
+      "Directories containing rules (can be used multiple times)",
+    ),
+  )
+  .allowUnknownOption(true)
+  .action(async (filter, options) => {
+    checkConfigFile(true);
+    const { extraArgs } = parseExtraArgs();
+    await lint(filter, {
+      ...options,
+      extraArgs,
+    });
+  });
+
 // docs
 const docsCommand = new Command("docs").description("Documentation management");
 
@@ -630,7 +782,7 @@ docsCommand
   .description("Generate documentation for Motoko code")
   .addOption(new Option("--source <source>", "Source directory").default("src"))
   .addOption(
-    new Option("--output <output>", "Output directory").default("docs"),
+    new Option("--output, -o <output>", "Output directory").default("docs"),
   )
   .addOption(
     new Option("--format <format>", "Output format")
