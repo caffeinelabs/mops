@@ -1,32 +1,32 @@
 .documentation {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	margin-bottom: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 80px;
 }
 
 .documentation .content {
-	max-width: 700px;
-	width: 100%;
-	padding: 30px 15px;
-	box-sizing: border-box;
+  max-width: 700px;
+  width: 100%;
+  padding: 30px 15px;
+  box-sizing: border-box;
 }
 
 .documentation h2 {
-	border-bottom: none;
+  border-bottom: none;
 }
 
 .documentation h3 {
-	margin-top: 30px;
+  margin-top: 30px;
 }
 
 .documentation code.inline {
-	display: inline;
-	padding: 3px;
+  display: inline;
+  padding: 3px;
 }
 
 .documentation code {
-	display: block;
-	padding: 10px 12px;
-	overflow-x: auto;
+  display: block;
+  padding: 10px 12px;
+  overflow-x: auto;
 }

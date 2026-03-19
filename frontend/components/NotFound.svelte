@@ -1,5 +1,5 @@
 <script lang="ts">
-	import sadMopsImg from '/img/sad-mops.svg';
+	import sadMopsImg from "/img/sad-mops.svg";
 </script>
 
 <div class="not-found">

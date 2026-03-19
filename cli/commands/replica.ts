@@ -1,322 +1,372 @@
-import process from 'node:process';
-import {ChildProcessWithoutNullStreams, execSync, spawn} from 'node:child_process';
-import path from 'node:path';
-import fs from 'node:fs';
-import {PassThrough} from 'node:stream';
-import {spawn as spawnAsync} from 'promisify-child-process';
+import process from "node:process";
+import {
+  ChildProcessWithoutNullStreams,
+  execSync,
+  spawn,
+} from "node:child_process";
+import path from "node:path";
+import fs from "node:fs";
+import { PassThrough } from "node:stream";
+import { spawn as spawnAsync } from "promisify-child-process";
 
-import {IDL} from '@icp-sdk/core/candid';
-import {Actor, HttpAgent} from '@icp-sdk/core/agent';
-import {PocketIc, PocketIcServer} from 'pic-ic';
-import {PocketIc as PocketIcMops, PocketIcServer as PocketIcServerMops} from 'pic-js-mops';
-import chalk from 'chalk';
+import { IDL } from "@icp-sdk/core/candid";
+import { Actor, HttpAgent } from "@icp-sdk/core/agent";
+import chalk from "chalk";
 
-import {readConfig} from '../mops.js';
-import {toolchain} from './toolchain/index.js';
-import {getDfxVersion} from '../helpers/get-dfx-version.js';
+import {
+  type AnyPocketIcServer,
+  type AnyPocketIc,
+  type AnySetupCanister,
+  startPocketIc,
+} from "../helpers/pocket-ic-client.js";
+import { toolchain } from "./toolchain/index.js";
+import { getDfxVersion } from "../helpers/get-dfx-version.js";
 
 type StartOptions = {
-	type ?: 'dfx' | 'pocket-ic' | 'dfx-pocket-ic';
-	dir ?: string;
-	verbose ?: boolean;
-	silent ?: boolean;
+  type?: "dfx" | "pocket-ic" | "dfx-pocket-ic";
+  dir?: string;
+  verbose?: boolean;
+  silent?: boolean;
 };
 
 export class Replica {
-	type : 'dfx' | 'pocket-ic' | 'dfx-pocket-ic' = 'dfx';
-	verbose = false;
-	canisters : Record<string, {cwd : string; canisterId : string; actor : any; stream : PassThrough;}> = {};
-	pocketIcServer ?: PocketIcServer | PocketIcServerMops;
-	pocketIc ?: PocketIc | PocketIcMops;
-	dfxProcess ?: ChildProcessWithoutNullStreams;
-	dir : string = ''; // absolute path (/.../.mops/.test/)
-	ttl = 60;
+  type: "dfx" | "pocket-ic" | "dfx-pocket-ic" = "dfx";
+  verbose = false;
+  canisters: Record<
+    string,
+    { cwd: string; canisterId: string; actor: any; stream: PassThrough }
+  > = {};
+  pocketIcServer?: AnyPocketIcServer;
+  pocketIc?: AnyPocketIc;
+  dfxProcess?: ChildProcessWithoutNullStreams;
+  dir: string = ""; // absolute path (/.../.mops/.test/)
+  ttl = 60;
 
-	async start({type, dir, verbose, silent} : StartOptions = {}) {
-		this.type = type ?? this.type;
-		this.verbose = verbose ?? this.verbose;
-		this.dir = dir ?? this.dir;
+  async start({ type, dir, verbose, silent }: StartOptions = {}) {
+    this.type = type ?? this.type;
+    this.verbose = verbose ?? this.verbose;
+    this.dir = dir ?? this.dir;
 
-		silent || console.log(`Starting ${this.type} replica...`);
+    silent || console.log(`Starting ${this.type} replica...`);
 
-		if (this.type === 'dfx' || this.type === 'dfx-pocket-ic') {
-			fs.mkdirSync(this.dir, {recursive: true});
-			fs.writeFileSync(path.join(this.dir, 'dfx.json'), JSON.stringify(this.dfxJson(''), null, 2));
-			fs.writeFileSync(path.join(this.dir, 'canister.did'), 'service : { runTests: () -> (); }');
+    if (this.type === "dfx" || this.type === "dfx-pocket-ic") {
+      fs.mkdirSync(this.dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(this.dir, "dfx.json"),
+        JSON.stringify(this.dfxJson(""), null, 2),
+      );
+      fs.writeFileSync(
+        path.join(this.dir, "canister.did"),
+        "service : { runTests: () -> (); }",
+      );
 
-			await this.stop();
+      await this.stop();
 
-			this.dfxProcess = spawn('dfx', ['start', this.type === 'dfx-pocket-ic' ? '--pocketic' : '', '--clean', (this.verbose ? '' : '-qqqq'), '--artificial-delay', '0'].filter(x => x).flat(), {cwd: this.dir});
+      this.dfxProcess = spawn(
+        "dfx",
+        [
+          "start",
+          this.type === "dfx-pocket-ic" ? "--pocketic" : "",
+          "--clean",
+          this.verbose ? "" : "-qqqq",
+          "--artificial-delay",
+          "0",
+        ]
+          .filter((x) => x)
+          .flat(),
+        { cwd: this.dir },
+      );
 
-			// process canister logs
-			this._attachCanisterLogHandler(this.dfxProcess);
+      // process canister logs
+      this._attachCanisterLogHandler(this.dfxProcess);
 
-			this.dfxProcess.stdout.on('data', (data) => {
-				if (this.verbose) {
-					console.log('DFX:', data.toString());
-				}
-			});
+      this.dfxProcess.stdout.on("data", (data) => {
+        if (this.verbose) {
+          console.log("DFX:", data.toString());
+        }
+      });
 
-			this.dfxProcess.stderr.on('data', (data) => {
-				if (this.verbose) {
-					console.error('DFX:', data.toString());
-				}
-				if (data.toString().includes('Failed to bind socket to')) {
-					console.error(chalk.red(data.toString()));
-					console.log('Please try again after some time');
-					process.exit(11);
-				}
-			});
+      this.dfxProcess.stderr.on("data", (data) => {
+        if (this.verbose) {
+          console.error("DFX:", data.toString());
+        }
+        if (data.toString().includes("Failed to bind socket to")) {
+          console.error(chalk.red(data.toString()));
+          console.log("Please try again after some time");
+          process.exit(11);
+        }
+      });
 
-			// await for dfx to start
-			let ok = false;
-			while (!ok) {
-				await fetch('http://127.0.0.1:4945/api/v2/status')
-					.then(res => {
-						if (res.status === 200) {
-							ok = true;
-						}
-					})
-					.catch(() => {})
-					.finally(() => {
-						return new Promise(resolve => setTimeout(resolve, 1000));
-					});
-			}
-		}
-		else {
-			let pocketIcBin = await toolchain.bin('pocket-ic');
+      // await for dfx to start
+      let ok = false;
+      while (!ok) {
+        await fetch("http://127.0.0.1:4945/api/v2/status")
+          .then((res) => {
+            if (res.status === 200) {
+              ok = true;
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            return new Promise((resolve) => setTimeout(resolve, 1000));
+          });
+      }
+    } else {
+      let pocketIcBin = await toolchain.bin("pocket-ic");
 
-			let config = readConfig();
-			if (config.toolchain?.['pocket-ic'] !== '4.0.0' && !config.toolchain?.['pocket-ic']?.startsWith('9.')) {
-				console.error('Current Mops CLI only supports pocket-ic 9.x.x and 4.0.0');
-				process.exit(1);
-			}
+      let pic = await startPocketIc({
+        binPath: pocketIcBin,
+        showRuntimeLogs: false,
+        showCanisterLogs: false,
+        ttl: this.ttl,
+      });
+      this.pocketIcServer = pic.server;
+      this.pocketIc = pic.client;
 
-			// pocket-ic 9.x.x
-			if (config.toolchain?.['pocket-ic']?.startsWith('9.')) {
-				this.pocketIcServer = await PocketIcServerMops.start({
-					showRuntimeLogs: false,
-					showCanisterLogs: false,
-					binPath: pocketIcBin,
-					ttl: this.ttl,
-				});
-				this.pocketIc = await PocketIcMops.create(this.pocketIcServer.getUrl());
-			}
-			// pocket-ic 4.0.0
-			else {
-				this.pocketIcServer = await PocketIcServer.start({
-					showRuntimeLogs: false,
-					showCanisterLogs: false,
-					binPath: pocketIcBin,
-					ttl: this.ttl,
-				});
-				this.pocketIc = await PocketIc.create(this.pocketIcServer.getUrl());
-			}
+      // process canister logs
+      this._attachCanisterLogHandler(
+        this.pocketIcServer.serverProcess as ChildProcessWithoutNullStreams,
+      );
+    }
+  }
 
-			// process canister logs
-			this._attachCanisterLogHandler(this.pocketIcServer.serverProcess as ChildProcessWithoutNullStreams);
-		}
-	}
+  _attachCanisterLogHandler(proc: ChildProcessWithoutNullStreams) {
+    let curData = "";
+    proc.stderr.on("data", (data) => {
+      curData = curData + data.toString();
 
-	_attachCanisterLogHandler(proc : ChildProcessWithoutNullStreams) {
-		let curData = '';
-		proc.stderr.on('data', (data) => {
-			curData = curData + data.toString();
+      if (curData.includes("\n")) {
+        let chunk = curData.split("\n").slice(0, -1).join("\n");
+        let matches = [...chunk.matchAll(/\[Canister ([a-z0-9-]+)\] (.*)/g)];
 
-			if (curData.includes('\n')) {
-				let chunk = curData.split('\n').slice(0, -1).join('\n');
-				let matches = [...chunk.matchAll(/\[Canister ([a-z0-9-]+)\] (.*)/g)];
+        for (let match of matches) {
+          let [, canisterId, msg] = match;
+          let stream = this.getCanisterStream(canisterId || "");
+          if (stream) {
+            stream.write(msg);
+          }
+        }
 
-				for (let match of matches) {
-					let [, canisterId, msg] = match;
-					let stream = this.getCanisterStream(canisterId || '');
-					if (stream) {
-						stream.write(msg);
-					}
-				}
+        if (matches.length) {
+          curData = curData.split("\n").slice(-1).join("\n");
+        }
+      }
+    });
+  }
 
-				if (matches.length) {
-					curData = curData.split('\n').slice(-1).join('\n');
-				}
-			}
-		});
-	}
+  async stop(sigint = false) {
+    if (this.type === "dfx" || this.type === "dfx-pocket-ic") {
+      if (this.dfxProcess) {
+        let killed = this.dfxProcess.kill();
 
-	async stop(sigint = false) {
-		if (this.type === 'dfx' || this.type === 'dfx-pocket-ic') {
-			if (this.dfxProcess) {
-				let killed = this.dfxProcess.kill();
+        if (!killed) {
+          this.dfxProcess.kill("SIGKILL");
+        }
 
-				if (!killed) {
-					this.dfxProcess.kill('SIGKILL');
-				}
+        // give replica some time to stop
+        let i = 0;
+        while (this.dfxProcess.exitCode === null) {
+          i++;
+          await new Promise((resolve) => {
+            setTimeout(resolve, 500);
+          });
+          if (i >= 20) {
+            break;
+          }
+        }
 
-				// give replica some time to stop
-				let i = 0;
-				while (this.dfxProcess.exitCode === null) {
-					i++;
-					await new Promise((resolve) => {
-						setTimeout(resolve, 500);
-					});
-					if (i >= 20) {
-						break;
-					}
-				}
+        // // make sure replica is stopped
+        // try {
+        // 	// execSync('dfx killall', {cwd: this.dir, timeout: 3_000, stdio: ['pipe', this.verbose ? 'inherit' : 'ignore', 'pipe']});
+        // 	execSync('dfx stop' + (this.verbose ? '' : ' -qqqq'), {cwd: this.dir, timeout: 3_000, stdio: ['pipe', this.verbose ? 'inherit' : 'ignore', 'pipe']});
+        // }
+        // catch {}
+      }
+    } else if (this.pocketIc && this.pocketIcServer) {
+      if (!sigint) {
+        await this.pocketIc.tearDown(); // error 'fetch failed' if run on SIGINT
+      }
+      await this.pocketIcServer.stop();
+    }
+  }
 
-				// // make sure replica is stopped
-				// try {
-				// 	// execSync('dfx killall', {cwd: this.dir, timeout: 3_000, stdio: ['pipe', this.verbose ? 'inherit' : 'ignore', 'pipe']});
-				// 	execSync('dfx stop' + (this.verbose ? '' : ' -qqqq'), {cwd: this.dir, timeout: 3_000, stdio: ['pipe', this.verbose ? 'inherit' : 'ignore', 'pipe']});
-				// }
-				// catch {}
-			}
-		}
-		else if (this.pocketIc && this.pocketIcServer) {
-			if (!sigint) {
-				await this.pocketIc.tearDown(); // error 'fetch failed' if run on SIGINT
-			}
-			await this.pocketIcServer.stop();
-		}
-	}
+  async deploy(
+    name: string,
+    wasm: string,
+    idlFactory: IDL.InterfaceFactory,
+    cwd: string = process.cwd(),
+    signal?: AbortSignal,
+  ) {
+    if (this.type === "dfx" || this.type === "dfx-pocket-ic") {
+      // prepare dfx.json for current canister
+      let dfxJson = path.join(this.dir, "dfx.json");
 
-	async deploy(name : string, wasm : string, idlFactory : IDL.InterfaceFactory, cwd : string = process.cwd(), signal ?: AbortSignal) {
-		if (this.type === 'dfx' || this.type === 'dfx-pocket-ic') {
-			// prepare dfx.json for current canister
-			let dfxJson = path.join(this.dir, 'dfx.json');
+      let oldDfxJsonData;
+      if (fs.existsSync(dfxJson)) {
+        oldDfxJsonData = JSON.parse(fs.readFileSync(dfxJson).toString());
+      }
+      let newDfxJsonData = this.dfxJson(name, name + ".wasm");
 
-			let oldDfxJsonData;
-			if (fs.existsSync(dfxJson)) {
-				oldDfxJsonData = JSON.parse(fs.readFileSync(dfxJson).toString());
-			}
-			let newDfxJsonData = this.dfxJson(name, name + '.wasm');
+      if (oldDfxJsonData.canisters) {
+        newDfxJsonData.canisters = Object.assign(
+          oldDfxJsonData.canisters,
+          newDfxJsonData.canisters,
+        );
+      }
 
-			if (oldDfxJsonData.canisters) {
-				newDfxJsonData.canisters = Object.assign(oldDfxJsonData.canisters, newDfxJsonData.canisters);
-			}
+      fs.mkdirSync(this.dir, { recursive: true });
+      fs.writeFileSync(dfxJson, JSON.stringify(newDfxJsonData, null, 2));
 
-			fs.mkdirSync(this.dir, {recursive: true});
-			fs.writeFileSync(dfxJson, JSON.stringify(newDfxJsonData, null, 2));
+      await spawnAsync(
+        "dfx",
+        [
+          "deploy",
+          name,
+          "--mode",
+          "reinstall",
+          "--yes",
+          "--identity",
+          "anonymous",
+        ],
+        {
+          cwd: this.dir,
+          signal,
+          stdio: this.verbose ? "pipe" : ["pipe", "ignore", "pipe"],
+        },
+      ).catch((error) => {
+        if (error.code === "ABORT_ERR") {
+          return { stderr: "" };
+        }
+        throw error;
+      });
 
-			await spawnAsync('dfx', ['deploy', name, '--mode', 'reinstall', '--yes', '--identity', 'anonymous'], {cwd: this.dir, signal, stdio: this.verbose ? 'pipe' : ['pipe', 'ignore', 'pipe']}).catch((error) => {
-				if (error.code === 'ABORT_ERR') {
-					return {stderr: ''};
-				}
-				throw error;
-			});
+      if (signal?.aborted) {
+        return;
+      }
 
-			if (signal?.aborted) {
-				return;
-			}
+      await spawnAsync(
+        "dfx",
+        ["ledger", "fabricate-cycles", "--canister", name, "--t", "100"],
+        {
+          cwd: this.dir,
+          signal,
+          stdio: this.verbose ? "pipe" : ["pipe", "ignore", "pipe"],
+        },
+      ).catch((error) => {
+        if (error.code === "ABORT_ERR") {
+          return { stderr: "" };
+        }
+        throw error;
+      });
 
-			await spawnAsync('dfx', ['ledger', 'fabricate-cycles', '--canister', name, '--t', '100'], {cwd: this.dir, signal, stdio: this.verbose ? 'pipe' : ['pipe', 'ignore', 'pipe']}).catch((error) => {
-				if (error.code === 'ABORT_ERR') {
-					return {stderr: ''};
-				}
-				throw error;
-			});
+      if (signal?.aborted) {
+        return;
+      }
 
-			if (signal?.aborted) {
-				return;
-			}
+      let canisterId = execSync(`dfx canister id ${name}`, { cwd: this.dir })
+        .toString()
+        .trim();
 
-			let canisterId = execSync(`dfx canister id ${name}`, {cwd: this.dir}).toString().trim();
+      let actor = Actor.createActor(idlFactory, {
+        agent: await HttpAgent.create({
+          host: "http://127.0.0.1:4945",
+          shouldFetchRootKey: true,
+        }),
+        canisterId,
+      });
 
-			let actor = Actor.createActor(idlFactory, {
-				agent: await HttpAgent.create({
-					host: 'http://127.0.0.1:4945',
-					shouldFetchRootKey: true,
-				}),
-				canisterId,
-			});
+      this.canisters[name] = {
+        cwd,
+        canisterId,
+        actor,
+        stream: new PassThrough(),
+      };
+    } else if (this.pocketIc) {
+      let { canisterId, actor } = await (
+        this.pocketIc.setupCanister as AnySetupCanister
+      )({
+        wasm,
+        idlFactory,
+      });
 
-			this.canisters[name] = {
-				cwd,
-				canisterId,
-				actor,
-				stream: new PassThrough(),
-			};
-		}
-		else if (this.pocketIc) {
-			type PocketIcSetupCanister = PocketIcMops['setupCanister'] & PocketIc['setupCanister'];
-			let {canisterId, actor} = await (this.pocketIc.setupCanister as PocketIcSetupCanister)({
-				wasm,
-				idlFactory,
-			});
+      if (signal?.aborted) {
+        return;
+      }
 
-			if (signal?.aborted) {
-				return;
-			}
+      await this.pocketIc.addCycles(canisterId as any, 1_000_000_000_000);
 
-			await this.pocketIc.addCycles(canisterId as any, 1_000_000_000_000);
+      if (signal?.aborted) {
+        return;
+      }
 
-			if (signal?.aborted) {
-				return;
-			}
+      this.canisters[name] = {
+        cwd,
+        canisterId: canisterId.toText(),
+        actor,
+        stream: new PassThrough(),
+      };
+    }
 
-			this.canisters[name] = {
-				cwd,
-				canisterId: canisterId.toText(),
-				actor,
-				stream: new PassThrough(),
-			};
-		}
+    if (!this.canisters[name]) {
+      throw new Error(`Canister ${name} not found`);
+    }
 
-		if (!this.canisters[name]) {
-			throw new Error(`Canister ${name} not found`);
-		}
+    return this.canisters[name];
+  }
 
-		return this.canisters[name];
-	}
+  getActor(name: string): unknown {
+    if (!this.canisters[name]) {
+      throw new Error(`Canister ${name} not found`);
+    }
+    return this.canisters[name]?.actor;
+  }
 
-	getActor(name : string) : unknown {
-		if (!this.canisters[name]) {
-			throw new Error(`Canister ${name} not found`);
-		}
-		return this.canisters[name]?.actor;
-	}
+  getCanister(name: string) {
+    return this.canisters[name];
+  }
 
-	getCanister(name : string) {
-		return this.canisters[name];
-	}
+  getCanisterId(name: string): string {
+    return this.canisters[name]?.canisterId || "";
+  }
 
-	getCanisterId(name : string) : string {
-		return this.canisters[name]?.canisterId || '';
-	}
+  getCanisterStream(canisterId: string): PassThrough | null {
+    for (let canister of Object.values(this.canisters)) {
+      if (canister.canisterId === canisterId) {
+        return canister.stream;
+      }
+    }
+    return null;
+  }
 
-	getCanisterStream(canisterId : string) : PassThrough | null {
-		for (let canister of Object.values(this.canisters)) {
-			if (canister.canisterId === canisterId) {
-				return canister.stream;
-			}
-		}
-		return null;
-	}
+  dfxJson(
+    canisterName: string,
+    wasmPath = "canister.wasm",
+    didPath = "canister.did",
+  ) {
+    let canisters: Record<string, any> = {};
+    if (canisterName) {
+      canisters[canisterName] = {
+        type: "custom",
+        wasm: wasmPath,
+        candid: didPath,
+      };
+    }
 
-	dfxJson(canisterName : string, wasmPath = 'canister.wasm', didPath = 'canister.did') {
-		let canisters : Record<string, any> = {};
-		if (canisterName) {
-			canisters[canisterName] = {
-				type: 'custom',
-				wasm: wasmPath,
-				candid: didPath,
-			};
-		}
-
-		return {
-			version: 1,
-			canisters,
-			dfx: getDfxVersion(),
-			defaults: {
-				build: {
-					packtool: 'mops sources',
-				},
-			},
-			networks: {
-				local: {
-					type: 'ephemeral',
-					bind: '127.0.0.1:4945',
-				},
-			},
-		};
-	}
+    return {
+      version: 1,
+      canisters,
+      dfx: getDfxVersion(),
+      defaults: {
+        build: {
+          packtool: "mops sources",
+        },
+      },
+      networks: {
+        local: {
+          type: "ephemeral",
+          bind: "127.0.0.1:4945",
+        },
+      },
+    };
+  }
 }

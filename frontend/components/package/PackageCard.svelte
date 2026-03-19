@@ -1,10 +1,10 @@
 <script lang="ts">
-	import {link} from 'svelte-spa-history-router';
-	import {formatDistanceStrict} from 'date-fns';
-	import DateEl from '../Date.svelte';
+	import {link} from "svelte-spa-history-router";
+	import {formatDistanceStrict} from "date-fns";
+	import DateEl from "../Date.svelte";
 
-	import {PackageSummary} from '/declarations/main/main.did.js';
-	import PackageQualityIcon from './PackageQualityIcon.svelte';
+	import {PackageSummary} from "/declarations/main/main.did.js";
+	import PackageQualityIcon from "./PackageQualityIcon.svelte";
 
 	export let pkg : PackageSummary;
 	export let showVersion = false;
@@ -13,20 +13,20 @@
 	export let showDownloads = false;
 	export let show7DayDownloads = false;
 	export let showLatestVersion = false;
-	export let showDependsOn = '';
+	export let showDependsOn = "";
 
-	let status : 'latest' | 'update-available' | 'outdated' = 'latest';
-	let howOld = '';
-	let dependsOnVersion = '';
+	let status : "latest" | "update-available" | "outdated" = "latest";
+	let howOld = "";
+	let dependsOnVersion = "";
 
 	$: if (pkg.config.version !== pkg.highestVersion) {
 		let pubTime = Number(pkg.publication.time / 1_000_000n);
-		status = pubTime < Date.now() - 1000 * 60 * 60 * 24 * 30 * 6 ? 'outdated' : 'update-available';
-		howOld = formatDistanceStrict(pubTime, Date.now()) + ' old';
+		status = pubTime < Date.now() - 1000 * 60 * 60 * 24 * 30 * 6 ? "outdated" : "update-available";
+		howOld = formatDistanceStrict(pubTime, Date.now()) + " old";
 	}
 
 	$: if (showDependsOn) {
-		dependsOnVersion = [...pkg.config.dependencies, ...pkg.config.devDependencies].find(dep => dep.name.split('@')[0] == showDependsOn)?.version ?? '';
+		dependsOnVersion = [...pkg.config.dependencies, ...pkg.config.devDependencies].find(dep => dep.name.split("@")[0] == showDependsOn)?.version ?? "";
 	}
 </script>
 
@@ -46,7 +46,7 @@
 				<div>Version {pkg.config.version}</div>
 			{/if}
 			{#if showLatestVersion}
-				{#if status !== 'latest'}
+				{#if status !== "latest"}
 					<div class="{status}">{howOld}</div>
 					<div>Latest: {pkg.highestVersion}</div>
 				{/if}

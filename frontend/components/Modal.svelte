@@ -1,7 +1,7 @@
 <script lang="ts">
-	export let title = '';
-	export let theme = '';
-	export let size : 'small' | 'medium' | 'large' = 'small';
+	export let title = "";
+	export let theme = "";
+	export let size : "small" | "medium" | "large" = "small";
 	export let active = false;
 	export let popup = false;
 	export let valid = true;
@@ -36,10 +36,10 @@
 		if (!active) {
 			return;
 		}
-		if (e.key === 'Enter') {
+		if (e.key === "Enter") {
 			confirm();
 		}
-		if (e.key === 'Escape') {
+		if (e.key === "Escape") {
 			cancel();
 		}
 	}

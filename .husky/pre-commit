@@ -1,2 +1,1 @@
-# npm run lint && npm run test && (cd cli && npm run check)
-node .husky/pre-commit.js
+npm run precommit

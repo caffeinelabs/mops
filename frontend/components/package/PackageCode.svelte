@@ -1,32 +1,32 @@
 <script lang="ts">
-	import {routeParams} from 'svelte-spa-history-router';
-	import {toHtml} from 'hast-util-to-html';
-	import {onMount} from 'svelte';
-	import {filesize} from 'filesize';
-	import {downloadFile} from 'ic-mops/api/downloadPackageFiles';
-	import '@wooorm/starry-night/style/light';
+	import {routeParams} from "svelte-spa-history-router";
+	import {toHtml} from "hast-util-to-html";
+	import {onMount} from "svelte";
+	import {filesize} from "filesize";
+	import {downloadFile} from "ic-mops/api/downloadPackageFiles";
+	import "@wooorm/starry-night/style/light";
 
-	import {getStarryNight} from '/logic/get-starry-night';
-	import {PackageDetails} from '/declarations/main/main.did.js';
-	import PackageCodeTreeView from './PackageCodeTreeView.svelte';
-	import {mainActor} from '/logic/actors';
-	import Loader from '../Loader.svelte';
+	import {getStarryNight} from "/logic/get-starry-night";
+	import {PackageDetails} from "/declarations/main/main.did.js";
+	import PackageCodeTreeView from "./PackageCodeTreeView.svelte";
+	import {mainActor} from "/logic/actors";
+	import Loader from "../Loader.svelte";
 
 	export let packageDetails : PackageDetails;
 	export let fileIds : string[];
 
 	let pkgId = `${packageDetails.config.name}@${packageDetails.config.version}`;
 
-	let files : string[] = fileIds.map((id) => id.replace(pkgId + '/', ''));
+	let files : string[] = fileIds.map((id) => id.replace(pkgId + "/", ""));
 	let tree = buildTree(files);
 
 	let cachedFilesContent = new Map<string, string>();
 	let cachedFilesContentHtml = new Map<string, string>();
-	let fileContent = '';
+	let fileContent = "";
 	let fileContentHtml : null | string = null;
 	let lineHighlightActive = false;
 
-	$: selectedFileName = $routeParams.file ? $routeParams.file : '';
+	$: selectedFileName = $routeParams.file ? $routeParams.file : "";
 
 	type Tree = {
 		name : string;
@@ -38,13 +38,13 @@
 		const root : Tree = [];
 
 		filenames
-			.toSorted((a, b) => b.split('/').length - a.split('/').length || a.localeCompare(b))
+			.toSorted((a, b) => b.split("/").length - a.split("/").length || a.localeCompare(b))
 			.forEach(filename => {
-				const parts = filename.split('/');
+				const parts = filename.split("/");
 				let currentLevel = root;
 
 				parts.forEach((part, index) => {
-					const path = parts.slice(0, index + 1).join('/');
+					const path = parts.slice(0, index + 1).join("/");
 					let node = currentLevel.find(c => c.name === part);
 
 					if (!node) {
@@ -64,13 +64,13 @@
 	async function loadFileHashes() {
 		let main = await mainActor();
 		let res = await main.getFileHashesQuery(packageDetails.config.name, packageDetails.config.version);
-		if ('ok' in res) {
-			fileHashes = new Map(res.ok.map(([name, hash]) => [name, Array.from(hash).map((byte) => byte.toString(16).padStart(2, '0')).join('')]));
+		if ("ok" in res) {
+			fileHashes = new Map(res.ok.map(([name, hash]) => [name, Array.from(hash).map((byte) => byte.toString(16).padStart(2, "0")).join("")]));
 		}
 	}
 
 	function getFileHash(filename : string, _d : any) {
-		return fileHashes.get(pkgId + '/' + filename) || '';
+		return fileHashes.get(pkgId + "/" + filename) || "";
 	}
 
 	loadFileHashes();
@@ -90,22 +90,22 @@
 		}
 
 		fileContentHtml = null;
-		fileContent = '';
+		fileContent = "";
 
-		let {data} = await downloadFile(packageDetails.publication.storage.toText(), pkgId + '/' + curSelectedFileName);
+		let {data} = await downloadFile(packageDetails.publication.storage.toText(), pkgId + "/" + curSelectedFileName);
 		let content = new TextDecoder().decode(new Uint8Array(data));
 
 		// syntax highlight
 		let starryNight = await getStarryNight();
-		let html = '';
-		if (curSelectedFileName.endsWith('.mo')) {
-			html = toHtml(starryNight.highlight(content, 'source.mo'));
+		let html = "";
+		if (curSelectedFileName.endsWith(".mo")) {
+			html = toHtml(starryNight.highlight(content, "source.mo"));
 		}
-		else if (curSelectedFileName.endsWith('.md')) {
-			html = toHtml(starryNight.highlight(content, 'text.md'));
+		else if (curSelectedFileName.endsWith(".md")) {
+			html = toHtml(starryNight.highlight(content, "text.md"));
 		}
-		else if (curSelectedFileName.endsWith('.toml')) {
-			html = toHtml(starryNight.highlight(content, 'source.toml'));
+		else if (curSelectedFileName.endsWith(".toml")) {
+			html = toHtml(starryNight.highlight(content, "source.toml"));
 		}
 		else {
 			html = content;
@@ -124,27 +124,27 @@
 	}
 
 	function scrollToDefiition() {
-		let parts = location.hash.replace('#', '').split('.').filter(x => x);
+		let parts = location.hash.replace("#", "").split(".").filter(x => x);
 
 		let prev2 : Node | null = null;
 		let prev : Node | null = null;
 		let prevClasses : string[] = [];
 
-		for (let child of Array.from(codeViewEl.querySelector('.content').childNodes)) {
+		for (let child of Array.from(codeViewEl.querySelector(".content").childNodes)) {
 			let scroll = false;
 
 			if (prev) {
-				if (parts[0] === 'type' && (prev.textContent === 'type' || prev.textContent === 'class') && child.textContent === parts[1]) {
+				if (parts[0] === "type" && (prev.textContent === "type" || prev.textContent === "class") && child.textContent === parts[1]) {
 					scroll = true;
 				}
 
 				if (parts.length === 1 || parts.length > 1 && parts.slice(0, -1).every((part) => prevClasses.includes(part))) {
-					if ((prev.textContent === 'func' || prev2?.textContent === 'public' && prev.textContent === 'let') && child.textContent.trim().match(`^${parts.at(-1)}(\\(| :|$)`)) {
+					if ((prev.textContent === "func" || prev2?.textContent === "public" && prev.textContent === "let") && child.textContent.trim().match(`^${parts.at(-1)}(\\(| :|$)`)) {
 						scroll = true;
 					}
 				}
 
-				if (prev.textContent === 'class' && child.textContent.trim()) {
+				if (prev.textContent === "class" && child.textContent.trim()) {
 					prevClasses.push(child.textContent.trim());
 				}
 			}
@@ -165,7 +165,7 @@
 					el = child.previousSibling;
 				}
 
-				el.scrollIntoView({block: 'start', behavior: 'smooth'});
+				el.scrollIntoView({block: "start", behavior: "smooth"});
 
 				lineHighlightEl.style.top = `${el.offsetTop}px`;
 
@@ -173,7 +173,7 @@
 				setTimeout(() => {
 					lineHighlightActive = false;
 					setTimeout(() => {
-						lineHighlightEl.style.top = '0';
+						lineHighlightEl.style.top = "0";
 					}, 700);
 				}, 1000);
 
@@ -193,8 +193,8 @@
 	let codeViewEl : HTMLElement;
 	let lineHighlightEl : HTMLElement;
 
-	let filesPanelHeight = '';
-	let footerHeight = document.querySelector('#app-footer').getBoundingClientRect().height;
+	let filesPanelHeight = "";
+	let footerHeight = document.querySelector("#app-footer").getBoundingClientRect().height;
 	let margin = 40;
 	let padding = 10;
 	let bottomSpace = 0;
@@ -211,9 +211,9 @@
 
 	onMount(() => {
 		filesEl && onResize();
-		window.addEventListener('resize', onResize);
+		window.addEventListener("resize", onResize);
 		return () => {
-			window.removeEventListener('resize', onResize);
+			window.removeEventListener("resize", onResize);
 		};
 	});
 </script>
@@ -230,7 +230,7 @@
 	<div class="middle-right">
 		<div class="header" hidden={!selectedFileName}>
 			<div class="file-name"><code>{selectedFileName}</code></div>
-			<div class="file-size">{filesize(fileContent.length, {standard: 'iec', round: 1})}</div>
+			<div class="file-size">{filesize(fileContent.length, {standard: "iec", round: 1})}</div>
 			<div class="bullet">•</div>
 			<div class="file-hash">{getFileHash(selectedFileName, fileHashes)}</div>
 		</div>
@@ -238,7 +238,7 @@
 		<div class="code-view" hidden={!selectedFileName || fileContentHtml == null} bind:this={codeViewEl}>
 			<div class="code-view-wrap">
 				<div class="line-numbers">
-					{#each fileContent.split('\n') as _line, i}
+					{#each fileContent.split("\n") as _line, i}
 						<div class="line-number">{i + 1}</div>
 					{/each}
 				</div>

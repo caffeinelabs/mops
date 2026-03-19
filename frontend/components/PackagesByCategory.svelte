@@ -1,18 +1,18 @@
 <script lang="ts">
-	import {onMount} from 'svelte';
-	import Loader from './Loader.svelte';
-	import PackageCard from './package/PackageCard.svelte';
-	import {PackageSummary} from '/declarations/main/main.did.js';
-	import {mainActor} from '/logic/actors';
-	import {getQualityPoints} from '/logic/get-quality-points';
-	import Keywords from './package/Keywords.svelte';
+	import {onMount} from "svelte";
+	import Loader from "./Loader.svelte";
+	import PackageCard from "./package/PackageCard.svelte";
+	import {PackageSummary} from "/declarations/main/main.did.js";
+	import {mainActor} from "/logic/actors";
+	import {getQualityPoints} from "/logic/get-quality-points";
+	import Keywords from "./package/Keywords.svelte";
 
 	let packagesByCategory : [string, PackageSummary[]][] = [];
 
 	let loaded = false;
 	let packages : PackageSummary[] = [];
 	let categories : string[] = [];
-	let selectedCategory = '';
+	let selectedCategory = "";
 
 	function selectCategory(category : string) {
 		selectedCategory = category;
@@ -29,86 +29,86 @@
 	}
 
 	function getCategoryDescription(category : string) {
-		if (category === 'Data Structures') {
-			return 'Efficient collections and algorithms for data management';
+		if (category === "Data Structures") {
+			return "Efficient collections and algorithms for data management";
 		}
-		if (category === 'Utilities') {
-			return 'Helpful functions and tools for streamlined Motoko development';
+		if (category === "Utilities") {
+			return "Helpful functions and tools for streamlined Motoko development";
 		}
-		if (category === 'Encoding') {
-			return 'Tools for converting data formats';
+		if (category === "Encoding") {
+			return "Tools for converting data formats";
 		}
-		if (category === 'Cryptography') {
-			return 'Secure data handling with encryption and hashing techniques';
+		if (category === "Cryptography") {
+			return "Secure data handling with encryption and hashing techniques";
 		}
-		if (category === 'Types/Interfaces') {
-			return 'Types and interfaces for seamless integration';
+		if (category === "Types/Interfaces") {
+			return "Types and interfaces for seamless integration";
 		}
-		if (category === 'HTTP') {
-			return 'Facilitate web communication with HTTP request/response handling';
+		if (category === "HTTP") {
+			return "Facilitate web communication with HTTP request/response handling";
 		}
-		if (category === 'Async Data Flow') {
-			return 'Manage asynchronous operations and data streams';
+		if (category === "Async Data Flow") {
+			return "Manage asynchronous operations and data streams";
 		}
-		if (category === 'Databases') {
-			return 'Databases for persistent data storage';
+		if (category === "Databases") {
+			return "Databases for persistent data storage";
 		}
-		if (category === 'Stable Memory') {
-			return 'Manage data in persistent memory up to 400GB';
+		if (category === "Stable Memory") {
+			return "Manage data in persistent memory up to 400GB";
 		}
-		if (category === 'ICRC') {
-			return 'Implementation of ICRC standards';
+		if (category === "ICRC") {
+			return "Implementation of ICRC standards";
 		}
-		if (category === 'DeFi') {
-			return 'Tools and protocols for decentralized finance';
+		if (category === "DeFi") {
+			return "Tools and protocols for decentralized finance";
 		}
-		if (category === 'AI') {
-			return 'On-chain AI';
+		if (category === "AI") {
+			return "On-chain AI";
 		}
-		if (category === 'Chain Fusion') {
-			return 'Interconnect with multiple blockchains in a decentralized manner (Bitcoin, Ethereum, Solana, etc.)';
+		if (category === "Chain Fusion") {
+			return "Interconnect with multiple blockchains in a decentralized manner (Bitcoin, Ethereum, Solana, etc.)";
 		}
 	}
 
 	function getCategoryKeywords(category : string) {
-		if (category === 'Data Structures') {
-			return ['data-structure'];
+		if (category === "Data Structures") {
+			return ["data-structure"];
 		}
-		if (category === 'Utilities') {
-			return ['utils'];
+		if (category === "Utilities") {
+			return ["utils"];
 		}
-		if (category === 'Encoding') {
-			return ['encoding', 'decoding'];
+		if (category === "Encoding") {
+			return ["encoding", "decoding"];
 		}
-		if (category === 'Cryptography') {
-			return ['crypto', 'hash', 'encryption'];
+		if (category === "Cryptography") {
+			return ["crypto", "hash", "encryption"];
 		}
-		if (category === 'Types/Interfaces') {
-			return ['types', 'interface', 'service'];
+		if (category === "Types/Interfaces") {
+			return ["types", "interface", "service"];
 		}
-		if (category === 'HTTP') {
-			return ['http', 'server', 'web'];
+		if (category === "HTTP") {
+			return ["http", "server", "web"];
 		}
-		if (category === 'Async Data Flow') {
-			return ['async', 'data-flow'];
+		if (category === "Async Data Flow") {
+			return ["async", "data-flow"];
 		}
-		if (category === 'Databases') {
-			return ['database', 'db'];
+		if (category === "Databases") {
+			return ["database", "db"];
 		}
-		if (category === 'Stable Memory') {
-			return ['stable-memory', 'memory', 'region', 'persistent'];
+		if (category === "Stable Memory") {
+			return ["stable-memory", "memory", "region", "persistent"];
 		}
-		if (category === 'ICRC') {
-			return ['icrc'];
+		if (category === "ICRC") {
+			return ["icrc"];
 		}
-		if (category === 'DeFi') {
-			return ['defi', 'exchange'];
+		if (category === "DeFi") {
+			return ["defi", "exchange"];
 		}
-		if (category === 'AI') {
-			return ['ai', 'llm', 'mcp'];
+		if (category === "AI") {
+			return ["ai", "llm", "mcp"];
 		}
-		if (category === 'Chain Fusion') {
-			return ['chain-fusion', 'threshold', 'chain-key'];
+		if (category === "Chain Fusion") {
+			return ["chain-fusion", "threshold", "chain-key"];
 		}
 	}
 

@@ -1,13 +1,13 @@
 <script lang="ts">
-	import {link} from 'svelte-spa-history-router';
-	import Header from './Header.svelte';
-	import TopPackages from './TopPackages.svelte';
-	import Footer from './Footer.svelte';
-	import TotalStats from './TotalStats.svelte';
-	import PackagesByCategory from './PackagesByCategory.svelte';
-	import mopsImg from '/img/mops-motoko.svg';
-	import motokoImg from '/img/motoko.svg';
-	import RecentlyUpdatedPackages from './RecentlyUpdatedPackages.svelte';
+	import {link} from "svelte-spa-history-router";
+	import Header from "./Header.svelte";
+	import TopPackages from "./TopPackages.svelte";
+	import Footer from "./Footer.svelte";
+	import TotalStats from "./TotalStats.svelte";
+	import PackagesByCategory from "./PackagesByCategory.svelte";
+	import mopsImg from "/img/mops-motoko.svg";
+	import motokoImg from "/img/motoko.svg";
+	import RecentlyUpdatedPackages from "./RecentlyUpdatedPackages.svelte";
 </script>
 
 <svelte:head>

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import {Line} from 'svelte-chartjs';
-	import {Chart as ChartJS, LineElement, LinearScale, CategoryScale, TimeScale, PointElement, Filler} from 'chart.js';
-	import 'chartjs-adapter-date-fns';
-	import {DownloadsSnapshot} from '/declarations/main/main.did.js';
+	import {Line} from "svelte-chartjs";
+	import {Chart as ChartJS, LineElement, LinearScale, CategoryScale, TimeScale, PointElement, Filler} from "chart.js";
+	import "chartjs-adapter-date-fns";
+	import {DownloadsSnapshot} from "/declarations/main/main.did.js";
 
 	ChartJS.register([LineElement, PointElement, LinearScale, CategoryScale, TimeScale, Filler]);
 
@@ -24,8 +24,8 @@
 						};
 					}),
 					// backgroundColor: window.getComputedStyle(document.body).getPropertyValue('--color-primary-light'),
-					borderColor: window.getComputedStyle(document.body).getPropertyValue('--color-primary-light'),
-					borderJoinStyle: 'bevel',
+					borderColor: window.getComputedStyle(document.body).getPropertyValue("--color-primary-light"),
+					borderJoinStyle: "bevel",
 					borderWidth: 2,
 					fill: true,
 					pointRadius: 0,
@@ -40,10 +40,10 @@
 				scales: {
 					x: {
 						display: false,
-						type: 'time',
+						type: "time",
 						min: Math.min(Date.now() - 300 * 24 * 60 * 60 * 1_000, Number(snapshots[0].startTime / 1_000_000n)),
 						time: {
-							unit: 'week',
+							unit: "week",
 						},
 					},
 					y: {

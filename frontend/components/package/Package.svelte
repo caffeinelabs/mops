@@ -1,34 +1,34 @@
 <script lang="ts">
-	import {onMount} from 'svelte';
-	import {debounce} from 'throttle-debounce';
-	import {currentURL, routeParams, push, link} from 'svelte-spa-history-router';
-	import {getFileIds} from 'ic-mops/api/downloadPackageFiles';
+	import {onMount} from "svelte";
+	import {debounce} from "throttle-debounce";
+	import {currentURL, routeParams, push, link} from "svelte-spa-history-router";
+	import {getFileIds} from "ic-mops/api/downloadPackageFiles";
 
-	import {PackageDetails, PackageSummary, PackageSummaryWithChanges} from '/declarations/main/main.did.js';
-	import {mainActor, storageActor} from '/logic/actors';
+	import {PackageDetails, PackageSummary, PackageSummaryWithChanges} from "/declarations/main/main.did.js";
+	import {mainActor, storageActor} from "/logic/actors";
 
-	import Header from '../Header.svelte';
-	import Loader from '../Loader.svelte';
-	import Date from '../Date.svelte';
-	import NotFound from '../NotFound.svelte';
-	import Footer from '../Footer.svelte';
-	import PackageCard from './PackageCard.svelte';
-	import PackageReadme from './PackageReadme.svelte';
-	import PackageCode from './PackageCode.svelte';
-	import PackageDocs from './PackageDocs.svelte';
-	import PackageRightPanel from './PackageRightPanel.svelte';
-	import githubImg from '/img/github.svg';
-	import {compareVersions} from '/logic/compare-versions';
-	import PackageVersionSummary from './PackageVersionSummary.svelte';
-	import PackageTestStats from './PackageTestStats.svelte';
-	import PackageBenchmarks from './PackageBenchmarks.svelte';
-	import Keywords from './Keywords.svelte';
+	import Header from "../Header.svelte";
+	import Loader from "../Loader.svelte";
+	import Date from "../Date.svelte";
+	import NotFound from "../NotFound.svelte";
+	import Footer from "../Footer.svelte";
+	import PackageCard from "./PackageCard.svelte";
+	import PackageReadme from "./PackageReadme.svelte";
+	import PackageCode from "./PackageCode.svelte";
+	import PackageDocs from "./PackageDocs.svelte";
+	import PackageRightPanel from "./PackageRightPanel.svelte";
+	import githubImg from "/img/github.svg";
+	import {compareVersions} from "/logic/compare-versions";
+	import PackageVersionSummary from "./PackageVersionSummary.svelte";
+	import PackageTestStats from "./PackageTestStats.svelte";
+	import PackageBenchmarks from "./PackageBenchmarks.svelte";
+	import Keywords from "./Keywords.svelte";
 
 	let pkgName : string;
 	$: pkgName = $routeParams.packageName;
 	$: pkgVersion = $routeParams.version;
 	$: $currentURL && load();
-	$: command = `mops add ${packageDetails?.config.name}${getHighestVersion() !== packageDetails?.config.version ? '@' + packageDetails?.config.version : ''}`;
+	$: command = `mops add ${packageDetails?.config.name}${getHighestVersion() !== packageDetails?.config.version ? "@" + packageDetails?.config.version : ""}`;
 
 	let readme : string;
 	let fileIds : string[];
@@ -51,9 +51,9 @@
 		}
 		loaded = false;
 
-		let ver = pkgVersion || 'highest';
+		let ver = pkgVersion || "highest";
 		let packageDetailsRes = await mainActor().getPackageDetails(pkgName, ver);
-		if ('ok' in packageDetailsRes) {
+		if ("ok" in packageDetailsRes) {
 			packageDetails = packageDetailsRes.ok;
 		}
 		else {
@@ -64,17 +64,17 @@
 
 		let downloadReadme = async () => {
 			let res = await storageActor(packageDetails.publication.storage).downloadChunk(`${packageDetails.config.name}@${packageDetails.config.version}/${packageDetails.config.readme}`, 0n);
-			if ('ok' in res) {
+			if ("ok" in res) {
 				readme = new TextDecoder().decode(new Uint8Array(res.ok));
 			}
 			else {
-				readme = '*Not found README.md*';
+				readme = "*Not found README.md*";
 			}
 		};
 
 		let downloadDocs = async () => {
 			let docsRes = await storageActor(packageDetails.publication.storage).downloadChunk(`${packageDetails.config.name}@${packageDetails.config.version}/docs.tgz`, 0n);
-			if ('ok' in docsRes) {
+			if ("ok" in docsRes) {
 				docsData = new Uint8Array(docsRes.ok);
 			}
 			else {
@@ -121,7 +121,7 @@
 		}, 3000);
 	}
 
-	$: selectedTab = $routeParams.tab || '';
+	$: selectedTab = $routeParams.tab || "";
 	function selectTab(tab : string) {
 		let path = `/${$routeParams.packageId}`;
 		if (tab) {
@@ -136,7 +136,7 @@
 
 	let versionHistory : PackageSummaryWithChanges[] = null;
 	$: {
-		if (selectedTab == 'versions' && !versionHistory) {
+		if (selectedTab == "versions" && !versionHistory) {
 			mainActor().getPackageVersionHistory(pkgName).then(res => {
 				versionHistory = res;
 			});
@@ -145,7 +145,7 @@
 
 	let dependents : PackageSummary[] = null;
 	$: {
-		if (selectedTab == 'dependents' && !dependents) {
+		if (selectedTab == "dependents" && !dependents) {
 			mainActor().getPackageDependents(pkgName, 500n, 0n).then(res => {
 				dependents = res[0];
 			});
@@ -156,7 +156,7 @@
 </script>
 
 <svelte:head>
-	<title>{packageDetails ? `${packageDetails.config.name} • Motoko Package` : 'Motoko Package'}</title>
+	<title>{packageDetails ? `${packageDetails.config.name} • Motoko Package` : "Motoko Package"}</title>
 </svelte:head>
 
 <Header></Header>
@@ -180,7 +180,7 @@
 							<div class="text" on:click="{copyCommand}">Install</div>
 							<div class="command" on:click="{copyCommand}">{command}</div>
 						</div>
-						<div class="clipboard-text">{copiedToClipboard ? 'Copied to clipboard!' : 'Click to copy to clipboard'}</div>
+						<div class="clipboard-text">{copiedToClipboard ? "Copied to clipboard!" : "Click to copy to clipboard"}</div>
 					</div>
 
 					<Keywords keywords={packageDetails.config.keywords} />
@@ -189,22 +189,22 @@
 
 			<!-- tabs -->
 			<div class="tabs">
-				<div class="tab" class:selected={isTabSelected('code', selectedTab)} on:click={() => selectTab('code')} on:keydown={(e) => e.key === 'Enter' && selectTab('code')} tabindex="0" role="tab">Code</div>
-				<div class="tab" class:selected={isTabSelected('docs', selectedTab)} on:click={() => selectTab('docs')} on:keydown={(e) => e.key === 'Enter' && selectTab('docs')} tabindex="0" role="tab">Docs</div>
-				<div class="tab" class:selected={isTabSelected('', selectedTab)} on:click={() => selectTab('')} on:keydown={(e) => e.key === 'Enter' && selectTab('')} tabindex="0" role="tab">Readme</div>
-				<div class="tab" class:selected={isTabSelected('versions', selectedTab)} on:click={() => selectTab('versions')} on:keydown={(e) => e.key === 'Enter' && selectTab('versions')} tabindex="0" role="tab">Versions ({packageDetails.versions.length})</div>
-				<div class="tab" class:selected={isTabSelected('dependencies', selectedTab)} on:click={() => selectTab('dependencies')} on:keydown={(e) => e.key === 'Enter' && selectTab('dependencies')} tabindex="0" role="tab">Dependencies ({packageDetails.deps.length + githubDeps.length})</div>
-				<div class="tab" class:selected={isTabSelected('dependents', selectedTab)} on:click={() => selectTab('dependents')} on:keydown={(e) => e.key === 'Enter' && selectTab('dependents')} tabindex="0" role="tab">Dependents ({packageDetails.dependentsCount})</div>
-				<div class="tab" class:selected={isTabSelected('tests', selectedTab)} on:click={() => selectTab('tests')} on:keydown={(e) => e.key === 'Enter' && selectTab('tests')} tabindex="0" role="tab">Tests ({packageDetails.testStats.passed})</div>
-				<div class="tab" class:selected={isTabSelected('benchmarks', selectedTab)} on:click={() => selectTab('benchmarks')} on:keydown={(e) => e.key === 'Enter' && selectTab('benchmarks')} tabindex="0" role="tab">Benchmarks ({packageDetails.benchmarks.length})</div>
+				<div class="tab" class:selected={isTabSelected("code", selectedTab)} on:click={() => selectTab("code")} on:keydown={(e) => e.key === "Enter" && selectTab("code")} tabindex="0" role="tab">Code</div>
+				<div class="tab" class:selected={isTabSelected("docs", selectedTab)} on:click={() => selectTab("docs")} on:keydown={(e) => e.key === "Enter" && selectTab("docs")} tabindex="0" role="tab">Docs</div>
+				<div class="tab" class:selected={isTabSelected("", selectedTab)} on:click={() => selectTab("")} on:keydown={(e) => e.key === "Enter" && selectTab("")} tabindex="0" role="tab">Readme</div>
+				<div class="tab" class:selected={isTabSelected("versions", selectedTab)} on:click={() => selectTab("versions")} on:keydown={(e) => e.key === "Enter" && selectTab("versions")} tabindex="0" role="tab">Versions ({packageDetails.versions.length})</div>
+				<div class="tab" class:selected={isTabSelected("dependencies", selectedTab)} on:click={() => selectTab("dependencies")} on:keydown={(e) => e.key === "Enter" && selectTab("dependencies")} tabindex="0" role="tab">Dependencies ({packageDetails.deps.length + githubDeps.length})</div>
+				<div class="tab" class:selected={isTabSelected("dependents", selectedTab)} on:click={() => selectTab("dependents")} on:keydown={(e) => e.key === "Enter" && selectTab("dependents")} tabindex="0" role="tab">Dependents ({packageDetails.dependentsCount})</div>
+				<div class="tab" class:selected={isTabSelected("tests", selectedTab)} on:click={() => selectTab("tests")} on:keydown={(e) => e.key === "Enter" && selectTab("tests")} tabindex="0" role="tab">Tests ({packageDetails.testStats.passed})</div>
+				<div class="tab" class:selected={isTabSelected("benchmarks", selectedTab)} on:click={() => selectTab("benchmarks")} on:keydown={(e) => e.key === "Enter" && selectTab("benchmarks")} tabindex="0" role="tab">Benchmarks ({packageDetails.benchmarks.length})</div>
 			</div>
 
 			<div class="body">
-				{#if selectedTab == 'code'}
+				{#if selectedTab == "code"}
 					<div class="layout-wide">
 						<PackageCode {packageDetails} {fileIds}></PackageCode>
 					</div>
-				{:else if selectedTab == 'docs'}
+				{:else if selectedTab == "docs"}
 					<div class="layout-wide">
 						{#if docsData}
 							<PackageDocs docsData={docsData}></PackageDocs>
@@ -215,15 +215,15 @@
 				{:else}
 					<div class="layout-compact">
 						<div class="middle">
-							{#if selectedTab == ''}
+							{#if selectedTab == ""}
 								<PackageReadme readme={readme} repository={packageDetails.config.repository}></PackageReadme>
-							{:else if selectedTab == 'versions'}
+							{:else if selectedTab == "versions"}
 								<div class="packages">
 									{#each (versionHistory || packageDetails.versionHistory) as versionSummary}
 										<PackageVersionSummary summary={versionSummary}></PackageVersionSummary>
 									{/each}
 								</div>
-							{:else if selectedTab == 'dependencies'}
+							{:else if selectedTab == "dependencies"}
 								<h3 class="deps">Dependencies</h3>
 								<div class="packages">
 									{#each packageDetails.deps as pkg}
@@ -246,24 +246,24 @@
 												<div class="github-dep-name">{dep.name}</div>
 												<a class="github-dep-repo" href="{dep.repo}" target="_blank">
 													<img class="github-icon" src="{githubImg}" alt="GitHub logo" loading="lazy" />
-													<div>{dep.repo.replace(/https?:\/\/(www\.)?(github\.com\/)?/, '').split('#')[0]}</div>
+													<div>{dep.repo.replace(/https?:\/\/(www\.)?(github\.com\/)?/, "").split("#")[0]}</div>
 												</a>
-												<div class="github-dep-tag">{dep.repo.split('#')[1] || ''}</div>
+												<div class="github-dep-tag">{dep.repo.split("#")[1] || ""}</div>
 											</div>
 										{/each}
 									</div>
 								{/if}
-							{:else if selectedTab == 'dependents'}
+							{:else if selectedTab == "dependents"}
 								<div class="packages">
 									{#each (dependents || packageDetails.dependents) as pkg}
 										<PackageCard {pkg} showDownloads={true} showDependsOn={packageDetails.config.name} />
 									{/each}
 								</div>
-							{:else if selectedTab == 'tests'}
+							{:else if selectedTab == "tests"}
 								<div class="tests">
 									<PackageTestStats {packageDetails}></PackageTestStats>
 								</div>
-							{:else if selectedTab == 'benchmarks'}
+							{:else if selectedTab == "benchmarks"}
 								<div class="benchmarks">
 									<PackageBenchmarks {packageDetails}></PackageBenchmarks>
 								</div>

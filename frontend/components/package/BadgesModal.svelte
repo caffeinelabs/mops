@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Modal from '../Modal.svelte';
+	import Modal from "../Modal.svelte";
 
 	export let packageName : string;
 	export let active = false;
 
 	function badgeUrl(badgeName : string) {
-		if (process.env.NODE_ENV === 'development') {
+		if (process.env.NODE_ENV === "development") {
 			return `http://localhost:4943/badge/${badgeName}/${packageName}?canisterId=2d2zu-vaaaa-aaaak-qb6pq-cai`;
 		}
 		else {
@@ -20,19 +20,19 @@
 
 		<div class="row">
 			<code class="code">
-				[![mops]({badgeUrl('mops')})](https://mops.one/{packageName})
+				[![mops]({badgeUrl("mops")})](https://mops.one/{packageName})
 			</code>
 			<div class="preview">
-				<img src="{badgeUrl('mops')}">
+				<img src="{badgeUrl("mops")}">
 			</div>
 		</div>
 
 		<div class="row">
 			<code class="code">
-				[![documentation]({badgeUrl('documentation')})](https://mops.one/{packageName}/docs)
+				[![documentation]({badgeUrl("documentation")})](https://mops.one/{packageName}/docs)
 			</code>
 			<div class="preview">
-				<img src="{badgeUrl('documentation')}">
+				<img src="{badgeUrl("documentation")}">
 			</div>
 		</div>
 	</div>

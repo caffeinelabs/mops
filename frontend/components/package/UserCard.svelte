@@ -1,8 +1,8 @@
 <script lang="ts">
-	import {link} from 'svelte-spa-history-router';
-	import githubImg from '/img/github.svg';
-	import twitterImg from '/img/twitter.svg';
-	import {User} from '/declarations/main/main.did';
+	import {link} from "svelte-spa-history-router";
+	import githubImg from "/img/github.svg";
+	import twitterImg from "/img/twitter.svg";
+	import {User} from "/declarations/main/main.did";
 
 	export let user : User;
 	export let compact = false;

@@ -1,13 +1,13 @@
 <script lang="ts">
-	import {Benchmarks, Benchmark} from '/declarations/main/main.did.js';
-	import PackageBenchmark from './PackageBenchmark.svelte';
-	import ColorizedValue from '../ColorizedValue.svelte';
-	import {getMetricDiff} from '/logic/benchmark-utils';
+	import {Benchmarks, Benchmark} from "/declarations/main/main.did.js";
+	import PackageBenchmark from "./PackageBenchmark.svelte";
+	import ColorizedValue from "../ColorizedValue.svelte";
+	import {getMetricDiff} from "/logic/benchmark-utils";
 
 	export let curBenchmarks : Benchmarks;
 	export let prevBenchmarks : Benchmarks;
 
-	type Metric = 'instructions' | 'rts_heap_size' | 'rts_logical_stable_memory_size' | 'rts_reclaimed';
+	type Metric = "instructions" | "rts_heap_size" | "rts_logical_stable_memory_size" | "rts_reclaimed";
 
 	let pairs = curBenchmarks.map((cur) => [cur, prevBenchmarks.find((prev) => {
 		return prev.file === cur.file;
@@ -29,7 +29,7 @@
 	}
 
 	function computeDiffAll(cur : Benchmark, prev : Benchmark) : number {
-		let metrics : Metric[] = ['instructions', 'rts_heap_size', 'rts_logical_stable_memory_size', 'rts_reclaimed'];
+		let metrics : Metric[] = ["instructions", "rts_heap_size", "rts_logical_stable_memory_size", "rts_reclaimed"];
 		let diff = 0;
 
 		for (let metric of metrics) {
@@ -48,10 +48,10 @@
 			</summary>
 			<div class="diff">
 				<div class="bench-overall-diff">
-					<div>Instructions: <ColorizedValue value={computeDiff(cur, prev, 'instructions')}></ColorizedValue></div>
-					<div>Heap: <ColorizedValue value={computeDiff(cur, prev, 'rts_heap_size')}></ColorizedValue></div>
-					<div>Garbage Collection: <ColorizedValue value={computeDiff(cur, prev, 'rts_reclaimed')}></ColorizedValue></div>
-					<div>Stable Memory: <ColorizedValue value={computeDiff(cur, prev, 'rts_logical_stable_memory_size')}></ColorizedValue></div>
+					<div>Instructions: <ColorizedValue value={computeDiff(cur, prev, "instructions")}></ColorizedValue></div>
+					<div>Heap: <ColorizedValue value={computeDiff(cur, prev, "rts_heap_size")}></ColorizedValue></div>
+					<div>Garbage Collection: <ColorizedValue value={computeDiff(cur, prev, "rts_reclaimed")}></ColorizedValue></div>
+					<div>Stable Memory: <ColorizedValue value={computeDiff(cur, prev, "rts_logical_stable_memory_size")}></ColorizedValue></div>
 				</div>
 				<PackageBenchmark benchmark={cur} otherBenchmark={prev}></PackageBenchmark>
 			</div>

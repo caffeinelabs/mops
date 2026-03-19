@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {link} from 'svelte-spa-history-router';
+	import {link} from "svelte-spa-history-router";
 
 	export let keywords : string[];
 </script>

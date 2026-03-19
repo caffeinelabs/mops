@@ -1,0 +1,11 @@
+/cli/wasm
+
+.svelte-kit/
+declarations/
+target/
+
+*.md
+*.did
+*.js
+*.d.ts
+*.svelte

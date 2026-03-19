@@ -1,31 +1,31 @@
-import mopsSvg from './mops.svg.js';
+import mopsSvg from "./mops.svg.js";
 
 if (globalThis.location) {
-	let urls = globalThis.location.href.includes('localhost')
+	let urls = globalThis.location.href.includes("localhost")
 		? {
-			packages: 'http://localhost:3000',
-			docs: 'http://localhost:3001',
-			blog: 'http://localhost:3002',
-			cli: 'http://localhost:3003',
+			packages: "http://localhost:3000",
+			docs: "http://localhost:3001",
+			blog: "http://localhost:3002",
+			cli: "http://localhost:3003",
 
 		}
 		: {
-			packages: 'https://mops.one',
-			docs: 'https://docs.mops.one',
-			blog: 'https://blog.mops.one',
-			cli: 'https://cli.mops.one',
+			packages: "https://mops.one",
+			docs: "https://docs.mops.one",
+			blog: "https://blog.mops.one",
+			cli: "https://cli.mops.one",
 		};
 
 	class MyCustomElement extends HTMLElement {
 		_isActive(url) {
-			if (url === 'https://mops.one' && globalThis.location.href.includes('localhost')) {
-				return 'active';
+			if (url === "https://mops.one" && globalThis.location.href.includes("localhost")) {
+				return "active";
 			}
-			return globalThis.location.href.startsWith(url) ? 'active' : '';
+			return globalThis.location.href.startsWith(url) ? "active" : "";
 		}
 
 		connectedCallback() {
-			let shadow = this.attachShadow({mode: 'open'});
+			let shadow = this.attachShadow({mode: "open"});
 			shadow.innerHTML = `
 				<style>
 					:host {
@@ -81,5 +81,5 @@ if (globalThis.location) {
 		}
 	}
 
-	customElements.define('mops-navbar', MyCustomElement);
+	customElements.define("mops-navbar", MyCustomElement);
 }

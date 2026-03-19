@@ -1,4 +1,4 @@
-name: mops test with ZenVoich/setup-mops
+name: mops test with dfinity/setup-mops
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    name: Test with ZenVoich/setup-mops
+    name: Test with dfinity/setup-mops
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0

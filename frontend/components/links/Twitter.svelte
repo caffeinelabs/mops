@@ -1,5 +1,5 @@
 <script lang="ts">
-	import twitterImg from '/img/twitter.svg';
+	import twitterImg from "/img/twitter.svg";
 </script>
 
 <a aria-label="Mops on Twitter" href="https://twitter.com/mops_one" target="_blank" rel="external noopener norefferer">

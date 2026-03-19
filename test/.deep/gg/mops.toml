@@ -8,7 +8,7 @@ files = [ "test.mo" ]
 [dependencies]
 dd = "0.1.0"
 ff = "0.1.0"
-fuzz = "https://github.com/ZenVoich/fuzz#master"
+fuzz = "https://github.com/dfinity/fuzz#master"
 
 [dev-dependencies]
 ee = "0.1.0"

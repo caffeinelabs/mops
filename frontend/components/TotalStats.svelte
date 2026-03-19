@@ -1,6 +1,6 @@
 <script lang="ts">
-	import {onMount} from 'svelte';
-	import {mainActor} from '/logic/actors';
+	import {onMount} from "svelte";
+	import {mainActor} from "/logic/actors";
 
 	let totalPackages : bigint;
 	let totalDownloads : bigint;
@@ -12,8 +12,8 @@
 </script>
 
 <div class="container">
-	<div class="total">Total packages: <span class="count">{totalPackages?.toLocaleString() || '-'}</span></div>
-	<div class="total">Total downloads: <span class="count">{totalDownloads?.toLocaleString() || '-'}</span></div>
+	<div class="total">Total packages: <span class="count">{totalPackages?.toLocaleString() || "-"}</span></div>
+	<div class="total">Total downloads: <span class="count">{totalDownloads?.toLocaleString() || "-"}</span></div>
 </div>
 
 <style>

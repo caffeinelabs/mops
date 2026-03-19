@@ -1,30 +1,30 @@
 <script lang="ts">
-	import {Router, currentURL, routeParams} from 'svelte-spa-history-router';
-	import {onMount} from 'svelte';
+	import {Router, currentURL, routeParams} from "svelte-spa-history-router";
+	import {onMount} from "svelte";
 
-	import Home from './Home.svelte';
-	import SearchResults from './SearchResults.svelte';
-	import Package from './package/Package.svelte';
-	import InstallDoc from './docs/InstallDoc.svelte';
-	import PublishDoc from './docs/PublishDoc.svelte';
-	import ConfigDoc from './docs/ConfigDoc.svelte';
+	import Home from "./Home.svelte";
+	import SearchResults from "./SearchResults.svelte";
+	import Package from "./package/Package.svelte";
+	import InstallDoc from "./docs/InstallDoc.svelte";
+	import PublishDoc from "./docs/PublishDoc.svelte";
+	import ConfigDoc from "./docs/ConfigDoc.svelte";
 	// import UserPage from './docs/UserPage.svelte';
 
 	let routes = [
-		{path: '/', component: Home},
-		{path: '/docs/install', component: InstallDoc},
-		{path: '/docs/publish', component: PublishDoc},
-		{path: '/docs/config', component: ConfigDoc},
+		{path: "/", component: Home},
+		{path: "/docs/install", component: InstallDoc},
+		{path: "/docs/publish", component: PublishDoc},
+		{path: "/docs/config", component: ConfigDoc},
 		// {path: '/@(?<username>.+)', component: UserPage},
-		{path: '/search/(?<search>.*)', component: SearchResults},
-		{path: '/(?<packageId>(?<packageName>.*?)(@(?<version>.*?))?)/(?<tab>code)/(?<file>.*)', component: Package},
-		{path: '/(?<packageId>(?<packageName>.*?)(@(?<version>.*?))?)/(?<tab>docs)/(?<file>.*)', component: Package},
-		{path: '/(?<packageId>(?<packageName>.*?)(@(?<version>.*?))?)(/(?<tab>.*?))?', component: Package},
+		{path: "/search/(?<search>.*)", component: SearchResults},
+		{path: "/(?<packageId>(?<packageName>.*?)(@(?<version>.*?))?)/(?<tab>code)/(?<file>.*)", component: Package},
+		{path: "/(?<packageId>(?<packageName>.*?)(@(?<version>.*?))?)/(?<tab>docs)/(?<file>.*)", component: Package},
+		{path: "/(?<packageId>(?<packageName>.*?)(@(?<version>.*?))?)(/(?<tab>.*?))?", component: Package},
 	];
 
 	// redirect legacy paths
 	if (location.hash.match(/^#\/(docs|search|package)/)) {
-		location.href = location.origin + location.hash.replace('#/package/', '/').replace('#/', '/');
+		location.href = location.origin + location.hash.replace("#/package/", "/").replace("#/", "/");
 	}
 
 	// reset scroll on navigate
@@ -33,21 +33,21 @@
 		let popstate = () => {
 			clearTimeout(resetScrollTimer);
 		};
-		window.addEventListener('popstate', popstate);
+		window.addEventListener("popstate", popstate);
 		return () => {
-			window.removeEventListener('popstate', popstate);
+			window.removeEventListener("popstate", popstate);
 		};
 	});
 	$: {
 		if ($currentURL) {
 			resetScrollTimer = setTimeout(() => {
 				// hack to scroll to docs section
-				if ($routeParams.packageId && $routeParams.tab == 'docs') {
+				if ($routeParams.packageId && $routeParams.tab == "docs") {
 					setTimeout(() => {
-						let docsEl = document.querySelector('#package-docs') as HTMLElement;
+						let docsEl = document.querySelector("#package-docs") as HTMLElement;
 						let to = docsEl?.offsetTop || 0;
 						if (document.body.scrollTop > to) {
-							docsEl.scrollIntoView({behavior: 'smooth'});
+							docsEl.scrollIntoView({behavior: "smooth"});
 						}
 					}, 200);
 				}

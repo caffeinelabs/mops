@@ -1,8 +1,8 @@
 <script lang="ts">
-	import {filesize} from 'filesize';
-	import {Benchmark} from '/declarations/main/main.did.js';
-	import ColorizedValue from '../ColorizedValue.svelte';
-	import {getMetricDiff, getMetricNum} from '/logic/benchmark-utils';
+	import {filesize} from "filesize";
+	import {Benchmark} from "/declarations/main/main.did.js";
+	import ColorizedValue from "../ColorizedValue.svelte";
+	import {getMetricDiff, getMetricNum} from "/logic/benchmark-utils";
 
 	export let benchmark : Benchmark;
 	export let otherBenchmark : Benchmark | undefined = undefined;
@@ -11,7 +11,7 @@
 		let value = getMetricNum(bench, row, col, metric);
 
 		if (value !== undefined) {
-			if (metric === 'instructions') {
+			if (metric === "instructions") {
 				if (value > 100_000) {
 					let decimals = 2;
 					if (value > 100_000_000) {
@@ -20,17 +20,17 @@
 					else if (value > 10_000_000) {
 						decimals = 1;
 					}
-					return parseFloat((value / 1_000_000).toFixed(decimals)).toLocaleString('en-US').replaceAll(',', '_') + ' M';
+					return parseFloat((value / 1_000_000).toFixed(decimals)).toLocaleString("en-US").replaceAll(",", "_") + " M";
 				}
-				return value.toLocaleString('en-US').replaceAll(',', '_') ?? '-';
+				return value.toLocaleString("en-US").replaceAll(",", "_") ?? "-";
 			}
-			else if (metric === 'rts_logical_stable_memory_size') {
-				return filesize(value * 65536, {standard: 'iec', round: 2});
+			else if (metric === "rts_logical_stable_memory_size") {
+				return filesize(value * 65536, {standard: "iec", round: 2});
 			}
-			return filesize(value, {standard: 'iec', round: 2});
+			return filesize(value, {standard: "iec", round: 2});
 		}
 		else {
-			return '-';
+			return "-";
 		}
 	}
 </script>
@@ -60,9 +60,9 @@
 						{#each benchmark.cols as col}
 							<td>
 								{#if otherBenchmark}
-									<ColorizedValue value={getMetricDiff(benchmark, otherBenchmark, row, col, 'instructions')}></ColorizedValue>
+									<ColorizedValue value={getMetricDiff(benchmark, otherBenchmark, row, col, "instructions")}></ColorizedValue>
 								{:else}
-									{getMetric(benchmark, row, col, 'instructions')}
+									{getMetric(benchmark, row, col, "instructions")}
 								{/if}
 							</td>
 						{/each}
@@ -88,9 +88,9 @@
 						{#each benchmark.cols as col}
 							<td>
 								{#if otherBenchmark}
-									<ColorizedValue value={getMetricDiff(benchmark, otherBenchmark, row, col, 'rts_heap_size')}></ColorizedValue>
+									<ColorizedValue value={getMetricDiff(benchmark, otherBenchmark, row, col, "rts_heap_size")}></ColorizedValue>
 								{:else}
-									{getMetric(benchmark, row, col, 'rts_heap_size')}
+									{getMetric(benchmark, row, col, "rts_heap_size")}
 								{/if}
 							</td>
 						{/each}
@@ -116,9 +116,9 @@
 						{#each benchmark.cols as col}
 							<td>
 								{#if otherBenchmark}
-									<ColorizedValue value={getMetricDiff(benchmark, otherBenchmark, row, col, 'rts_reclaimed')}></ColorizedValue>
+									<ColorizedValue value={getMetricDiff(benchmark, otherBenchmark, row, col, "rts_reclaimed")}></ColorizedValue>
 								{:else}
-									{getMetric(benchmark, row, col, 'rts_reclaimed')}
+									{getMetric(benchmark, row, col, "rts_reclaimed")}
 								{/if}
 							</td>
 						{/each}
@@ -144,9 +144,9 @@
 						{#each benchmark.cols as col}
 							<td>
 								{#if otherBenchmark}
-									<ColorizedValue value={getMetricDiff(benchmark, otherBenchmark, row, col, 'rts_logical_stable_memory_size')}></ColorizedValue>
+									<ColorizedValue value={getMetricDiff(benchmark, otherBenchmark, row, col, "rts_logical_stable_memory_size")}></ColorizedValue>
 								{:else}
-									{getMetric(benchmark, row, col, 'rts_logical_stable_memory_size')}
+									{getMetric(benchmark, row, col, "rts_logical_stable_memory_size")}
 								{/if}
 							</td>
 						{/each}

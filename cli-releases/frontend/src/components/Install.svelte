@@ -1,26 +1,26 @@
 <script lang="ts">
-	let copyText = '📋';
+	let copyText = "📋";
 
 	function copyToClipboard(e : MouseEvent | KeyboardEvent) {
-		let command = '';
+		let command = "";
 		if (!(e.target instanceof HTMLElement)) {
 			return;
 		}
 		let target = e.target;
 
-		command = target.parentElement?.querySelector('.command')?.textContent || '';
+		command = target.parentElement?.querySelector(".command")?.textContent || "";
 
 		if (!command) {
 			return;
 		}
 
 		navigator.clipboard.writeText(command).then(() => {
-			target.textContent = '✔️';
+			target.textContent = "✔️";
 			setTimeout(() => {
-				target.textContent = '📋';
+				target.textContent = "📋";
 			}, 2000);
 		}, (err) => {
-			console.error('Could not copy text: ', err);
+			console.error("Could not copy text: ", err);
 		});
 	}
 </script>
@@ -29,7 +29,7 @@
 	<div class="title">Install latest Mops CLI</div>
 	<div class="command-container">
 		<code class="command">curl -fsSL cli.mops.one/install.sh | sh</code>
-		<div class="copy" on:click="{copyToClipboard}" role="button" on:keydown="{(e => e.key === 'Enter' && copyToClipboard(e))}" tabindex="0">{copyText}</div>
+		<div class="copy" on:click="{copyToClipboard}" role="button" on:keydown="{(e => e.key === "Enter" && copyToClipboard(e))}" tabindex="0">{copyText}</div>
 	</div>
 </div>
 
@@ -37,7 +37,7 @@
 	<div class="title">or update Mops CLI to the latest version</div>
 	<div class="command-container">
 		<code class="command">mops self update</code>
-		<div class="copy" on:click="{copyToClipboard}" role="button" on:keydown="{(e => e.key === 'Enter' && copyToClipboard(e))}" tabindex="0">{copyText}</div>
+		<div class="copy" on:click="{copyToClipboard}" role="button" on:keydown="{(e => e.key === "Enter" && copyToClipboard(e))}" tabindex="0">{copyText}</div>
 	</div>
 </div>
 

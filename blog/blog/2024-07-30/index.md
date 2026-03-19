@@ -45,14 +45,14 @@ Added a common nav bar to all subdomains for easier navigation.
 
 (by [@ZenVoich](https://github.com/ZenVoich))
 
-New version `1.3.1` of [`setup-mops`](https://github.com/ZenVoich/setup-mops) action is released.
+New version `1.3.1` of [`setup-mops`](https://github.com/dfinity/setup-mops) action is released.
 
 The action is updated to use the on-chain storage to install Mops, which gave a **2x** speedup to the installation process (from ~20s to ~10s).
 
 If you are using the action in this way:
 
 ```yaml
-- uses: ZenVoich/setup-mops@v1
+- uses: dfinity/setup-mops@v1
 ```
 
 no changes are required from your side.

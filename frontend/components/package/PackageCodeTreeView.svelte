@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {link, routeParams} from 'svelte-spa-history-router';
+	import {link, routeParams} from "svelte-spa-history-router";
 
 	type TreeNode = {
 		name : string;
@@ -14,7 +14,7 @@
 	let expanded : null | boolean = null;
 
 	$: {
-		if (expanded == null && $routeParams.file?.startsWith(node.path + '/')) {
+		if (expanded == null && $routeParams.file?.startsWith(node.path + "/")) {
 			expanded = true;
 		}
 	}
@@ -27,7 +27,7 @@
 <div class="tree" class:root={root} style="--nesting: {nesting}">
 	<!-- {#if !root} -->
 		{#if node.children.length > 0}
-			<div class="folder" class:expanded={expanded} on:click={() => expanded = !expanded} on:keydown={(e) => e.key === 'Enter' && (expanded = !expanded)} role="tree" tabindex="0">
+			<div class="folder" class:expanded={expanded} on:click={() => expanded = !expanded} on:keydown={(e) => e.key === "Enter" && (expanded = !expanded)} role="tree" tabindex="0">
 				<svg class="arrow" viewBox="0 0 40 37" xmlns="http://www.w3.org/2000/svg">
 					<path d="M5 12.5l15 15 15-15" stroke="var(--color-primary)" stroke-width="5" fill="none"></path>
 				</svg>

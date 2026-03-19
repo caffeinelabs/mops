@@ -1,13 +1,13 @@
 <script lang="ts">
-	import {onMount} from 'svelte';
-	import mops2Img from '/img/mops2.svg';
+	import {onMount} from "svelte";
+	import mops2Img from "/img/mops2.svg";
 
-	export let size = '200px';
+	export let size = "200px";
 
 	let loaderEl : HTMLElement;
 
 	onMount(() => {
-		loaderEl.style.setProperty('--size', size);
+		loaderEl.style.setProperty("--size", size);
 	});
 </script>
 
