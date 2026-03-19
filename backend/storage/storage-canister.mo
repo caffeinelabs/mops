@@ -12,15 +12,15 @@ import Nat "mo:base/Nat";
 
 import Types "./types";
 
-shared ({ caller = parent }) actor class Storage() {
+shared ({ caller = parent }) persistent actor class Storage() {
   public type StorageStats = Types.StorageStats;
   public type FileMeta = Types.FileMeta;
   public type FileId = Types.FileId;
   public type Chunk = Types.Chunk;
   public type Err = Types.Err;
 
-  var filesMeta = TrieMap.TrieMap<FileId, FileMeta>(Text.equal, Text.hash);
-  var filesChunks = TrieMap.TrieMap<FileId, [Chunk]>(Text.equal, Text.hash);
+  transient var filesMeta = TrieMap.TrieMap<FileId, FileMeta>(Text.equal, Text.hash);
+  transient var filesChunks = TrieMap.TrieMap<FileId, [Chunk]>(Text.equal, Text.hash);
 
   func _getStats() : StorageStats {
     return {
@@ -54,8 +54,8 @@ shared ({ caller = parent }) actor class Storage() {
   };
 
   // UPLOAD
-  let activeUploadsMeta = TrieMap.TrieMap<FileId, FileMeta>(Text.equal, Text.hash);
-  let activeUploadsChunks = TrieMap.TrieMap<FileId, [var Chunk]>(Text.equal, Text.hash);
+  transient let activeUploadsMeta = TrieMap.TrieMap<FileId, FileMeta>(Text.equal, Text.hash);
+  transient let activeUploadsChunks = TrieMap.TrieMap<FileId, [var Chunk]>(Text.equal, Text.hash);
 
   public shared ({ caller }) func startUpload(fileMeta : FileMeta) : async Result.Result<(), Err> {
     assert (caller == parent);
@@ -197,8 +197,8 @@ shared ({ caller = parent }) actor class Storage() {
   };
 
   // SYSTEM
-  stable var filesMetaStable : [(FileId, FileMeta)] = [];
-  stable var filesChunksStable : [(FileId, [Chunk])] = [];
+  var filesMetaStable : [(FileId, FileMeta)] = [];
+  var filesChunksStable : [(FileId, [Chunk])] = [];
 
   system func preupgrade() {
     filesMetaStable := Iter.toArray(filesMeta.entries());

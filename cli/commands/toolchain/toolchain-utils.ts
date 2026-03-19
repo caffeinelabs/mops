@@ -12,6 +12,20 @@ import { extract as extractTar } from "tar";
 
 import { getRootDir } from "../../mops.js";
 
+export const TOOLCHAINS = ["moc", "wasmtime", "pocket-ic", "lintoko"];
+
+export let tryDownloadFile = async (url: string): Promise<Buffer | null> => {
+  let res = await fetch(url);
+
+  if (!res.ok) {
+    console.error(`HTTP ${res.status} ${url}`);
+    return null;
+  }
+
+  let arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+};
+
 export let downloadAndExtract = async (
   url: string,
   destDir: string,
