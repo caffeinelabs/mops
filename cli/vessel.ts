@@ -204,7 +204,6 @@ export const installFromGithub = async (
     try {
       await downloadFromGithub(repo, cacheDir, progress);
     } catch (err) {
-      console.error(chalk.red("Error: ") + `Failed to download ${repo}`);
       deleteSync([cacheDir], { force: true });
       return false;
     }
