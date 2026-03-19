@@ -6,7 +6,7 @@ RUN curl -sSf https://sh.rustup.rs/ | sh -s -- --default-toolchain=1.91.1 -y
 
 # clone repository
 ARG COMMIT_HASH
-RUN git clone https://github.com/dfinity/mops.git
+RUN git clone https://github.com/caffeinelabs/mops.git
 
 WORKDIR /mops
 RUN git checkout $COMMIT_HASH

@@ -4,7 +4,7 @@ import os from "node:os";
 import chalk from "chalk";
 
 import { getMocPath } from "../../helpers/get-moc-path.js";
-import { getRootDir } from "../../mops.js";
+import { getGlobalMocArgs, getRootDir, readConfig } from "../../mops.js";
 import { sources } from "../sources.js";
 import { parallel } from "../../parallel.js";
 import { globMoFiles } from "./globMoFiles.js";
@@ -44,6 +44,7 @@ export class ErrorChecker {
     let rootDir = getRootDir();
     let mocPath = getMocPath();
     let deps = await sources({ cwd: rootDir });
+    let globalMocArgs = getGlobalMocArgs(readConfig());
 
     let paths = globMoFiles(rootDir);
 
@@ -54,7 +55,12 @@ export class ErrorChecker {
       try {
         await promisify(execFile)(
           mocPath,
-          ["--check", ...deps.flatMap((x) => x.split(" ")), file],
+          [
+            "--check",
+            ...deps.flatMap((x) => x.split(" ")),
+            ...globalMocArgs,
+            file,
+          ],
           { cwd: rootDir },
         );
       } catch (error: any) {

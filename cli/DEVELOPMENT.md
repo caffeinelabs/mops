@@ -33,7 +33,7 @@ npm publish
 
 ## Check reproducibility of the build
 
-Check release hash of latest build for version `0.0.0` at https://github.com/dfinity/mops/actions/workflows/build-hash.yml
+Check release hash of latest build for version `0.0.0` at https://github.com/caffeinelabs/mops/actions/workflows/build-hash.yml
 
 Build locally version `0.0.0`
 ```

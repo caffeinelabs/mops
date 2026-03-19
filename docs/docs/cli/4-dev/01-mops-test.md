@@ -127,7 +127,7 @@ Make sure your actor doesn't have a name `actor {`.
 
 Make sure your actor has `runTests` method.
 
-See example [here](https://github.com/dfinity/mops/blob/main/test/storage-actor.test.mo).
+See example [here](https://github.com/caffeinelabs/mops/blob/main/test/storage-actor.test.mo).
 
 Under the hood, Mops will:
 - Start a local replica on port `4945`
