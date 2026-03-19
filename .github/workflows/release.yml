@@ -176,6 +176,8 @@ jobs:
         run: npm ci
 
       - name: Deploy CLI canister
+        env:
+          DFX_WARNING: -mainnet_plaintext_identity
         run: |
           for i in 1 2 3; do
             dfx deploy --network ic --no-wallet cli --identity mops && exit 0
@@ -189,6 +191,8 @@ jobs:
         run: npm ci
 
       - name: Deploy docs canister
+        env:
+          DFX_WARNING: -mainnet_plaintext_identity
         run: |
           for i in 1 2 3; do
             dfx deploy --network ic --no-wallet docs --identity mops && exit 0
