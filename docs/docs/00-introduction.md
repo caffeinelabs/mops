@@ -35,7 +35,7 @@ Mops comes with a [benchmarking tool](/cli/mops-bench) that works with the [`ben
 
 ### Mops is a toolchain manager for Motoko
 
-[`mops toolchain`](/cli/toolchain) helps you install and manage Motoko toolchain, including `moc`, `pocket-ic` and `wasmtime`.
+[`mops toolchain`](/cli/toolchain) helps you install and manage Motoko toolchain, including `moc`, `pocket-ic`, `wasmtime`, and `lintoko`.
 
 ### Mops is an essential tool for Motoko developers
 
