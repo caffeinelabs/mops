@@ -1,5 +1,10 @@
+dfinity:
+  name: DFINITY
+  title: Mops Maintainer
+  url: https://dfinity.org
+  image_url: https://github.com/dfinity.png
 zen:
   name: Zen Voich
-  title: Mops Maintainer
+  title: Original Mops Author
   url: https://github.com/ZenVoich
   image_url: https://github.com/ZenVoich.png

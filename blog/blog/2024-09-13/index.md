@@ -50,7 +50,7 @@ Now you can search packages by the owner principal id. Just click on the owner p
 
 ## GitHub Action update
 
-New version `1.4.0` of [`setup-mops`](https://github.com/ZenVoich/setup-mops) action is released.
+New version `1.4.0` of [`setup-mops`](https://github.com/dfinity/setup-mops) action is released.
 
 - Add caching for macOS
 - Use node v22
@@ -66,7 +66,7 @@ docker build . --build-arg COMMIT_HASH=<commit_hash> --build-arg MOPS_VERSION=<m
 docker run --rm --env SHASUM=<build_hash> mops
 ```
 
-[Documentation](https://github.com/ZenVoich/mops/blob/main/cli/DEVELOPMENT.md#verify-build).
+[Documentation](https://github.com/caffeinelabs/mops/blob/main/cli/DEVELOPMENT.md#verify-build).
 
 
 ## Package Registry site updates

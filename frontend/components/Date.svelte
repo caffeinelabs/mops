@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {formatDistanceStrict} from 'date-fns';
+	import {formatDistanceStrict} from "date-fns";
 
 	export let date : number | Date;
 
@@ -8,7 +8,7 @@
 	}
 
 	function format(date : number | Date) {
-		return Intl.DateTimeFormat(navigator.language, {year: 'numeric', month: 'long', day: 'numeric'}).format(date);
+		return Intl.DateTimeFormat(navigator.language, {year: "numeric", month: "long", day: "numeric"}).format(date);
 	}
 </script>
 

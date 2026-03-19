@@ -1,116 +1,52 @@
 {
-    "root": true,
-    "env": {
-        "es2022": true
-    },
-    "extends": [
-        "eslint:recommended",
-        "plugin:@typescript-eslint/recommended"
+  "root": true,
+  "env": {
+    "es2022": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:prettier/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "@stylistic", "@stylistic/migrate"],
+  "ignorePatterns": [
+    "node_modules/",
+    "declarations/",
+    "backend/",
+    "docs/",
+    "blog/",
+    ".dfx/",
+    ".git/",
+    ".mops/",
+    "dist/",
+    "cli-releases/dist/",
+    "cli-releases/frontend/dist/",
+    "bundle/",
+    "cli/wasm/"
+  ],
+  "rules": {
+    "linebreak-style": ["error", "unix"],
+    "semi": ["error", "always"],
+    "curly": ["error", "all"],
+    "space-in-parens": ["error", "never"],
+    "prefer-const": "off",
+    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "space-before-blocks": ["error", "always"],
+    "no-empty": [
+      "error",
+      {
+        "allowEmptyCatch": true
+      }
     ],
-    "parser": "@typescript-eslint/parser",
-    "plugins": [
-        "@typescript-eslint",
-        "@stylistic",
-        "@stylistic/migrate"
-    ],
-    "ignorePatterns": [
-        "node_modules/",
-        "declarations/",
-        "backend/",
-        "docs/",
-        "blog/",
-        ".dfx/",
-        ".git/",
-        ".mops/",
-        "dist/",
-        "cli-releases/dist/",
-        "cli-releases/frontend/dist/",
-        "bundle/"
-    ],
-    "rules": {
-        "@stylistic/type-annotation-spacing": [
-            "error",
-            {
-                "before": true,
-                "after": true
-            }
-        ],
-        "@stylistic/comma-dangle": [
-            "error",
-            {
-                "arrays": "always-multiline",
-                "objects": "always-multiline",
-                "imports": "always-multiline",
-                "exports": "always-multiline",
-                "functions": "ignore"
-            }
-        ],
-        "indent": [
-            "error",
-            "tab"
-        ],
-        "linebreak-style": [
-            "error",
-            "unix"
-        ],
-        "quotes": [
-            "error",
-            "single"
-        ],
-        "semi": [
-            "error",
-            "always"
-        ],
-        "curly": [
-            "error",
-            "all"
-        ],
-        "object-curly-spacing": [
-            "error",
-            "never"
-        ],
-        "brace-style": [
-            "error",
-            "stroustrup"
-        ],
-        "space-in-parens": [
-            "error",
-            "never"
-        ],
-        "prefer-const": "off",
-        "@typescript-eslint/ban-ts-comment": "off",
-        "@typescript-eslint/no-explicit-any": "off",
-        "space-before-blocks": [
-            "error",
-            "always"
-        ],
-        "no-empty": [
-            "error",
-            {
-                "allowEmptyCatch": true
-            }
-        ],
-        "arrow-spacing": [
-            "error",
-            {
-                "before": true,
-                "after": true
-            }
-        ],
-        "keyword-spacing": [
-            "error",
-            {
-                "before": true,
-                "after": true
-            }
-        ],
-        "no-unused-vars": "off",
-        "@typescript-eslint/no-unused-vars": [
-            "error",
-            {
-                "argsIgnorePattern": "^_",
-                "destructuredArrayIgnorePattern": "^_"
-            }
-        ]
-    }
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "destructuredArrayIgnorePattern": "^_"
+      }
+    ]
+  }
 }

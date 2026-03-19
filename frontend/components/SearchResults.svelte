@@ -1,19 +1,19 @@
 <script lang="ts">
-	import {onMount} from 'svelte';
-	import {debounce} from 'throttle-debounce';
-	import {link, currentURL} from 'svelte-spa-history-router';
+	import {onMount} from "svelte";
+	import {debounce} from "throttle-debounce";
+	import {link, currentURL} from "svelte-spa-history-router";
 
-	import {PackageSummary} from '/declarations/main/main.did.js';
-	import {mainActor} from '/logic/actors';
+	import {PackageSummary} from "/declarations/main/main.did.js";
+	import {mainActor} from "/logic/actors";
 
-	import Header from './Header.svelte';
-	import Loader from './Loader.svelte';
-	import PackageCard from './package/PackageCard.svelte';
-	import NotFound from './NotFound.svelte';
-	import Footer from './Footer.svelte';
+	import Header from "./Header.svelte";
+	import Loader from "./Loader.svelte";
+	import PackageCard from "./package/PackageCard.svelte";
+	import NotFound from "./NotFound.svelte";
+	import Footer from "./Footer.svelte";
 
-	$: searchText = decodeURI($currentURL.pathname.split('/search/')[1]);
-	$: page = parseInt($currentURL.searchParams.get('page')) || 1;
+	$: searchText = decodeURI($currentURL.pathname.split("/search/")[1]);
+	$: page = parseInt($currentURL.searchParams.get("page")) || 1;
 	$: $currentURL && updateResults();
 
 	let packages : PackageSummary[] = [];
@@ -49,7 +49,7 @@
 		{#if pageCount > 1}
 			<div class="pages">
 				{#each Array(pageCount) as _, i}
-					<a href="/search/{searchText}?page={i + 1}" class="page-link {page === i + 1 ? 'active' : ''}" use:link>{i + 1}</a>
+					<a href="/search/{searchText}?page={i + 1}" class="page-link {page === i + 1 ? "active" : ""}" use:link>{i + 1}</a>
 				{/each}
 			</div>
 		{/if}

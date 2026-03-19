@@ -1,36 +1,36 @@
 <script lang="ts">
-	import {onMount} from 'svelte';
-	import Loader from './Loader.svelte';
-	import PackageCard from './package/PackageCard.svelte';
-	import {PackageSummary} from '/declarations/main/main.did.js';
-	import {mainActor} from '/logic/actors';
+	import {onMount} from "svelte";
+	import Loader from "./Loader.svelte";
+	import PackageCard from "./package/PackageCard.svelte";
+	import {PackageSummary} from "/declarations/main/main.did.js";
+	import {mainActor} from "/logic/actors";
 
-	export let type : 'recently-updated' | 'most-downloaded' | 'new' = 'recently-updated';
+	export let type : "recently-updated" | "most-downloaded" | "new" = "recently-updated";
 	let loaded = false;
 	let packages : PackageSummary[] = [];
 
 	onMount(async () => {
-		if (type === 'recently-updated') {
+		if (type === "recently-updated") {
 			packages = await mainActor().getRecentlyUpdatedPackages();
 		}
-		else if (type === 'most-downloaded') {
+		else if (type === "most-downloaded") {
 			packages = await mainActor().getMostDownloadedPackagesIn7Days();
 		}
-		else if (type === 'new') {
+		else if (type === "new") {
 			packages = await mainActor().getNewPackages();
 		}
 		loaded = true;
 	});
 
-	let title = '';
-	$: if (type === 'recently-updated') {
-		title = 'Recently Updated';
+	let title = "";
+	$: if (type === "recently-updated") {
+		title = "Recently Updated";
 	}
-	else if (type === 'most-downloaded') {
-		title = 'Most Downloaded in 7 days';
+	else if (type === "most-downloaded") {
+		title = "Most Downloaded in 7 days";
 	}
-	else if (type === 'new') {
-		title = 'New Packages';
+	else if (type === "new") {
+		title = "New Packages";
 	}
 </script>
 
@@ -41,10 +41,10 @@
 		{#each packages as pkg}
 			<PackageCard
 				{pkg}
-				showUpdated={type === 'recently-updated'}
-				showFirstPublished={type === 'new'}
-				showVersion={type === 'recently-updated'}
-				show7DayDownloads={type === 'most-downloaded'}
+				showUpdated={type === "recently-updated"}
+				showFirstPublished={type === "new"}
+				showVersion={type === "recently-updated"}
+				show7DayDownloads={type === "most-downloaded"}
 			></PackageCard>
 		{:else}
 			{#if loaded}

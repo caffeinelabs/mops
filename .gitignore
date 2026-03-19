@@ -1,6 +1,7 @@
-node_modules
-dist
-.dfx
-.vscode
-.mops
+node_modules/
+target/
+dist/
+.dfx/
+.mops/
+
 .DS_Store

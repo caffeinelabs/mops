@@ -1,5 +1,8 @@
-import {test} "mo:test";
+import { test } "mo:test";
 
-test("succ", func() {
-	assert true;
-});
+test(
+  "succ",
+  func() {
+    assert true;
+  },
+);

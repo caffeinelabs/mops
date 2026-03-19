@@ -7,11 +7,14 @@ on:
       - master
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
       matrix:
-        node-version: [18, 20, 24]
+        node-version: [20, 22, 24]
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
@@ -25,7 +28,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install npm dependencies
         run: cd cli && npm i
@@ -46,3 +49,11 @@ jobs:
         run: mops -v
 
       - run: mops format
+
+  ci-ok-cli:
+    if: always()
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

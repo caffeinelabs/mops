@@ -1,97 +1,92 @@
 {
-	"$schema": "./dfx.schema.json",
-	"version": 1,
-	"canisters": {
-		"main": {
-			"type": "motoko",
-			"main": "backend/main/main-canister.mo",
-			"specified_id": "2d2zu-vaaaa-aaaak-qb6pq-cai",
-			"declarations": {
-				"output": "cli/declarations/main/",
-				"node_compatibility": true
-			},
-			"optimize": "cycles",
-			"gzip": true
-		},
-		"assets": {
-			"type": "assets",
-			"build": ["npm run build-frontend"],
-			"specified_id": "ogp6e-diaaa-aaaam-qajta-cai",
-			"frontend": {
-				"entrypoint": "frontend/dist/index.html"
-			},
-			"source": ["frontend/dist/"]
-		},
-		"docs": {
-			"type": "assets",
-			"build": ["npm run build-docs"],
-			"frontend": {
-				"entrypoint": "docs/build/index.html"
-			},
-			"source": ["docs/build/"]
-		},
-		"blog": {
-			"type": "assets",
-			"build": ["npm run build-blog"],
-			"frontend": {
-				"entrypoint": "blog/build/index.html"
-			},
-			"source": ["blog/build/"]
-		},
-		"cli": {
-			"type": "assets",
-			"build": ["npm run build-cli-releases"],
-			"frontend": {
-				"entrypoint": "cli-releases/frontend/dist/index.html"
-			},
-			"source": [
-				"cli-releases/",
-				"cli-releases/frontend/dist/"
-			]
-		},
-		"play-frontend": {
-			"type": "assets",
-			"build": [""],
-			"frontend": {
-				"entrypoint": "play-frontend/dist/index.html"
-			},
-			"source": [
-				"play-frontend/"
-			]
-		},
-		"bench": {
-			"type": "motoko",
-			"main": "cli/commands/bench/bench-canister.mo",
-			"declarations": {
-				"output": "cli/declarations/bench/",
-				"node_compatibility": true
-			},
-			"remote": {
-				"id": {
-					"ic": "2222s-4iaaa-aaaaf-ax2uq-cai",
-					"staging": "2222s-4iaaa-aaaaf-ax2uq-cai"
-				}
-			}
-		}
-	},
-	"defaults": {
-		"build": {
-			"packtool": "mops sources"
-		}
-	},
-	"dfx": "0.29.1",
-	"networks": {
-		"local": {
-			"type": "ephemeral",
-			"bind": "127.0.0.1:4943"
-		},
-		"staging": {
-			"type": "persistent",
-			"providers": ["https://icp0.io"]
-		},
-		"ic": {
-			"type": "persistent",
-			"providers": ["https://icp0.io"]
-		}
-	}
+  "$schema": "./dfx.schema.json",
+  "version": 1,
+  "canisters": {
+    "main": {
+      "type": "motoko",
+      "main": "backend/main/main-canister.mo",
+      "specified_id": "2d2zu-vaaaa-aaaak-qb6pq-cai",
+      "declarations": {
+        "output": "cli/declarations/main/",
+        "node_compatibility": true
+      },
+      "optimize": "cycles",
+      "gzip": true
+    },
+    "assets": {
+      "type": "assets",
+      "build": ["npm run build-frontend"],
+      "specified_id": "ogp6e-diaaa-aaaam-qajta-cai",
+      "frontend": {
+        "entrypoint": "frontend/dist/index.html"
+      },
+      "source": ["frontend/dist/"]
+    },
+    "docs": {
+      "type": "assets",
+      "build": ["npm run build-docs"],
+      "frontend": {
+        "entrypoint": "docs/build/index.html"
+      },
+      "source": ["docs/build/"]
+    },
+    "blog": {
+      "type": "assets",
+      "build": ["npm run build-blog"],
+      "frontend": {
+        "entrypoint": "blog/build/index.html"
+      },
+      "source": ["blog/build/"]
+    },
+    "cli": {
+      "type": "assets",
+      "build": ["npm run build-cli-releases"],
+      "frontend": {
+        "entrypoint": "cli-releases/frontend/dist/index.html"
+      },
+      "source": ["cli-releases/", "cli-releases/frontend/dist/"]
+    },
+    "play-frontend": {
+      "type": "assets",
+      "build": [""],
+      "frontend": {
+        "entrypoint": "play-frontend/dist/index.html"
+      },
+      "source": ["play-frontend/"]
+    },
+    "bench": {
+      "type": "motoko",
+      "main": "cli/commands/bench/bench-canister.mo",
+      "declarations": {
+        "output": "cli/declarations/bench/",
+        "node_compatibility": true
+      },
+      "remote": {
+        "id": {
+          "ic": "2222s-4iaaa-aaaaf-ax2uq-cai",
+          "staging": "2222s-4iaaa-aaaaf-ax2uq-cai"
+        }
+      }
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": "mops sources"
+    }
+  },
+  "dfx": "0.29.1",
+  "networks": {
+    "local": {
+      "type": "ephemeral",
+      "bind": "127.0.0.1:4943"
+    },
+    "staging": {
+      "type": "persistent",
+      "providers": ["https://icp0.io"]
+    },
+    "ic": {
+      "type": "persistent",
+      "providers": ["https://icp0.io"]
+    }
+  }
 }

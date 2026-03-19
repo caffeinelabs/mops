@@ -1,5 +1,5 @@
 module {
-	public func hello(name : Text) : Text {
-		"Hello ddd, " # name;
-	};
+  public func hello(name : Text) : Text {
+    "Hello ddd, " # name;
+  };
 };

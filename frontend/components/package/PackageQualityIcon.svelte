@@ -1,6 +1,6 @@
 <script lang="ts">
-	import {PackageSummary} from '/declarations/main/main.did.js';
-	import {getQualityPoints} from '/logic/get-quality-points';
+	import {PackageSummary} from "/declarations/main/main.did.js";
+	import {getQualityPoints} from "/logic/get-quality-points";
 
 	export let pkg : PackageSummary;
 

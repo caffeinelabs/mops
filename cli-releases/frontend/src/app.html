@@ -1,46 +1,79 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" href="%sveltekit.assets%/mops.svg" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		%sveltekit.head%
-	</head>
-	<body data-sveltekit-preload-data="hover">
-		<div style="display: contents">%sveltekit.body%</div>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%sveltekit.assets%/mops.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
 
-	<!-- Fathom - beautiful, simple website analytics -->
-	<script src="https://cdn.usefathom.com/script.js" data-spa="auto" data-site="THOISMFA" defer></script>
-	<!-- / Fathom -->
+  <!-- Matomo -->
+  <script>
+    var _paq = (window._paq = window._paq || []);
+    /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+    _paq.push(["trackPageView"]);
+    _paq.push(["enableLinkTracking"]);
+    (function () {
+      var u = "https://internetcomputer.matomo.cloud/";
+      _paq.push(["setTrackerUrl", u + "matomo.php"]);
+      _paq.push(["setSiteId", "18"]);
+      var d = document,
+        g = d.createElement("script"),
+        s = d.getElementsByTagName("script")[0];
+      g.async = true;
+      g.src =
+        "https://cdn.matomo.cloud/internetcomputer.matomo.cloud/matomo.js";
+      s.parentNode.insertBefore(g, s);
+    })();
+  </script>
+  <!-- End Matomo Code -->
 </html>
 
 <style>
-	:root {
-		--color-primary: hsl(73deg 20% 44%);
-		--color-primary-light: hsl(72deg 24% 55%);
-		--color-secondary: rgb(213 217 208);
-	}
+  :root {
+    --color-primary: hsl(73deg 20% 44%);
+    --color-primary-light: hsl(72deg 24% 55%);
+    --color-secondary: rgb(213 217 208);
+  }
 
-	body {
-		margin: 0;
-		font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-		-webkit-font-smoothing: antialiased;
-	}
+  body {
+    margin: 0;
+    font-family:
+      system-ui,
+      -apple-system,
+      Segoe UI,
+      Roboto,
+      Ubuntu,
+      Cantarell,
+      Noto Sans,
+      sans-serif,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Helvetica,
+      Arial,
+      sans-serif,
+      "Apple Color Emoji",
+      "Segoe UI Emoji",
+      "Segoe UI Symbol";
+    -webkit-font-smoothing: antialiased;
+  }
 
-	code {
-		padding: 3px;
-		border-radius: 3px;
-		overflow-x: auto;
-		background: #eceeee;
-	}
+  code {
+    padding: 3px;
+    border-radius: 3px;
+    overflow-x: auto;
+    background: #eceeee;
+  }
 
-	a {
-		color: var(--color-primary);
-		text-decoration: none;
-	}
+  a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
 
-	a:hover {
-		text-decoration: underline;
-	}
+  a:hover {
+    text-decoration: underline;
+  }
 </style>

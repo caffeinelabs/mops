@@ -1,9 +1,9 @@
 <script lang="ts">
-	import '@wooorm/starry-night/style/light';
-	import {markdownToHtml} from '/logic/markdown-to-html';
+	import "@wooorm/starry-night/style/light";
+	import {markdownToHtml} from "/logic/markdown-to-html";
 
-	export let readme = '';
-	export let repository = '';
+	export let readme = "";
+	export let repository = "";
 </script>
 
 <div class="readme">

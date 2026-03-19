@@ -1,5 +1,5 @@
 <script lang="ts">
-	import '../../../../ui-kit/index';
+	import "../../../../ui-kit/index";
 </script>
 
 <header>

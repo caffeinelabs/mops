@@ -1,15 +1,15 @@
 <script lang="ts">
-	import {link, routeParams, push} from 'svelte-spa-history-router';
-	import pako from 'pako';
-	import untar from 'js-untar';
-	import {toHtml} from 'hast-util-to-html';
-	import {onMount} from 'svelte';
-	import asciidoctor from '@asciidoctor/core';
-	import markdownIt from 'markdown-it';
-	import '@wooorm/starry-night/style/light';
-	import {getStarryNight} from '/logic/get-starry-night';
+	import {link, routeParams, push} from "svelte-spa-history-router";
+	import pako from "pako";
+	import untar from "js-untar";
+	import {toHtml} from "hast-util-to-html";
+	import {onMount} from "svelte";
+	import asciidoctor from "@asciidoctor/core";
+	import markdownIt from "markdown-it";
+	import "@wooorm/starry-night/style/light";
+	import {getStarryNight} from "/logic/get-starry-night";
 
-	type DefinitionKind = 'module' | 'class' | 'type' | 'func' | 'value' | 'type-actor';
+	type DefinitionKind = "module" | "class" | "type" | "func" | "value" | "type-actor";
 	type Definition = {
 		id : string;
 		name : string;
@@ -18,19 +18,19 @@
 
 	export let docsData : Uint8Array;
 
-	let docsHtml = 'Loading...';
+	let docsHtml = "Loading...";
 	let files : any[] = [];
 	let definitions : Definition[] = [];
 	let fileNameShadow = false;
 
 	function getDefaultFileName(files : any[]) : string {
-		return files[0]?.name.replace('.adoc', '') || '';
+		return files[0]?.name.replace(".adoc", "") || "";
 	}
 
 	$: selectedFileName = $routeParams.file ? $routeParams.file : getDefaultFileName(files);
 
 	function isFileSelected(file : any, selectedFileName = getDefaultFileName(files)) {
-		return file.name.replace('.adoc', '') == selectedFileName;
+		return file.name.replace(".adoc", "") == selectedFileName;
 	}
 
 	let unpack = async (docsData : Uint8Array) => {
@@ -40,16 +40,16 @@
 		// sort files by folder nesting
 		// place "lib" at the top of the folder
 		let getPath = (file : string) => {
-			return file.split('/').slice(0, -1).join('/');
+			return file.split("/").slice(0, -1).join("/");
 		};
 		files.sort((a, b) => {
-			let aNesting = a.name.split('/').length;
-			let bNesting = b.name.split('/').length;
+			let aNesting = a.name.split("/").length;
+			let bNesting = b.name.split("/").length;
 			if (aNesting == bNesting) {
-				if (getPath(a.name) === getPath(b.name) && a.name.endsWith('lib.adoc')) {
+				if (getPath(a.name) === getPath(b.name) && a.name.endsWith("lib.adoc")) {
 					return -1;
 				}
-				if (getPath(a.name) === getPath(b.name) && b.name.endsWith('lib.adoc')) {
+				if (getPath(a.name) === getPath(b.name) && b.name.endsWith("lib.adoc")) {
 					return 1;
 				}
 				return a.name.localeCompare(b.name);
@@ -59,29 +59,29 @@
 	};
 
 	function getModuleNesting(id : string) : number {
-		return [...id.replace('type.', '').matchAll(/\./g)].length;
+		return [...id.replace("type.", "").matchAll(/\./g)].length;
 	}
 
 	let render = async (files : any[], fileName = getDefaultFileName(files)) => {
-		let file = files.find((file) => file.name.replace('.adoc', '') == fileName);
+		let file = files.find((file) => file.name.replace(".adoc", "") == fileName);
 		if (!file) {
 			return;
 		}
 
-		let div = document.createElement('div');
+		let div = document.createElement("div");
 
 		// adoc to html
 		let text = new TextDecoder().decode(file.buffer);
 
 		// hack to remove html from doc https://github.com/dfinity/motoko-base/blob/master/src/Trie.mo#L8C8-L8C31
-		text = text.replaceAll('<a name="overview"></a>', '');
+		text = text.replaceAll("<a name=\"overview\"></a>", "");
 
 		// remove internal links to modules
-		text = text.replaceAll(/\[\[module([^\]]*?)\]\]\s*=\s*[\w./-]+/g, '');
+		text = text.replaceAll(/\[\[module([^\]]*?)\]\]\s*=\s*[\w./-]+/g, "");
 
 		// render markdown admonition blocks
 		text = text.replaceAll(/^:::\s*(\w+)(?: +(.*))?\n([\s\S]*?)\n:::\s*$/gm, (match, type, title, content) => {
-			return `[${type.replace('info', 'tip').toUpperCase()}]\n${title ? `.${title}\n` : ''}====\n${content}\n====\n\n`;
+			return `[${type.replace("info", "tip").toUpperCase()}]\n${title ? `.${title}\n` : ""}====\n${content}\n====\n\n`;
 		});
 
 		// convert markdown links to asciidoc links
@@ -110,38 +110,38 @@
 		// definitions
 		let getKind = (line : string) : DefinitionKind => {
 			if (line.match(/^\w+$/i)) {
-				return 'module';
+				return "module";
 			}
-			if (line.startsWith('class')) {
-				return 'class';
+			if (line.startsWith("class")) {
+				return "class";
 			}
 			if (line.match(/type \w+ = actor {/)) {
-				return 'type-actor';
+				return "type-actor";
 			}
-			if (line.startsWith('type')) {
-				return 'type';
+			if (line.startsWith("type")) {
+				return "type";
 			}
-			if (line.startsWith('func') || line.includes(' -> ')) {
-				return 'func';
+			if (line.startsWith("func") || line.includes(" -> ")) {
+				return "func";
 			}
-			return 'value';
+			return "value";
 		};
 		definitions = Object.values(doc.getRefs()).slice(1).filter((def : any) => {
-			return !def.id.startsWith('_') && def.blocks[0]?.node_name !== 'paragraph' && def.blocks[0]?.node_name !== 'ulist';
+			return !def.id.startsWith("_") && def.blocks[0]?.node_name !== "paragraph" && def.blocks[0]?.node_name !== "ulist";
 		}).map((def : any) => {
 			return {
 				id: def.id,
-				name: def.id.replace('type.', '').split('.').at(-1),
-				kind: def.blocks[0]?.node_name === 'listing' ? getKind(def.blocks[0]?.lines[0]) : 'value',
+				name: def.id.replace("type.", "").split(".").at(-1),
+				kind: def.blocks[0]?.node_name === "listing" ? getKind(def.blocks[0]?.lines[0]) : "value",
 			};
 		});
 
 		div.innerHTML = doc.convert();
 
 		// nested fields
-		div.querySelectorAll('h3').forEach((el) => {
+		div.querySelectorAll("h3").forEach((el) => {
 			if (getModuleNesting(el.id)) {
-				let section = el.closest('.sectionbody') as HTMLElement;
+				let section = el.closest(".sectionbody") as HTMLElement;
 				if (section) {
 					// sticky sub header
 					// let sectionTitle = section.previousElementSibling as HTMLElement;
@@ -150,59 +150,59 @@
 					// sectionTitle.style.background = 'white';
 					// sectionTitle.style.borderBottom = '1px solid gray';
 
-					section.style.marginLeft = '0px';
-					section.style.paddingLeft = '20px';
-					section.style.borderLeft = '1px solid rgb(222 222 222)';
+					section.style.marginLeft = "0px";
+					section.style.paddingLeft = "20px";
+					section.style.borderLeft = "1px solid rgb(222 222 222)";
 				}
 			}
 		});
 
 		// link to source code
-		div.querySelectorAll('h2, h3, h4').forEach((el : HTMLElement) => {
-			let link = document.createElement('a');
-			link.className = 'source-link';
-			link.href = `/${$routeParams.packageName}${$routeParams.version ? '@' + $routeParams.version : ''}/code/src/${selectedFileName}.mo#${el.id}`;
-			link.textContent = '[source]';
-			link.style.fontSize = '16px';
+		div.querySelectorAll("h2, h3, h4").forEach((el : HTMLElement) => {
+			let link = document.createElement("a");
+			link.className = "source-link";
+			link.href = `/${$routeParams.packageName}${$routeParams.version ? "@" + $routeParams.version : ""}/code/src/${selectedFileName}.mo#${el.id}`;
+			link.textContent = "[source]";
+			link.style.fontSize = "16px";
 			el.appendChild(link);
-			el.style.display = 'flex';
-			el.style.alignItems = 'center';
-			el.style.justifyContent = 'space-between';
+			el.style.display = "flex";
+			el.style.alignItems = "center";
+			el.style.justifyContent = "space-between";
 		});
 
 		let starryNight = await getStarryNight();
-		div.querySelectorAll('pre code.language-motoko, pre code.language-mo').forEach((el) => {
+		div.querySelectorAll("pre code.language-motoko, pre code.language-mo").forEach((el) => {
 			let text = el.textContent;
 
 			// beautify
 			let indentLevel = 0;
-			if (el.closest('.sectionbody > :first-child.listingblock.no-repl')) {
-				text = text.replaceAll(/(;)\s|(\{)\s|\s(\})/g, '$1$2$3')
+			if (el.closest(".sectionbody > :first-child.listingblock.no-repl")) {
+				text = text.replaceAll(/(;)\s|(\{)\s|\s(\})/g, "$1$2$3")
 					.replace(/\{|\}|;/g, (m0) => {
-						if (m0 == '{') {
+						if (m0 == "{") {
 							indentLevel++;
 						}
-						if (m0 == '}') {
+						if (m0 == "}") {
 							indentLevel--;
 						}
 
-						let indent = '\t'.repeat(indentLevel);
+						let indent = "\t".repeat(indentLevel);
 
-						if (m0 == ';' || m0 == '{') {
+						if (m0 == ";" || m0 == "{") {
 							return `${m0}\n${indent}`;
 						}
 						return `\n${indent}${m0}`;
 					})
-					.replace(/([^;])(\n\t*})/g, '$1;$2')
-					.replaceAll('}\t;', '};');
+					.replace(/([^;])(\n\t*})/g, "$1;$2")
+					.replaceAll("}\t;", "};");
 
-				if (!text.trim().endsWith(';')) {
-					text += ';';
+				if (!text.trim().endsWith(";")) {
+					text += ";";
 				}
 			}
 
 			// syntax highlight
-			el.innerHTML = toHtml(starryNight.highlight(text, 'source.mo'));
+			el.innerHTML = toHtml(starryNight.highlight(text, "source.mo"));
 		});
 
 		docsHtml = div.innerHTML;
@@ -217,10 +217,10 @@
 	let filesEl : HTMLElement;
 	let defsEl : HTMLElement;
 
-	let filesPanelHeight = '';
-	let defsPanelHeight = '';
-	let defsPanelTop = '';
-	let footerHeight = document.querySelector('#app-footer').getBoundingClientRect().height;
+	let filesPanelHeight = "";
+	let defsPanelHeight = "";
+	let defsPanelTop = "";
+	let footerHeight = document.querySelector("#app-footer").getBoundingClientRect().height;
 	let margin = 20;
 	let bottomSpace = 0;
 	let filesDefsDiff = 0;
@@ -249,7 +249,7 @@
 			defsPanelTop = `${filesDefsDiff}px`;
 		}
 		else {
-			defsPanelTop = '';
+			defsPanelTop = "";
 		}
 
 		fileNameShadow = filesTop < 1;
@@ -257,27 +257,27 @@
 
 	let onClick = (e : MouseEvent) => {
 		let link = e.target as HTMLElement;
-		if (link.matches('a.source-link')) {
+		if (link.matches("a.source-link")) {
 			e.preventDefault();
-			push(link.getAttribute('href'));
+			push(link.getAttribute("href"));
 		}
 	};
 
 	onMount(() => {
 		filesEl && onScroll();
-		window.addEventListener('scroll', onScroll);
-		window.addEventListener('click', onClick);
+		window.addEventListener("scroll", onScroll);
+		window.addEventListener("click", onClick);
 
 		return () => {
-			window.removeEventListener('scroll', onScroll);
-			window.removeEventListener('click', onClick);
+			window.removeEventListener("scroll", onScroll);
+			window.removeEventListener("click", onClick);
 		};
 	});
 
 	function definitionOnClick(e : MouseEvent) {
 		e.preventDefault();
-		let id = (e.currentTarget as HTMLElement).getAttribute('href');
-		history.replaceState({}, '', id);
+		let id = (e.currentTarget as HTMLElement).getAttribute("href");
+		history.replaceState({}, "", id);
 		scrollToDefiition();
 	}
 
@@ -286,17 +286,17 @@
 		let el = document.querySelector(`[id="${id}"]`) as HTMLElement;
 		if (!id || !el) {
 			if (document.scrollingElement.scrollTop > packageDocsEl.offsetTop) {
-				document.scrollingElement.scroll({top: packageDocsEl.offsetTop - 1, behavior: 'instant'});
+				document.scrollingElement.scroll({top: packageDocsEl.offsetTop - 1, behavior: "instant"});
 			}
 			return;
 		}
 		document.scrollingElement.scroll({
 			top: el.offsetTop - docHeaderEl.offsetHeight - 10,
-			behavior: 'smooth',
+			behavior: "smooth",
 		});
-		el.classList.add('highlight');
+		el.classList.add("highlight");
 		setTimeout(() => {
-			el.classList.remove('highlight');
+			el.classList.remove("highlight");
 		}, 700);
 	}
 
@@ -311,10 +311,10 @@
 				<a
 					class="file"
 					class:selected={isFileSelected(file, $routeParams.file)}
-					href="/{$routeParams.packageId}/{$routeParams.tab}/{file.name.replace('.adoc', '')}"
+					href="/{$routeParams.packageId}/{$routeParams.tab}/{file.name.replace(".adoc", "")}"
 					use:link
 				>
-					{file.name.replace('.adoc', '')}
+					{file.name.replace(".adoc", "")}
 				</a>
 			{/each}
 		</div>
@@ -339,7 +339,7 @@
 							href="#{definition.id}"
 							on:click={definitionOnClick}
 						>
-							<span class="def-kind def-kind-{definition.kind}">{definition.kind.split('-')[0]}</span> <span class="def-name">{definition.name}</span>
+							<span class="def-kind def-kind-{definition.kind}">{definition.kind.split("-")[0]}</span> <span class="def-name">{definition.name}</span>
 						</a>
 					{/each}
 				</div>

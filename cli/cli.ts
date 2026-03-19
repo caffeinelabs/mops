@@ -1,519 +1,823 @@
-import process from 'node:process';
-import fs from 'node:fs';
-import events from 'node:events';
-import {Command, Argument, Option} from 'commander';
+import { Argument, Command, Option } from "commander";
+import events from "node:events";
+import fs from "node:fs";
+import process from "node:process";
 
-import {init} from './commands/init.js';
-import {publish} from './commands/publish.js';
-import {sources} from './commands/sources.js';
-import {checkApiCompatibility, setNetwork, apiVersion, checkConfigFile, getNetworkFile, version} from './mops.js';
-import {getNetwork} from './api/network.js';
-import {installAll} from './commands/install/install-all.js';
-import {search} from './commands/search.js';
-import {add} from './commands/add.js';
-import {cacheSize, cleanCache, show} from './cache.js';
-import {test} from './commands/test/test.js';
-import {template} from './commands/template.js';
-import {remove} from './commands/remove.js';
-import {importPem, getPrincipal, getUserProp, setUserProp} from './commands/user.js';
-import {bump} from './commands/bump.js';
-import {sync} from './commands/sync.js';
-import {outdated} from './commands/outdated.js';
-import {update} from './commands/update.js';
-import {bench} from './commands/bench.js';
-import {toolchain} from './commands/toolchain/index.js';
-import {Tool} from './types.js';
-import * as self from './commands/self.js';
-import {resolvePackages} from './resolve-packages.js';
-import {watch} from './commands/watch/watch.js';
-import {addOwner, printOwners, removeOwner} from './commands/owner.js';
-import {addMaintainer, printMaintainers, removeMaintainer} from './commands/maintainer.js';
-import {format} from './commands/format.js';
-import {docs} from './commands/docs.js';
-import {docsCoverage} from './commands/docs-coverage.js';
+import { resolve } from "node:path";
+import { getNetwork } from "./api/network.js";
+import { cacheSize, cleanCache, show } from "./cache.js";
+import { add } from "./commands/add.js";
+import { bench } from "./commands/bench.js";
+import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
+import { bump } from "./commands/bump.js";
+import { check } from "./commands/check.js";
+import { checkCandid } from "./commands/check-candid.js";
+import { checkStable } from "./commands/check-stable.js";
+import { docsCoverage } from "./commands/docs-coverage.js";
+import { docs } from "./commands/docs.js";
+import { format } from "./commands/format.js";
+import { init } from "./commands/init.js";
+import { lint } from "./commands/lint.js";
+import { installAll } from "./commands/install/install-all.js";
+import {
+  addMaintainer,
+  printMaintainers,
+  removeMaintainer,
+} from "./commands/maintainer.js";
+import { outdated } from "./commands/outdated.js";
+import { addOwner, printOwners, removeOwner } from "./commands/owner.js";
+import { publish } from "./commands/publish.js";
+import { remove } from "./commands/remove.js";
+import { search } from "./commands/search.js";
+import * as self from "./commands/self.js";
+import { sources } from "./commands/sources.js";
+import { sync } from "./commands/sync.js";
+import { template } from "./commands/template.js";
+import { test } from "./commands/test/test.js";
+import { toolchain } from "./commands/toolchain/index.js";
+import { update } from "./commands/update.js";
+import {
+  getPrincipal,
+  getUserProp,
+  importPem,
+  setUserProp,
+} from "./commands/user.js";
+import { watch } from "./commands/watch/watch.js";
+import {
+  apiVersion,
+  checkApiCompatibility,
+  checkConfigFile,
+  getGlobalMocArgs,
+  getNetworkFile,
+  readConfig,
+  setNetwork,
+  version,
+} from "./mops.js";
+import { resolvePackages } from "./resolve-packages.js";
+import { Tool } from "./types.js";
+import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
 
 declare global {
-	// eslint-disable-next-line no-var
-	var MOPS_NETWORK : string;
-	// eslint-disable-next-line no-var
-	var mopsReplicaTestRunning : boolean;
+  // eslint-disable-next-line no-var
+  var MOPS_NETWORK: string;
+  // eslint-disable-next-line no-var
+  var mopsReplicaTestRunning: boolean;
 }
 
 events.setMaxListeners(20);
 
+// Change working directory for `npm run mops`
+let cwd = process.env["MOPS_CWD"];
+if (cwd) {
+  process.chdir(resolve(cwd));
+}
+
 let networkFile = getNetworkFile();
 if (fs.existsSync(networkFile)) {
-	globalThis.MOPS_NETWORK = fs.readFileSync(networkFile).toString() || 'ic';
+  globalThis.MOPS_NETWORK = fs.readFileSync(networkFile).toString() || "ic";
 }
 
 let program = new Command();
 
-program.name('mops');
+function parseExtraArgs(variadicArgs?: string[]): {
+  extraArgs: string[];
+  args: string[];
+} {
+  const rawArgs = process.argv.slice(2);
+  const dashDashIndex = rawArgs.indexOf("--");
+  const extraArgs =
+    dashDashIndex !== -1 ? rawArgs.slice(dashDashIndex + 1) : [];
+  const args = variadicArgs
+    ? extraArgs.length > 0
+      ? variadicArgs.slice(0, variadicArgs.length - extraArgs.length)
+      : variadicArgs
+    : [];
+  return { extraArgs, args };
+}
+
+program.name("mops");
 
 // --version
-program.version(`CLI ${version()}\nAPI ${apiVersion}`, '-v --version');
+program.version(`CLI ${version()}\nAPI ${apiVersion}`, "-v --version");
 
 // init
 program
-	.command('init')
-	.description('Initialize a new project or package in the current directory')
-	.option('-y, --yes', 'Accept all defaults')
-	.action(async (options) => {
-		await init(options);
-	});
+  .command("init")
+  .description("Initialize a new project or package in the current directory")
+  .option("-y, --yes", "Accept all defaults")
+  .action(async (options) => {
+    await init(options);
+  });
 
 // add
 program
-	.command('add <pkg>')
-	.description('Install the package and save it to mops.toml')
-	.option('--dev', 'Add to [dev-dependencies] section')
-	.option('--verbose')
-	.addOption(new Option('--lock <action>', 'Lockfile action').choices(['update', 'ignore']))
-	.action(async (pkg, options) => {
-		if (!checkConfigFile()) {
-			process.exit(1);
-		}
-		await add(pkg, options);
-	});
+  .command("add <pkg>")
+  .description("Install the package and save it to mops.toml")
+  .option("--dev", "Add to [dev-dependencies] section")
+  .option("--verbose")
+  .addOption(
+    new Option("--lock <action>", "Lockfile action").choices([
+      "update",
+      "ignore",
+    ]),
+  )
+  .action(async (pkg, options) => {
+    if (!checkConfigFile()) {
+      process.exit(1);
+    }
+    await add(pkg, options);
+  });
 
 // remove
 program
-	.command('remove <pkg>')
-	.alias('rm')
-	.description('Remove package and update mops.toml')
-	.option('--dev', 'Remove from dev-dependencies instead of dependencies')
-	.option('--verbose', 'Show more information')
-	.option('--dry-run', 'Do not actually remove anything')
-	.addOption(new Option('--lock <action>', 'Lockfile action').choices(['update', 'ignore']))
-	.action(async (pkg, options) => {
-		if (!checkConfigFile()) {
-			process.exit(1);
-		}
-		await remove(pkg, options);
-	});
+  .command("remove <pkg>")
+  .alias("rm")
+  .description("Remove package and update mops.toml")
+  .option("--dev", "Remove from dev-dependencies instead of dependencies")
+  .option("--verbose", "Show more information")
+  .option("--dry-run", "Do not actually remove anything")
+  .addOption(
+    new Option("--lock <action>", "Lockfile action").choices([
+      "update",
+      "ignore",
+    ]),
+  )
+  .action(async (pkg, options) => {
+    if (!checkConfigFile()) {
+      process.exit(1);
+    }
+    await remove(pkg, options);
+  });
 
 // install
 program
-	.command('install')
-	.alias('i')
-	.description('Install all dependencies specified in mops.toml')
-	.option('--no-toolchain', 'Do not install toolchain')
-	.option('--verbose')
-	.addOption(new Option('--lock <action>', 'Lockfile action').choices(['check', 'update', 'ignore']))
-	.action(async (options) => {
-		if (!checkConfigFile()) {
-			process.exit(1);
-		}
+  .command("install")
+  .alias("i")
+  .description("Install all dependencies specified in mops.toml")
+  .option("--no-toolchain", "Do not install toolchain")
+  .option("--verbose")
+  .addOption(
+    new Option("--lock <action>", "Lockfile action").choices([
+      "check",
+      "update",
+      "ignore",
+    ]),
+  )
+  .action(async (options) => {
+    if (!checkConfigFile()) {
+      process.exit(1);
+    }
 
-		let compatible = await checkApiCompatibility();
-		if (!compatible) {
-			return;
-		}
+    let compatible = await checkApiCompatibility();
+    if (!compatible) {
+      return;
+    }
 
-		if (options.toolchain) {
-			await toolchain.ensureToolchainInited({strict: false});
-		}
+    if (options.toolchain) {
+      await toolchain.checkToolchainInited({ strict: false });
+    }
 
-		let ok = await installAll(options);
+    let ok = await installAll(options);
 
-		if (options.toolchain) {
-			await toolchain.installAll(options);
-		}
+    if (options.toolchain) {
+      await toolchain.installAll(options);
+    }
 
-		// check conflicts
-		await resolvePackages({conflicts: 'warning'});
+    // check conflicts
+    await resolvePackages({ conflicts: "warning" });
 
-		if (!ok) {
-			process.exit(1);
-		}
-	});
+    if (!ok) {
+      process.exit(1);
+    }
+  });
 
 // publish
 program
-	.command('publish')
-	.description('Publish package to the mops registry')
-	.option('--no-docs', 'Do not generate docs')
-	.option('--no-test', 'Do not run tests')
-	.option('--no-bench', 'Do not run benchmarks')
-	.option('--verbose')
-	.action(async (options) => {
-		if (!checkConfigFile()) {
-			process.exit(1);
-		}
-		let compatible = await checkApiCompatibility();
-		if (compatible) {
-			await publish(options);
-		}
-	});
+  .command("publish")
+  .description("Publish package to the mops registry")
+  .option("--no-docs", "Do not generate docs")
+  .option("--no-test", "Do not run tests")
+  .option("--no-bench", "Do not run benchmarks")
+  .option("--verbose")
+  .action(async (options) => {
+    if (!checkConfigFile()) {
+      process.exit(1);
+    }
+    let compatible = await checkApiCompatibility();
+    if (compatible) {
+      await publish(options);
+    }
+  });
 
 // set-network
 program
-	.command('set-network <network>')
-	.alias('sn')
-	.description('Set network local|staging|ic')
-	.action(async (network) => {
-		await setNetwork(network);
-		console.log(`Selected '${network}' network`);
-	});
+  .command("set-network <network>")
+  .alias("sn")
+  .description("Set network local|staging|ic")
+  .action(async (network) => {
+    await setNetwork(network);
+    console.log(`Selected '${network}' network`);
+  });
 
 // get-network
 program
-	.command('get-network')
-	.alias('gn')
-	.description('Get network')
-	.action(async () => {
-		console.log(getNetwork());
-	});
+  .command("get-network")
+  .alias("gn")
+  .description("Get network")
+  .action(async () => {
+    console.log(getNetwork());
+  });
 
 // sources
 program
-	.command('sources')
-	.description('for dfx packtool')
-	.option('--no-install', 'Do not install dependencies before running sources')
-	.addOption(new Option('--conflicts <action>', 'What to do with dependency version conflicts').choices(['ignore', 'warning', 'error']).default('warning'))
-	.action(async (options) => {
-		if (!checkConfigFile()) {
-			process.exit(1);
-		}
-		if (options.install) {
-			await installAll({silent: true, lock: 'ignore', threads: 6, installFromLockFile: true});
-		}
-		await toolchain.ensureToolchainInited({strict: false});
-		let sourcesArr = await sources(options);
-		console.log(sourcesArr.join('\n'));
-	});
+  .command("sources")
+  .description("for dfx packtool")
+  .option("--no-install", "Do not install dependencies before running sources")
+  .addOption(
+    new Option(
+      "--conflicts <action>",
+      "What to do with dependency version conflicts",
+    )
+      .choices(["ignore", "warning", "error"])
+      .default("warning"),
+  )
+  .action(async (options) => {
+    if (!checkConfigFile()) {
+      process.exit(1);
+    }
+    if (options.install) {
+      await installAll({
+        silent: true,
+        lock: "ignore",
+        threads: 6,
+        installFromLockFile: true,
+      });
+    }
+    await toolchain.checkToolchainInited({ strict: false });
+    let sourcesArr = await sources(options);
+    console.log(sourcesArr.join("\n"));
+  });
+
+// moc-args
+program
+  .command("moc-args")
+  .description("Print global moc compiler flags from [moc] config section")
+  .action(async () => {
+    checkConfigFile(true);
+    let config = readConfig();
+    let args = getGlobalMocArgs(config);
+    if (args.length) {
+      console.log(args.join("\n"));
+    }
+  });
 
 // search
 program
-	.command('search <text>')
-	.description('Search for packages')
-	.action(async (text) => {
-		await search(text);
-	});
+  .command("search <text>")
+  .description("Search for packages")
+  .action(async (text) => {
+    await search(text);
+  });
 
 // cache
 program
-	.command('cache')
-	.description('Manage cache')
-	.addArgument(new Argument('<sub>').choices(['size', 'clean', 'show']))
-	.action(async (sub) => {
-		if (sub == 'clean') {
-			await cleanCache();
-			console.log('Cache cleaned');
-		}
-		else if (sub == 'size') {
-			let size = await cacheSize();
-			console.log('Cache size is ' + size);
-		}
-		else if (sub == 'show') {
-			console.log(show());
-		}
-	});
+  .command("cache")
+  .description("Manage cache")
+  .addArgument(new Argument("<sub>").choices(["size", "clean", "show"]))
+  .action(async (sub) => {
+    if (sub == "clean") {
+      await cleanCache();
+      console.log("Cache cleaned");
+    } else if (sub == "size") {
+      let size = await cacheSize();
+      console.log("Cache size is " + size);
+    } else if (sub == "show") {
+      console.log(show());
+    }
+  });
+
+// build
+program
+  .command("build [canisters...]")
+  .description("Build a canister")
+  .addOption(new Option("--verbose", "Verbose console output"))
+  .addOption(new Option("--output, -o <output>", "Output directory"))
+  .allowUnknownOption(true) // TODO: restrict unknown before "--"
+  .action(async (canisters, options) => {
+    checkConfigFile(true);
+    const { extraArgs, args } = parseExtraArgs(canisters);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await build(args.length ? args : undefined, {
+      ...options,
+      outputDir: options.output,
+      extraArgs,
+    });
+  });
+
+// check
+program
+  .command("check [files...]")
+  .description(
+    "Check Motoko files for syntax errors and type issues. If no files are specified, checks all canister entrypoints from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured",
+  )
+  .option("--verbose", "Verbose console output")
+  .addOption(
+    new Option(
+      "--fix",
+      "Apply autofixes to all files, including transitively imported ones",
+    ),
+  )
+  .allowUnknownOption(true)
+  .action(async (files, options) => {
+    checkConfigFile(true);
+    const { extraArgs, args: fileList } = parseExtraArgs(files);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await check(fileList, {
+      ...options,
+      extraArgs,
+    });
+  });
+
+// check-candid
+program
+  .command("check-candid <new-candid> <original-candid>")
+  .description("Check Candid interface compatibility between two Candid files")
+  .action(async (newCandid, originalCandid) => {
+    checkConfigFile(true);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await checkCandid(newCandid, originalCandid);
+  });
+
+// check-stable
+program
+  .command("check-stable <old-file> [canister]")
+  .description(
+    "Check stable variable compatibility between an old version (.mo or .most file) and the current canister entrypoint",
+  )
+  .option("--verbose", "Verbose console output")
+  .allowUnknownOption(true)
+  .action(async (oldFile, canister, options) => {
+    checkConfigFile(true);
+    const { extraArgs } = parseExtraArgs();
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await checkStable(oldFile, canister, {
+      ...options,
+      extraArgs,
+    });
+  });
 
 // test
 program
-	.command('test [filter]')
-	.description('Run tests')
-	.addOption(new Option('-r, --reporter <reporter>', 'Test reporter').choices(['verbose', 'compact', 'files', 'silent']))
-	.addOption(new Option('--mode <mode>', 'Test mode').choices(['interpreter', 'wasi', 'replica']).default('interpreter'))
-	.addOption(new Option('--replica <replica>', 'Which replica to use to run tests in replica mode').choices(['dfx', 'pocket-ic']))
-	.option('-w, --watch', 'Enable watch mode')
-	.option('--verbose', 'Verbose output')
-	.action(async (filter, options) => {
-		checkConfigFile(true);
-		await installAll({silent: true, lock: 'ignore', installFromLockFile: true});
-		await test(filter, options);
-	});
+  .command("test [filter]")
+  .description("Run tests")
+  .addOption(
+    new Option("-r, --reporter <reporter>", "Test reporter").choices([
+      "verbose",
+      "compact",
+      "files",
+      "silent",
+    ]),
+  )
+  .addOption(
+    new Option("--mode <mode>", "Test mode")
+      .choices(["interpreter", "wasi", "replica"])
+      .default("interpreter"),
+  )
+  .addOption(
+    new Option(
+      "--replica <replica>",
+      "Which replica to use to run tests in replica mode",
+    ).choices(["dfx", "pocket-ic"]),
+  )
+  .option("-w, --watch", "Enable watch mode")
+  .option("--verbose", "Verbose output")
+  .action(async (filter, options) => {
+    checkConfigFile(true);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await test(filter, options);
+  });
 
 // bench
 program
-	.command('bench [filter]')
-	.description('Run benchmarks')
-	.addOption(new Option('--replica <replica>', 'Which replica to use to run benchmarks').choices(['dfx', 'pocket-ic']))
-	.addOption(new Option('--gc <gc>', 'Garbage collector').choices(['copying', 'compacting', 'generational', 'incremental']).default('copying'))
-	.addOption(new Option('--save', 'Save benchmark results to .bench/<filename>.json'))
-	.addOption(new Option('--compare', 'Run benchmark and compare results with .bench/<filename>.json'))
-	// .addOption(new Option('--force-gc', 'Force GC'))
-	.addOption(new Option('--verbose', 'Show more information'))
-	.action(async (filter, options) => {
-		checkConfigFile(true);
-		await installAll({silent: true, lock: 'ignore', installFromLockFile: true});
-		await bench(filter, options);
-	});
+  .command("bench [filter]")
+  .description("Run benchmarks")
+  .addOption(
+    new Option(
+      "--replica <replica>",
+      "Which replica to use to run benchmarks",
+    ).choices(["dfx", "pocket-ic"]),
+  )
+  .addOption(
+    new Option("--gc <gc>", "Garbage collector")
+      .choices(["copying", "compacting", "generational", "incremental"])
+      .default("copying"),
+  )
+  .addOption(
+    new Option("--save", "Save benchmark results to .bench/<filename>.json"),
+  )
+  .addOption(
+    new Option(
+      "--compare",
+      "Run benchmark and compare results with .bench/<filename>.json",
+    ),
+  )
+  // .addOption(new Option('--force-gc', 'Force GC'))
+  .addOption(new Option("--verbose", "Show more information"))
+  .action(async (filter, options) => {
+    checkConfigFile(true);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await bench(filter, options);
+  });
 
 // template
 program
-	.command('template')
-	.description('Apply template')
-	.action(async () => {
-		if (!checkConfigFile()) {
-			process.exit(1);
-		}
-		await template();
-	});
+  .command("template")
+  .description("Apply template")
+  .action(async () => {
+    if (!checkConfigFile()) {
+      process.exit(1);
+    }
+    await template();
+  });
 
 // mops user *
-const userCommand = new Command('user').description('User management');
+const userCommand = new Command("user").description("User management");
 
 // user get-principal
 userCommand
-	.command('get-principal')
-	.description('Print your principal')
-	.action(async () => {
-		await getPrincipal();
-	});
+  .command("get-principal")
+  .description("Print your principal")
+  .action(async () => {
+    await getPrincipal();
+  });
 
 // user import
 userCommand
-	.command('import <data>')
-	.description('Import .pem file data to use as identity')
-	.addOption(new Option('--no-encrypt', 'Do not ask for a password to encrypt identity'))
-	.action(async (data, options) => {
-		await importPem(data, options);
-		await getPrincipal();
-	});
+  .command("import <data>")
+  .description("Import .pem file data to use as identity")
+  .addOption(
+    new Option("--no-encrypt", "Do not ask for a password to encrypt identity"),
+  )
+  .action(async (data, options) => {
+    await importPem(data, options);
+    await getPrincipal();
+  });
 
 // user set <prop> <value>
 userCommand
-	.command('set')
-	.addArgument(new Argument('<prop>').choices(['name', 'site', 'email', 'github', 'twitter']))
-	.addArgument(new Argument('<value>'))
-	.description('Set user property')
-	.action(async (prop, value) => {
-		await setUserProp(prop, value);
-	});
+  .command("set")
+  .addArgument(
+    new Argument("<prop>").choices([
+      "name",
+      "site",
+      "email",
+      "github",
+      "twitter",
+    ]),
+  )
+  .addArgument(new Argument("<value>"))
+  .description("Set user property")
+  .action(async (prop, value) => {
+    await setUserProp(prop, value);
+  });
 
 // user get <prop>
 userCommand
-	.command('get')
-	.addArgument(new Argument('<prop>').choices(['name', 'site', 'email', 'github', 'twitter']))
-	.description('Get user property')
-	.action(async (prop) => {
-		await getUserProp(prop);
-	});
+  .command("get")
+  .addArgument(
+    new Argument("<prop>").choices([
+      "name",
+      "site",
+      "email",
+      "github",
+      "twitter",
+    ]),
+  )
+  .description("Get user property")
+  .action(async (prop) => {
+    await getUserProp(prop);
+  });
 
 program.addCommand(userCommand);
 
 // mops owner *
-const ownerCommand = new Command('owner').description('Package owner management');
+const ownerCommand = new Command("owner").description(
+  "Package owner management",
+);
 
 // mops owner list
 ownerCommand
-	.command('list')
-	.description('List package owners')
-	.action(async () => {
-		await printOwners();
-	});
+  .command("list")
+  .description("List package owners")
+  .action(async () => {
+    await printOwners();
+  });
 
 // mops owner add
 ownerCommand
-	.command('add <principal>')
-	.description('Add package owner')
-	.addOption(new Option('--yes', 'Do not ask for confirmation'))
-	.action(async (data, options) => {
-		await addOwner(data, options.yes);
-	});
+  .command("add <principal>")
+  .description("Add package owner")
+  .addOption(new Option("--yes", "Do not ask for confirmation"))
+  .action(async (data, options) => {
+    await addOwner(data, options.yes);
+  });
 
 // mops owner remove
 ownerCommand
-	.command('remove <principal>')
-	.description('Remove package owner')
-	.addOption(new Option('--yes', 'Do not ask for confirmation'))
-	.action(async (data, options) => {
-		await removeOwner(data, options.yes);
-	});
+  .command("remove <principal>")
+  .description("Remove package owner")
+  .addOption(new Option("--yes", "Do not ask for confirmation"))
+  .action(async (data, options) => {
+    await removeOwner(data, options.yes);
+  });
 
 program.addCommand(ownerCommand);
 
 // mops maintainer *
-const maintainerCommand = new Command('maintainer').description('Package maintainer management');
+const maintainerCommand = new Command("maintainer").description(
+  "Package maintainer management",
+);
 
 // mops maintainer list
 maintainerCommand
-	.command('list')
-	.description('List package maintainers')
-	.action(async () => {
-		await printMaintainers();
-	});
+  .command("list")
+  .description("List package maintainers")
+  .action(async () => {
+    await printMaintainers();
+  });
 
 // mops maintainer add
 maintainerCommand
-	.command('add <principal>')
-	.description('Add package maintainer')
-	.addOption(new Option('--yes', 'Do not ask for confirmation'))
-	.action(async (data, options) => {
-		await addMaintainer(data, options.yes);
-	});
+  .command("add <principal>")
+  .description("Add package maintainer")
+  .addOption(new Option("--yes", "Do not ask for confirmation"))
+  .action(async (data, options) => {
+    await addMaintainer(data, options.yes);
+  });
 
 // mops maintainer remove
 maintainerCommand
-	.command('remove <principal>')
-	.description('Remove package maintainer')
-	.addOption(new Option('--yes', 'Do not ask for confirmation'))
-	.action(async (data, options) => {
-		await removeMaintainer(data, options.yes);
-	});
+  .command("remove <principal>")
+  .description("Remove package maintainer")
+  .addOption(new Option("--yes", "Do not ask for confirmation"))
+  .action(async (data, options) => {
+    await removeMaintainer(data, options.yes);
+  });
 
 program.addCommand(maintainerCommand);
 
 // bump
 program
-	.command('bump [major|minor|patch]')
-	.description('Bump current package version')
-	.action(async (part) => {
-		await bump(part);
-	});
+  .command("bump [major|minor|patch]")
+  .description("Bump current package version")
+  .action(async (part) => {
+    await bump(part);
+  });
 
 // sync
 program
-	.command('sync')
-	.description('Add missing packages and remove unused packages')
-	.addOption(new Option('--lock <action>', 'Lockfile action').choices(['update', 'ignore']))
-	.action(async (options) => {
-		await sync(options);
-	});
+  .command("sync")
+  .description("Add missing packages and remove unused packages")
+  .addOption(
+    new Option("--lock <action>", "Lockfile action").choices([
+      "update",
+      "ignore",
+    ]),
+  )
+  .action(async (options) => {
+    await sync(options);
+  });
 
 // outdated
 program
-	.command('outdated')
-	.description('Print outdated dependencies specified in mops.toml')
-	.action(async () => {
-		await outdated();
-	});
+  .command("outdated")
+  .description("Print outdated dependencies specified in mops.toml")
+  .action(async () => {
+    await outdated();
+  });
 
 // update
 program
-	.command('update [pkg]')
-	.description('Update dependencies specified in mops.toml')
-	.addOption(new Option('--lock <action>', 'Lockfile action').choices(['update', 'ignore']))
-	.action(async (pkg, options) => {
-		await update(pkg, options);
-	});
+  .command("update [pkg]")
+  .description("Update dependencies specified in mops.toml")
+  .addOption(
+    new Option("--lock <action>", "Lockfile action").choices([
+      "update",
+      "ignore",
+    ]),
+  )
+  .action(async (pkg, options) => {
+    await update(pkg, options);
+  });
 
 // toolchain
-const toolchainCommand = new Command('toolchain').description('Toolchain management');
+const toolchainCommand = new Command("toolchain").description(
+  "Toolchain management",
+);
 
 toolchainCommand
-	.command('init')
-	.description('One-time initialization of toolchain management')
-	.action(async () => {
-		await toolchain.init();
-	});
+  .command("init")
+  .description("One-time initialization of toolchain management")
+  .action(async () => {
+    await toolchain.init();
+  });
 
 toolchainCommand
-	.command('reset')
-	.description('Uninstall toolchain management')
-	.action(async () => {
-		await toolchain.init({reset: true});
-	});
+  .command("reset")
+  .description("Uninstall toolchain management")
+  .action(async () => {
+    await toolchain.init({ reset: true });
+  });
 
 toolchainCommand
-	.command('use')
-	.description('Install specified tool version and update mops.toml')
-	.addArgument(new Argument('<tool>').choices(['moc', 'wasmtime', 'pocket-ic']))
-	.addArgument(new Argument('[version]'))
-	.action(async (tool, version) => {
-		if (!checkConfigFile()) {
-			process.exit(1);
-		}
-		await toolchain.use(tool, version);
-	});
+  .command("use")
+  .description("Install specified tool version and update mops.toml")
+  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
+  .addArgument(new Argument("[version]"))
+  .action(async (tool, version) => {
+    if (!checkConfigFile()) {
+      process.exit(1);
+    }
+    await toolchain.use(tool, version);
+  });
 
 toolchainCommand
-	.command('update')
-	.description('Update specified tool or all tools to the latest version and update mops.toml')
-	.addArgument(new Argument('[tool]').choices(['moc', 'wasmtime', 'pocket-ic']))
-	.action(async (tool ?: Tool) => {
-		if (!checkConfigFile()) {
-			process.exit(1);
-		}
-		await toolchain.update(tool);
-	});
+  .command("update")
+  .description(
+    "Update specified tool or all tools to the latest version and update mops.toml",
+  )
+  .addArgument(new Argument("[tool]").choices(TOOLCHAINS))
+  .action(async (tool?: Tool) => {
+    if (!checkConfigFile()) {
+      process.exit(1);
+    }
+    await toolchain.update(tool);
+  });
 
 toolchainCommand
-	.command('bin')
-	.description('Get path to the tool binary\n<tool> can be one of "moc", "wasmtime", "pocket-ic"')
-	.addArgument(new Argument('<tool>').choices(['moc', 'wasmtime', 'pocket-ic']))
-	.addOption(new Option('--fallback', 'Fallback to the moc that comes with dfx if moc is not specified in the [toolchain] section'))
-	.action(async (tool, options) => {
-		let bin = await toolchain.bin(tool, options);
-		console.log(bin);
-	});
+  .command("bin")
+  .description(
+    `Get path to the tool binary\n<tool> can be one of ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}`,
+  )
+  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
+  .addOption(
+    new Option(
+      "--fallback",
+      "Fallback to the moc that comes with dfx if moc is not specified in the [toolchain] section",
+    ),
+  )
+  .action(async (tool, options) => {
+    let bin = await toolchain.bin(tool, options);
+    console.log(bin);
+  });
 
 program.addCommand(toolchainCommand);
 
 // self
-const selfCommand = new Command('self').description('Mops CLI management');
+const selfCommand = new Command("self").description("Mops CLI management");
 
 selfCommand
-	.command('update')
-	.description('Update mops CLI to the latest version')
-	.action(async () => {
-		await self.update();
-	});
+  .command("update")
+  .description("Update mops CLI to the latest version")
+  .action(async () => {
+    await self.update();
+  });
 
 selfCommand
-	.command('uninstall')
-	.description('Uninstall mops CLI')
-	.action(async () => {
-		await self.uninstall();
-	});
+  .command("uninstall")
+  .description("Uninstall mops CLI")
+  .action(async () => {
+    await self.uninstall();
+  });
 
 program.addCommand(selfCommand);
 
 // watch
 program
-	.command('watch')
-	.description('Watch *.mo files and check for syntax errors, warnings, run tests, generate declarations and deploy canisters')
-	.option('-e, --error', 'Check Motoko canisters or *.mo files for syntax errors')
-	.option('-w, --warning', 'Check Motoko canisters or *.mo files for warnings')
-	.option('-f, --format', 'Format Motoko code')
-	.option('-t, --test', 'Run tests')
-	.option('-g, --generate', 'Generate declarations for Motoko canisters')
-	.option('-d, --deploy', 'Deploy Motoko canisters')
-	.action(async (options) => {
-		checkConfigFile(true);
-		await watch(options);
-	});
+  .command("watch")
+  .description(
+    "Watch *.mo files and check for syntax errors, warnings, run tests, generate declarations and deploy canisters",
+  )
+  .option(
+    "-e, --error",
+    "Check Motoko canisters or *.mo files for syntax errors",
+  )
+  .option("-w, --warning", "Check Motoko canisters or *.mo files for warnings")
+  .option("-f, --format", "Format Motoko code")
+  .option("-t, --test", "Run tests")
+  .option("-g, --generate", "Generate declarations for Motoko canisters")
+  .option("-d, --deploy", "Deploy Motoko canisters")
+  .action(async (options) => {
+    checkConfigFile(true);
+    await watch(options);
+  });
 
 // format
 program
-	.command('format [filter]')
-	.alias('fmt')
-	.description('Format Motoko code')
-	.addOption(new Option('--check', 'Check code formatting (do not change source files)'))
-	.action(async (filter, options) => {
-		checkConfigFile(true);
-		let {ok} = await format(filter, options);
-		if (!ok) {
-			process.exit(1);
-		}
-	});
+  .command("format [filter]")
+  .alias("fmt")
+  .description("Format Motoko code")
+  .addOption(
+    new Option("--check", "Check code formatting (do not change source files)"),
+  )
+  .action(async (filter, options) => {
+    checkConfigFile(true);
+    let { ok } = await format(filter, options);
+    if (!ok) {
+      process.exit(1);
+    }
+  });
+
+// lint
+program
+  .command("lint [filter]")
+  .description("Lint Motoko code")
+  .addOption(new Option("--verbose", "Verbose output"))
+  .addOption(new Option("--fix", "Apply fixes"))
+  .addOption(
+    new Option(
+      "-r, --rules <directory...>",
+      "Directories containing rules (can be used multiple times)",
+    ),
+  )
+  .allowUnknownOption(true)
+  .action(async (filter, options) => {
+    checkConfigFile(true);
+    const { extraArgs } = parseExtraArgs();
+    await lint(filter, {
+      ...options,
+      extraArgs,
+    });
+  });
 
 // docs
-const docsCommand = new Command('docs').description('Documentation management');
+const docsCommand = new Command("docs").description("Documentation management");
 
 docsCommand
-	.command('generate')
-	.description('Generate documentation for Motoko code')
-	.addOption(new Option('--source <source>', 'Source directory').default('src'))
-	.addOption(new Option('--output <output>', 'Output directory').default('docs'))
-	.addOption(new Option('--format <format>', 'Output format').default('md').choices(['md', 'adoc', 'html']))
-	.action(async (options) => {
-		checkConfigFile(true);
-		await docs(options);
-	});
+  .command("generate")
+  .description("Generate documentation for Motoko code")
+  .addOption(new Option("--source <source>", "Source directory").default("src"))
+  .addOption(
+    new Option("--output, -o <output>", "Output directory").default("docs"),
+  )
+  .addOption(
+    new Option("--format <format>", "Output format")
+      .default("md")
+      .choices(["md", "adoc", "html"]),
+  )
+  .action(async (options) => {
+    checkConfigFile(true);
+    await docs(options);
+  });
 
 docsCommand
-	.command('coverage')
-	.description('Documentation coverage report')
-	.addOption(new Option('-s, --source <source>', 'Source directory (with .mo files)').default('src'))
-	.addOption(new Option('-r, --reporter <reporter>', 'Coverage reporter').choices(['files', 'compact', 'missing', 'verbose']).default('files'))
-	.addOption(new Option('-t, --threshold <threshold>', 'Coverage threshold (0-100). If total coverage is below threshold, exit with error code 1').default(70))
-	.action(async (options) => {
-		checkConfigFile(true);
-		await docsCoverage(options);
-	});
+  .command("coverage")
+  .description("Documentation coverage report")
+  .addOption(
+    new Option(
+      "-s, --source <source>",
+      "Source directory (with .mo files)",
+    ).default("src"),
+  )
+  .addOption(
+    new Option("-r, --reporter <reporter>", "Coverage reporter")
+      .choices(["files", "compact", "missing", "verbose"])
+      .default("files"),
+  )
+  .addOption(
+    new Option(
+      "-t, --threshold <threshold>",
+      "Coverage threshold (0-100). If total coverage is below threshold, exit with error code 1",
+    ).default(70),
+  )
+  .action(async (options) => {
+    checkConfigFile(true);
+    await docsCoverage(options);
+  });
 program.addCommand(docsCommand);
 
 program.parse();

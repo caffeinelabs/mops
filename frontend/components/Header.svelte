@@ -1,7 +1,7 @@
 <script lang="ts">
-	import {push} from 'svelte-spa-history-router';
+	import {push} from "svelte-spa-history-router";
 
-	export let searchText = '';
+	export let searchText = "";
 	let searchBarShown = false;
 
 	function search() {
@@ -14,7 +14,7 @@
 	}
 
 	function onKeyDown(e : KeyboardEvent) {
-		if (e.key == 'Enter') {
+		if (e.key == "Enter") {
 			search();
 		}
 	}

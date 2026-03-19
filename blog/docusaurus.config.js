@@ -75,7 +75,7 @@ const config = {
 						items: [
 							{
 								label: 'GitHub',
-								href: 'https://github.com/ZenVoich/mops',
+								href: 'https://github.com/caffeinelabs/mops',
 							},
 							{
 								label: 'Twitter',
@@ -101,6 +101,13 @@ const config = {
 
 	plugins: [
 		'docusaurus-plugin-fathom',
+	],
+	
+	scripts: [
+		{
+			src: '/js/loadtags.js',
+			async: false,
+		},
 	],
 };
 

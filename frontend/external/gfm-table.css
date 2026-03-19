@@ -1,10 +1,10 @@
 /* Light theme. */
 :root {
-	--color-canvas-default: #ffffff;
-	/* --color-canvas-subtle: #f6f8fa; */
-	--color-canvas-subtle: rgb(246 248 248);
-	--color-border-default: #d0d7de;
-	--color-border-muted: hsla(210, 18%, 87%, 1);
+  --color-canvas-default: #ffffff;
+  /* --color-canvas-subtle: #f6f8fa; */
+  --color-canvas-subtle: rgb(246 248 248);
+  --color-border-default: #d0d7de;
+  --color-border-muted: hsla(210, 18%, 87%, 1);
 }
 
 /* Dark theme. */
@@ -18,36 +18,36 @@
 } */
 
 table {
-	border-spacing: 0;
-	border-collapse: collapse;
-	display: block;
-	margin-top: 0;
-	margin-bottom: 16px;
-	width: max-content;
-	max-width: 100%;
-	overflow: auto;
+  border-spacing: 0;
+  border-collapse: collapse;
+  display: block;
+  margin-top: 0;
+  margin-bottom: 16px;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
 }
 
 tr {
-	background-color: var(--color-canvas-default);
-	border-top: 1px solid var(--color-border-muted);
+  background-color: var(--color-canvas-default);
+  border-top: 1px solid var(--color-border-muted);
 }
 
 tr:nth-child(2n) {
-	background-color: var(--color-canvas-subtle);
+  background-color: var(--color-canvas-subtle);
 }
 
 td,
 th {
-	padding: 6px 13px;
-	border: 1px solid var(--color-border-default);
-	word-break: normal;
+  padding: 6px 13px;
+  border: 1px solid var(--color-border-default);
+  word-break: normal;
 }
 
 th {
-	font-weight: 600;
+  font-weight: 600;
 }
 
 table img {
-	background-color: transparent;
+  background-color: transparent;
 }

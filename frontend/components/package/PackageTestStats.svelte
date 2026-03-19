@@ -1,6 +1,6 @@
 <script lang="ts">
-	import PackageTestStatsLine from './PackageTestStatsLine.svelte';
-	import {PackageDetails} from '/declarations/main/main.did.js';
+	import PackageTestStatsLine from "./PackageTestStatsLine.svelte";
+	import {PackageDetails} from "/declarations/main/main.did.js";
 
 	export let packageDetails : PackageDetails;
 
@@ -10,7 +10,7 @@
 		const result : NestedStats = {};
 
 		lines.forEach(line => {
-			const parts = line.split(' › ');
+			const parts = line.split(" › ");
 			let currentObj : NestedStats = result;
 
 			parts.forEach((part, index) => {

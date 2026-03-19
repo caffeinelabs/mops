@@ -1,12 +1,12 @@
 <script lang="ts">
-	import {filesize} from 'filesize';
-	import {DepsStatus, PackageDetails} from '/declarations/main/main.did.js';
-	import {getDocsCoverageColor} from '/logic/get-docs-coverage-color.js';
-	import DownloadTrend from '../DownloadTrend.svelte';
-	import githubImg from '/img/github.svg';
-	import BadgesModal from './BadgesModal.svelte';
-	import PackageQualityIcon from './PackageQualityIcon.svelte';
-	import UserCard from './UserCard.svelte';
+	import {filesize} from "filesize";
+	import {DepsStatus, PackageDetails} from "/declarations/main/main.did.js";
+	import {getDocsCoverageColor} from "/logic/get-docs-coverage-color.js";
+	import DownloadTrend from "../DownloadTrend.svelte";
+	import githubImg from "/img/github.svg";
+	import BadgesModal from "./BadgesModal.svelte";
+	import PackageQualityIcon from "./PackageQualityIcon.svelte";
+	import UserCard from "./UserCard.svelte";
 
 	export let packageDetails : PackageDetails;
 	let badgesModalActive = false;
@@ -17,14 +17,14 @@
 	}
 
 	function depsStatusText(depsStatus : DepsStatus) : string {
-		if ('allLatest' in depsStatus) {
-			return 'Up to Date';
+		if ("allLatest" in depsStatus) {
+			return "Up to Date";
 		}
-		else if ('updatesAvailable' in depsStatus) {
-			return 'Updates Available';
+		else if ("updatesAvailable" in depsStatus) {
+			return "Updates Available";
 		}
-		else if ('tooOld' in depsStatus) {
-			return 'Outdated';
+		else if ("tooOld" in depsStatus) {
+			return "Outdated";
 		}
 	}
 </script>
@@ -40,9 +40,9 @@
 	{#if packageDetails.config.repository}
 		<div class="detail">
 			<div class="label">Repository</div>
-			<a class="value with-icon" href="{packageDetails.config.repository.replace(/^(https:\/\/github\.com\/[^/]+\/[^/]+)\/(.+)$/, '$1/tree/main/$2')}" target="_blank">
+			<a class="value with-icon" href="{packageDetails.config.repository.replace(/^(https:\/\/github\.com\/[^/]+\/[^/]+)\/(.+)$/, "$1/tree/main/$2")}" target="_blank">
 				<img class="github-icon" src="{githubImg}" alt="GitHub logo" loading="lazy" />
-				{packageDetails.config.repository.replace(/https?:\/\/(www\.)?(github\.com\/)?/, '')}
+				{packageDetails.config.repository.replace(/https?:\/\/(www\.)?(github\.com\/)?/, "")}
 			</a>
 		</div>
 	{/if}
@@ -56,7 +56,7 @@
 		<div class="detail-row">
 			<div class="detail">
 				<div class="label">Size</div>
-				{filesize(Number(packageDetails.fileStats.sourceSize), {standard: 'iec', round: 1})}
+				{filesize(Number(packageDetails.fileStats.sourceSize), {standard: "iec", round: 1})}
 			</div>
 			<div class="detail">
 				<div class="label">Files</div>
@@ -116,32 +116,32 @@
 
 		<div class="sub-row">
 			<div class="quality-label">Description</div>
-			<div class="quality-value base-quality" data-yes={packageDetails.quality.hasDescription}>{packageDetails.quality.hasDescription ? 'Yes' : 'No'}</div>
+			<div class="quality-value base-quality" data-yes={packageDetails.quality.hasDescription}>{packageDetails.quality.hasDescription ? "Yes" : "No"}</div>
 		</div>
 
 		<div class="sub-row">
 			<div class="quality-label">Keywords</div>
-			<div class="quality-value base-quality" data-yes={packageDetails.quality.hasKeywords}>{packageDetails.quality.hasKeywords ? 'Yes' : 'No'}</div>
+			<div class="quality-value base-quality" data-yes={packageDetails.quality.hasKeywords}>{packageDetails.quality.hasKeywords ? "Yes" : "No"}</div>
 		</div>
 
 		<div class="sub-row">
 			<div class="quality-label">License</div>
-			<div class="quality-value base-quality" data-yes={packageDetails.quality.hasLicense}>{packageDetails.quality.hasLicense ? 'Yes' : 'No'}</div>
+			<div class="quality-value base-quality" data-yes={packageDetails.quality.hasLicense}>{packageDetails.quality.hasLicense ? "Yes" : "No"}</div>
 		</div>
 
 		<div class="sub-row">
 			<div class="quality-label">Repository</div>
-			<div class="quality-value base-quality" data-yes={packageDetails.quality.hasRepository}>{packageDetails.quality.hasRepository ? 'Yes' : 'No'}</div>
+			<div class="quality-value base-quality" data-yes={packageDetails.quality.hasRepository}>{packageDetails.quality.hasRepository ? "Yes" : "No"}</div>
 		</div>
 
 		<div class="sub-row">
 			<div class="quality-label">Release Notes</div>
-			<div class="quality-value extra-quality" data-yes={packageDetails.quality.hasReleaseNotes}>{packageDetails.quality.hasReleaseNotes ? 'Yes' : 'No'}</div>
+			<div class="quality-value extra-quality" data-yes={packageDetails.quality.hasReleaseNotes}>{packageDetails.quality.hasReleaseNotes ? "Yes" : "No"}</div>
 		</div>
 
 		<div class="sub-row">
 			<div class="quality-label">Tests</div>
-			<div class="quality-value extra-quality" data-yes={packageDetails.quality.hasTests}>{packageDetails.quality.hasTests ? 'Yes' : 'No'}</div>
+			<div class="quality-value extra-quality" data-yes={packageDetails.quality.hasTests}>{packageDetails.quality.hasTests ? "Yes" : "No"}</div>
 		</div>
 	</div>
 

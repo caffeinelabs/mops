@@ -1,19 +1,19 @@
 <script lang="ts">
-	import {link} from 'svelte-spa-history-router';
+	import {link} from "svelte-spa-history-router";
 
-	import {DepChange, PackageSummaryWithChanges} from '/declarations/main/main.did.js';
-	import {markdownToHtml} from '/logic/markdown-to-html';
-	import {getDocsCoverageColor} from '/logic/get-docs-coverage-color.js';
-	import Date from '../Date.svelte';
-	import PackageBenchmarksDiff from './PackageBenchmarksDiff.svelte';
-	import UserCard from './UserCard.svelte';
+	import {DepChange, PackageSummaryWithChanges} from "/declarations/main/main.did.js";
+	import {markdownToHtml} from "/logic/markdown-to-html";
+	import {getDocsCoverageColor} from "/logic/get-docs-coverage-color.js";
+	import Date from "../Date.svelte";
+	import PackageBenchmarksDiff from "./PackageBenchmarksDiff.svelte";
+	import UserCard from "./UserCard.svelte";
 
 	export let summary : PackageSummaryWithChanges;
 	export let showName = false;
 
 	let url = showName ? `/${summary.config.name}` : `/${summary.config.name}@${summary.config.version}`;
 
-	let dd : [string, DepChange[]][] = [['Dependencies', summary.changes.deps], ['Dev Dependencies', summary.changes.devDeps]];
+	let dd : [string, DepChange[]][] = [["Dependencies", summary.changes.deps], ["Dev Dependencies", summary.changes.devDeps]];
 </script>
 
 <div class="version-summary" class:show-name={showName}>

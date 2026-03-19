@@ -1,33 +1,33 @@
 {
-	"type": "module",
-	"scripts": {
-		"dev": "vite dev --port 3003",
-		"build": "vite build",
-		"preview": "vite preview",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"lint": "eslint ."
-	},
-	"devDependencies": {
-		"@sveltejs/adapter-auto": "3.1.1",
-		"@sveltejs/adapter-static": "3.0.1",
-		"@sveltejs/kit": "2.5.4",
-		"@sveltejs/vite-plugin-svelte": "3.0.2",
-		"@types/eslint": "8.56.6",
-		"@types/markdown-it": "13.0.7",
-		"@typescript-eslint/eslint-plugin": "7.4.0",
-		"@typescript-eslint/parser": "7.4.0",
-		"eslint": "8.57.0",
-		"eslint-plugin-svelte": "2.35.1",
-		"svelte": "4.2.12",
-		"svelte-check": "3.6.8",
-		"tslib": "2.6.2",
-		"typescript": "5.4.3",
-		"vite": "5.2.6"
-	},
-	"dependencies": {
-		"filesize": "10.1.1",
-		"hast-util-to-html": "9.0.0",
-		"markdown-it": "14.1.0"
-	}
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --port 3003",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "3.1.1",
+    "@sveltejs/adapter-static": "3.0.1",
+    "@sveltejs/kit": "2.5.4",
+    "@sveltejs/vite-plugin-svelte": "3.0.2",
+    "@types/eslint": "8.56.6",
+    "@types/markdown-it": "13.0.7",
+    "@typescript-eslint/eslint-plugin": "7.4.0",
+    "@typescript-eslint/parser": "7.4.0",
+    "eslint": "8.57.0",
+    "eslint-plugin-svelte": "2.35.1",
+    "svelte": "4.2.12",
+    "svelte-check": "3.6.8",
+    "tslib": "2.6.2",
+    "typescript": "5.4.3",
+    "vite": "5.2.6"
+  },
+  "dependencies": {
+    "filesize": "10.1.1",
+    "hast-util-to-html": "9.0.0",
+    "markdown-it": "14.1.0"
+  }
 }

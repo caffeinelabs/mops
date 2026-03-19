@@ -1,6 +1,6 @@
 <script lang="ts">
-	import PackageBenchmark from './PackageBenchmark.svelte';
-	import {PackageDetails} from '/declarations/main/main.did.js';
+	import PackageBenchmark from "./PackageBenchmark.svelte";
+	import {PackageDetails} from "/declarations/main/main.did.js";
 
 	export let packageDetails : PackageDetails;
 </script>
