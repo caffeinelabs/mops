@@ -1,8 +1,9 @@
 # Mops CLI Changelog
 
 ## Next
-- Fix `mops build` failing with `ENOENT` when canister `args` override the output path with `-o`
+- Support `[build].outputDir` config in `mops.toml` for custom build output directory
 - Fix `mops build --output` CLI option being silently ignored
+- Warn when canister `args` contain flags managed by `mops build` (e.g. `-o`, `-c`, `--idl`)
 
 ## 2.3.2
 - Fix `mops check`, `mops build`, and `mops check-stable` failing to find canister entrypoints when run from a subdirectory

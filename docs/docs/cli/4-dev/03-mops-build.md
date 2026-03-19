@@ -54,7 +54,7 @@ Show detailed build information including compiler commands and build times.
 
 ### `--output`, `-o`
 
-Specify the output directory for compiled Wasm and Candid files.
+Specify the output directory for compiled Wasm and Candid files. Overrides `[build].outputDir` from `mops.toml`.
 
 Default `.mops/.build`
 
@@ -78,11 +78,20 @@ Each canister configuration supports:
 - `initArg` - Candid-encoded initialization arguments (optional)
 - `candid` - Path to the Candid interface file (optional, for compatibility checking)
 
-You can also set global build arguments:
+You can also set global build settings:
 ```toml
 [build]
+outputDir = "dist"
 args = ["--release", "--ai-errors"]
 ```
+
+### `[build].outputDir`
+
+Custom output directory for compiled Wasm and Candid files. The path is relative to the `mops.toml` location.
+
+Default `.mops/.build`
+
+The `--output` CLI flag takes precedence over this config value.
 
 ## Candid Compatibility
 

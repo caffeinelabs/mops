@@ -26,9 +26,8 @@ describe("build", () => {
     ).toMatch("Candid compatibility check failed for canister bar");
   });
 
-  // Regression: user-provided -o in canister args caused ENOENT because
-  // mops looked for .did/.wasm at the hardcoded .mops/.build/ path
-  test("custom output path via canister args", async () => {
+  // [build].outputDir in mops.toml should control where build output goes
+  test("custom output path via config outputDir", async () => {
     const cwd = path.join(import.meta.dirname, "build/custom-output");
     const customWasm = path.join(cwd, "custom-out/main.wasm");
     const customDid = path.join(cwd, "custom-out/main.did");
