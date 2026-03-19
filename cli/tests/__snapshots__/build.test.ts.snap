@@ -75,3 +75,15 @@ build canister bar
 ✓ Built 2 canisters successfully",
 }
 `;
+
+exports[`build warns when args contain managed flags 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "Warning: '-o' in args for canister foo may conflict with mops build — use [build].outputDir in mops.toml or --output flag instead
+Warning: '-c' in args for canister foo may conflict with mops build — this flag is always set by mops build
+Warning: '--idl' in args for canister foo may conflict with mops build — this flag is always set by mops build
+Error while compiling canister foo
+ENOENT: no such file or directory, open '.mops/.build/foo.did'",
+  "stdout": "build canister foo",
+}
+`;
