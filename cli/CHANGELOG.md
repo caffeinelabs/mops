@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.4.0
 - Support `[build].outputDir` config in `mops.toml` for custom build output directory
 - Fix `mops build --output` CLI option being silently ignored
 - Warn when canister `args` contain flags managed by `mops build` (e.g. `-o`, `-c`, `--idl`)
