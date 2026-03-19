@@ -1,0 +1,3 @@
+actor {
+  var counter : Text = "";
+};

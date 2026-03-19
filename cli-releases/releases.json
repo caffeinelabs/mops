@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "1.12.0"
+    "latest": "2.4.0"
   },
   "versions": {
     "0.41.0": {
@@ -248,6 +248,78 @@
       "commitHash": "41b5957183a740a9f7e39bff646793a20be7dd17",
       "url": "https://cli.mops.one/versions/1.12.0.tgz",
       "hash": "ca7585c96cb90d8107c28197788c79b32de18f50a58715638fc2f020c4d00930"
+    },
+    "2.0.0": {
+      "time": 1769189082453,
+      "size": 2540458,
+      "relseaseNotes": "",
+      "commitHash": "09935b98136560706057162f972afe46911e91f5",
+      "url": "https://cli.mops.one/versions/2.0.0.tgz",
+      "hash": "8a33cd3ab7fdd404b7cf51cb6cef396f766d98d51c2fd769aa8f7dad6d1589d0"
+    },
+    "2.0.1": {
+      "time": 1769190288167,
+      "size": 2539881,
+      "relseaseNotes": "",
+      "commitHash": "7dd0d5a05e21924c80087f94dfe255b8f23d3029",
+      "url": "https://cli.mops.one/versions/2.0.1.tgz",
+      "hash": "6a3db2988dd345406623c5c77f5183e6e386e53ed59bf330db056e50d983d567"
+    },
+    "2.1.0": {
+      "time": 1772654033785,
+      "size": 2544391,
+      "relseaseNotes": "* Add `mops check --fix` subcommand (for Motoko files) with autofix logic\n* Add `mops check` subcommand for type-checking Motoko files\n* Warn for `dfx` projects instead of requiring `mops toolchain init`\n* Allow specifying toolchain file paths in `mops.toml`\n* Add `mops lint` subcommand and `lintoko` toolchain management\n* Improve bench-canister Bench type to be less restrictive (by @timohanke)\n",
+      "commitHash": "8a7642e1a19015e721298daab3ea5bfa6c6c61f1",
+      "url": "https://cli.mops.one/versions/2.1.0.tgz",
+      "hash": "ba39a7bd0e3eebee5b7737255e29cba6e564fcb0cba8e17771b9ae254ff7a91a"
+    },
+    "2.2.0": {
+      "time": 1773049166037,
+      "size": 2545193,
+      "relseaseNotes": "* Add `[moc]` config section for global `moc` compiler flags (applied to `check`, `build`, `test`, `bench`, `watch`)\n* Add `mops moc-args` command to print global `moc` flags from `[moc]` config section\n* Fix `mops check --fix` crash on overlapping diagnostic edits (e.g., nested function calls)\n",
+      "commitHash": "0081c5edb69f2545e3497a56eeb4a7b2315e2169",
+      "url": "https://cli.mops.one/versions/2.2.0.tgz",
+      "hash": "249e3be491388cc0363c861a7c8b67a7b81cc84881bf605042fd9b066c5dda6e"
+    },
+    "2.2.1": {
+      "time": 1773166687524,
+      "size": 2837516,
+      "relseaseNotes": "* Fix `mops toolchain` when toolchain version is a local file path with subdirectories.\n* Update Motoko formatter (`prettier-plugin-motoko`).\n",
+      "commitHash": "a0916c0213e73745e5f5eb1fa076289841042907",
+      "url": "https://cli.mops.one/versions/2.2.1.tgz",
+      "hash": "7238c839c52a79efa3b26b9d2bdfb4cfbb4292247f1cffbcd78941e1a11f90a4"
+    },
+    "2.3.0": {
+      "time": 1773683809661,
+      "size": 2843803,
+      "relseaseNotes": "* Add `mops check-stable` command for stable variable compatibility checking\n* `mops check` now falls back to canister entrypoints from `mops.toml` when no files are specified\n* `mops check` automatically runs stable compatibility when `[canisters.<name>.check-stable]` is configured\n* `mops check --fix` now behaves like fix + `mops check` — reports changed files, then type-checks and runs stable compatibility if configured\n* `skipIfMissing` in `[canisters.<name>.check-stable]` silently skips when the file doesn't exist\n* Add docs for `mops lint`, `mops moc-args`, `[canisters]`, `[build]`, and `[lint]` config sections\n* Add docs canister deployment step to release process\n",
+      "commitHash": "4610376b0bf8cd8bad05a2c7864d445698cf5bba",
+      "url": "https://cli.mops.one/versions/2.3.0.tgz",
+      "hash": "0efabebb328006139f7ebe15e294e66cef2ab839d4b75083eb8fb291a3776a5c"
+    },
+    "2.3.1": {
+      "time": 1773763091148,
+      "size": 2843803,
+      "relseaseNotes": "* Fix `mops build` and `mops check-candid` failing with \"Wasm bindings have not been set\" when installed via `npm i -g ic-mops`\n",
+      "commitHash": "420f07811384fb2dc3dc1553ca72368c65c3e619",
+      "url": "https://cli.mops.one/versions/2.3.1.tgz",
+      "hash": "aa45dafa8d949d9614ca8ff7befc946de54162eea80d48d9c0a8b148bf766c52"
+    },
+    "2.3.2": {
+      "time": 1773825116772,
+      "size": 2838416,
+      "relseaseNotes": "* Fix `mops check`, `mops build`, and `mops check-stable` failing to find canister entrypoints when run from a subdirectory\n",
+      "commitHash": "130ddb3a7b7059b7ed88f5fe9cb82e65c396f290",
+      "url": "https://cli.mops.one/versions/2.3.2.tgz",
+      "hash": "69ff29aa59e9347a5e660cb8fc33b4241beb077fd0196c34617a144c463a7759"
+    },
+    "2.4.0": {
+      "time": 1773909659658,
+      "size": 2844336,
+      "relseaseNotes": "* Support `[build].outputDir` config in `mops.toml` for custom build output directory\n* Fix `mops build --output` CLI option being silently ignored\n* Warn when canister `args` contain flags managed by `mops build` (e.g. `-o`, `-c`, `--idl`)\n* Support pocket-ic versions beyond 9.x.x (fixes #410)\n",
+      "commitHash": "9e15850474bfaaf0a93f641d41d5db267a1254c2",
+      "url": "https://cli.mops.one/versions/2.4.0.tgz",
+      "hash": "37a95a008156ae0ad8204d8ea39d06abcf245c7f8cc6c957e2683dfc8d8d7338"
     }
   }
 }

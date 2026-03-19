@@ -23,4 +23,5 @@ Update specific tool to the latest version
 mops toolchain update moc
 mops toolchain update wasmtime
 mops toolchain update pocket-ic
+mops toolchain update lintoko
 ```

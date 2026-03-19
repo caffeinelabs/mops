@@ -22,7 +22,8 @@
     "dist/",
     "cli-releases/dist/",
     "cli-releases/frontend/dist/",
-    "bundle/"
+    "bundle/",
+    "cli/wasm/"
   ],
   "rules": {
     "linebreak-style": ["error", "unix"],

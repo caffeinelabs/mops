@@ -1,0 +1,4 @@
+// Custom Candid file
+service : {
+  call: () -> (text);
+}

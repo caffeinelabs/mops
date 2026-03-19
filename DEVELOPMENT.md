@@ -29,11 +29,11 @@ npm install -g tsx
 
 2. Add `mops-local` alias to your shell (`~/.zshrc`, `~/.bashrc`)
 ```bash
-alias mops-local="tsx /<path-to-local-mops>/cli/cli.ts"
+alias mops-local="tsx /<path-to-local-mops>/cli/environments/nodejs/cli.ts"
 ```
 or
 ```bash
-alias mops-local="bun /<path-to-local-mops>/cli/cli.ts"
+alias mops-local="bun /<path-to-local-mops>/cli/environments/nodejs/cli.ts"
 ```
 
 
