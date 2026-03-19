@@ -12,6 +12,7 @@
 - Fix corrupted `mops.lock` file causing an unhandled crash instead of a helpful error message
 - Fix `mops sources` resolving package config from wrong directory in some contexts
 - Harden lock file integrity check against package ID prefix collisions
+- `mops build` now reports invalid canister names instead of silently ignoring them
 - Document `baseDir`, `readme`, and `dfx` fields in `[package]` config
 
 ## 2.4.0

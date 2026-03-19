@@ -105,7 +105,7 @@ export async function add(
       verbose: verbose,
     });
     if (!res) {
-      return;
+      process.exit(1);
     }
   } else if (!pkgDetails.path) {
     let res = await installMopsDep(pkgDetails.name, pkgDetails.version, {
