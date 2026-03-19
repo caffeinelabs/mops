@@ -5,19 +5,14 @@ import { Identity } from "@icp-sdk/core/agent";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import prompts from "prompts";
-import fetch from "node-fetch";
-
 import { decodeFile } from "./pem.js";
+import { cliError } from "./error.js";
 import { Config, Dependency } from "./types.js";
 import { mainActor, storageActor } from "./api/actors.js";
 import { getNetwork } from "./api/network.js";
 import { getHighestVersion } from "./api/getHighestVersion.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { FILE_PATH_REGEX } from "./constants.js";
-
-if (!globalThis.fetch) {
-  globalThis.fetch = fetch as any;
-}
 
 // (!) make changes in pair with backend
 export let apiVersion = "1.3";
@@ -103,6 +98,14 @@ export function getRootDir() {
     return "";
   }
   return path.dirname(configFile);
+}
+
+/**
+ * Resolve a path from mops.toml config (relative to project root)
+ * into a path relative to the current working directory.
+ */
+export function resolveConfigPath(configPath: string): string {
+  return path.relative(process.cwd(), path.resolve(getRootDir(), configPath));
 }
 
 export function checkConfigFile(exit = false) {
@@ -202,6 +205,18 @@ export function readConfig(configFile = getClosestConfigFile()): Config {
   });
 
   return config;
+}
+
+export function getGlobalMocArgs(config: Config): string[] {
+  if (!config.moc?.args) {
+    return [];
+  }
+  if (typeof config.moc.args === "string") {
+    cliError(
+      `[moc] config 'args' should be an array of strings in mops.toml config file`,
+    );
+  }
+  return config.moc.args;
 }
 
 export function writeConfig(

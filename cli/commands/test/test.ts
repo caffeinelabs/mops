@@ -13,7 +13,7 @@ import { SemVer } from "semver";
 import { ActorMethod } from "@icp-sdk/core/agent";
 
 import { sources } from "../sources.js";
-import { getRootDir, readConfig } from "../../mops.js";
+import { getGlobalMocArgs, getRootDir, readConfig } from "../../mops.js";
 import { parallel } from "../../parallel.js";
 
 import { MMF1 } from "./mmf1.js";
@@ -232,6 +232,7 @@ export async function testWithReporter(
 
   let config = readConfig();
   let sourcesArr = await sources();
+  let globalMocArgs = getGlobalMocArgs(config);
 
   if (!mocPath) {
     mocPath = await toolchain.bin("moc", { fallback: true });
@@ -298,6 +299,7 @@ export async function testWithReporter(
         "--hide-warnings",
         "--error-detail=2",
         ...sourcesArr.join(" ").split(" "),
+        ...globalMocArgs,
         file,
       ].filter((x) => x);
 

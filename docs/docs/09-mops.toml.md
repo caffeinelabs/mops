@@ -7,14 +7,19 @@ sidebar_label: mops.toml
 
 ## [package]
 
-| Field        | Description                                      |
-| ------------ | ------------------------------------------------ |
-| name         | Package name (e.g. `lib`)                          |
-| version      | Package version in format x.y.z (e.g. `0.1.2`)     |
-| description  | Package description shown in search results      |
-| repository   | Repository url (e.g. `https://github.com/dfinity/motoko-base`).<br/>Can include subdirs (see note below) |
-| keywords     | Array of keywords (max 10 items, max 20 chars)   |
-| license      | Package license. Use [SPDX license identifier](https://spdx.org/licenses/) (e.g. `MIT`) |
+| Field         | Description                                      |
+| ------------- | ------------------------------------------------ |
+| name          | Package name (e.g. `lib`)                          |
+| version       | Package version in format x.y.z (e.g. `0.1.2`)     |
+| description   | Package description shown in search results      |
+| repository    | Repository url (e.g. `https://github.com/dfinity/motoko-base`).<br/>Can include subdirs (see note below) |
+| keywords      | Array of keywords (max 10 items, max 20 chars)   |
+| license       | Package license. Use [SPDX license identifier](https://spdx.org/licenses/) (e.g. `MIT`) |
+| files         | Array of glob patterns for files to include when publishing (default `["**/*.mo"]`) |
+| homepage      | Homepage URL for the package                     |
+| documentation | Documentation URL for the package                |
+| moc           | Motoko compiler version used to build the package |
+| donation      | Donation address                                 |
 
 :::note
 Repository URL can include subdirectory when the package is located not in the root of the repository.
@@ -34,6 +39,7 @@ Make sure there is no `/tree/main/` in the URL.
 | <mops_package_name><br/>Example: `base`        | Version in format x.y.z (e.g. `0.1.2`)              |
 | <mops_package_name>@<pinned_version><br/>Example: `base@0.11.0`        | Version in format x.y.z (e.g. `0.1.2`)              |
 | <github_package_name><br/>Example: `gh-pkg` | Format: `https://github.com/<repo>#<branch/tag/ref>`<br/>Example: `https://github.com/dfinity/motoko-base#moc-0.11.0` |
+| <local_package_name><br/>Example: `shared` | Local path starting with `./`, `../`, or `/`<br/>Example: `./packages/shared` |
 
 
 Learn how Mops resolves dependencies [here](/how-dependency-resolution-works).
@@ -59,6 +65,104 @@ See [toolchain management](/cli/toolchain) page for more details.
 | lintoko              | Linter version (e.g. `0.7.0`) or file path for Motoko linting   |
 
 File paths must start with `/`, `./`, or `../`.
+
+
+## [moc]
+
+Global Motoko compiler flags applied to all `moc` invocations (`check`, `build`, `test`, `bench`, `watch`).
+
+| Field | Description |
+| ----- | ----------- |
+| args  | Array of flags to pass to `moc` (e.g. `["--default-persistent-actors", "-Werror"]`) |
+
+Example:
+```toml
+[moc]
+args = ["--default-persistent-actors", "-W=M0223,M0236,M0237"]
+```
+
+These flags are applied before command-specific flags (`[build].args`, `[canisters.<name>].args`) and CLI `-- flags`.
+
+Use `mops moc-args` to print the moc flags defined in `mops.toml` (useful when invoking `moc` directly).
+
+
+## [canisters]
+
+Define Motoko canisters for [`mops build`](/cli/mops-build), [`mops check`](/cli/mops-check), and [`mops check-stable`](/cli/mops-check-stable).
+
+Each canister entry specifies the entrypoint file and optional compiler settings.
+
+| Field    | Description                                                     |
+| -------- | --------------------------------------------------------------- |
+| main     | Path to the main Motoko file (required)                         |
+| args     | Array of additional `moc` arguments for this canister (optional)|
+| candid   | Path to a Candid interface file for compatibility checking (optional) |
+| initArg  | Candid-encoded initialization arguments (optional)              |
+
+Example:
+```toml
+[canisters.backend]
+main = "src/main.mo"
+args = ["--incremental-gc"]
+candid = "candid/backend.did"
+initArg = "(\"Hello\")"
+```
+
+### `[canisters.<name>.check-stable]`
+
+Configure automatic stable variable compatibility checking for a canister. When set, [`mops check`](/cli/mops-check) will verify that the current canister is compatible with the deployed version.
+
+| Field         | Description                                                     |
+| ------------- | --------------------------------------------------------------- |
+| path          | Path to the deployed version's `.most` or `.mo` file (required). A `.most` file is preferred; when a `.mo` file is provided, stable types are generated from it (the file must compile successfully) |
+| skipIfMissing | If `true`, silently skip the stable check when the file doesn't exist (default: `false`) |
+
+Example:
+```toml
+[canisters.backend.check-stable]
+path = ".old/src/main.most"
+skipIfMissing = true
+```
+
+Shorthand — when only the entrypoint is needed:
+```toml
+[canisters]
+backend = "src/main.mo"
+```
+
+
+## [build]
+
+Global build settings used by [`mops build`](/cli/mops-build).
+
+| Field     | Description                                                     |
+| --------- | --------------------------------------------------------------- |
+| outputDir | Output directory for compiled Wasm and Candid files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
+| args      | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
+
+Example:
+```toml
+[build]
+outputDir = "dist"
+args = ["--release", "--ai-errors"]
+```
+
+These flags are applied after `[moc].args` and before per-canister `[canisters.<name>].args`.
+
+
+## [lint]
+
+Settings for [`mops lint`](/cli/mops-lint).
+
+| Field | Description                                                     |
+| ----- | --------------------------------------------------------------- |
+| args  | Array of extra flags passed to `lintoko` (e.g. `["--severity", "warning"]`) |
+
+Example:
+```toml
+[lint]
+args = ["--severity", "warning"]
+```
 
 
 ## [requirements]

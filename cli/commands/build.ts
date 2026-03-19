@@ -4,12 +4,13 @@ import { exists } from "fs-extra";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { cliError } from "../error.js";
-import { getMocPath } from "../helpers/get-moc-path.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
+import { resolveCanisterConfigs } from "../helpers/resolve-canisters.js";
+import { CanisterConfig, Config } from "../types.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
-import { readConfig } from "../mops.js";
-import { CanisterConfig } from "../types.js";
+import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
 import { sourcesArgs } from "./sources.js";
+import { toolchain } from "./toolchain/index.js";
 
 export interface BuildOptions {
   outputDir: string;
@@ -27,18 +28,14 @@ export async function build(
     cliError("No canisters specified to build");
   }
 
-  let outputDir = options.outputDir ?? DEFAULT_BUILD_OUTPUT_DIR;
-  let mocPath = getMocPath();
-  let canisters: Record<string, CanisterConfig> = {};
   let config = readConfig();
-  if (config.canisters) {
-    canisters =
-      Object.fromEntries(
-        Object.entries(config.canisters).map(([name, c]) =>
-          typeof c === "string" ? [name, { main: c }] : [name, c],
-        ),
-      ) ?? {};
-  }
+  let configOutputDir = config.build?.outputDir
+    ? resolveConfigPath(config.build.outputDir)
+    : undefined;
+  let outputDir =
+    options.outputDir ?? configOutputDir ?? DEFAULT_BUILD_OUTPUT_DIR;
+  let mocPath = await toolchain.bin("moc", { fallback: true });
+  let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {
     cliError(`No Motoko canisters found in mops.toml configuration`);
   }
@@ -75,6 +72,7 @@ export async function build(
     if (!motokoPath) {
       cliError(`No main file is specified for canister ${canisterName}`);
     }
+    motokoPath = resolveConfigPath(motokoPath);
     const wasmPath = join(outputDir, `${canisterName}.wasm`);
     let args = [
       "-c",
@@ -82,25 +80,13 @@ export async function build(
       "-o",
       wasmPath,
       motokoPath,
-      ...(options.extraArgs ?? []),
       ...(await sourcesArgs()).flat(),
+      ...getGlobalMocArgs(config),
     ];
-    if (config.build?.args) {
-      if (typeof config.build.args === "string") {
-        cliError(
-          `[build] config 'args' should be an array of strings in mops.toml config file`,
-        );
-      }
-      args.push(...config.build.args);
-    }
-    if (canister.args) {
-      if (typeof canister.args === "string") {
-        cliError(
-          `Canister config 'args' should be an array of strings for canister ${canisterName}`,
-        );
-      }
-      args.push(...canister.args);
-    }
+    args.push(
+      ...collectExtraArgs(config, canister, canisterName, options.extraArgs),
+    );
+
     const isPublicCandid = true; // always true for now to reduce corner cases
     const candidVisibility = isPublicCandid ? "icp:public" : "icp:private";
     if (isPublicCandid) {
@@ -136,13 +122,15 @@ export async function build(
       }
 
       const generatedDidPath = join(outputDir, `${canisterName}.did`);
-      if (canister.candid) {
-        const originalCandidPath = canister.candid;
+      const resolvedCandidPath = canister.candid
+        ? resolveConfigPath(canister.candid)
+        : null;
 
+      if (resolvedCandidPath) {
         try {
           const compatible = await isCandidCompatible(
             generatedDidPath,
-            originalCandidPath,
+            resolvedCandidPath,
           );
 
           if (!compatible) {
@@ -167,7 +155,7 @@ export async function build(
 
       options.verbose &&
         console.log(chalk.gray(`Adding metadata to ${wasmPath}`));
-      const candidPath = canister.candid ?? generatedDidPath;
+      const candidPath = resolvedCandidPath ?? generatedDidPath;
       const candidText = await readFile(candidPath, "utf-8");
       const customSections: CustomSection[] = [
         { name: `${candidVisibility} candid:service`, data: candidText },
@@ -199,4 +187,55 @@ export async function build(
       `\n✓ Built ${Object.keys(filteredCanisters).length} canister${Object.keys(filteredCanisters).length == 1 ? "" : "s"} successfully`,
     ),
   );
+}
+
+const managedFlags: Record<string, string> = {
+  "-o": "use [build].outputDir in mops.toml or --output flag instead",
+  "-c": "this flag is always set by mops build",
+  "--idl": "this flag is always set by mops build",
+  "--public-metadata": "this flag is managed by mops build",
+};
+
+function collectExtraArgs(
+  config: Config,
+  canister: CanisterConfig,
+  canisterName: string,
+  extraArgs?: string[],
+): string[] {
+  const args: string[] = [];
+
+  if (config.build?.args) {
+    if (typeof config.build.args === "string") {
+      cliError(
+        `[build] config 'args' should be an array of strings in mops.toml config file`,
+      );
+    }
+    args.push(...config.build.args);
+  }
+  if (canister.args) {
+    if (typeof canister.args === "string") {
+      cliError(
+        `Canister config 'args' should be an array of strings for canister ${canisterName}`,
+      );
+    }
+    args.push(...canister.args);
+  }
+  if (extraArgs) {
+    args.push(...extraArgs);
+  }
+
+  const warned = new Set<string>();
+  for (const arg of args) {
+    const hint = managedFlags[arg];
+    if (hint && !warned.has(arg)) {
+      warned.add(arg);
+      console.warn(
+        chalk.yellow(
+          `Warning: '${arg}' in args for canister ${canisterName} may conflict with mops build — ${hint}`,
+        ),
+      );
+    }
+  }
+
+  return args;
 }

@@ -1,0 +1,2 @@
+[toolchain]
+moc = "./bin/moc"

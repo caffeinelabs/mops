@@ -19,6 +19,9 @@ export type Config = {
   "dev-dependencies"?: Dependencies;
   toolchain?: Toolchain;
   requirements?: Requirements;
+  moc?: {
+    args?: string[];
+  };
   canisters?: Record<string, string | CanisterConfig>;
   build?: {
     outputDir?: string;
@@ -30,10 +33,14 @@ export type Config = {
 };
 
 export type CanisterConfig = {
-  main: string;
+  main?: string;
   args?: string[];
   candid?: string;
   initArg?: string;
+  "check-stable"?: {
+    path: string;
+    skipIfMissing?: boolean;
+  };
 };
 
 export type Dependencies = Record<string, Dependency>;

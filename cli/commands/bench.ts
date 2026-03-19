@@ -12,7 +12,12 @@ import { filesize } from "filesize";
 import terminalSize from "terminal-size";
 import { SemVer } from "semver";
 
-import { getRootDir, readConfig, readDfxJson } from "../mops.js";
+import {
+  getGlobalMocArgs,
+  getRootDir,
+  readConfig,
+  readDfxJson,
+} from "../mops.js";
 import { parallel } from "../parallel.js";
 import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
@@ -138,13 +143,15 @@ export async function bench(
 
   await replica.start({ silent: options.silent });
 
+  let globalMocArgs = getGlobalMocArgs(config);
+
   if (!process.env.CI && !options.silent) {
     console.log("Deploying canisters...");
   }
 
   await parallel(os.cpus().length, files, async (file: string) => {
     try {
-      await deployBenchFile(file, options, replica);
+      await deployBenchFile(file, options, replica, globalMocArgs);
     } catch (err) {
       console.error("Unexpected error. Stopping replica...");
       await replica.stop();
@@ -267,6 +274,7 @@ async function deployBenchFile(
   file: string,
   options: BenchOptions,
   replica: BenchReplica,
+  globalMocArgs: string[],
 ): Promise<void> {
   let rootDir = getRootDir();
   let tempDir = path.join(rootDir, ".mops/.bench/", path.parse(file).name);
@@ -294,7 +302,7 @@ async function deployBenchFile(
   let mocArgs = getMocArgs(options);
   options.verbose && console.time(`build ${canisterName}`);
   await execaCommand(
-    `${mocPath} -c --idl canister.mo ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`,
+    `${mocPath} -c --idl canister.mo ${globalMocArgs.join(" ")} ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`,
     {
       cwd: tempDir,
       stdio: options.verbose ? "pipe" : ["pipe", "ignore", "pipe"],
