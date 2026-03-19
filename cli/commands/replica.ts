@@ -11,14 +11,14 @@ import { spawn as spawnAsync } from "promisify-child-process";
 
 import { IDL } from "@icp-sdk/core/candid";
 import { Actor, HttpAgent } from "@icp-sdk/core/agent";
-import { PocketIc, PocketIcServer } from "pic-ic";
-import {
-  PocketIc as PocketIcMops,
-  PocketIcServer as PocketIcServerMops,
-} from "pic-js-mops";
 import chalk from "chalk";
 
-import { readConfig } from "../mops.js";
+import {
+  type AnyPocketIcServer,
+  type AnyPocketIc,
+  type AnySetupCanister,
+  startPocketIc,
+} from "../helpers/pocket-ic-client.js";
 import { toolchain } from "./toolchain/index.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 
@@ -36,8 +36,8 @@ export class Replica {
     string,
     { cwd: string; canisterId: string; actor: any; stream: PassThrough }
   > = {};
-  pocketIcServer?: PocketIcServer | PocketIcServerMops;
-  pocketIc?: PocketIc | PocketIcMops;
+  pocketIcServer?: AnyPocketIcServer;
+  pocketIc?: AnyPocketIc;
   dfxProcess?: ChildProcessWithoutNullStreams;
   dir: string = ""; // absolute path (/.../.mops/.test/)
   ttl = 60;
@@ -114,37 +114,14 @@ export class Replica {
     } else {
       let pocketIcBin = await toolchain.bin("pocket-ic");
 
-      let config = readConfig();
-      if (
-        config.toolchain?.["pocket-ic"] !== "4.0.0" &&
-        !config.toolchain?.["pocket-ic"]?.startsWith("9.")
-      ) {
-        console.error(
-          "Current Mops CLI only supports pocket-ic 9.x.x and 4.0.0",
-        );
-        process.exit(1);
-      }
-
-      // pocket-ic 9.x.x
-      if (config.toolchain?.["pocket-ic"]?.startsWith("9.")) {
-        this.pocketIcServer = await PocketIcServerMops.start({
-          showRuntimeLogs: false,
-          showCanisterLogs: false,
-          binPath: pocketIcBin,
-          ttl: this.ttl,
-        });
-        this.pocketIc = await PocketIcMops.create(this.pocketIcServer.getUrl());
-      }
-      // pocket-ic 4.0.0
-      else {
-        this.pocketIcServer = await PocketIcServer.start({
-          showRuntimeLogs: false,
-          showCanisterLogs: false,
-          binPath: pocketIcBin,
-          ttl: this.ttl,
-        });
-        this.pocketIc = await PocketIc.create(this.pocketIcServer.getUrl());
-      }
+      let pic = await startPocketIc({
+        binPath: pocketIcBin,
+        showRuntimeLogs: false,
+        showCanisterLogs: false,
+        ttl: this.ttl,
+      });
+      this.pocketIcServer = pic.server;
+      this.pocketIc = pic.client;
 
       // process canister logs
       this._attachCanisterLogHandler(
@@ -305,10 +282,8 @@ export class Replica {
         stream: new PassThrough(),
       };
     } else if (this.pocketIc) {
-      type PocketIcSetupCanister = PocketIcMops["setupCanister"] &
-        PocketIc["setupCanister"];
       let { canisterId, actor } = await (
-        this.pocketIc.setupCanister as PocketIcSetupCanister
+        this.pocketIc.setupCanister as AnySetupCanister
       )({
         wasm,
         idlFactory,
