@@ -32,7 +32,7 @@ mops install
 Both variables can be set together to redirect all registry operations to a custom deployment:
 
 ```bash
-export MOPS_REGISTRY_HOST="http://host.docker.internal:4943"
+export MOPS_REGISTRY_HOST="http://mops-alternative.host:4943"
 export MOPS_REGISTRY_CANISTER_ID="2d2zu-vaaaa-aaaak-qb6pq-cai"
 mops install
 ```
