@@ -56,4 +56,4 @@ export MOPS_REGISTRY_CANISTER_ID="your-local-canister-id"
 mops-local add <pkg>
 ```
 
-This approach is particularly useful for Docker containers or CI environments where you need to redirect registry operations to a custom IC replica. See [Environment Variables](/cli/environment-variables) in the documentation for details.
+See [Environment Variables](/cli/environment-variables) in the documentation for details.
