@@ -1,8 +1,12 @@
 import { Principal } from "@icp-sdk/core/principal";
-import { mainActor, storageActor } from "./actors.js";
+import { storageActor } from "./actors.js";
 import { resolveVersion } from "./resolveVersion.js";
 import { parallel } from "../parallel.js";
 import { Storage } from "../declarations/storage/storage.did.js";
+import {
+  getMainActorForPkg,
+  getStorageActorForPkg,
+} from "./registryFallback.js";
 
 export async function downloadPackageFiles(
   pkg: string,
@@ -13,7 +17,7 @@ export async function downloadPackageFiles(
   version = await resolveVersion(pkg, version);
 
   let { storageId, fileIds } = await getPackageFilesInfo(pkg, version);
-  let storage = await storageActor(storageId);
+  let storage = await getStorageActorForPkg(pkg, storageId);
 
   let filesData = new Map<string, Array<number>>();
   await parallel(threads, fileIds, async (fileId: string) => {
@@ -30,7 +34,7 @@ export async function getPackageFilesInfo(
   pkg: string,
   version: string,
 ): Promise<{ storageId: Principal; fileIds: string[] }> {
-  let actor = await mainActor();
+  let actor = await getMainActorForPkg(pkg);
 
   let [packageDetailsRes, fileIds] = await Promise.all([
     actor.getPackageDetails(pkg, version),
@@ -53,7 +57,7 @@ export async function getFileIds(
   pkg: string,
   version: string,
 ): Promise<string[]> {
-  let actor = await mainActor();
+  let actor = await getMainActorForPkg(pkg);
   let fileIdsRes = await actor.getFileIds(pkg, version);
 
   if ("err" in fileIdsRes) {
