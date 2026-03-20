@@ -20,6 +20,8 @@ jobs:
           - mops-version: ic-mops@1.0.0
             test-global: false
           - mops-version: ./cli/dist
+            test-global: false
+          - mops-version: ./cli/dist
             test-global: true
 
     runs-on: ubuntu-latest
@@ -91,6 +93,7 @@ jobs:
           (cd cli/tests/build/error && mops install)
 
       - name: Run CLI tests
+        if: ${{ !matrix.test-global }}
         run: cd cli && npm test
 
       - name: Run CLI tests (global)
