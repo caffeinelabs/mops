@@ -45,3 +45,15 @@ mops-local set-network local
 Now you can install/publish packages locally like this `mops-local add <pkg>`
 
 Also you can switch network to staging to work with staging registry like this `mops-local set-network staging`
+
+### Alternative: Using Environment Variables
+
+You can also override the registry endpoint without switching networks using environment variables:
+
+```bash
+export MOPS_REGISTRY_HOST="http://127.0.0.1:4943"
+export MOPS_REGISTRY_CANISTER_ID="your-local-canister-id"
+mops-local add <pkg>
+```
+
+This approach is particularly useful for Docker containers or CI environments where you need to redirect registry operations to a custom IC replica. See [Environment Variables](/cli/environment-variables) in the documentation for details.
