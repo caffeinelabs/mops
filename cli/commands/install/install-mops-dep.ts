@@ -7,7 +7,6 @@ import chalk from "chalk";
 import { deleteSync } from "del";
 import { checkConfigFile, progressBar, readConfig } from "../../mops.js";
 import { getHighestVersion } from "../../api/getHighestVersion.js";
-import { storageActor } from "../../api/actors.js";
 import { parallel } from "../../parallel.js";
 import {
   getDepCacheDir,
@@ -18,6 +17,7 @@ import {
   downloadFile,
   getPackageFilesInfo,
 } from "../../api/downloadPackageFiles.js";
+import { getStorageActorForPkg } from "../../api/registryFallback.js";
 import { installDeps } from "./install-deps.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
 
@@ -92,7 +92,7 @@ export async function installMopsDep(
       total = fileIds.length + 2;
 
       let filesData = new Map();
-      let storage = await storageActor(storageId);
+      let storage = await getStorageActorForPkg(depName, storageId);
 
       await parallel(threads, fileIds, async (fileId: string) => {
         let { path, data } = await downloadFile(storage, fileId);
