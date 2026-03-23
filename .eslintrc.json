@@ -9,7 +9,7 @@
     "plugin:prettier/recommended"
   ],
   "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint", "@stylistic", "@stylistic/migrate"],
+  "plugins": ["@typescript-eslint"],
   "ignorePatterns": [
     "node_modules/",
     "declarations/",
