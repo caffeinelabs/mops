@@ -14,7 +14,7 @@ function cleanFixture(cwd: string, ...extras: string[]) {
 }
 
 describe("build", () => {
-  // Several dfx/pocket-ic builds per test; slow CI (e.g. node 20 matrix) can exceed 60s default.
+  // Several dfx/pocket-ic builds per test; slow CI can exceed 60s default.
   jest.setTimeout(120_000);
 
   test("ok", async () => {

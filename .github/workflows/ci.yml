@@ -16,7 +16,7 @@ jobs:
       matrix:
         mops-version: [ic-mops@1.0.0, ./cli/dist]
         moc-version: [0.14.13]
-        node-version: [20]
+        node-version: [22]
 
     runs-on: ubuntu-latest
     name: node ${{ matrix.node-version }}, moc ${{ matrix.moc-version }}, ${{ matrix.mops-version }}
