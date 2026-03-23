@@ -1,5 +1,4 @@
 import markdownIt from "markdown-it";
-// import {toHtml} from 'hast-util-to-html';
 
 export function markdownToHtml(markdown: string, repositoryUrl?: string) {
   // make links to issues and PRs clickable

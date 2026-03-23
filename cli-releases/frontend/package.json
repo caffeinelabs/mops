@@ -27,7 +27,6 @@
   },
   "dependencies": {
     "filesize": "10.1.1",
-    "hast-util-to-html": "9.0.0",
     "markdown-it": "14.1.0"
   }
 }

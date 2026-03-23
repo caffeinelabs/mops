@@ -16,14 +16,11 @@
   "dependencies": {
     "@asciidoctor/core": "3.0.4",
     "@dfinity/agent": "1.0.1",
-    "@dfinity/auth-client": "1.0.1",
     "@dfinity/principal": "1.0.1",
-    "@types/throttle-debounce": "5.0.2",
     "@wooorm/starry-night": "3.2.0",
     "chart.js": "4.4.2",
     "chartjs-adapter-date-fns": "^3.0.0",
     "date-fns": "3.6.0",
-    "events": "^3.3.0",
     "filesize": "10.1.1",
     "hast-util-to-html": "9.0.5",
     "ic-mops": "0.40.0",
@@ -31,12 +28,12 @@
     "markdown-it": "14.1.0",
     "pako": "^2.1.0",
     "svelte-chartjs": "3.1.5",
-    "svelte-simple-modal": "1.6.2",
     "svelte-spa-history-router": "2.1.1",
     "throttle-debounce": "5.0.2"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "3.0.2",
+    "@types/throttle-debounce": "5.0.2",
     "@types/markdown-it": "13.0.7",
     "@types/node": "20.11.30",
     "@types/pako": "2.0.4",
