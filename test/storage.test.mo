@@ -34,6 +34,13 @@ await suite(
     );
 
     await test(
+      "upload chunk",
+      func() : async () {
+        assert Result.isOk(await storage.uploadChunk(fileId, 0, Blob.fromArray([1, 2, 3])));
+      },
+    );
+
+    await test(
       "try to finish upload with unknown file id",
       func() : async () {
         assert Result.isErr(await storage.finishUploads([fileId, "unknown-file-id"]));
