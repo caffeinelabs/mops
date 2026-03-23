@@ -39,10 +39,10 @@ Make sure there is no `/tree/main/` in the URL.
 
 | Field                 | Description                                     |
 | --------------------- | ----------------------------------------------- |
-| &lt;mops_package_name&gt;<br/>Example: `base`        | Version in format x.y.z (e.g. `0.1.2`)              |
-| &lt;mops_package_name&gt;@&lt;pinned_version&gt;<br/>Example: `base@0.11.0`        | Version in format x.y.z (e.g. `0.1.2`)              |
-| &lt;github_package_name&gt;<br/>Example: `gh-pkg` | Format: `https://github.com/&lt;repo&gt;#&lt;branch/tag/ref&gt;`<br/>Example: `https://github.com/dfinity/motoko-base#moc-0.11.0` |
-| &lt;local_package_name&gt;<br/>Example: `shared` | Local path starting with `./`, `../`, or `/`<br/>Example: `./packages/shared` |
+| `<mops_package_name>`<br/>Example: `base`        | Version in format x.y.z (e.g. `0.1.2`)              |
+| `<mops_package_name>@<pinned_version>`<br/>Example: `base@0.11.0`        | Version in format x.y.z (e.g. `0.1.2`)              |
+| `<github_package_name>`<br/>Example: `gh-pkg` | Format: `https://github.com/<repo>#<branch/tag/ref>`<br/>Example: `https://github.com/dfinity/motoko-base#moc-0.11.0` |
+| `<local_package_name>`<br/>Example: `shared` | Local path starting with `./`, `../`, or `/`<br/>Example: `./packages/shared` |
 
 
 Learn how Mops resolves dependencies [here](/how-dependency-resolution-works).
