@@ -94,8 +94,12 @@ shared ({ caller = parent }) persistent actor class Storage() {
       if (Option.isNull(activeUploadsMeta.get(fileId))) {
         return #err("File '" # fileId # "' is not uploading");
       };
-      if (Option.isNull(activeUploadsChunks.get(fileId))) {
-        return #err("File '" # fileId # "' is not uploading");
+      let ?chunks = activeUploadsChunks.get(fileId) else return #err("File '" # fileId # "' is not uploading");
+
+      for (i in chunks.keys()) {
+        if (chunks[i].size() == 0) {
+          return #err("File '" # fileId # "' has empty chunk at index " # Nat.toText(i));
+        };
       };
     };
 
