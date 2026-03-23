@@ -111,7 +111,7 @@ candid = "candid/backend.did"
 initArg = "(\"Hello\")"
 ```
 
-### `[canisters.&lt;name&gt;.check-stable]`
+### `[canisters.<name>.check-stable]`
 
 Configure automatic stable variable compatibility checking for a canister. When set, [`mops check`](/cli/mops-check) will verify that the current canister is compatible with the deployed version.
 
