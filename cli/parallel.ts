@@ -3,11 +3,15 @@ export async function parallel<T>(
   items: T[],
   fn: (item: T) => Promise<void>,
 ) {
-  return new Promise<void>((resolve) => {
+  return new Promise<void>((resolve, reject) => {
     let busyThreads = 0;
+    let failed = false;
     items = items.slice();
 
     let loop = () => {
+      if (failed) {
+        return;
+      }
       if (!items.length) {
         if (busyThreads === 0) {
           resolve();
@@ -18,10 +22,16 @@ export async function parallel<T>(
         return;
       }
       busyThreads++;
-      fn(items.shift() as T).then(() => {
-        busyThreads--;
-        loop();
-      });
+      fn(items.shift() as T).then(
+        () => {
+          busyThreads--;
+          loop();
+        },
+        (err) => {
+          failed = true;
+          reject(err);
+        },
+      );
       loop();
     };
     loop();
