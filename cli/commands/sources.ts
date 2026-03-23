@@ -38,8 +38,9 @@ export async function sourcesArgs({
 
       // append baseDir
       let pkgBaseDir;
-      if (fs.existsSync(path.join(pkgDir, "mops.toml"))) {
-        let config = readConfig(path.join(pkgDir, "mops.toml"));
+      let resolvedMopsToml = path.resolve(cwd, pkgDir, "mops.toml");
+      if (fs.existsSync(resolvedMopsToml)) {
+        let config = readConfig(resolvedMopsToml);
         pkgBaseDir = path.join(pkgDir, config.package?.baseDir || "src");
       } else {
         pkgBaseDir = path.join(pkgDir, "src");

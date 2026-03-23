@@ -152,6 +152,13 @@ export async function getGithubCommit(repo: string, ref: string): Promise<any> {
     res = await fetch(`https://api.github.com/repos/${repo}/commits/main`);
     json = await res.json();
   }
+
+  if (!res.ok || !json.sha) {
+    throw new Error(
+      `Failed to fetch commit for ${repo}#${ref}: ${json.message || `HTTP ${res.status}`}`,
+    );
+  }
+
   return json;
 }
 

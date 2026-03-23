@@ -14,4 +14,4 @@ mops init
 
 ### `--yes`, `-y`
 
-Initalize with all defaults.
+Initialize with all defaults.

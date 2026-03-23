@@ -41,6 +41,6 @@ What to do with dependency version conflicts.
 If the dependency graph contains packages with the same name but different major versions, they will be treated as conflicting.
 
 Possible values:
-- `warning` - Show conflics _(default)_
-- `error` - Show conflics and exit with error code
+- `warning` - Show conflicts _(default)_
+- `error` - Show conflicts and exit with error code
 - `ignore` - Ignore conflicts

@@ -102,9 +102,37 @@ jobs:
           MOPS_TEST_GLOBAL: 1
         run: cd cli && npm test
 
+  bundle-smoke-test:
+    runs-on: ubuntu-latest
+    name: bundle build smoke test
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: "npm"
+      - uses: oven-sh/setup-bun@v2
+      - uses: ./.github/actions/cache-rust-wasm
+
+      - name: Install npm packages
+        run: |
+          npm ci --ignore-scripts
+          npm run ci:postinstall
+
+      - name: Build and install bundle
+        run: |
+          cd cli && npm run bundle
+          npm i -g ./bundle
+
+      - name: Test mops build with bundle
+        run: |
+          cd cli/tests/build/no-dfx
+          mops install
+          mops build
+
   ci-ok:
     if: always()
-    needs: [build]
+    needs: [build, bundle-smoke-test]
     runs-on: ubuntu-latest
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')

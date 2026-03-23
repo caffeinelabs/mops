@@ -101,9 +101,12 @@ export async function add(
   }
 
   if (pkgDetails.repo) {
-    await installFromGithub(pkgDetails.name, pkgDetails.repo, {
+    let res = await installFromGithub(pkgDetails.name, pkgDetails.repo, {
       verbose: verbose,
     });
+    if (!res) {
+      process.exit(1);
+    }
   } else if (!pkgDetails.path) {
     let res = await installMopsDep(pkgDetails.name, pkgDetails.version, {
       verbose: verbose,
