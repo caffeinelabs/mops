@@ -16,12 +16,7 @@ await suite(
     await test(
       "start upload and fill chunk",
       func() : async () {
-        assert Result.isOk(await storage.startUpload({
-          id = fileId;
-          path = "src/Runtime.mo";
-          chunkCount = 1;
-          owners = [];
-        }));
+        assert Result.isOk(await storage.startUpload({ id = fileId; path = "src/Runtime.mo"; chunkCount = 1; owners = [] }));
         assert Result.isOk(await storage.uploadChunk(fileId, 0, realData));
       },
     );
@@ -29,12 +24,7 @@ await suite(
     await test(
       "second startUpload resets the active upload (idempotent)",
       func() : async () {
-        assert Result.isOk(await storage.startUpload({
-          id = fileId;
-          path = "src/Runtime.mo";
-          chunkCount = 1;
-          owners = [];
-        }));
+        assert Result.isOk(await storage.startUpload({ id = fileId; path = "src/Runtime.mo"; chunkCount = 1; owners = [] }));
       },
     );
 
@@ -59,12 +49,7 @@ await suite(
     await test(
       "stale session: start and upload",
       func() : async () {
-        assert Result.isOk(await storage.startUpload({
-          id = fileId;
-          path = "src/Runtime.mo";
-          chunkCount = 1;
-          owners = [];
-        }));
+        assert Result.isOk(await storage.startUpload({ id = fileId; path = "src/Runtime.mo"; chunkCount = 1; owners = [] }));
         assert Result.isOk(await storage.uploadChunk(fileId, 0, staleData));
       },
     );
@@ -72,12 +57,7 @@ await suite(
     await test(
       "retry session: startUpload resets, then upload fresh data",
       func() : async () {
-        assert Result.isOk(await storage.startUpload({
-          id = fileId;
-          path = "src/Runtime.mo";
-          chunkCount = 1;
-          owners = [];
-        }));
+        assert Result.isOk(await storage.startUpload({ id = fileId; path = "src/Runtime.mo"; chunkCount = 1; owners = [] }));
         assert Result.isOk(await storage.uploadChunk(fileId, 0, freshData));
       },
     );
@@ -116,12 +96,7 @@ await suite(
     await test(
       "start upload with chunkCount=2 but upload only chunk 0",
       func() : async () {
-        assert Result.isOk(await storage.startUpload({
-          id = fileId;
-          path = "src/Lib.mo";
-          chunkCount = 2;
-          owners = [];
-        }));
+        assert Result.isOk(await storage.startUpload({ id = fileId; path = "src/Lib.mo"; chunkCount = 2; owners = [] }));
         assert Result.isOk(await storage.uploadChunk(fileId, 0, Blob.fromArray([10, 20, 30])));
       },
     );
@@ -148,12 +123,7 @@ await suite(
     await test(
       "upload file with 2 chunks",
       func() : async () {
-        assert Result.isOk(await storage.startUpload({
-          id = fileId;
-          path = "src/Main.mo";
-          chunkCount = 2;
-          owners = [];
-        }));
+        assert Result.isOk(await storage.startUpload({ id = fileId; path = "src/Main.mo"; chunkCount = 2; owners = [] }));
         assert Result.isOk(await storage.uploadChunk(fileId, 0, data1));
         assert Result.isOk(await storage.uploadChunk(fileId, 1, data2));
       },
@@ -171,13 +141,13 @@ await suite(
       func() : async () {
         let c0 = await storage.downloadChunk(fileId, 0);
         switch (c0) {
-          case (#ok(chunk)) { assert chunk == data1; };
-          case (#err(_)) { assert false; };
+          case (#ok(chunk)) { assert chunk == data1 };
+          case (#err(_)) { assert false };
         };
         let c1 = await storage.downloadChunk(fileId, 1);
         switch (c1) {
-          case (#ok(chunk)) { assert chunk == data2; };
-          case (#err(_)) { assert false; };
+          case (#ok(chunk)) { assert chunk == data2 };
+          case (#err(_)) { assert false };
         };
       },
     );
@@ -194,12 +164,7 @@ await suite(
     await test(
       "start upload with chunkCount=0",
       func() : async () {
-        assert Result.isOk(await storage.startUpload({
-          id = fileId;
-          path = "src/Empty.mo";
-          chunkCount = 0;
-          owners = [];
-        }));
+        assert Result.isOk(await storage.startUpload({ id = fileId; path = "src/Empty.mo"; chunkCount = 0; owners = [] }));
       },
     );
 
@@ -215,8 +180,8 @@ await suite(
       func() : async () {
         let res = await storage.getFileMeta(fileId);
         switch (res) {
-          case (#ok(meta)) { assert meta.chunkCount == 0; };
-          case (#err(_)) { assert false; };
+          case (#ok(meta)) { assert meta.chunkCount == 0 };
+          case (#err(_)) { assert false };
         };
       },
     );
