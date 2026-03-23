@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 import { execa } from "execa";
 import { existsSync, rmSync } from "node:fs";
 import path from "path";
@@ -14,6 +14,9 @@ function cleanFixture(cwd: string, ...extras: string[]) {
 }
 
 describe("build", () => {
+  // Several dfx/pocket-ic builds per test; slow CI (e.g. node 20 matrix) can exceed 60s default.
+  jest.setTimeout(120_000);
+
   test("ok", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
     try {
