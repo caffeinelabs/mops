@@ -28,6 +28,7 @@ export async function parallel<T>(
           loop();
         },
         (err) => {
+          busyThreads--;
           failed = true;
           reject(err);
         },

@@ -2,6 +2,7 @@
 
 ## Next
 - Support `MOPS_REGISTRY_HOST` and `MOPS_REGISTRY_CANISTER_ID` environment variables for custom registry endpoints
+- Fix `parallel()` swallowing errors from concurrent tasks (e.g. `mops publish` uploads), which could hang or leave failures unreported
 
 ## 2.4.0
 - Support `[build].outputDir` config in `mops.toml` for custom build output directory
