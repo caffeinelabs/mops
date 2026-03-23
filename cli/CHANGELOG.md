@@ -1,6 +1,19 @@
 # Mops CLI Changelog
 
 ## Next
+- Fix `mops test` and `mops watch` breaking when dependency paths contain spaces
+- Fix `mops sync` incorrectly reporting version-pinned dependencies as missing/unused
+- Fix `mops update --lock ignore` not respecting the lock option during intermediate installs
+- Fix `mops update` crashing with unhandled error when GitHub API is unavailable
+- Fix `mops add` writing dependency to config even when GitHub download fails
+- Fix GitHub dependency install crashing the entire process instead of reporting the error
+- Fix version comparison treating short version strings (e.g. `1.0`) as equal to longer ones (e.g. `1.0.5`)
+- Fix `mops remove` not cleaning up transitive dependencies of GitHub packages
+- Fix corrupted `mops.lock` file causing an unhandled crash instead of a helpful error message
+- Fix `mops sources` resolving package config from wrong directory in some contexts
+- Harden lock file integrity check against package ID prefix collisions
+- `mops build` now reports invalid canister names instead of silently ignoring them
+- Document `baseDir`, `readme`, and `dfx` fields in `[package]` config
 
 ## 2.5.0
 - Add support for `MOPS_REGISTRY_HOST` and `MOPS_REGISTRY_CANISTER_ID` environment variables for custom registry endpoints

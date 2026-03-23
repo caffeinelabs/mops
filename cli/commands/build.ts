@@ -24,7 +24,7 @@ export async function build(
   canisterNames: string[] | undefined,
   options: Partial<BuildOptions>,
 ): Promise<void> {
-  if (canisterNames?.length == 0) {
+  if (canisterNames?.length === 0) {
     cliError("No canisters specified to build");
   }
 
@@ -41,16 +41,11 @@ export async function build(
   }
 
   if (canisterNames) {
-    canisterNames = canisterNames.filter((name) => name in canisters);
-    if (canisterNames.length === 0) {
-      throw new Error("No valid canister names specified");
-    }
-    for (let name of canisterNames) {
-      if (!(name in canisters)) {
-        cliError(
-          `Motoko canister '${name}' not found in mops.toml configuration`,
-        );
-      }
+    let invalidNames = canisterNames.filter((name) => !(name in canisters));
+    if (invalidNames.length) {
+      cliError(
+        `Motoko canister(s) not found in mops.toml configuration: ${invalidNames.join(", ")}`,
+      );
     }
   }
 
@@ -184,7 +179,7 @@ export async function build(
 
   console.log(
     chalk.green(
-      `\n✓ Built ${Object.keys(filteredCanisters).length} canister${Object.keys(filteredCanisters).length == 1 ? "" : "s"} successfully`,
+      `\n✓ Built ${Object.keys(filteredCanisters).length} canister${Object.keys(filteredCanisters).length === 1 ? "" : "s"} successfully`,
     ),
   );
 }

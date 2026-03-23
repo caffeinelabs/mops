@@ -42,12 +42,18 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
   for (let dep of githubDeps) {
     let { org, gitName, branch, commitHash } = parseGithubURL(dep.repo || "");
     let dev = !!config["dev-dependencies"]?.[dep.name];
-    let commit = await getGithubCommit(`${org}/${gitName}`, branch);
-    if (commit.sha !== commitHash) {
-      await add(
-        `https://github.com/${org}/${gitName}#${branch}@${commit.sha}`,
-        { dev },
-        dep.name,
+    try {
+      let commit = await getGithubCommit(`${org}/${gitName}`, branch);
+      if (commit.sha !== commitHash) {
+        await add(
+          `https://github.com/${org}/${gitName}#${branch}@${commit.sha}`,
+          { dev, lock },
+          dep.name,
+        );
+      }
+    } catch (err: any) {
+      console.log(
+        chalk.red("Error: ") + `Failed to update ${dep.name}: ${err.message}`,
       );
     }
   }
@@ -87,7 +93,7 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
           );
         }) || dep[0];
 
-      await add(`${dep[0]}@${dep[2]}`, { dev }, asName);
+      await add(`${dep[0]}@${dep[2]}`, { dev, lock }, asName);
     }
   }
 
