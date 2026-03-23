@@ -1,8 +1,9 @@
 // @ts-check
-// Note: type annotations allow type checking and IDEs autocompletion
+// `@type` JSDoc annotations allow editor autocompletion and type checking
+// (when paired with `@ts-check`).
+// See: https://docusaurus.io/docs/api/docusaurus-config
 
-const lightCodeTheme = require('prism-react-renderer/themes/github');
-const darkCodeTheme = require('prism-react-renderer/themes/dracula');
+import {themes as prismThemes} from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -39,14 +40,14 @@ const config = {
 			({
 				docs: {
 					routeBasePath: '/',
-					sidebarPath: require.resolve('./sidebars.js'),
+					sidebarPath: './sidebars.js',
 					// Please change this to your repo.
 					// Remove this to remove the "edit this page" links.
 					editUrl: 'https://github.com/caffeinelabs/mops/edit/main/docs/',
 				},
 				blog: false,
 				theme: {
-					customCss: require.resolve('./src/css/custom.css'),
+					customCss: './src/css/custom.css',
 				},
 			}),
 		],
@@ -90,8 +91,8 @@ const config = {
 				// copyright: `Copyright © ${new Date().getFullYear()} MOPS`,
 			},
 			prism: {
-				theme: lightCodeTheme,
-				darkTheme: darkCodeTheme,
+				theme: prismThemes.github,
+				darkTheme: prismThemes.dracula,
 			},
 			fathomAnalytics: {
 				siteId: 'THOISMFA',
@@ -101,7 +102,7 @@ const config = {
 	plugins: [
 		'docusaurus-plugin-fathom',
 	],
-	
+
 	scripts: [
 		{
 			src: '/js/loadtags.js',
@@ -110,4 +111,4 @@ const config = {
 	],
 };
 
-module.exports = config;
+export default config;
