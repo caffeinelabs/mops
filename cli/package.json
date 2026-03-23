@@ -26,7 +26,7 @@
   "author": "DFINITY",
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "mops": "tsx ./environments/nodejs/cli",

@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Raise minimum supported Node.js to 22.x (Node 20 is end-of-life)
 - Support `MOPS_REGISTRY_HOST` and `MOPS_REGISTRY_CANISTER_ID` environment variables for custom registry endpoints
 - Fix `mops build` crashing with `__wbindgen_malloc` error in bundled CLI distribution
 - Fix `parallel()` swallowing errors from concurrent tasks (e.g. `mops publish` uploads), which could hang or leave failures unreported

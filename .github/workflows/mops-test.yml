@@ -24,7 +24,7 @@ jobs:
             "https://cli.mops.one/versions/latest.tgz",
           ]
         moc-version: [0.14.13]
-        node-version: [20, 24]
+        node-version: [22, 24]
         runner: [ubuntu-latest]
 
     runs-on: ${{ matrix.runner }}
