@@ -38,7 +38,7 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "3.0.2",
     "@types/markdown-it": "13.0.7",
-    "@types/node": "22.13.10",
+    "@types/node": "20.11.30",
     "@types/pako": "2.0.4",
     "buffer": "^6.0.3",
     "eslint-plugin-svelte": "2.35.1",

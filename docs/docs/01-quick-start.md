@@ -6,7 +6,7 @@
 # Quick Start
 
 ## 1. Prerequisites
-- [Node.js](https://nodejs.org/) >= 22.0.0
+- [Node.js](https://nodejs.org/) >= 20.0.0
 - [DFX](https://internetcomputer.org/docs/current/developer-docs/quickstart/local-quickstart) >= 0.10.0
 
 ## 2. Install Mops CLI
