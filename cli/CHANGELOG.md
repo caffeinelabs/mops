@@ -1,7 +1,9 @@
 # Mops CLI Changelog
 
 ## Next
-- Support `MOPS_REGISTRY_HOST` and `MOPS_REGISTRY_CANISTER_ID` environment variables for custom registry endpoints
+
+## 2.5.0
+- Add support for `MOPS_REGISTRY_HOST` and `MOPS_REGISTRY_CANISTER_ID` environment variables for custom registry endpoints
 - Fix `mops build` crashing with `__wbindgen_malloc` error in bundled CLI distribution
 - Fix `parallel()` swallowing errors from concurrent tasks (e.g. `mops publish` uploads), which could hang or leave failures unreported
 
