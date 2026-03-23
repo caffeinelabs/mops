@@ -8,6 +8,7 @@ import { remove } from "./remove.js";
 import { checkIntegrity } from "../integrity.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
 import { MOTOKO_IGNORE_PATTERNS } from "../constants.js";
+import { getDepName } from "../helpers/get-dep-name.js";
 
 type SyncOptions = {
   lock?: "update" | "ignore";
@@ -80,26 +81,22 @@ async function getUsedPackages(): Promise<string[]> {
 
 async function getMissingPackages(): Promise<string[]> {
   let config = readConfig();
-  let allDeps = [
-    ...Object.keys(config.dependencies || {}),
-    ...Object.keys(config["dev-dependencies"] || {}),
-  ];
-  let missing = new Set(await getUsedPackages());
-  for (let pkg of allDeps) {
-    missing.delete(pkg);
-  }
-  return [...missing];
+  let allDepNames = new Set(
+    [
+      ...Object.keys(config.dependencies || {}),
+      ...Object.keys(config["dev-dependencies"] || {}),
+    ].map((key) => getDepName(key)),
+  );
+  let used = await getUsedPackages();
+  return used.filter((pkg) => !allDepNames.has(pkg));
 }
 
 async function getUnusedPackages(): Promise<string[]> {
   let config = readConfig();
-  let allDeps = new Set([
+  let allDeps = [
     ...Object.keys(config.dependencies || {}),
     ...Object.keys(config["dev-dependencies"] || {}),
-  ]);
-  let used = await getUsedPackages();
-  for (let pkg of used) {
-    allDeps.delete(pkg);
-  }
-  return [...allDeps];
+  ];
+  let used = new Set(await getUsedPackages());
+  return allDeps.filter((key) => !used.has(getDepName(key)));
 }
