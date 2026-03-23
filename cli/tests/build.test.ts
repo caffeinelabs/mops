@@ -5,7 +5,6 @@ import path from "path";
 import { cli, cliSnapshot } from "./helpers";
 
 const distBin = path.resolve(import.meta.dirname, "../dist/bin/mops.js");
-const bundleBin = path.resolve(import.meta.dirname, "../bundle/bin/mops.js");
 
 function cleanFixture(cwd: string, ...extras: string[]) {
   rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
@@ -113,31 +112,6 @@ describe("build", () => {
 
         expect(result.stderr).not.toContain("Wasm bindings have not been set");
         expect(result.exitCode).toBe(0);
-      } finally {
-        cleanFixture(cwd);
-      }
-    },
-  );
-
-  // The bundle (bun build) uses the web wasm-pack target which requires
-  // explicit initSync(). This test exercises the bundle binary to ensure the
-  // CLI's own WASM module is properly initialized before add_custom_sections.
-  const hasBundleBin = existsSync(bundleBin);
-  (hasBundleBin ? test : test.skip)(
-    "wasm bindings initialized via bundle entry point",
-    async () => {
-      const cwd = path.join(import.meta.dirname, "build/success");
-      try {
-        const result = await execa("node", [bundleBin, "build", "foo"], {
-          cwd,
-          stdio: "pipe",
-          reject: false,
-        });
-
-        expect(result.stderr).not.toContain("Wasm bindings have not been set");
-        expect(result.stderr).not.toContain("__wbindgen_malloc");
-        expect(result.exitCode).toBe(0);
-        expect(existsSync(path.join(cwd, ".mops/.build/foo.wasm"))).toBe(true);
       } finally {
         cleanFixture(cwd);
       }

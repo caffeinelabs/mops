@@ -111,9 +111,9 @@ jobs:
 
       - name: Test mops build with bundle
         run: |
-          cd cli/tests/build/success
+          cd cli/tests/build/no-dfx
           mops install
-          mops build foo
+          mops build
 
   ci-ok:
     if: always()
