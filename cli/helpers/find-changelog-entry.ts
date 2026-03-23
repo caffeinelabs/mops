@@ -16,7 +16,9 @@ export function findChangelogEntry(changelog: string, version: string): string {
       }
     } else if (
       node.type === "heading" &&
-      toMarkdown(node).match(new RegExp(`\\b${version}\\b`))
+      toMarkdown(node).match(
+        new RegExp(`\\b${version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`),
+      )
     ) {
       depth = node.depth;
       found = true;

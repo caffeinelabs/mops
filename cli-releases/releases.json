@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.4.0"
+    "latest": "2.5.0"
   },
   "versions": {
     "0.41.0": {
@@ -320,6 +320,14 @@
       "commitHash": "9e15850474bfaaf0a93f641d41d5db267a1254c2",
       "url": "https://cli.mops.one/versions/2.4.0.tgz",
       "hash": "37a95a008156ae0ad8204d8ea39d06abcf245c7f8cc6c957e2683dfc8d8d7338"
+    },
+    "2.5.0": {
+      "time": 1774279417335,
+      "size": 3426832,
+      "relseaseNotes": "* Add support for `MOPS_REGISTRY_HOST` and `MOPS_REGISTRY_CANISTER_ID` environment variables for custom registry endpoints\n* Fix `mops build` crashing with `__wbindgen_malloc` error in bundled CLI distribution\n* Fix `parallel()` swallowing errors from concurrent tasks (e.g. `mops publish` uploads), which could hang or leave failures unreported\n",
+      "commitHash": "a7695b9b71f146b4eb39193dd93f9639be9fc32d",
+      "url": "https://cli.mops.one/versions/2.5.0.tgz",
+      "hash": "fd8ec74bce3f91ec2b4b967d3cd7e3678dc17a16433d71c5fe9757e07de051d0"
     }
   }
 }

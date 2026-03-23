@@ -181,7 +181,7 @@ export const installFromGithub = async (
     silent = false,
     ignoreTransitive = false,
   } = {},
-) => {
+): Promise<boolean> => {
   let cacheName = getGithubDepCacheName(name, repo);
   let cacheDir = getDepCacheDir(cacheName);
 
@@ -205,7 +205,7 @@ export const installFromGithub = async (
       await downloadFromGithub(repo, cacheDir, progress);
     } catch (err) {
       deleteSync([cacheDir], { force: true });
-      process.exit(1);
+      return false;
     }
   }
 
@@ -216,7 +216,7 @@ export const installFromGithub = async (
   }
 
   if (ignoreTransitive) {
-    return;
+    return true;
   }
 
   const config = await readVesselConfig(cacheDir, { silent });
@@ -228,4 +228,6 @@ export const installFromGithub = async (
       }
     }
   }
+
+  return true;
 };

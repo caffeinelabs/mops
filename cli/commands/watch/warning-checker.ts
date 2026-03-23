@@ -5,7 +5,7 @@ import chalk from "chalk";
 
 import { getMocPath } from "../../helpers/get-moc-path.js";
 import { getGlobalMocArgs, getRootDir, readConfig } from "../../mops.js";
-import { sources } from "../sources.js";
+import { sourcesArgs } from "../sources.js";
 import { ErrorChecker } from "./error-checker.js";
 import { parallel } from "../../parallel.js";
 import { globMoFiles } from "./globMoFiles.js";
@@ -69,7 +69,7 @@ export class WarningChecker {
 
     let rootDir = getRootDir();
     let mocPath = getMocPath();
-    let deps = await sources({ cwd: rootDir });
+    let deps = (await sourcesArgs({ cwd: rootDir })).flat();
     let globalMocArgs = getGlobalMocArgs(readConfig());
     let paths = globMoFiles(rootDir);
 
@@ -83,12 +83,7 @@ export class WarningChecker {
 
       let { stderr } = await promisify(execFile)(
         mocPath,
-        [
-          "--check",
-          ...deps.flatMap((x) => x.split(" ")),
-          ...globalMocArgs,
-          file,
-        ],
+        ["--check", ...deps, ...globalMocArgs, file],
         { cwd: rootDir, signal },
       ).catch((error) => {
         if (error.code === "ABORT_ERR") {
