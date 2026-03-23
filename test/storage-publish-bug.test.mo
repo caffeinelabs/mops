@@ -8,7 +8,7 @@ var storage = await Storage.Storage();
 
 // PRECONDITION: startUpload is idempotent — resets active upload (prevents stale data)
 await suite(
-  "FIX: startUpload resets active upload, finishUploads catches empty chunks",
+  "PRECONDITION: startUpload reset + finishUploads rejects empty chunks",
   func() : async () {
     let fileId = "core@2.3.0/src/Runtime.mo";
     let realData = Blob.fromArray([1, 2, 3, 4, 5, 6, 7, 8]);
@@ -39,7 +39,7 @@ await suite(
 
 // PRECONDITION: idempotent startUpload allows a clean retry to succeed
 await suite(
-  "FIX: retry after reset succeeds with fresh data",
+  "PRECONDITION: retry after reset succeeds with fresh data",
   func() : async () {
     storage := await Storage.Storage();
     let fileId = "core@2.3.0/src/Runtime.mo";
