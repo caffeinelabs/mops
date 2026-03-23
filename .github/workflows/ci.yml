@@ -14,9 +14,15 @@ jobs:
   build:
     strategy:
       matrix:
-        mops-version: [ic-mops@1.0.0, ./cli/dist]
         moc-version: [0.14.13]
         node-version: [22]
+        include:
+          - mops-version: ic-mops@1.0.0
+            test-global: false
+          - mops-version: ./cli/dist
+            test-global: false
+          - mops-version: ./cli/dist
+            test-global: true
 
     runs-on: ubuntu-latest
     name: node ${{ matrix.node-version }}, moc ${{ matrix.moc-version }}, ${{ matrix.mops-version }}
@@ -82,9 +88,18 @@ jobs:
       - name: Pre-cache moc 1.3.0 and test fixture dependencies
         run: |
           mops toolchain use moc 1.3.0 && mops toolchain use moc ${{ matrix.moc-version }}
-          cd cli/tests/check/fix && mops install
+          (cd cli/tests/check/fix && mops install)
+          (cd cli/tests/build/success && mops install)
+          (cd cli/tests/build/error && mops install)
 
       - name: Run CLI tests
+        if: ${{ !matrix.test-global }}
+        run: cd cli && npm test
+
+      - name: Run CLI tests (global)
+        if: ${{ matrix.test-global }}
+        env:
+          MOPS_TEST_GLOBAL: 1
         run: cd cli && npm test
 
   bundle-smoke-test:

@@ -7,8 +7,16 @@ export interface CliOptions {
   cwd?: string;
 }
 
+// When MOPS_TEST_GLOBAL is set, invoke the globally-installed `mops` binary
+// directly rather than the npm script. This exercises the real global-install
+// code path where the binary lives outside the project tree.
+const useGlobalBinary = Boolean(process.env.MOPS_TEST_GLOBAL);
+
 export const cli = async (args: string[], { cwd }: CliOptions = {}) => {
-  return await execa("npm", ["run", "--silent", "mops", "--", ...args], {
+  const [cmd, cmdArgs] = useGlobalBinary
+    ? ["mops", args]
+    : ["npm", ["run", "--silent", "mops", "--", ...args]];
+  return await execa(cmd, cmdArgs, {
     env: { ...process.env, ...(cwd != null && { MOPS_CWD: cwd }) },
     ...(cwd != null && { cwd }),
     stdio: "pipe",
