@@ -1,0 +1,8 @@
+[dependencies]
+my-pkg = "./my-pkg"
+
+[toolchain]
+lintoko = "0.7.0"
+
+[lint]
+extends = true

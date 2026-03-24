@@ -3,7 +3,12 @@ import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
-import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
+import {
+  getGlobalMocArgs,
+  getRootDir,
+  readConfig,
+  resolveConfigPath,
+} from "../mops.js";
 import { autofixMotoko } from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import {
@@ -13,6 +18,7 @@ import {
 import { runStableCheck } from "./check-stable.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
+import { collectLintRules, lint } from "./lint.js";
 
 const MOC_ALL_LIBS_MIN_VERSION = "1.3.0";
 
@@ -165,5 +171,12 @@ export async function check(
       globalMocArgs,
       options: { verbose: options.verbose, extraArgs: options.extraArgs },
     });
+  }
+
+  const rootDir = getRootDir();
+  const lintRules = await collectLintRules(config, rootDir);
+  const lintokoConfigured = !!config.toolchain?.lintoko;
+  if (lintRules.length > 0 || lintokoConfigured) {
+    await lint(undefined, { verbose: options.verbose, fix: options.fix });
   }
 }

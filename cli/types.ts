@@ -29,6 +29,8 @@ export type Config = {
   };
   lint?: {
     args?: string[];
+    rules?: string[];
+    extends?: string[] | true;
   };
 };
 

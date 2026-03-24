@@ -3,10 +3,66 @@ import { execa } from "execa";
 import { globSync } from "glob";
 import path from "node:path";
 import { cliError } from "../error.js";
-import { getRootDir, readConfig } from "../mops.js";
+import {
+  formatDir,
+  formatGithubDir,
+  getDependencyType,
+  getRootDir,
+  readConfig,
+} from "../mops.js";
+import { resolvePackages } from "../resolve-packages.js";
 import { toolchain } from "./toolchain/index.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { existsSync } from "node:fs";
+import { Config } from "../types.js";
+
+export async function resolveDepRules(
+  config: Config,
+  rootDir: string,
+): Promise<string[]> {
+  const ext = config.lint?.extends;
+  if (!ext) {
+    return [];
+  }
+
+  const resolvedPackages = await resolvePackages();
+  const rules: string[] = [];
+
+  for (const [name, version] of Object.entries(resolvedPackages)) {
+    if (ext !== true && !ext.includes(name)) {
+      continue;
+    }
+
+    const depType = getDependencyType(version);
+    let pkgDir: string;
+    if (depType === "local") {
+      pkgDir = version;
+    } else if (depType === "github") {
+      pkgDir = formatGithubDir(name, version);
+    } else {
+      pkgDir = formatDir(name, version);
+    }
+
+    const rulesDir = path.join(pkgDir, "rules");
+    if (existsSync(rulesDir)) {
+      rules.push(path.relative(rootDir, rulesDir));
+    }
+  }
+
+  return rules;
+}
+
+export async function collectLintRules(
+  config: Config,
+  rootDir: string,
+): Promise<string[]> {
+  const localRules = ["lint", "lints"].filter((d) =>
+    existsSync(path.join(rootDir, d)),
+  );
+  const configRules = config.lint?.rules ?? [];
+  const depRules = await resolveDepRules(config, rootDir);
+  return [...localRules, ...configRules, ...depRules];
+}
 
 export interface LintOptions {
   verbose: boolean;
@@ -44,7 +100,7 @@ export async function lint(
   const rules =
     options.rules && options.rules.length > 0
       ? options.rules
-      : ["lint", "lints"].filter((d) => existsSync(path.join(rootDir, d)));
+      : await collectLintRules(config, rootDir);
   rules.forEach((rule) => args.push("--rules", rule));
 
   if (config.lint?.args) {
