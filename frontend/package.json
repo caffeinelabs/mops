@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "DFX_NETWORK=local vite --port 3000",
+    "start": "DFX_NETWORK=${DFX_NETWORK:-local} vite --port 3000",
     "vite": "vite",
     "build": "vite build",
     "preview": "vite preview",
