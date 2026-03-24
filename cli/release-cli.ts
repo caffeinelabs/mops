@@ -79,7 +79,7 @@ type Releases = {
 if (!fs.existsSync(path.resolve(__dirname, "../cli-releases/releases.json"))) {
   fs.writeFileSync(
     path.resolve(__dirname, "../cli-releases/releases.json"),
-    JSON.stringify({ tags: {}, versions: {} }, null, 2),
+    JSON.stringify({ tags: {}, versions: {} }, null, 2) + "\n",
   );
 }
 
@@ -102,5 +102,5 @@ releases.versions[version] = {
 
 fs.writeFileSync(
   path.resolve(__dirname, "../cli-releases/releases.json"),
-  JSON.stringify(releases, null, 2),
+  JSON.stringify(releases, null, 2) + "\n",
 );

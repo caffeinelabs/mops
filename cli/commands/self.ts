@@ -29,7 +29,7 @@ function detectPackageManager() {
 
 export async function getLatestVersion() {
   let res = await fetch(url + "/tags/latest");
-  return res.text();
+  return (await res.text()).trim();
 }
 
 export async function update() {

@@ -1,5 +1,5 @@
 export function getNetwork() {
-  return globalThis.MOPS_NETWORK || "ic";
+  return process.env["MOPS_NETWORK"] || globalThis.MOPS_NETWORK || "ic";
 }
 
 export function getEndpoint(network: string) {

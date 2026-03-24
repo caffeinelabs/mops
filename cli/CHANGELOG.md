@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.5.1
 - Fix `mops test` and `mops watch` breaking when dependency paths contain spaces
 - Fix `mops sync` incorrectly reporting version-pinned dependencies as missing/unused
 - Fix `mops update --lock ignore` not respecting the lock option during intermediate installs
