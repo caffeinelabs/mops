@@ -2,6 +2,11 @@
 
 ## Next
 
+- Packages can ship lintoko rules for consumers in a `rules/` directory (distinct from `lint/`/`lints/` which check the package itself)
+- Add `[lint] extends` in `mops.toml` to pull in `rules/` from installed dependencies: `extends = ["pkg"]` for named packages or `extends = true` for all
+- Add `[lint] rules` in `mops.toml` for additional local rule directories (additive to `lint/`/`lints/` auto-discovery)
+- `mops check` now runs `mops lint` after a successful type-check when lintoko is configured or lint rules are present; `--fix` propagates to both steps
+
 ## 2.5.1
 - Fix `mops test` and `mops watch` breaking when dependency paths contain spaces
 - Fix `mops sync` incorrectly reporting version-pinned dependencies as missing/unused
