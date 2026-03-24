@@ -23,7 +23,11 @@ const config = {
 	projectName: 'docusaurus', // Usually your repo name.
 
 	onBrokenLinks: 'throw',
-	onBrokenMarkdownLinks: 'warn',
+	markdown: {
+		hooks: {
+			onBrokenMarkdownLinks: 'warn',
+		},
+	},
 
 	// Even if you don't use internalization, you can use this field to set useful
 	// metadata like html lang. For example, if your site is Chinese, you may want
@@ -101,6 +105,20 @@ const config = {
 
 	plugins: [
 		'docusaurus-plugin-fathom',
+		// Workaround: webpack 5.96+ broke HMR when webpack-dev-server applies
+		// HotModuleReplacementPlugin after compiler creation. Adding it here
+		// ensures it's in the config before compiler instantiation.
+		// See: https://github.com/webpack/webpack/issues/19120
+		function hmrCompatibilityFix() {
+			return {
+				name: 'webpack-hmr-compat',
+				configureWebpack(config, isServer) {
+					if (isServer || config.mode === 'production') return {};
+					const {HotModuleReplacementPlugin} = require('webpack');
+					return {plugins: [new HotModuleReplacementPlugin()]};
+				},
+			};
+		},
 	],
 
 	scripts: [
