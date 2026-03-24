@@ -177,6 +177,11 @@ export async function check(
   const lintRules = await collectLintRules(config, rootDir);
   const lintokoConfigured = !!config.toolchain?.lintoko;
   if (lintRules.length > 0 || lintokoConfigured) {
-    await lint(undefined, { verbose: options.verbose, fix: options.fix });
+    await lint(undefined, {
+      verbose: options.verbose,
+      fix: options.fix,
+      // Pass pre-collected rules (possibly empty) to avoid resolvePackages() running twice
+      rules: lintRules,
+    });
   }
 }

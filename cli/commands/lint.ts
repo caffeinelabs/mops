@@ -27,11 +27,13 @@ export async function resolveDepRules(
 
   const resolvedPackages = await resolvePackages();
   const rules: string[] = [];
+  const matched = new Set<string>();
 
   for (const [name, version] of Object.entries(resolvedPackages)) {
     if (ext !== true && !ext.includes(name)) {
       continue;
     }
+    matched.add(name);
 
     const depType = getDependencyType(version);
     let pkgDir: string;
@@ -49,6 +51,17 @@ export async function resolveDepRules(
     }
   }
 
+  if (Array.isArray(ext)) {
+    const unresolved = ext.filter((n) => !matched.has(n));
+    if (unresolved.length > 0) {
+      console.warn(
+        chalk.yellow(
+          `[lint] extends: package(s) not found in dependencies: ${unresolved.join(", ")}`,
+        ),
+      );
+    }
+  }
+
   return rules;
 }
 
@@ -60,6 +73,13 @@ export async function collectLintRules(
     existsSync(path.join(rootDir, d)),
   );
   const configRules = config.lint?.rules ?? [];
+  for (const d of configRules) {
+    if (!existsSync(path.join(rootDir, d))) {
+      cliError(
+        `[lint] rules: directory '${d}' not found. Check your mops.toml [lint] config.`,
+      );
+    }
+  }
   const depRules = await resolveDepRules(config, rootDir);
   return [...localRules, ...configRules, ...depRules];
 }
@@ -98,7 +118,7 @@ export async function lint(
     args.push("--fix");
   }
   const rules =
-    options.rules && options.rules.length > 0
+    options.rules !== undefined
       ? options.rules
       : await collectLintRules(config, rootDir);
   rules.forEach((rule) => args.push("--rules", rule));

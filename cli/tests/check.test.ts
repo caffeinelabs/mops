@@ -122,7 +122,7 @@ describe("check", () => {
     expect(result.stdout).not.toMatch(/Stable compatibility/);
   });
 
-  test("lint is run after moc check passes when lintoko is configured", async () => {
+  test("lint is run after moc check passes when lintoko is configured or rules are present", async () => {
     const cwd = path.join(import.meta.dirname, "check/with-lint-pass");
     const result = await cli(["check", "Ok.mo"], { cwd });
     expect(result.exitCode).toBe(0);
@@ -141,5 +141,12 @@ describe("check", () => {
     const result = await cli(["check", "Ok.mo"], { cwd });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).not.toMatch(/Lint/);
+  });
+
+  test("--fix propagates to lint step", async () => {
+    const cwd = path.join(import.meta.dirname, "check/with-lint-pass");
+    const result = await cli(["check", "--fix", "Ok.mo"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/✓ Lint fixes applied/);
   });
 });
