@@ -4,7 +4,7 @@
 
 - Packages can ship lintoko rules for consumers in a `rules/` directory (distinct from `lint/`/`lints/` which check the package itself)
 - Add `[lint] extends` in `mops.toml` to pull in `rules/` from installed dependencies: `extends = ["pkg"]` for named packages or `extends = true` for all
-- Add `[lint] rules` in `mops.toml` for additional local rule directories (additive to `lint/`/`lints/` auto-discovery)
+- Add `[lint] rules` in `mops.toml` to override the default `lint/`/`lints/` rule directories with custom paths
 - `mops check` now runs `mops lint` after a successful type-check when `lintoko` is pinned in `[toolchain]` and rule directories are present; `--fix` propagates to both steps
 
 ## 2.5.1

@@ -86,12 +86,14 @@ Works similarly to ESLint plugins — packages expose rule files that consumers 
 
 ### `rules`
 
-Specify additional local rule directories. These are added on top of the auto-discovered `lint/` and `lints/` directories, not instead of them.
+Override the default rule directories with one or more local paths. When set, the auto-discovered `lint/` and `lints/` directories are ignored in favour of the directories listed here.
 
 ```toml
 [lint]
-rules = ["my-extra-rules"]
+rules = ["my-rules"]
 ```
+
+Rules from `[lint] extends` are always included on top, regardless of this setting.
 
 ### `args`
 
@@ -112,7 +114,7 @@ args = ["--severity", "warning"]
 ```
 
 :::tip
-The `--rules` CLI flag overrides all configured rule directories (including `extends` and local `lint/`/`lints/`). Use it for one-off overrides without changing `mops.toml`.
+The `--rules` CLI flag overrides all configured rule directories (including `[lint] rules`, `extends`, and the default `lint/`/`lints/`). Use it for one-off overrides without changing `mops.toml`.
 :::
 
 ## Publishing rules with a package

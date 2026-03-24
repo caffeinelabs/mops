@@ -79,9 +79,6 @@ export async function collectLintRules(
   config: Config,
   rootDir: string,
 ): Promise<string[]> {
-  const localRules = ["lint", "lints"].filter((d) =>
-    existsSync(path.join(rootDir, d)),
-  );
   const configRules = config.lint?.rules ?? [];
   for (const d of configRules) {
     if (!existsSync(path.join(rootDir, d))) {
@@ -90,8 +87,12 @@ export async function collectLintRules(
       );
     }
   }
+  const localRules =
+    configRules.length > 0
+      ? configRules
+      : ["lint", "lints"].filter((d) => existsSync(path.join(rootDir, d)));
   const depRules = await resolveDepRules(config, rootDir);
-  return [...localRules, ...configRules, ...depRules];
+  return [...localRules, ...depRules];
 }
 
 export interface LintOptions {
