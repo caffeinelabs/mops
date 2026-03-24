@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.5.0"
+    "latest": "2.5.1"
   },
   "versions": {
     "0.41.0": {
@@ -328,6 +328,14 @@
       "commitHash": "a7695b9b71f146b4eb39193dd93f9639be9fc32d",
       "url": "https://cli.mops.one/versions/2.5.0.tgz",
       "hash": "fd8ec74bce3f91ec2b4b967d3cd7e3678dc17a16433d71c5fe9757e07de051d0"
+    },
+    "2.5.1": {
+      "time": 1774343016608,
+      "size": 3437287,
+      "relseaseNotes": "* Fix `mops test` and `mops watch` breaking when dependency paths contain spaces\n* Fix `mops sync` incorrectly reporting version-pinned dependencies as missing/unused\n* Fix `mops update --lock ignore` not respecting the lock option during intermediate installs\n* Fix `mops update` crashing with unhandled error when GitHub API is unavailable\n* Fix `mops add` writing dependency to config even when GitHub download fails\n* Fix GitHub dependency install crashing the entire process instead of reporting the error\n* Fix version comparison treating short version strings (e.g. `1.0`) as equal to longer ones (e.g. `1.0.5`)\n* Fix `mops remove` not cleaning up transitive dependencies of GitHub packages\n* Fix corrupted `mops.lock` file causing an unhandled crash instead of a helpful error message\n* Fix `mops sources` resolving package config from wrong directory in some contexts\n* Harden lock file integrity check against package ID prefix collisions\n* `mops build` now reports invalid canister names instead of silently ignoring them\n* Document `baseDir`, `readme`, and `dfx` fields in `[package]` config\n",
+      "commitHash": "91a35338f4dad64bfcbb355e0040426dc92799fd",
+      "url": "https://cli.mops.one/versions/2.5.1.tgz",
+      "hash": "b64426d10399fea77727f386e693ae58fce22234cccbc1acc755a598c8863a36"
     }
   }
 }
