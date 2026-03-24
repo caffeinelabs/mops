@@ -102,10 +102,7 @@ For more details, see [`mops check-stable`](/cli/mops-check-stable).
 
 ## Lint integration
 
-After type-checking succeeds, `mops check` automatically runs [`mops lint`](/cli/mops-lint) when either of the following is true:
-
-- `lintoko` is pinned in `[toolchain]`
-- At least one rule directory is found (local `lint/`/`lints/`, `[lint].rules`, or `[lint].extends`)
+After type-checking succeeds, `mops check` automatically runs [`mops lint`](/cli/mops-lint) when `lintoko` is pinned in `[toolchain]`.
 
 This means `mops check` is the single command for all correctness checks — type errors and lint violations are both caught in one pass.
 

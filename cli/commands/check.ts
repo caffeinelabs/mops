@@ -174,11 +174,9 @@ export async function check(
   }
 
   const rootDir = getRootDir();
-  const lintRules = await collectLintRules(config, rootDir);
   const lintokoConfigured = !!config.toolchain?.lintoko;
-  // When lintoko is pinned but no rule dirs are found, lint runs with no --rules
-  // flags. Lintoko exits 0 in that case — it has nothing to check.
-  if (lintRules.length > 0 || lintokoConfigured) {
+  if (lintokoConfigured) {
+    const lintRules = await collectLintRules(config, rootDir);
     await lint(undefined, {
       verbose: options.verbose,
       fix: options.fix,
