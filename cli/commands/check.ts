@@ -173,13 +173,9 @@ export async function check(
     });
   }
 
-  const rootDir = getRootDir();
-  const lintokoConfigured = !!config.toolchain?.lintoko;
-  if (lintokoConfigured) {
+  if (config.toolchain?.lintoko) {
+    const rootDir = getRootDir();
     const lintRules = await collectLintRules(config, rootDir);
-    if (lintRules.length === 0) {
-      return;
-    }
     await lint(undefined, {
       verbose: options.verbose,
       fix: options.fix,
