@@ -380,6 +380,16 @@ export async function publish(
     }
   }
 
+  // pre-flight file count check (must match MAX_PACKAGE_FILES in PackagePublisher.mo)
+  const FILE_LIMIT = 1000;
+  if (files.length > FILE_LIMIT) {
+    console.log(
+      chalk.red("Error: ") +
+        `Too many files (${files.length}). Maximum is ${FILE_LIMIT}.`,
+    );
+    process.exit(1);
+  }
+
   // progress
   let total = files.length + 2;
   let step = 0;

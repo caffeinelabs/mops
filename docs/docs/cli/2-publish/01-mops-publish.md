@@ -35,3 +35,4 @@ You can also view the diff of the benchmark results between the current version 
 `--no-bench` - Do not run benchmarks
 
 `--verbose` - Verbose output (print file names to be uploaded)
+
