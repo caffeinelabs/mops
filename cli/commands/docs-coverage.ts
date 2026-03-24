@@ -100,12 +100,14 @@ function docFileCoverage(file: string) {
   let items = sections.map((section) => {
     let rawId = section.match(/^\[\[([^\]]+)\]\]/)?.[1] ?? "";
     let id = rawId.replace(/^type\./, "");
+    // mo-doc anchors types as [[type.X]]; classes/values have no prefix → "func"
     let type = rawId.startsWith("type.") ? "type" : "func";
     let definition = section.match(/^== (.+)$/m)?.[1]?.trim() ?? "";
 
-    // Text after the closing ---- is the doc comment (empty when undocumented)
+    // Text after the closing ---- is the doc comment (empty when undocumented).
+    // slice(2).join preserves any ---- that appears inside the comment itself.
     let parts = section.split(/^----$/m);
-    let comment = parts[2]?.trim() ?? "";
+    let comment = parts.slice(2).join("----").trim();
 
     return {
       file: moduleFile,
