@@ -271,6 +271,7 @@ export async function publish(
     "README.md",
     "LICENSE",
     "NOTICE",
+    "rules/*.toml",
     "!.mops/**",
     "!test/**",
     "!tests/**",
