@@ -7,6 +7,19 @@ sidebar_label: Environment Variables
 
 Mops CLI supports several environment variables to customize its behavior.
 
+## Network Selection
+
+### `MOPS_NETWORK`
+
+Override the active network (`local`, `staging`, or `ic`). Equivalent to `mops set-network` but without persisting to disk. Useful in CI/CD pipelines and Docker containers where `mops set-network` may not have write access.
+
+When set to `local`, the agent fetches the root key from the replica (required for local replicas) and defaults to `http://127.0.0.1:4943`.
+
+```bash
+export MOPS_NETWORK="local"
+mops install
+```
+
 ## Registry Configuration
 
 ### `MOPS_REGISTRY_HOST`
