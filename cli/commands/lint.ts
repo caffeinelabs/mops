@@ -99,6 +99,7 @@ export interface LintOptions {
   verbose: boolean;
   fix: boolean;
   rules?: string[];
+  files?: string[];
   extraArgs: string[];
 }
 
@@ -112,17 +113,22 @@ export async function lint(
     ? await toolchain.bin("lintoko")
     : "lintoko";
 
-  let globStr = filter ? `**/*${filter}*.mo` : "**/*.mo";
-  let filesToLint = globSync(path.join(rootDir, globStr), {
-    ...MOTOKO_GLOB_CONFIG,
-    cwd: rootDir,
-  });
-  if (filesToLint.length === 0) {
-    cliError(
-      filter
-        ? `No files found for filter '${filter}'`
-        : "No .mo files found in the project",
-    );
+  let filesToLint: string[];
+  if (options.files && options.files.length > 0) {
+    filesToLint = options.files;
+  } else {
+    let globStr = filter ? `**/*${filter}*.mo` : "**/*.mo";
+    filesToLint = globSync(path.join(rootDir, globStr), {
+      ...MOTOKO_GLOB_CONFIG,
+      cwd: rootDir,
+    });
+    if (filesToLint.length === 0) {
+      cliError(
+        filter
+          ? `No files found for filter '${filter}'`
+          : "No .mo files found in the project",
+      );
+    }
   }
 
   let args: string[] = [];

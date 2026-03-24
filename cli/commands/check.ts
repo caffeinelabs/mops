@@ -37,7 +37,8 @@ export async function check(
   files: string | string[],
   options: Partial<CheckOptions> = {},
 ): Promise<void> {
-  let fileList = Array.isArray(files) ? files : files ? [files] : [];
+  const explicitFiles = Array.isArray(files) ? files : files ? [files] : [];
+  let fileList = [...explicitFiles];
 
   const config = readConfig();
 
@@ -180,6 +181,7 @@ export async function check(
       verbose: options.verbose,
       fix: options.fix,
       rules: lintRules,
+      files: explicitFiles.length > 0 ? explicitFiles : undefined,
     });
   }
 }

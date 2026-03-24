@@ -113,7 +113,7 @@ mops check --fix
 `--fix` is forwarded to both the Motoko compiler and lintoko, so both type-level and lint fixes are applied in a single invocation.
 
 :::note
-Linting always runs on **all** `.mo` files in the project, regardless of which files were passed to `mops check`. For example, `mops check src/Main.mo` type-checks only `src/Main.mo`, but lint covers every `.mo` file in the project.
+When files are passed explicitly (e.g. `mops check src/Main.mo`), linting is scoped to those same files. When no files are specified and `mops check` resolves entrypoints from `[canisters]`, linting covers all `.mo` files in the project.
 :::
 
 :::info
