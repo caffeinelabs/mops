@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import chalk from "chalk";
 import { globSync } from "glob";
-import { JSDOM } from "jsdom";
 import { docs } from "./docs.js";
 
 export type DocsCoverageReporter =
@@ -30,12 +29,12 @@ export async function docsCoverage(options: Partial<DocsCoverageOptions> = {}) {
   await docs({
     source,
     output: docsDir,
-    format: "html",
+    format: "adoc",
     silent: true,
   });
 
-  let files = globSync(`${docsDir}/**/*.html`, {
-    ignore: [`${docsDir}/**/index.html`],
+  let files = globSync(`${docsDir}/**/*.adoc`, {
+    ignore: [`${docsDir}/**/*.test.adoc`, `${docsDir}/test/**/*`],
   });
   let coverages = [];
 
@@ -88,35 +87,39 @@ export async function docsCoverage(options: Partial<DocsCoverageOptions> = {}) {
 }
 
 function docFileCoverage(file: string) {
-  let dom = new JSDOM(readFileSync(file, "utf-8"));
+  let content = readFileSync(file, "utf-8");
 
-  let module = dom.window.document.querySelector("h1")?.textContent || "";
+  // Module name is on the line after the [[module.*]] anchor
+  let module =
+    content.match(/^\[\[module\.[^\]]+\]\]\n= (.+)$/m)?.[1]?.trim() || "";
   let moduleFile = `${module}.mo`;
 
-  let items = [...dom.window.document.querySelectorAll("h4")].map((h4) => {
-    let id = h4.getAttribute("id")?.replace("type.", "");
-    let type = h4.className
-      .replace("-declaration", "")
-      .replace("function", "func");
-    let definition = h4.textContent;
-    let comment = h4.parentElement?.querySelector("p + p")?.textContent;
+  // Split into per-declaration sections at every [[id]] that is NOT [[module.*]]
+  let sections = content.split(/^(?=\[\[(?!module\.))/m).slice(1);
+
+  let items = sections.map((section) => {
+    let rawId = section.match(/^\[\[([^\]]+)\]\]/)?.[1] ?? "";
+    let id = rawId.replace(/^type\./, "");
+    let type = rawId.startsWith("type.") ? "type" : "func";
+    let definition = section.match(/^== (.+)$/m)?.[1]?.trim() ?? "";
+
+    // Text after the closing ---- is the doc comment (empty when undocumented)
+    let parts = section.split(/^----$/m);
+    let comment = parts[2]?.trim() ?? "";
+
     return {
       file: moduleFile,
       id,
       type,
       definition,
       comment,
-      covered: (comment || "").length >= 5,
+      covered: comment.length >= 5,
     };
   });
 
-  let coverage = 0;
-  if (!items.length) {
-    coverage = 100;
-  } else {
-    coverage =
-      (items.filter((item) => item.covered).length / items.length) * 100;
-  }
+  let coverage = !items.length
+    ? 100
+    : (items.filter((item) => item.covered).length / items.length) * 100;
 
   return { file: moduleFile, coverage, items };
 }
