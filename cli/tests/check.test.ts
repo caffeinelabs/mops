@@ -122,7 +122,7 @@ describe("check", () => {
     expect(result.stdout).not.toMatch(/Stable compatibility/);
   });
 
-  test("lint is run after moc check passes when lintoko is configured or rules are present", async () => {
+  test("lint runs after moc check and passes", async () => {
     const cwd = path.join(import.meta.dirname, "check/with-lint-pass");
     const result = await cli(["check", "Ok.mo"], { cwd });
     expect(result.exitCode).toBe(0);
