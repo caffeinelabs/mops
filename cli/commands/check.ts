@@ -177,6 +177,9 @@ export async function check(
   const lintokoConfigured = !!config.toolchain?.lintoko;
   if (lintokoConfigured) {
     const lintRules = await collectLintRules(config, rootDir);
+    if (lintRules.length === 0) {
+      return;
+    }
     await lint(undefined, {
       verbose: options.verbose,
       fix: options.fix,

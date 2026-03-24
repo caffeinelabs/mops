@@ -68,12 +68,16 @@ The `[lint]` section in `mops.toml` controls how rules are collected.
 
 Pull in `rules/` directories from installed package dependencies. This is the primary way to consume lint rules shipped by a library.
 
+Include rules from specific dependencies:
+
 ```toml
-# Include rules from specific dependencies
 [lint]
 extends = ["base", "map"]
+```
 
-# Include rules from ALL dependencies (including transitive ones)
+Include rules from ALL dependencies (including transitive ones):
+
+```toml
 [lint]
 extends = true
 ```

@@ -117,7 +117,11 @@ export async function lint(
     cwd: rootDir,
   });
   if (filesToLint.length === 0) {
-    cliError(`No files found for filter '${filter}'`);
+    cliError(
+      filter
+        ? `No files found for filter '${filter}'`
+        : "No .mo files found in the project",
+    );
   }
 
   let args: string[] = [];
