@@ -121,12 +121,14 @@ The `--rules` CLI flag overrides all configured rule directories (including `[li
 
 Packages can ship lintoko rules for their consumers by placing `.toml` rule files in a `rules/` directory at the package root. Consumers opt into them via `[lint] extends`.
 
+`rules/*.toml` files are included automatically when running `mops publish` — no extra `[package] files` configuration needed. Rules must be flat (lintoko does not recurse into subdirectories of `--rules`).
+
 This is distinct from the `lint/` or `lints/` directories, which are used to check the package itself and are not consumed by downstream users.
 
 ```
 my-package/
 ├── src/           # Motoko source (published, used via mops sources)
-├── rules/         # Lintoko rules for consumers (published)
+├── rules/         # Lintoko rules for consumers (published automatically)
 └── lint/          # Lintoko rules for self-check (not for consumers)
 ```
 
