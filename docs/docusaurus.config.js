@@ -1,8 +1,10 @@
 // @ts-check
-// Note: type annotations allow type checking and IDEs autocompletion
+// `@type` JSDoc annotations allow editor autocompletion and type checking
+// (when paired with `@ts-check`).
+// See: https://docusaurus.io/docs/api/docusaurus-config
 
-const lightCodeTheme = require('prism-react-renderer/themes/github');
-const darkCodeTheme = require('prism-react-renderer/themes/dracula');
+import {themes as prismThemes} from 'prism-react-renderer';
+import webpack from 'webpack';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -22,7 +24,11 @@ const config = {
 	projectName: 'docusaurus', // Usually your repo name.
 
 	onBrokenLinks: 'throw',
-	onBrokenMarkdownLinks: 'warn',
+	markdown: {
+		hooks: {
+			onBrokenMarkdownLinks: 'warn',
+		},
+	},
 
 	// Even if you don't use internalization, you can use this field to set useful
 	// metadata like html lang. For example, if your site is Chinese, you may want
@@ -39,20 +45,20 @@ const config = {
 			({
 				docs: {
 					routeBasePath: '/',
-					sidebarPath: require.resolve('./sidebars.js'),
+					sidebarPath: './sidebars.js',
 					// Please change this to your repo.
 					// Remove this to remove the "edit this page" links.
 					editUrl: 'https://github.com/caffeinelabs/mops/edit/main/docs/',
 				},
 				blog: false,
 				theme: {
-					customCss: require.resolve('./src/css/custom.css'),
+					customCss: './src/css/custom.css',
 				},
 			}),
 		],
 	],
 	clientModules: [
-		require.resolve('../ui-kit/index.js'),
+		'../ui-kit/index.js',
 	],
 	themeConfig:
 		/** @type {import('@docusaurus/preset-classic').ThemeConfig} */
@@ -90,8 +96,8 @@ const config = {
 				// copyright: `Copyright © ${new Date().getFullYear()} MOPS`,
 			},
 			prism: {
-				theme: lightCodeTheme,
-				darkTheme: darkCodeTheme,
+				theme: prismThemes.github,
+				darkTheme: prismThemes.dracula,
 			},
 			fathomAnalytics: {
 				siteId: 'THOISMFA',
@@ -100,8 +106,21 @@ const config = {
 
 	plugins: [
 		'docusaurus-plugin-fathom',
+		// Workaround: webpack 5.96+ broke HMR when webpack-dev-server applies
+		// HotModuleReplacementPlugin after compiler creation. Adding it here
+		// ensures it's in the config before compiler instantiation.
+		// See: https://github.com/webpack/webpack/issues/19120
+		function hmrCompatibilityFix() {
+			return {
+				name: 'webpack-hmr-compat',
+				configureWebpack(config, isServer) {
+					if (isServer || config.mode === 'production') return {};
+					return {plugins: [new webpack.HotModuleReplacementPlugin()]};
+				},
+			};
+		},
 	],
-	
+
 	scripts: [
 		{
 			src: '/js/loadtags.js',
@@ -110,4 +129,4 @@ const config = {
 	],
 };
 
-module.exports = config;
+export default config;
