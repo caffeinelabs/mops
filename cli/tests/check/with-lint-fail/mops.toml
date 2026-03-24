@@ -4,3 +4,6 @@ lintoko = "0.7.0"
 
 [moc]
 args = ["--default-persistent-actors"]
+
+[canisters.backend]
+main = "NoBoolSwitch.mo"

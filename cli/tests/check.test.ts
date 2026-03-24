@@ -124,28 +124,28 @@ describe("check", () => {
 
   test("lint runs after moc check and passes", async () => {
     const cwd = path.join(import.meta.dirname, "check/with-lint-pass");
-    const result = await cli(["check", "Ok.mo"], { cwd });
+    const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/✓ Lint succeeded/);
   });
 
   test("check fails when lint finds errors", async () => {
     const cwd = path.join(import.meta.dirname, "check/with-lint-fail");
-    const result = await cli(["check", "NoBoolSwitch.mo"], { cwd });
+    const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/no-bool-switch/);
   });
 
   test("lint is skipped when lintoko not configured and no rules exist", async () => {
-    const cwd = path.join(import.meta.dirname, "check/success");
-    const result = await cli(["check", "Ok.mo"], { cwd });
+    const cwd = path.join(import.meta.dirname, "check/canisters");
+    const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).not.toMatch(/Lint/);
   });
 
   test("--fix flag reaches lint step", async () => {
     const cwd = path.join(import.meta.dirname, "check/with-lint-pass");
-    const result = await cli(["check", "--fix", "Ok.mo"], { cwd });
+    const result = await cli(["check", "--fix"], { cwd });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/✓ Lint fixes applied/);
   });
