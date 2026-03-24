@@ -26,7 +26,8 @@
     "@docusaurus/module-type-aliases": "3.9.2",
     "@docusaurus/types": "3.9.2",
     "@tsconfig/docusaurus": "^2.0.3",
-    "typescript": "~5.4.0"
+    "typescript": "~5.4.0",
+    "webpack": "*"
   },
   "browserslist": {
     "production": [
