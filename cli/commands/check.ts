@@ -180,7 +180,6 @@ export async function check(
     await lint(undefined, {
       verbose: options.verbose,
       fix: options.fix,
-      // Pass pre-collected rules (possibly empty) to avoid resolvePackages() running twice
       rules: lintRules,
     });
   }
