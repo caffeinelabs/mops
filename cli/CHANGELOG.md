@@ -2,6 +2,9 @@
 
 ## Next
 
+- Raise package file limit from 300 to 1000; `mops publish` now fails fast with a clear error if the limit is exceeded
+- Fix `mops docs coverage` crashing with out-of-memory on packages with many source files (replaced JSDOM with a lightweight adoc parser)
+
 ## 2.5.1
 - Fix `mops test` and `mops watch` breaking when dependency paths contain spaces
 - Fix `mops sync` incorrectly reporting version-pinned dependencies as missing/unused

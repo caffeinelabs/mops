@@ -8,6 +8,7 @@ import Char "mo:base/Char";
 import Array "mo:base/Array";
 import Option "mo:base/Option";
 import Iter "mo:base/Iter";
+import Nat "mo:base/Nat";
 import Sha256 "mo:sha2/Sha256";
 
 import Registry "./registry/Registry";
@@ -42,7 +43,7 @@ module {
   };
 
   public class PackagePublisher(registry : Registry.Registry, storageManager : StorageManager.StorageManager) {
-    let MAX_PACKAGE_FILES = 300;
+    let MAX_PACKAGE_FILES = 1000;
     let MAX_PACKAGE_SIZE = 1024 * 1024 * 28; // 28MB
 
     let publishingPackages = TrieMap.TrieMap<PublishingId, PublishingPackage>(Text.equal, Text.hash);
@@ -152,7 +153,7 @@ module {
 
       let ?pubFiles = publishingFiles.get(publishingId) else return #err("Publishing files not found");
       if (pubFiles.size() >= MAX_PACKAGE_FILES) {
-        return #err("Maximum number of package files: 300");
+        return #err("Maximum number of package files: " # Nat.toText(MAX_PACKAGE_FILES));
       };
 
       let moMd = Text.endsWith(path, #text(".mo")) or Text.endsWith(path, #text(".md"));
