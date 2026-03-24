@@ -4,6 +4,7 @@
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
 import {themes as prismThemes} from 'prism-react-renderer';
+import webpack from 'webpack';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -57,7 +58,7 @@ const config = {
 		],
 	],
 	clientModules: [
-		require.resolve('../ui-kit/index.js'),
+		'../ui-kit/index.js',
 	],
 	themeConfig:
 		/** @type {import('@docusaurus/preset-classic').ThemeConfig} */
@@ -114,8 +115,7 @@ const config = {
 				name: 'webpack-hmr-compat',
 				configureWebpack(config, isServer) {
 					if (isServer || config.mode === 'production') return {};
-					const {HotModuleReplacementPlugin} = require('webpack');
-					return {plugins: [new HotModuleReplacementPlugin()]};
+					return {plugins: [new webpack.HotModuleReplacementPlugin()]};
 				},
 			};
 		},
