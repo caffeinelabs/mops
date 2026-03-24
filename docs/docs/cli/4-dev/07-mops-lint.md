@@ -73,12 +73,12 @@ Pull in `rules/` directories from installed package dependencies. This is the pr
 [lint]
 extends = ["base", "map"]
 
-# Include rules from ALL dependencies
+# Include rules from ALL dependencies (including transitive ones)
 [lint]
 extends = true
 ```
 
-Works analogously to `extends` in ESLint — named packages or `true` for all.
+Works similarly to ESLint plugins — packages expose rule files that consumers explicitly opt into. Named entries (`extends = ["pkg"]`) pull in only the listed packages. `extends = true` pulls in every resolved package including transitive dependencies, so prefer named entries in projects with large dependency graphs.
 
 ### `rules`
 

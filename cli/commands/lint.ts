@@ -16,7 +16,7 @@ import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { existsSync } from "node:fs";
 import { Config } from "../types.js";
 
-export async function resolveDepRules(
+async function resolveDepRules(
   config: Config,
   rootDir: string,
 ): Promise<string[]> {
@@ -28,6 +28,7 @@ export async function resolveDepRules(
   const resolvedPackages = await resolvePackages();
   const rules: string[] = [];
   const matched = new Set<string>();
+  const hasRules = new Set<string>();
 
   for (const [name, version] of Object.entries(resolvedPackages)) {
     if (ext !== true && !ext.includes(name)) {
@@ -48,6 +49,7 @@ export async function resolveDepRules(
     const rulesDir = path.join(pkgDir, "rules");
     if (existsSync(rulesDir)) {
       rules.push(path.relative(rootDir, rulesDir));
+      hasRules.add(name);
     }
   }
 
@@ -57,6 +59,14 @@ export async function resolveDepRules(
       console.warn(
         chalk.yellow(
           `[lint] extends: package(s) not found in dependencies: ${unresolved.join(", ")}`,
+        ),
+      );
+    }
+    const noRulesDir = ext.filter((n) => matched.has(n) && !hasRules.has(n));
+    if (noRulesDir.length > 0) {
+      console.warn(
+        chalk.yellow(
+          `[lint] extends: package(s) have no rules/ directory: ${noRulesDir.join(", ")}`,
         ),
       );
     }

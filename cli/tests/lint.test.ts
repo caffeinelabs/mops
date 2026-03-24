@@ -35,11 +35,22 @@ describe("lint", () => {
     expect(fail.stderr).toMatch(/no-bool-switch/);
   });
 
+  test("[lint] extends true - picks up rules/ from all dependencies", async () => {
+    const cwd = path.join(import.meta.dirname, "lint-extends-all");
+    const ok = await cli(["lint", "Ok"], { cwd });
+    expect(ok.exitCode).toBe(0);
+
+    const fail = await cli(["lint", "NoBoolSwitch"], { cwd });
+    expect(fail.exitCode).toBe(1);
+    expect(fail.stderr).toMatch(/no-bool-switch/);
+  });
+
   test("[lint] extends - dep not in extends list is ignored", async () => {
     // my-pkg has rules/ but extends only lists "other-pkg" (which doesn't exist),
     // so no dep rules are loaded and NoBoolSwitch.mo passes with exit 0.
     const cwd = path.join(import.meta.dirname, "lint-extends-ignored");
     const result = await cli(["lint", "NoBoolSwitch"], { cwd });
     expect(result.exitCode).toBe(0);
+    expect(result.stderr).toMatch(/not found in dependencies/);
   });
 });

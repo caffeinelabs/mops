@@ -143,7 +143,7 @@ describe("check", () => {
     expect(result.stdout).not.toMatch(/Lint/);
   });
 
-  test("--fix propagates to lint step", async () => {
+  test("--fix flag reaches lint step", async () => {
     const cwd = path.join(import.meta.dirname, "check/with-lint-pass");
     const result = await cli(["check", "--fix", "Ok.mo"], { cwd });
     expect(result.exitCode).toBe(0);
