@@ -37,7 +37,6 @@ import { getPackageDetails = _getPackageDetails } "./registry/getPackageDetails"
 import { packagesByCategory } "./registry/packagesByCategory";
 import { getDefaultPackages = _getDefaultPackages } "./registry/getDefaultPackages";
 import { getPackageDependents = _getPackageDependents } "./registry/getPackageDependents";
-import { verifyPackageRepository } "./verifyPackageRepository";
 import PackageUtils "./utils/package-utils";
 
 actor class Main() = this {
@@ -120,23 +119,6 @@ actor class Main() = this {
     getPackageSummaryWithChanges(registry, users, downloadLog, name, version);
   };
 
-  public shared query func transformRequest(arg : IC.TransformArg) : async IC.HttpRequestResult {
-    {
-      status = arg.response.status;
-      body = arg.response.body;
-      headers = [];
-    };
-  };
-
-  let transform : IC.Transform = {
-    function = transformRequest;
-    context = Blob.fromArray([]);
-  };
-
-  func _verifyPackageRepo(config : PackageConfigV3) : async Result.Result<(), Err> {
-    await verifyPackageRepository(config.name, config.repository, transform);
-  };
-
   // PUBLIC
 
   // Publication
@@ -145,21 +127,7 @@ actor class Main() = this {
       configPub with
       requirements = Option.get(configPub.requirements, []);
     };
-
-    let pubRes = await packagePublisher.startPublish(caller, config);
-    if (Result.isErr(pubRes)) {
-      return pubRes;
-    };
-
-    let repoVerifyRes = await _verifyPackageRepo(config);
-    switch (repoVerifyRes) {
-      case (#ok) {};
-      case (#err(err)) {
-        return #err(err);
-      };
-    };
-
-    return pubRes;
+    await packagePublisher.startPublish(caller, config);
   };
 
   public shared ({ caller }) func startFileUpload(publishingId : PublishingId, path : Text.Text, chunkCount : Nat, firstChunk : Blob) : async Result.Result<FileId, Err> {

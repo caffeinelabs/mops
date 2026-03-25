@@ -83,7 +83,7 @@ export async function publish(
   }
 
   // desired fields
-  for (let key of ["description", "repository"]) {
+  for (let key of ["description"]) {
     // @ts-ignore
     if (!config.package[key] && !process.env.CI) {
       let res = await prompts({
@@ -120,6 +120,14 @@ export async function publish(
     }
   }
 
+  // disabled fields
+  for (let key of ["dfx", "moc", "homepage", "documentation", "donation"]) {
+    if ((config.package as any)[key]) {
+      console.log(chalk.red("Error: ") + `package.${key} is not supported yet`);
+      process.exit(1);
+    }
+  }
+
   // check lengths
   let keysMax = {
     name: 50,
@@ -130,7 +138,7 @@ export async function publish(
     documentation: 300,
     homepage: 300,
     readme: 100,
-    license: 30,
+    license: 40,
     files: 20,
     dfx: 10,
     moc: 10,
@@ -166,18 +174,12 @@ export async function publish(
     }
 
     for (let dep of Object.values(config.dependencies)) {
-      if (dep.repo && !process.env.CI) {
-        let res = await prompts({
-          type: "confirm",
-          name: "ok",
-          message:
-            chalk.yellow(
-              "GitHub dependencies make the registry less reliable and limit its capabilities.\nIf you are the owner of the dependency, please consider publishing it to the Mops registry.",
-            ) + "\n\nPublish anyway?",
-        });
-        if (!res.ok) {
-          return;
-        }
+      if (dep.repo) {
+        console.log(
+          chalk.red("Error: ") +
+            "GitHub dependencies are no longer supported.\nIf you are the owner of the dependency, please publish it to the Mops registry.",
+        );
+        process.exit(1);
       }
     }
   }

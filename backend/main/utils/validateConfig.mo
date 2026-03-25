@@ -95,10 +95,6 @@ module {
       return #err("invalid config: name max length is " # Nat.toText(CONFIG_MAX_SIZES.name));
     };
 
-    // if (config.repository.size() == 0) {
-    //   return #err("invalid config: repository cannot be empty");
-    // };
-
     // reserved package names
     for (reserved in reservedNames.vals()) {
       if (config.name == reserved) {

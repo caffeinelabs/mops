@@ -2,6 +2,11 @@
 
 ## Next
 
+- `mops publish` no longer requires a `repository` field — it is now optional metadata (used by the registry UI for source links)
+- `mops publish` now hard-errors on GitHub dependencies instead of prompting; the backend has rejected them for some time and the prompt was misleading
+- `mops publish` now fails fast with a clear error when unsupported fields (`dfx`, `moc`, `homepage`, `documentation`, `donation`) are set in `mops.toml`
+- Fix `mops publish` reporting incorrect max length for `license` field (was 30, now matches backend limit of 40)
+
 ## 2.6.0
 
 - Packages can ship lintoko rules for consumers in a `rules/` directory (distinct from `lint/`/`lints/` which check the package itself); `rules/*.toml` files are included automatically when running `mops publish`
