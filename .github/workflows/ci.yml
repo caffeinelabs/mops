@@ -6,6 +6,8 @@ on:
       - main
       - master
   pull_request:
+    paths-ignore:
+      - 'cli-releases/**'
 
 permissions:
   contents: read
