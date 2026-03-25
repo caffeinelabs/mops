@@ -4,7 +4,7 @@ name: release-pr
 # update, then pushes the tag on merge to kick off the release pipeline.
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened, labeled, closed]
+    types: [opened, edited, synchronize, reopened, closed]
     branches:
       - main
 
