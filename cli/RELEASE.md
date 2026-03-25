@@ -21,7 +21,7 @@ cd cli
 npm version patch --no-git-tag-version  # or: minor / major
 ```
 
-## 3. Create a release PR
+## 3. Create a release PR and enable auto-merge
 
 ```bash
 git checkout -b <username>/release-X.Y.Z
@@ -32,18 +32,13 @@ gh pr create \
   --title "release: CLI vX.Y.Z" \
   --body "Release CLI vX.Y.Z." \
   --label release
+gh pr merge --auto --squash
 ```
 
 The [`release-pr.yml`](../.github/workflows/release-pr.yml) workflow runs on every update and validates:
 - PR title matches `release: CLI vX.Y.Z`
 - `cli/CHANGELOG.md` has an entry for the version
 - `cli/package.json` version matches
-
-## 4. Enable auto-merge
-
-```bash
-gh pr merge --auto --squash
-```
 
 Once all required checks pass the PR merges automatically. On merge, `release-pr.yml` pushes the `cli-vX.Y.Z` tag, which triggers the [`release.yml`](../.github/workflows/release.yml) workflow — it builds, publishes to npm, creates a GitHub Release, and deploys canisters (`cli.mops.one` and `docs.mops.one`).
 
