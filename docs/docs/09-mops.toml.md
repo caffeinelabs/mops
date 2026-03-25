@@ -16,12 +16,8 @@ sidebar_label: mops.toml
 | keywords      | Array of keywords (max 10 items, max 20 chars)   |
 | license       | Package license. Use [SPDX license identifier](https://spdx.org/licenses/) (e.g. `MIT`) |
 | files         | Array of glob patterns for files to include when publishing (default `["**/*.mo"]`) |
-| homepage      | _(not yet supported)_ Homepage URL for the package |
-| documentation | _(not yet supported)_ Documentation URL for the package |
 | baseDir       | Base directory for package sources (default `src`). Used by `mops sources` to resolve the package entrypoint |
 | readme        | Path to README file (default `README.md`)        |
-| ~~`dfx`~~     | **Deprecated.** Has no effect and cannot be published. |
-| ~~`moc`~~     | **Deprecated.** Use `[requirements].moc` to declare a minimum Motoko compiler version. |
 
 :::note
 Repository URL can include subdirectory when the package is located not in the root of the repository.
