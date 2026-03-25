@@ -34,6 +34,8 @@ gh pr create \
   --label release
 ```
 
+> **First time?** The `release` label must exist in the repo before `--label release` succeeds. Create it once at **Settings → Labels → New label** (name: `release`).
+
 The [`release-pr.yml`](../.github/workflows/release-pr.yml) workflow runs on every update and validates:
 - PR title matches `release: CLI vX.Y.Z`
 - `cli/CHANGELOG.md` has an entry for the version
