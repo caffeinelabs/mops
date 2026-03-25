@@ -53,8 +53,6 @@ Same structure as `[dependencies]`, with the exception that GitHub dependencies 
 
 `dev-dependencies` are only used for testing and benchmarking purposes. They are not installed when the package is used as a dependency.
 
-`dev-dependencies` are only used for testing and benchmarking purposes. They are not installed when the package is used as a dependency.
-
 
 ## [toolchain]
 See [toolchain management](/cli/toolchain) page for more details.
