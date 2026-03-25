@@ -47,8 +47,6 @@ The [`release-pr.yml`](../.github/workflows/release-pr.yml) workflow runs on eve
 gh pr merge --auto --squash
 ```
 
-> **Prerequisite:** auto-merge must be enabled at the repo level (**Settings → General → Allow auto-merge**), otherwise this command fails with a GraphQL error.
-
 Once all required checks pass the PR merges automatically. On merge, `release-pr.yml` pushes the `cli-vX.Y.Z` tag, which triggers the [`release.yml`](../.github/workflows/release.yml) workflow — it builds, publishes to npm, creates a GitHub Release, deploys canisters (`cli.mops.one` and `docs.mops.one`), and opens a PR with on-chain release artifacts.
 
 Monitor at [Actions → Release CLI](https://github.com/caffeinelabs/mops/actions/workflows/release.yml).
