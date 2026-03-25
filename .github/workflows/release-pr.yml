@@ -4,7 +4,7 @@ name: release-pr
 # update, then pushes the tag on merge to kick off the release pipeline.
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened, closed]
+    types: [opened, edited, synchronize, reopened, labeled, closed]
     branches:
       - main
 
@@ -14,8 +14,6 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     if: contains(github.event.pull_request.labels.*.name, 'release')
     outputs:
       version: ${{ steps.get_version.outputs.version }}
@@ -64,7 +62,9 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     permissions: {} # all privileged operations use the GitHub App token, not GITHUB_TOKEN
-    if: github.event.pull_request.merged == true
+    # action == 'closed' ensures this only fires on the actual merge event,
+    # not when the 'release' label is retroactively added to an already-merged PR.
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
     steps:
       - name: Create GitHub App Token
         uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
