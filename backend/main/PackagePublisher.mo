@@ -118,6 +118,9 @@ module {
         if (dep.repo.size() == 0 and registry.getPackageConfig(PackageUtils.getDepName(dep.name), dep.version) == null) {
           return #err("Dev Dependency " # packageId # " not found in registry");
         };
+        if (dep.repo.size() != 0) {
+          return #err("GitHub dev-dependencies are no longer supported to improve registry reliability and dependency resolution.");
+        };
       };
 
       let publishingId = await generateId();

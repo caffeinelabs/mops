@@ -200,6 +200,16 @@ export async function publish(
       }
       delete dep.path;
     }
+
+    for (let dep of Object.values(config["dev-dependencies"])) {
+      if (dep.repo) {
+        console.log(
+          chalk.red("Error: ") +
+            "GitHub dev-dependencies are no longer supported.\nIf you are the owner of the dependency, please publish it to the Mops registry.",
+        );
+        process.exit(1);
+      }
+    }
   }
 
   if (config.package.keywords) {
@@ -347,7 +357,10 @@ export async function publish(
   // parse changelog
   console.log("Parsing CHANGELOG.md...");
   let changelog = parseChangelog(config.package.version);
-  if (!changelog && config.package.repository) {
+  if (
+    !changelog &&
+    config.package.repository?.startsWith("https://github.com/")
+  ) {
     console.log("Fetching release notes from GitHub...");
     changelog = await fetchGitHubReleaseNotes(
       config.package.repository,
