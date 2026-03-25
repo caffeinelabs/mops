@@ -14,6 +14,8 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     # Only run for PRs carrying the 'release' label
     if: contains(github.event.pull_request.labels.*.name, 'release')
     outputs:
@@ -67,6 +69,7 @@ jobs:
   tag-and-release:
     needs: validate
     runs-on: ubuntu-latest
+    permissions: {}  # all privileged operations use the GitHub App token, not GITHUB_TOKEN
     # Only execute when the PR is actually merged (not just closed), and only
     # for release PRs. The explicit label check guards against future refactors
     # that might remove the `needs` dependency.
