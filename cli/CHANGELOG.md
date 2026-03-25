@@ -2,6 +2,8 @@
 
 ## Next
 
+## 2.7.0
+
 - `mops publish` no longer requires a `repository` field — it is now optional metadata (used by the registry UI for source links)
 - `mops publish` now hard-errors on GitHub `[dependencies]` instead of prompting; the backend has rejected them for some time and the prompt was misleading
 - `mops publish` now fails fast with a clear error when unsupported fields (`dfx`, `moc`, `homepage`, `documentation`, `donation`) are set in `mops.toml`
