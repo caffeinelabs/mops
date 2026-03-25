@@ -53,6 +53,12 @@ Once all required checks pass the PR merges automatically. On merge, `release-pr
 
 Monitor at [Actions → Release CLI](https://github.com/caffeinelabs/mops/actions/workflows/release.yml).
 
+> **Note:** This workflow only deploys the `cli` and `docs` canisters. The `main`, `assets`, `blog`, and `play-frontend` canisters require a manual deploy. If a release includes changes to any of those (e.g. `backend/main/` or `frontend/`), upgrade them manually (staging first, then `ic`):
+>
+> ```bash
+> NODE_ENV=production dfx deploy --no-wallet --identity mops --network <staging|ic> <canister>
+> ```
+
 ## 5. Artifacts PR
 
 After the release pipeline completes, it creates and auto-merges a `cli-releases: vX.Y.Z artifacts` PR. No action needed unless it fails — monitor at [Actions → Release CLI](https://github.com/caffeinelabs/mops/actions/workflows/release.yml) and merge the artifacts PR manually if needed.
