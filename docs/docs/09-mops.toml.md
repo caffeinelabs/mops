@@ -16,13 +16,8 @@ sidebar_label: mops.toml
 | keywords      | Array of keywords (max 10 items, max 20 chars)   |
 | license       | Package license. Use [SPDX license identifier](https://spdx.org/licenses/) (e.g. `MIT`) |
 | files         | Array of glob patterns for files to include when publishing (default `["**/*.mo"]`) |
-| homepage      | Homepage URL for the package                     |
-| documentation | Documentation URL for the package                |
-| moc           | Motoko compiler version used to build the package |
-| donation      | Donation address                                 |
 | baseDir       | Base directory for package sources (default `src`). Used by `mops sources` to resolve the package entrypoint |
 | readme        | Path to README file (default `README.md`)        |
-| dfx           | dfx version used to build the package            |
 
 :::note
 Repository URL can include subdirectory when the package is located not in the root of the repository.
@@ -41,9 +36,11 @@ Make sure there is no `/tree/main/` in the URL.
 | --------------------- | ----------------------------------------------- |
 | `<mops_package_name>`<br/>Example: `base`        | Version in format x.y.z (e.g. `0.1.2`)              |
 | `<mops_package_name>@<pinned_version>`<br/>Example: `base@0.11.0`        | Version in format x.y.z (e.g. `0.1.2`)              |
-| `<github_package_name>`<br/>Example: `gh-pkg` | Format: `https://github.com/<repo>#<branch/tag/ref>`<br/>Example: `https://github.com/dfinity/motoko-base#moc-0.11.0` |
 | `<local_package_name>`<br/>Example: `shared` | Local path starting with `./`, `../`, or `/`<br/>Example: `./packages/shared` |
 
+:::note
+GitHub dependencies are not allowed in `[dependencies]`. Please publish the dependency to the Mops registry instead.
+:::
 
 Learn how Mops resolves dependencies [here](/how-dependency-resolution-works).
 
@@ -52,7 +49,7 @@ Learn about version pinning [here](/dependency-version-pinning).
 
 ## [dev-dependencies]
 
-Same structure as `[dependencies]`.
+Same structure as `[dependencies]`, with the exception that GitHub dependencies are allowed.
 
 `dev-dependencies` are only used for testing and benchmarking purposes. They are not installed when the package is used as a dependency.
 
