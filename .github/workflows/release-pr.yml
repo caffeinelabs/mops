@@ -1,10 +1,7 @@
 name: release-pr
 
-# Triggered on PRs labeled 'release'.
-# - validate: runs on every update during review to catch problems early
-# - tag-and-release: runs only on merge, independently extracts the version
-#   from the PR title so a transient validate failure at merge time can never
-#   block the tag push.
+# Triggered on PRs labeled 'release'. Validates changelog and PR title on every
+# update, then pushes the tag on merge to kick off the release pipeline.
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened, closed]
@@ -19,11 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    # Skip on close — we only want to validate during the review phase.
-    # tag-and-release is fully independent and does not depend on this job.
-    if: |
-      github.event.action != 'closed' &&
-      contains(github.event.pull_request.labels.*.name, 'release')
+    if: contains(github.event.pull_request.labels.*.name, 'release')
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -33,16 +28,11 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           VERSION=$(echo "$PR_TITLE" | sed -nE 's/^release: CLI v([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?)$/\1/p')
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Fail if version could not be extracted
-        env:
-          VERSION: ${{ steps.get_version.outputs.version }}
-        run: |
           if [[ -z "$VERSION" ]]; then
             echo "::error::Could not extract version from PR title. Title must be: 'release: CLI vX.Y.Z'"
             exit 1
           fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Detected release version: $VERSION"
 
       - name: Validate changelog entry exists
@@ -71,27 +61,11 @@ jobs:
           echo "package.json version matches: $PKG_VERSION"
 
   tag-and-release:
+    needs: validate
     runs-on: ubuntu-latest
     permissions: {} # all privileged operations use the GitHub App token, not GITHUB_TOKEN
-    # Only execute when the PR is actually merged (not just closed).
-    # Version is extracted here independently — this job does not depend on
-    # validate so a transient failure at merge time cannot block the tag push.
-    if: |
-      github.event.pull_request.merged == true &&
-      contains(github.event.pull_request.labels.*.name, 'release')
+    if: github.event.pull_request.merged == true
     steps:
-      - name: Extract version from PR title
-        id: get_version
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          VERSION=$(echo "$PR_TITLE" | sed -nE 's/^release: CLI v([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?)$/\1/p')
-          if [[ -z "$VERSION" ]]; then
-            echo "::error::Could not extract version from PR title. Title must be: 'release: CLI vX.Y.Z'"
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
       - name: Create GitHub App Token
         uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
         id: app-token
@@ -112,7 +86,7 @@ jobs:
 
       - name: Push tag to trigger release pipeline
         env:
-          VERSION: ${{ steps.get_version.outputs.version }}
+          VERSION: ${{ needs.validate.outputs.version }}
         run: |
           git tag "cli-v${VERSION}" -m "CLI v${VERSION}"
           git push origin "cli-v${VERSION}"
