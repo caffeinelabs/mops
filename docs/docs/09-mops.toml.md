@@ -154,14 +154,18 @@ These flags are applied after `[moc].args` and before per-canister `[canisters.<
 
 Settings for [`mops lint`](/cli/mops-lint).
 
-| Field | Description                                                     |
-| ----- | --------------------------------------------------------------- |
-| args  | Array of extra flags passed to `lintoko` (e.g. `["--severity", "warning"]`) |
+| Field   | Description                                                                                                                                                                         |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| args    | Array of extra flags passed to `lintoko` (e.g. `["--severity", "warning"]`)                                                                                                        |
+| rules   | Array of local rule directory paths to use (e.g. `["lint"]`). Overrides the default `lint/`/`lints/` directories when set.                                                         |
+| extends | Pull in `rules/` directories from installed dependencies. Set to `true` to include all dependencies that ship rules, or to an array of package names (e.g. `["pkg"]`) to be selective. |
 
 Example:
 ```toml
 [lint]
 args = ["--severity", "warning"]
+rules = ["my-rules"]
+extends = ["some-pkg"]
 ```
 
 
