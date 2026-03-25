@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.5.1"
+    "latest": "2.6.0"
   },
   "versions": {
     "0.41.0": {
@@ -336,6 +336,14 @@
       "commitHash": "91a35338f4dad64bfcbb355e0040426dc92799fd",
       "url": "https://cli.mops.one/versions/2.5.1.tgz",
       "hash": "b64426d10399fea77727f386e693ae58fce22234cccbc1acc755a598c8863a36"
+    },
+    "2.6.0": {
+      "time": 1774434808604,
+      "size": 2400843,
+      "relseaseNotes": "* Packages can ship lintoko rules for consumers in a `rules/` directory (distinct from `lint/`/`lints/` which check the package itself); `rules/*.toml` files are included automatically when running `mops publish`\n* Add `[lint] extends` in `mops.toml` to pull in `rules/` from installed dependencies: `extends = [\"pkg\"]` for named packages or `extends = true` for all\n* Add `[lint] rules` in `mops.toml` to override the default `lint/`/`lints/` rule directories with custom paths\n* `mops check` now runs `mops lint` after a successful type-check when `lintoko` is pinned in `[toolchain]`; lint is scoped to explicitly passed files when given, otherwise covers all `.mo` files; `--fix` propagates to both steps\n* Raise package file limit from 300 to 1000; `mops publish` now fails fast with a clear error if the limit is exceeded\n* Fix `mops docs coverage` crashing with out-of-memory on packages with many source files (replaced JSDOM with a lightweight adoc parser)\n",
+      "commitHash": "be939d98f713ffcc1201393b627a4a3625813ac6",
+      "url": "https://cli.mops.one/versions/2.6.0.tgz",
+      "hash": "c07461ab9dd99294d7929dd766fcc230a8c7154102670442f5a1b99dd83a4d99"
     }
   }
 }
