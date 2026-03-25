@@ -200,16 +200,6 @@ export async function publish(
       }
       delete dep.path;
     }
-
-    for (let dep of Object.values(config["dev-dependencies"])) {
-      if (dep.repo) {
-        console.log(
-          chalk.red("Error: ") +
-            "GitHub dev-dependencies are no longer supported.\nIf you are the owner of the dependency, please publish it to the Mops registry.",
-        );
-        process.exit(1);
-      }
-    }
   }
 
   if (config.package.keywords) {
