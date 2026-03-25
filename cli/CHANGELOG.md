@@ -2,6 +2,8 @@
 
 ## Next
 
+## 2.6.0
+
 - Packages can ship lintoko rules for consumers in a `rules/` directory (distinct from `lint/`/`lints/` which check the package itself); `rules/*.toml` files are included automatically when running `mops publish`
 - Add `[lint] extends` in `mops.toml` to pull in `rules/` from installed dependencies: `extends = ["pkg"]` for named packages or `extends = true` for all
 - Add `[lint] rules` in `mops.toml` to override the default `lint/`/`lints/` rule directories with custom paths
