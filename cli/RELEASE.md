@@ -55,7 +55,7 @@ Monitor at [Actions → Release CLI](https://github.com/caffeinelabs/mops/action
 
 ## 5. Artifacts PR
 
-After the release pipeline completes, it creates and auto-merges a `cli-releases: vX.Y.Z artifacts` PR. No action needed unless the job fails or emits a warning annotation — check job annotations in [Actions → Release CLI](https://github.com/caffeinelabs/mops/actions/workflows/release.yml) and merge the artifacts PR manually if needed.
+After the release pipeline completes, it creates and auto-merges a `cli-releases: vX.Y.Z artifacts` PR. No action needed unless it fails — monitor at [Actions → Release CLI](https://github.com/caffeinelabs/mops/actions/workflows/release.yml) and merge the artifacts PR manually if needed.
 
 ## Verify build
 
