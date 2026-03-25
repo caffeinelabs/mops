@@ -36,9 +36,11 @@ Make sure there is no `/tree/main/` in the URL.
 | --------------------- | ----------------------------------------------- |
 | `<mops_package_name>`<br/>Example: `base`        | Version in format x.y.z (e.g. `0.1.2`)              |
 | `<mops_package_name>@<pinned_version>`<br/>Example: `base@0.11.0`        | Version in format x.y.z (e.g. `0.1.2`)              |
-| `<github_package_name>`<br/>Example: `gh-pkg` | Format: `https://github.com/<repo>#<branch/tag/ref>`<br/>Example: `https://github.com/dfinity/motoko-base#moc-0.11.0` |
 | `<local_package_name>`<br/>Example: `shared` | Local path starting with `./`, `../`, or `/`<br/>Example: `./packages/shared` |
 
+:::note
+GitHub dependencies are not allowed in `[dependencies]` because they make the package unreliable for consumers. Use them in `[dev-dependencies]` instead, or publish the dependency to the Mops registry.
+:::
 
 Learn how Mops resolves dependencies [here](/how-dependency-resolution-works).
 
@@ -47,7 +49,9 @@ Learn about version pinning [here](/dependency-version-pinning).
 
 ## [dev-dependencies]
 
-Same structure as `[dependencies]`.
+Same structure as `[dependencies]`, with the exception that GitHub dependencies are allowed.
+
+`dev-dependencies` are only used for testing and benchmarking purposes. They are not installed when the package is used as a dependency.
 
 `dev-dependencies` are only used for testing and benchmarking purposes. They are not installed when the package is used as a dependency.
 
