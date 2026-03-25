@@ -3,7 +3,12 @@ import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
-import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
+import {
+  getGlobalMocArgs,
+  getRootDir,
+  readConfig,
+  resolveConfigPath,
+} from "../mops.js";
 import { autofixMotoko } from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import {
@@ -13,6 +18,7 @@ import {
 import { runStableCheck } from "./check-stable.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
+import { collectLintRules, lint } from "./lint.js";
 
 const MOC_ALL_LIBS_MIN_VERSION = "1.3.0";
 
@@ -31,7 +37,8 @@ export async function check(
   files: string | string[],
   options: Partial<CheckOptions> = {},
 ): Promise<void> {
-  let fileList = Array.isArray(files) ? files : files ? [files] : [];
+  const explicitFiles = Array.isArray(files) ? files : files ? [files] : [];
+  let fileList = [...explicitFiles];
 
   const config = readConfig();
 
@@ -164,6 +171,17 @@ export async function check(
       mocPath,
       globalMocArgs,
       options: { verbose: options.verbose, extraArgs: options.extraArgs },
+    });
+  }
+
+  if (config.toolchain?.lintoko) {
+    const rootDir = getRootDir();
+    const lintRules = await collectLintRules(config, rootDir);
+    await lint(undefined, {
+      verbose: options.verbose,
+      fix: options.fix,
+      rules: lintRules,
+      files: explicitFiles.length > 0 ? explicitFiles : undefined,
     });
   }
 }

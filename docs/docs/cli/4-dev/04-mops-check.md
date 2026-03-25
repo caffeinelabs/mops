@@ -100,6 +100,22 @@ skipIfMissing = true
 
 For more details, see [`mops check-stable`](/cli/mops-check-stable).
 
+## Lint integration
+
+After type-checking succeeds, `mops check` automatically runs [`mops lint`](/cli/mops-lint) when `lintoko` is pinned in `[toolchain]`.
+
+This means `mops check` is the single command for all correctness checks — type errors and lint violations are both caught in one pass.
+
+```
+mops check --fix
+```
+
+`--fix` is forwarded to both the Motoko compiler and lintoko, so both type-level and lint fixes are applied in a single invocation.
+
+:::note
+When files are passed explicitly (e.g. `mops check src/Main.mo`), linting is scoped to those same files. When no files are specified and `mops check` resolves entrypoints from `[canisters]`, linting covers all `.mo` files in the project.
+:::
+
 :::info
 `mops check` only type-checks files — it does not produce any compiled output. To compile canisters, use [`mops build`](/cli/mops-build).
 :::
