@@ -1,0 +1,92 @@
+name: release-pr
+
+# Triggered on PRs labeled 'release'. Validates changelog and PR title on every
+# update, then pushes the tag on merge to kick off the release pipeline.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, closed]
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'release')
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Extract version from PR title
+        id: get_version
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          VERSION=$(echo "$PR_TITLE" | sed -nE 's/^release: CLI v([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?)$/\1/p')
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::Could not extract version from PR title. Title must be: 'release: CLI vX.Y.Z'"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected release version: $VERSION"
+
+      - name: Validate changelog entry exists
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: |
+          ESCAPED=$(echo "$VERSION" | sed 's/\./\\./g')
+          NOTES=$(awk "/^##? ${ESCAPED}$/{found=1; next} found && /^##? [0-9]/{exit} found && /^##? Next/{exit} found" CHANGELOG.md)
+          if [[ -z "$NOTES" ]]; then
+            echo "::error::No changelog entry found for v${VERSION} in cli/CHANGELOG.md"
+            exit 1
+          fi
+          echo "Changelog entry found for v${VERSION}."
+
+      - name: Validate package.json version matches PR title
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [[ "$PKG_VERSION" != "$VERSION" ]]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match PR title version ($VERSION)"
+            exit 1
+          fi
+          echo "package.json version matches: $PKG_VERSION"
+
+  tag-and-release:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions: {} # all privileged operations use the GitHub App token, not GITHUB_TOKEN
+    # action == 'closed' ensures this only fires on the actual merge event,
+    # not when the 'release' label is retroactively added to an already-merged PR.
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    steps:
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
+        id: app-token
+        with:
+          app-id: ${{ vars.GENERIC_CI_RW_APP_ID }}
+          private-key: ${{ secrets.GENERIC_CI_RW_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Check out the merge commit so the tag points at the right SHA
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Configure git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Push tag to trigger release pipeline
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          git tag "cli-v${VERSION}" -m "CLI v${VERSION}"
+          git push origin "cli-v${VERSION}"
