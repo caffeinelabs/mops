@@ -39,7 +39,7 @@ Make sure there is no `/tree/main/` in the URL.
 | `<local_package_name>`<br/>Example: `shared` | Local path starting with `./`, `../`, or `/`<br/>Example: `./packages/shared` |
 
 :::note
-GitHub dependencies are not allowed in `[dependencies]` because they make the package unreliable for consumers. Use them in `[dev-dependencies]` instead, or publish the dependency to the Mops registry.
+GitHub dependencies are not allowed in `[dependencies]`. Please publish the dependency to the Mops registry instead.
 :::
 
 Learn how Mops resolves dependencies [here](/how-dependency-resolution-works).
