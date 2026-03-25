@@ -332,6 +332,16 @@ export async function publish(
     }
   }
 
+  // pre-flight file count check (must match MAX_PACKAGE_FILES in PackagePublisher.mo)
+  const FILE_LIMIT = 1000;
+  if (files.length > FILE_LIMIT) {
+    console.log(
+      chalk.red("Error: ") +
+        `Too many files (${files.length}). Maximum is ${FILE_LIMIT}.`,
+    );
+    process.exit(1);
+  }
+
   // parse changelog
   console.log("Parsing CHANGELOG.md...");
   let changelog = parseChangelog(config.package.version);
@@ -514,6 +524,8 @@ function parseChangelog(version: string): string {
   return changelog || "";
 }
 
+type GitHubRelease = { message?: string; body?: string };
+
 async function fetchGitHubReleaseNotes(
   repo: string,
   version: string,
@@ -522,13 +534,13 @@ async function fetchGitHubReleaseNotes(
   let res = await fetch(
     `https://api.github.com/repos${repoPath}/releases/tags/${version}`,
   );
-  let release = await res.json();
+  let release = (await res.json()) as GitHubRelease;
 
   if (release.message === "Not Found") {
     res = await fetch(
       `https://api.github.com/repos${repoPath}/releases/tags/v${version}`,
     );
-    release = await res.json();
+    release = (await res.json()) as GitHubRelease;
 
     if (release.message === "Not Found") {
       console.log(
@@ -540,5 +552,5 @@ async function fetchGitHubReleaseNotes(
     }
   }
 
-  return release.body;
+  return release.body ?? "";
 }

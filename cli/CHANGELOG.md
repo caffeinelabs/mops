@@ -6,6 +6,8 @@
 - Add `[lint] extends` in `mops.toml` to pull in `rules/` from installed dependencies: `extends = ["pkg"]` for named packages or `extends = true` for all
 - Add `[lint] rules` in `mops.toml` to override the default `lint/`/`lints/` rule directories with custom paths
 - `mops check` now runs `mops lint` after a successful type-check when `lintoko` is pinned in `[toolchain]`; lint is scoped to explicitly passed files when given, otherwise covers all `.mo` files; `--fix` propagates to both steps
+- Raise package file limit from 300 to 1000; `mops publish` now fails fast with a clear error if the limit is exceeded
+- Fix `mops docs coverage` crashing with out-of-memory on packages with many source files (replaced JSDOM with a lightweight adoc parser)
 
 ## 2.5.1
 - Fix `mops test` and `mops watch` breaking when dependency paths contain spaces

@@ -26,6 +26,10 @@ You can view the results on the package page in the `Benchmarks` tab.
 
 You can also view the diff of the benchmark results between the current version and the previous version in the `Versions` tab. Benchmarks compared by file name, not by the benchmark name.
 
+## File limit
+
+Packages may contain up to **1000 files**. If your package exceeds this limit, `mops publish` will exit early with an error before contacting the registry.
+
 ## Options
 
 `--no-docs` - Do not generate docs
@@ -35,3 +39,4 @@ You can also view the diff of the benchmark results between the current version 
 `--no-bench` - Do not run benchmarks
 
 `--verbose` - Verbose output (print file names to be uploaded)
+
