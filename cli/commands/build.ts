@@ -69,9 +69,11 @@ export async function build(
     }
     motokoPath = resolveConfigPath(motokoPath);
     const wasmPath = join(outputDir, `${canisterName}.wasm`);
+    const mostPath = join(outputDir, `${canisterName}.most`);
     let args = [
       "-c",
       "--idl",
+      "--stable-types",
       "-o",
       wasmPath,
       motokoPath,
@@ -115,6 +117,9 @@ export async function build(
       if (options.verbose && result.stdout && result.stdout.trim()) {
         console.log(result.stdout);
       }
+
+      options.verbose &&
+        console.log(chalk.gray(`Stable types written to ${mostPath}`));
 
       const generatedDidPath = join(outputDir, `${canisterName}.did`);
       const resolvedCandidPath = canister.candid
@@ -188,6 +193,7 @@ const managedFlags: Record<string, string> = {
   "-o": "use [build].outputDir in mops.toml or --output flag instead",
   "-c": "this flag is always set by mops build",
   "--idl": "this flag is always set by mops build",
+  "--stable-types": "this flag is always set by mops build",
   "--public-metadata": "this flag is managed by mops build",
 };
 
