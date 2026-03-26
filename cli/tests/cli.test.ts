@@ -21,7 +21,8 @@ describe("install", () => {
     const lockFile = path.join(cwd, "mops.lock");
     rmSync(lockFile, { force: true });
     try {
-      const result = await cli(["install"], { cwd });
+      // Unset CI so checkIntegrity uses the local default ("update")
+      const result = await cli(["install"], { cwd, env: { CI: undefined } });
       expect(result.exitCode).toBe(0);
       expect(existsSync(lockFile)).toBe(true);
       expect(result.stdout).toMatch(/mops\.lock created/);
@@ -36,9 +37,10 @@ describe("install", () => {
     const lockFile = path.join(cwd, "mops.lock");
     rmSync(lockFile, { force: true });
     try {
-      const first = await cli(["install"], { cwd });
+      // Unset CI so checkIntegrity uses the local default ("update")
+      const first = await cli(["install"], { cwd, env: { CI: undefined } });
       expect(first.exitCode).toBe(0);
-      const result = await cli(["install"], { cwd });
+      const result = await cli(["install"], { cwd, env: { CI: undefined } });
       expect(result.exitCode).toBe(0);
       expect(existsSync(lockFile)).toBe(true);
       expect(result.stdout).not.toMatch(/mops\.lock created/);
