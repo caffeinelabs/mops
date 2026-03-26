@@ -2,6 +2,8 @@
 
 ## Next
 
+- `mops build` now generates a `.most` (Motoko stable types) file alongside `.wasm` and `.did` for each canister; the `.most` file can be passed directly to `mops check-stable` to verify upgrade compatibility
+
 ## 2.7.0
 
 - `mops publish` no longer requires a `repository` field — it is now optional metadata (used by the registry UI for source links)
