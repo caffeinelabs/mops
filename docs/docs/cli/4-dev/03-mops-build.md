@@ -111,7 +111,6 @@ To use it for upgrade safety checking, save the `.most` file before deploying a 
 ```toml
 [canisters.backend.check-stable]
 path = ".deployed/backend.most"
-skipIfMissing = true
 ```
 
 With this in place, `mops check` automatically verifies upgrade compatibility on every run — no extra commands needed.
