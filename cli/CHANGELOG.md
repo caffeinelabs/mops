@@ -2,6 +2,8 @@
 
 ## Next
 
+- `mops.lock` is now created automatically the first time dependencies are installed — no need to run `mops i --lock update` once to opt in. Triggered by `mops install`, `mops add`, `mops remove`, `mops update`, `mops sync`, and `mops init` (when it installs dependencies). Applications should commit `mops.lock`; library authors should add it to `.gitignore`.
+
 ## 2.7.0
 
 - `mops publish` no longer requires a `repository` field — it is now optional metadata (used by the registry UI for source links)
