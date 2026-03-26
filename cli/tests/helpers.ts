@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 
 export interface CliOptions {
   cwd?: string;
+  env?: Record<string, string | undefined>;
 }
 
 // When MOPS_TEST_GLOBAL is set, invoke the globally-installed `mops` binary
@@ -12,12 +13,12 @@ export interface CliOptions {
 // code path where the binary lives outside the project tree.
 const useGlobalBinary = Boolean(process.env.MOPS_TEST_GLOBAL);
 
-export const cli = async (args: string[], { cwd }: CliOptions = {}) => {
+export const cli = async (args: string[], { cwd, env }: CliOptions = {}) => {
   const [cmd, cmdArgs] = useGlobalBinary
     ? ["mops", args]
     : ["npm", ["run", "--silent", "mops", "--", ...args]];
   return await execa(cmd, cmdArgs, {
-    env: { ...process.env, ...(cwd != null && { MOPS_CWD: cwd }) },
+    env: { ...process.env, ...(cwd != null && { MOPS_CWD: cwd }), ...env },
     ...(cwd != null && { cwd }),
     stdio: "pipe",
     reject: false,
