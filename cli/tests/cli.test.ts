@@ -17,7 +17,7 @@ describe("install", () => {
   jest.setTimeout(120_000);
 
   test("creates mops.lock automatically on first install", async () => {
-    const cwd = path.join(import.meta.dirname, "build/success");
+    const cwd = path.join(import.meta.dirname, "install/success");
     const lockFile = path.join(cwd, "mops.lock");
     rmSync(lockFile, { force: true });
     try {
@@ -33,7 +33,7 @@ describe("install", () => {
   });
 
   test("does not print 'mops.lock created' on subsequent installs", async () => {
-    const cwd = path.join(import.meta.dirname, "build/success");
+    const cwd = path.join(import.meta.dirname, "install/success");
     const lockFile = path.join(cwd, "mops.lock");
     rmSync(lockFile, { force: true });
     try {
@@ -52,7 +52,7 @@ describe("install", () => {
   });
 
   test("does not create mops.lock when --lock ignore is passed", async () => {
-    const cwd = path.join(import.meta.dirname, "build/success");
+    const cwd = path.join(import.meta.dirname, "install/success");
     const lockFile = path.join(cwd, "mops.lock");
     rmSync(lockFile, { force: true });
     try {
