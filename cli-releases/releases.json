@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.7.0"
+    "latest": "2.8.0"
   },
   "versions": {
     "0.41.0": {
@@ -352,6 +352,14 @@
       "commitHash": "49ca78b7b3b893e93c9446bd7b2e3d6e60ff43a1",
       "url": "https://cli.mops.one/versions/2.7.0.tgz",
       "hash": "c90e6ee94738d9a6f78f97ab8305874ee84ebd45c61a48b9bb3f6fefa8bbf48b"
+    },
+    "2.8.0": {
+      "time": 1774536680093,
+      "size": 2400938,
+      "relseaseNotes": "* `mops build` now generates a `.most` (Motoko stable types) file alongside `.wasm` and `.did` for each canister; the `.most` file can be passed directly to `mops check-stable` to verify upgrade compatibility\n* `mops.lock` is now created automatically the first time dependencies are installed — no need to run `mops i --lock update` once to opt in. Triggered by `mops install`, `mops add`, `mops remove`, `mops update`, `mops sync`, and `mops init` (when it installs dependencies). Applications should commit `mops.lock`; library authors should add it to `.gitignore`.\n",
+      "commitHash": "b8cf8c39dd73c88bac267d1224a5a3bd2fd78e14",
+      "url": "https://cli.mops.one/versions/2.8.0.tgz",
+      "hash": "9dfb65a25a220b498c1660e78438d316de554439e6f06d24dcfd4247d8a2b554"
     }
   }
 }
