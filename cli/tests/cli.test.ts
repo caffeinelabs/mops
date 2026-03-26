@@ -40,6 +40,7 @@ describe("install", () => {
       // Unset CI so checkIntegrity uses the local default ("update")
       const first = await cli(["install"], { cwd, env: { CI: undefined } });
       expect(first.exitCode).toBe(0);
+      expect(first.stdout).toMatch(/mops\.lock created/);
       const result = await cli(["install"], { cwd, env: { CI: undefined } });
       expect(result.exitCode).toBe(0);
       expect(existsSync(lockFile)).toBe(true);
