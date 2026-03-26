@@ -36,16 +36,8 @@ type LockFile = LockFileV1 | LockFileV2 | LockFileV3;
 export async function checkIntegrity(lock?: "check" | "update" | "ignore") {
   let force = !!lock;
 
-  if (
-    !lock &&
-    !process.env["CI"] &&
-    fs.existsSync(path.join(getRootDir(), "mops.lock"))
-  ) {
-    lock = "update";
-  }
-
   if (!lock) {
-    lock = process.env["CI"] ? "check" : "ignore";
+    lock = process.env["CI"] ? "check" : "update";
   }
 
   if (lock === "update") {
@@ -197,7 +189,13 @@ export async function updateLockFile() {
 
   let rootDir = getRootDir();
   let lockFile = path.join(rootDir, "mops.lock");
+  let isNew = !fs.existsSync(lockFile);
   fs.writeFileSync(lockFile, JSON.stringify(lockFileJson, null, 2));
+  if (isNew) {
+    console.log("mops.lock created.");
+    console.log("  Applications: commit this file.");
+    console.log("  Libraries: add mops.lock to .gitignore.");
+  }
 }
 
 // compare hashes of local files with hashes from the lock file

@@ -50,6 +50,7 @@ describe("build", () => {
     const customOut = path.join(cwd, "custom-out");
     const customWasm = path.join(customOut, "main.wasm");
     const customDid = path.join(customOut, "main.did");
+    const customMost = path.join(customOut, "main.most");
     const defaultDid = path.join(cwd, ".mops/.build/main.did");
 
     try {
@@ -57,6 +58,7 @@ describe("build", () => {
       expect(result.exitCode).toBe(0);
       expect(existsSync(customWasm)).toBe(true);
       expect(existsSync(customDid)).toBe(true);
+      expect(existsSync(customMost)).toBe(true);
       expect(existsSync(defaultDid)).toBe(false);
     } finally {
       cleanFixture(cwd, customOut);
@@ -76,6 +78,7 @@ describe("build", () => {
       expect(result.exitCode).toBe(0);
       expect(existsSync(path.join(outputDir, "foo.wasm"))).toBe(true);
       expect(existsSync(path.join(outputDir, "foo.did"))).toBe(true);
+      expect(existsSync(path.join(outputDir, "foo.most"))).toBe(true);
     } finally {
       cleanFixture(cwd, outputDir);
     }
@@ -88,7 +91,7 @@ describe("build", () => {
 
     try {
       await cliSnapshot(
-        ["build", "foo", "--", "-o", "x", "-c", "--idl"],
+        ["build", "foo", "--", "-o", "x", "-c", "--idl", "--stable-types"],
         { cwd },
         1,
       );

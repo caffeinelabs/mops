@@ -5,7 +5,8 @@ exports[`build error 1`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "build canister foo
-moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+Stable types written to .mops/.build/foo.most
 Adding metadata to .mops/.build/foo.wasm
 
 ✓ Built 1 canister successfully",
@@ -34,10 +35,12 @@ exports[`build ok 1`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "build canister foo
-moc-wrapper ["-c","--idl","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+Stable types written to .mops/.build/foo.most
 Adding metadata to .mops/.build/foo.wasm
 build canister bar
-moc-wrapper ["-c","--idl","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
+moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
+Stable types written to .mops/.build/bar.most
 Candid compatibility check passed for canister bar
 Adding metadata to .mops/.build/bar.wasm
 
@@ -82,6 +85,7 @@ exports[`build warns when args contain managed flags 1`] = `
   "stderr": "Warning: '-o' in args for canister foo may conflict with mops build — use [build].outputDir in mops.toml or --output flag instead
 Warning: '-c' in args for canister foo may conflict with mops build — this flag is always set by mops build
 Warning: '--idl' in args for canister foo may conflict with mops build — this flag is always set by mops build
+Warning: '--stable-types' in args for canister foo may conflict with mops build — this flag is always set by mops build
 Error while compiling canister foo
 ENOENT: no such file or directory, open '.mops/.build/foo.did'",
   "stdout": "build canister foo",
