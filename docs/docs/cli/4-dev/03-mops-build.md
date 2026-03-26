@@ -104,10 +104,16 @@ For manual compatibility checking, see [`mops check-candid`](/cli/mops-check-can
 
 ## Stable Types
 
-Each build produces a `<canister>.most` file in the output directory alongside the `.wasm` and `.did` files. This file contains the stable variable type signatures and can be used to verify upgrade safety before deploying a new version.
+Each build produces a `<canister>.most` file in the output directory alongside the `.wasm` and `.did` files. This file captures the stable variable type signatures of the current canister version.
 
-```
-mops check-stable .mops/.build/backend.most
+To use it for upgrade safety checking, save the `.most` file before deploying a new version (e.g. copy it to a committed path), then point `mops check` to it via `mops.toml`:
+
+```toml
+[canisters.backend.check-stable]
+path = ".deployed/backend.most"
+skipIfMissing = true
 ```
 
-See [`mops check-stable`](/cli/mops-check-stable) for details.
+With this in place, `mops check` automatically verifies upgrade compatibility on every run — no extra commands needed.
+
+See [`mops check`](/cli/mops-check#stable-compatibility-checking) for full configuration details.
