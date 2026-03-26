@@ -36,14 +36,6 @@ type LockFile = LockFileV1 | LockFileV2 | LockFileV3;
 export async function checkIntegrity(lock?: "check" | "update" | "ignore") {
   let force = !!lock;
 
-  if (
-    !lock &&
-    !process.env["CI"] &&
-    fs.existsSync(path.join(getRootDir(), "mops.lock"))
-  ) {
-    lock = "update";
-  }
-
   if (!lock) {
     lock = process.env["CI"] ? "check" : "update";
   }

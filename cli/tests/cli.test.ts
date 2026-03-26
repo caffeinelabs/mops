@@ -39,7 +39,22 @@ describe("install", () => {
       await cli(["install"], { cwd });
       const result = await cli(["install"], { cwd });
       expect(result.exitCode).toBe(0);
+      expect(existsSync(lockFile)).toBe(true);
       expect(result.stdout).not.toMatch(/mops\.lock created/);
+    } finally {
+      rmSync(lockFile, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
+  test("does not create mops.lock when --lock ignore is passed", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    const lockFile = path.join(cwd, "mops.lock");
+    rmSync(lockFile, { force: true });
+    try {
+      const result = await cli(["install", "--lock", "ignore"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(existsSync(lockFile)).toBe(false);
     } finally {
       rmSync(lockFile, { force: true });
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
