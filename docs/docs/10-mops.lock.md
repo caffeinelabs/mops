@@ -7,13 +7,13 @@ sidebar_label: mops.lock
 
 `mops.lock` is used to ensure integrity of dependencies, so that you can be sure that all dependencies have exactly the same source code as they had when the package author published them to the Mops Registry.
 
-`mops.lock` is created automatically the first time you run any of the following commands, and kept up to date on every subsequent run:
+`mops.lock` is created automatically the first time dependencies are installed, and kept up to date on every subsequent run. It is triggered by:
 - `mops install`
 - `mops add`
 - `mops remove`
 - `mops update`
 - `mops sync`
-- `mops init`
+- `mops init` (when it installs dependencies)
 
 `mops.lock` is maintained by Mops and should not be manually edited.
 

@@ -55,7 +55,11 @@ describe("install", () => {
     const lockFile = path.join(cwd, "mops.lock");
     rmSync(lockFile, { force: true });
     try {
-      const result = await cli(["install", "--lock", "ignore"], { cwd });
+      // Unset CI for consistency; --lock ignore bypasses auto-detection regardless
+      const result = await cli(["install", "--lock", "ignore"], {
+        cwd,
+        env: { CI: undefined },
+      });
       expect(result.exitCode).toBe(0);
       expect(existsSync(lockFile)).toBe(false);
     } finally {
@@ -63,4 +67,7 @@ describe("install", () => {
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
     }
   });
+
+  // mops add/remove/update/sync are not separately tested here because they
+  // all route through the same checkIntegrity code path tested above.
 });
