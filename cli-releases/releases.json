@@ -345,6 +345,14 @@
       "url": "https://cli.mops.one/versions/2.6.0.tgz",
       "hash": "c07461ab9dd99294d7929dd766fcc230a8c7154102670442f5a1b99dd83a4d99"
     },
+    "2.7.0": {
+      "time": 1774444620239,
+      "size": 2400870,
+      "relseaseNotes": "* `mops publish` no longer requires a `repository` field — it is now optional metadata (used by the registry UI for source links)\n* `mops publish` now hard-errors on GitHub `[dependencies]` instead of prompting; the backend has rejected them for some time and the prompt was misleading\n* `mops publish` now fails fast with a clear error when unsupported fields (`dfx`, `moc`, `homepage`, `documentation`, `donation`) are set in `mops.toml`\n* Fix `mops publish` reporting incorrect max length for `license` field (was 30, now matches backend limit of 40)\n",
+      "commitHash": "49ca78b7b3b893e93c9446bd7b2e3d6e60ff43a1",
+      "url": "https://cli.mops.one/versions/2.7.0.tgz",
+      "hash": "c90e6ee94738d9a6f78f97ab8305874ee84ebd45c61a48b9bb3f6fefa8bbf48b"
+    },
     "2.8.0": {
       "time": 1774536680093,
       "size": 2400938,
