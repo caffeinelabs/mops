@@ -153,7 +153,7 @@ export async function check(
 
     const stablePath = resolveConfigPath(stableConfig.path);
     if (!existsSync(stablePath)) {
-      if (stableConfig.skipIfMissing) {
+      if (stableConfig.skipIfMissing || process.env["MOPS_CHECK_STABLE_SKIP_IF_MISSING"] === "true") {
         continue;
       }
       cliError(
