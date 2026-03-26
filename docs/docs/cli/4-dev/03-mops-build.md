@@ -113,6 +113,6 @@ To use it for upgrade safety checking, save the `.most` file before deploying a 
 path = ".deployed/backend.most"
 ```
 
-With this in place, `mops check` automatically verifies upgrade compatibility on every run — no extra commands needed.
+With this in place, `mops check` automatically verifies upgrade compatibility on every run.
 
 See [`mops check`](/cli/mops-check#stable-compatibility-checking) for full configuration details.

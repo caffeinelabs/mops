@@ -47,7 +47,7 @@ Path to the old (deployed) version of the actor. Accepts two formats:
 - **`.most` file** — a pre-generated stable type signature. Used directly without compilation.
 
 :::tip
-`mops build` generates a `.most` file for each canister alongside `.wasm` and `.did`. Save it before deploying an upgrade, then configure `[canisters.<name>.check-stable]` in `mops.toml` so `mops check` verifies upgrade safety automatically on every run — no need to pass files manually.
+`mops build` generates a `.most` file for each canister alongside `.wasm` and `.did`. Save it before deploying an upgrade, then configure `[canisters.<name>.check-stable]` in `mops.toml` so `mops check` verifies upgrade safety automatically on every run.
 :::
 
 ### `[canister]`
