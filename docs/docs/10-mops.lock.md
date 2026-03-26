@@ -50,7 +50,7 @@ In CI, if `mops.lock` does not exist, integrity checking is skipped and no lock 
 
 ## Opting out
 
-To skip lock file creation and checks entirely, pass `--lock ignore` to any of the commands above:
+To skip lock file creation and checks for a single run, pass `--lock ignore` to `mops install`, `mops add`, `mops remove`, `mops update`, or `mops sync`:
 
 ```bash
 mops install --lock ignore

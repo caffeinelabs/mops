@@ -36,7 +36,8 @@ describe("install", () => {
     const lockFile = path.join(cwd, "mops.lock");
     rmSync(lockFile, { force: true });
     try {
-      await cli(["install"], { cwd });
+      const first = await cli(["install"], { cwd });
+      expect(first.exitCode).toBe(0);
       const result = await cli(["install"], { cwd });
       expect(result.exitCode).toBe(0);
       expect(existsSync(lockFile)).toBe(true);
