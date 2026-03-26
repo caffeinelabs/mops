@@ -46,6 +46,10 @@ Path to the old (deployed) version of the actor. Accepts two formats:
 - **`.mo` file** — the old Motoko source file. The command generates the `.most` stable type signature automatically.
 - **`.most` file** — a pre-generated stable type signature. Used directly without compilation.
 
+:::tip
+`mops build` generates a `.most` file for each canister alongside `.wasm` and `.did`. You can archive the `.most` output before upgrading and pass it directly here to avoid re-compiling the old source.
+:::
+
 ### `[canister]`
 
 Name of the canister to check against (as defined in `mops.toml`). The current entrypoint is resolved from `[canisters.<name>].main`.
