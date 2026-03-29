@@ -47,6 +47,13 @@ describe("check-stable", () => {
     }
   });
 
+  test("works with relative --actor-idl in moc args", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/actor-idl");
+    const result = await cli(["check-stable", "old.mo"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
   test("errors when old file does not exist", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/compatible");
     const result = await cli(["check-stable", "nonexistent.mo"], { cwd });
