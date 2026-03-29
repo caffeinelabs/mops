@@ -1,4 +1,4 @@
-import { basename, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
 import chalk from "chalk";
@@ -10,35 +10,6 @@ import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
 const CHECK_STABLE_DIR = ".mops/.check-stable";
-
-const PATH_FLAGS = ["--actor-idl"];
-
-function resolveArgsForCwd(args: string[], cwd: string): string[] {
-  const resolved: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i] as string;
-
-    const eqFlag = PATH_FLAGS.find((f) => arg.startsWith(f + "="));
-    if (eqFlag) {
-      const value = arg.slice(eqFlag.length + 1);
-      if (!isAbsolute(value)) {
-        resolved.push(`${eqFlag}=${relative(cwd, resolve(value))}`);
-        continue;
-      }
-    }
-
-    if (PATH_FLAGS.includes(arg) && i + 1 < args.length) {
-      resolved.push(arg);
-      i++;
-      const next = args[i] as string;
-      resolved.push(isAbsolute(next) ? next : relative(cwd, resolve(next)));
-      continue;
-    }
-
-    resolved.push(arg);
-  }
-  return resolved;
-}
 
 export interface CheckStableOptions {
   verbose: boolean;
@@ -91,8 +62,7 @@ export async function runStableCheck(
     options = {},
   } = params;
 
-  const checkStableDir = resolve(CHECK_STABLE_DIR);
-  const sources = (await sourcesArgs({ cwd: checkStableDir })).flat();
+  const sources = (await sourcesArgs()).flat();
   const isOldMostFile = oldFile.endsWith(".most");
 
   if (!existsSync(oldFile)) {
@@ -166,14 +136,11 @@ async function generateStableTypes(
   globalMocArgs: string[],
   options: Partial<CheckStableOptions>,
 ): Promise<string> {
-  const checkStableDir = resolve(CHECK_STABLE_DIR);
-  const relFile = relative(checkStableDir, resolve(moFile));
-  const adjustedMocArgs = resolveArgsForCwd(globalMocArgs, checkStableDir);
   const args = [
     "--stable-types",
-    relFile,
+    moFile,
     ...sources,
-    ...adjustedMocArgs,
+    ...globalMocArgs,
     ...(options.extraArgs ?? []),
   ];
 
@@ -186,7 +153,6 @@ async function generateStableTypes(
   }
 
   const result = await execa(mocPath, args, {
-    cwd: CHECK_STABLE_DIR,
     stdio: "pipe",
     reject: false,
   });
@@ -201,8 +167,8 @@ async function generateStableTypes(
   }
 
   const base = basename(moFile, ".mo");
-  await rename(join(CHECK_STABLE_DIR, base + ".most"), outputPath);
-  await rm(join(CHECK_STABLE_DIR, base + ".wasm"), { force: true });
+  await rename(base + ".most", outputPath);
+  await rm(base + ".wasm", { force: true });
 
   return outputPath;
 }
