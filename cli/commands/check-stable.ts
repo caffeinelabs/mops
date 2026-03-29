@@ -1,4 +1,4 @@
-import { basename, join, relative, resolve } from "node:path";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
 import chalk from "chalk";
@@ -10,6 +10,35 @@ import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
 const CHECK_STABLE_DIR = ".mops/.check-stable";
+
+const PATH_FLAGS = ["--actor-idl"];
+
+function resolveArgsForCwd(args: string[], cwd: string): string[] {
+  const resolved: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] as string;
+
+    const eqFlag = PATH_FLAGS.find((f) => arg.startsWith(f + "="));
+    if (eqFlag) {
+      const value = arg.slice(eqFlag.length + 1);
+      if (!isAbsolute(value)) {
+        resolved.push(`${eqFlag}=${relative(cwd, resolve(value))}`);
+        continue;
+      }
+    }
+
+    if (PATH_FLAGS.includes(arg) && i + 1 < args.length) {
+      resolved.push(arg);
+      i++;
+      const next = args[i] as string;
+      resolved.push(isAbsolute(next) ? next : relative(cwd, resolve(next)));
+      continue;
+    }
+
+    resolved.push(arg);
+  }
+  return resolved;
+}
 
 export interface CheckStableOptions {
   verbose: boolean;
@@ -137,12 +166,14 @@ async function generateStableTypes(
   globalMocArgs: string[],
   options: Partial<CheckStableOptions>,
 ): Promise<string> {
-  const relFile = relative(resolve(CHECK_STABLE_DIR), resolve(moFile));
+  const checkStableDir = resolve(CHECK_STABLE_DIR);
+  const relFile = relative(checkStableDir, resolve(moFile));
+  const adjustedMocArgs = resolveArgsForCwd(globalMocArgs, checkStableDir);
   const args = [
     "--stable-types",
     relFile,
     ...sources,
-    ...globalMocArgs,
+    ...adjustedMocArgs,
     ...(options.extraArgs ?? []),
   ];
 
