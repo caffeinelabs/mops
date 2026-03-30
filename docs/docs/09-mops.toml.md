@@ -5,6 +5,8 @@ sidebar_label: mops.toml
 
 # `mops.toml` file
 
+All relative paths in `mops.toml` are resolved relative to the directory containing the file. This applies to canister entrypoints, candid paths, local dependencies, build output directories, moc flags with path arguments, and any other path-valued setting.
+
 ## [package]
 
 | Field         | Description                                      |
