@@ -14,7 +14,7 @@ All relative paths in `mops.toml` are resolved relative to the directory contain
 | name          | Package name (e.g. `lib`)                          |
 | version       | Package version in format x.y.z (e.g. `0.1.2`)     |
 | description   | Package description shown in search results      |
-| repository    | Repository url (e.g. `https://github.com/dfinity/motoko-base`).<br/>Can include subdirs (see note below) |
+| repository    | Repository url (e.g. `https://github.com/caffeinelabs/motoko-base`).<br/>Can include subdirs (see note below) |
 | keywords      | Array of keywords (max 10 items, max 20 chars)   |
 | license       | Package license. Use [SPDX license identifier](https://spdx.org/licenses/) (e.g. `MIT`) |
 | files         | Array of glob patterns for files to include when publishing (default `["**/*.mo"]`) |

@@ -39,7 +39,7 @@
 			<tr>
 				<td>repository</td>
 				<td>Text</td>
-				<td>Repository url (e.g. https://github.com/dfinity/motoko)</td>
+				<td>Repository url (e.g. https://github.com/caffeinelabs/motoko)</td>
 			</tr>
 			<tr>
 				<td>keywords</td>

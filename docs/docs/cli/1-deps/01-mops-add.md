@@ -24,12 +24,12 @@ mops add base@0.10.0
 
 Add package from GitHub
 ```
-mops add https://github.com/dfinity/motoko-base
+mops add https://github.com/caffeinelabs/motoko-base
 ```
 
 For GitHub-packages you can specify branch, tag, or commit hash by adding `#<branch/tag/hash>`
 ```
-mops add https://github.com/dfinity/motoko-base#moc-0.9.1
+mops add https://github.com/caffeinelabs/motoko-base#moc-0.9.1
 ```
 
 Add local package
