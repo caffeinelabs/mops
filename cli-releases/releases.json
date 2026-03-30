@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.8.0"
+    "latest": "2.8.1"
   },
   "versions": {
     "0.41.0": {
@@ -360,6 +360,14 @@
       "commitHash": "b8cf8c39dd73c88bac267d1224a5a3bd2fd78e14",
       "url": "https://cli.mops.one/versions/2.8.0.tgz",
       "hash": "9dfb65a25a220b498c1660e78438d316de554439e6f06d24dcfd4247d8a2b554"
+    },
+    "2.8.1": {
+      "time": 1774859427414,
+      "size": 2401092,
+      "relseaseNotes": "* Fix `mops check-stable` failing when `[moc] args` contains flags with relative paths (e.g. `--actor-idl=system-idl`)\n",
+      "commitHash": "225b327db8ae98908ee6a150f0555ac90dd14894",
+      "url": "https://cli.mops.one/versions/2.8.1.tgz",
+      "hash": "68be42bc87d060c13d7c33c342e643d6550c09b0a76ec19c3390577beb64a472"
     }
   }
 }
