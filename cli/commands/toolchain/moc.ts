@@ -8,7 +8,7 @@ import * as toolchainUtils from "./toolchain-utils.js";
 
 let cacheDir = path.join(globalCacheDir, "moc");
 
-export let repo = "dfinity/motoko";
+export let repo = "caffeinelabs/motoko";
 
 export let getLatestReleaseTag = async () => {
   return toolchainUtils.getLatestReleaseTag(repo);
@@ -44,7 +44,7 @@ export let download = async (
     }
   } else {
     // Download the .js artifact
-    const jsUrl = `https://github.com/dfinity/motoko/releases/download/${version}/moc-${version}.js`;
+    const jsUrl = `https://github.com/caffeinelabs/motoko/releases/download/${version}/moc-${version}.js`;
     const jsDestPath = path.join(destDir, "moc.js");
 
     if (verbose && !silent) {
@@ -75,14 +75,14 @@ export let download = async (
         ? "arm64"
         : "aarch64"
       : "x86_64";
-    url = `https://github.com/dfinity/motoko/releases/download/${version}/motoko-${platfrom}-${arch}-${version}.tar.gz`;
+    url = `https://github.com/caffeinelabs/motoko/releases/download/${version}/motoko-${platfrom}-${arch}-${version}.tar.gz`;
   } else if (new SemVer(version).compare(new SemVer("0.9.5")) >= 0) {
     let platfrom = process.platform == "darwin" ? "Darwin" : "Linux";
     let arch = "x86_64";
-    url = `https://github.com/dfinity/motoko/releases/download/${version}/motoko-${platfrom}-${arch}-${version}.tar.gz`;
+    url = `https://github.com/caffeinelabs/motoko/releases/download/${version}/motoko-${platfrom}-${arch}-${version}.tar.gz`;
   } else {
     let platfrom = process.platform == "darwin" ? "macos" : "linux64";
-    url = `https://github.com/dfinity/motoko/releases/download/${version}/motoko-${platfrom}-${version}.tar.gz`;
+    url = `https://github.com/caffeinelabs/motoko/releases/download/${version}/motoko-${platfrom}-${version}.tar.gz`;
   }
 
   if (verbose && !silent) {

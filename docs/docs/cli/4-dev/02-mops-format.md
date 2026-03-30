@@ -20,7 +20,7 @@ mops format [filter]
 
 Alias `mops fmt`
 
-Uses [Prettier](https://prettier.io) with [Motoko](https://github.com/dfinity/prettier-plugin-motoko) plugin.
+Uses [Prettier](https://prettier.io) with [Motoko](https://github.com/caffeinelabs/prettier-plugin-motoko) plugin.
 
 ## Configuration
 

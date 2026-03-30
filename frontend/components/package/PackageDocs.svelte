@@ -73,7 +73,7 @@
 		// adoc to html
 		let text = new TextDecoder().decode(file.buffer);
 
-		// hack to remove html from doc https://github.com/dfinity/motoko-base/blob/master/src/Trie.mo#L8C8-L8C31
+		// hack to remove html from doc https://github.com/caffeinelabs/motoko-base/blob/master/src/Trie.mo#L8C8-L8C31
 		text = text.replaceAll("<a name=\"overview\"></a>", "");
 
 		// remove internal links to modules

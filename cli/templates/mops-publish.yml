@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: dfinity/setup-mops@v1
+      - uses: caffeinelabs/setup-mops@v1
         with:
           # Make sure you set the MOPS_IDENTITY_PEM secret in your repository settings https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-a-repository
           identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
