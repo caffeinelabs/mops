@@ -2,6 +2,8 @@
 
 ## Next
 
+## 2.8.1
+
 - Fix `mops check-stable` failing when `[moc] args` contains flags with relative paths (e.g. `--actor-idl=system-idl`)
 
 ## 2.8.0
