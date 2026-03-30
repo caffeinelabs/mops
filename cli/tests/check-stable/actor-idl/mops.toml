@@ -1,0 +1,8 @@
+[toolchain]
+moc = "1.3.0"
+
+[moc]
+args = ["--default-persistent-actors", "--actor-idl=system-idl"]
+
+[canisters.backend]
+main = "new.mo"

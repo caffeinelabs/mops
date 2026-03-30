@@ -1,0 +1,3 @@
+service ic : {
+  raw_rand : () -> (blob);
+};
