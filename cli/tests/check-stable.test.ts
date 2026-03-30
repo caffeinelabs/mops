@@ -1,4 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
+import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "path";
@@ -45,6 +46,17 @@ describe("check-stable", () => {
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
+  });
+
+  test("works with relative paths in moc args (e.g. --actor-idl)", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/actor-idl");
+    const result = await cli(["check-stable", "old.mo"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+    expect(existsSync(path.join(cwd, "old.most"))).toBe(false);
+    expect(existsSync(path.join(cwd, "old.wasm"))).toBe(false);
+    expect(existsSync(path.join(cwd, "new.most"))).toBe(false);
+    expect(existsSync(path.join(cwd, "new.wasm"))).toBe(false);
   });
 
   test("errors when old file does not exist", async () => {

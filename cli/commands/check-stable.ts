@@ -1,6 +1,6 @@
-import { basename, join, relative, resolve } from "node:path";
+import { basename, join } from "node:path";
 import { existsSync, mkdirSync } from "node:fs";
-import { rename, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
@@ -62,8 +62,7 @@ export async function runStableCheck(
     options = {},
   } = params;
 
-  const checkStableDir = resolve(CHECK_STABLE_DIR);
-  const sources = (await sourcesArgs({ cwd: checkStableDir })).flat();
+  const sources = (await sourcesArgs()).flat();
   const isOldMostFile = oldFile.endsWith(".most");
 
   if (!existsSync(oldFile)) {
@@ -137,10 +136,13 @@ async function generateStableTypes(
   globalMocArgs: string[],
   options: Partial<CheckStableOptions>,
 ): Promise<string> {
-  const relFile = relative(resolve(CHECK_STABLE_DIR), resolve(moFile));
+  const base = basename(outputPath, ".most");
+  const wasmPath = join(CHECK_STABLE_DIR, base + ".wasm");
   const args = [
     "--stable-types",
-    relFile,
+    "-o",
+    wasmPath,
+    moFile,
     ...sources,
     ...globalMocArgs,
     ...(options.extraArgs ?? []),
@@ -155,7 +157,6 @@ async function generateStableTypes(
   }
 
   const result = await execa(mocPath, args, {
-    cwd: CHECK_STABLE_DIR,
     stdio: "pipe",
     reject: false,
   });
@@ -169,9 +170,7 @@ async function generateStableTypes(
     );
   }
 
-  const base = basename(moFile, ".mo");
-  await rename(join(CHECK_STABLE_DIR, base + ".most"), outputPath);
-  await rm(join(CHECK_STABLE_DIR, base + ".wasm"), { force: true });
+  await rm(wasmPath, { force: true });
 
   return outputPath;
 }
