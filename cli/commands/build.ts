@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { execa } from "execa";
 import { exists } from "fs-extra";
-import { mkdir, open, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { lock, unlockSync } from "proper-lockfile";
 import { cliError } from "../error.js";
@@ -73,23 +73,19 @@ export async function build(
     const mostPath = join(outputDir, `${canisterName}.most`);
 
     // per-canister lock to prevent parallel builds of the same canister from clobbering output files
-    const sentinelPath = join(outputDir, `.${canisterName}.buildlock`);
-    const fd = await open(sentinelPath, "a");
-    await fd.close();
+    const lockTarget = join(outputDir, `.${canisterName}.buildlock`);
+    await writeFile(lockTarget, "", { flag: "a" });
 
     let release: (() => Promise<void>) | undefined;
     try {
-      release = await lock(sentinelPath, {
+      release = await lock(lockTarget, {
         stale: 300_000,
         retries: { retries: 60, minTimeout: 500, maxTimeout: 5_000 },
       });
-    } catch (err: any) {
-      if (err.code === "ELOCKED") {
-        cliError(
-          `Timed out waiting for build lock on canister ${canisterName} — another build may be stuck`,
-        );
-      }
-      throw err;
+    } catch {
+      cliError(
+        `Failed to acquire build lock for canister ${canisterName} — another build may be stuck`,
+      );
     }
 
     // proper-lockfile registers its own signal-exit handler, but it doesn't reliably
@@ -97,7 +93,7 @@ export async function build(
     // harmless (the second call throws and is caught).
     const exitCleanup = () => {
       try {
-        unlockSync(sentinelPath);
+        unlockSync(lockTarget);
       } catch {}
     };
     process.on("exit", exitCleanup);
