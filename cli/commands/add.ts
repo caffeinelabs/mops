@@ -86,8 +86,7 @@ export async function add(
     } else {
       let versionRes = await getHighestVersion(name);
       if ("err" in versionRes) {
-        console.log(chalk.red("Error: ") + versionRes.err);
-        return;
+        cliError(versionRes.err);
       }
       ver = versionRes.ok;
     }
