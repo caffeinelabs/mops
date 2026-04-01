@@ -33,6 +33,7 @@ import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
 import { getDfxVersion } from "../../helpers/get-dfx-version.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
+import { cliAbort, cliError } from "../../error.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
 type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
@@ -68,12 +69,9 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
   if (replicaType === "pocket-ic" && !config.toolchain?.["pocket-ic"]) {
     let dfxVersion = getDfxVersion();
     if (!dfxVersion || new SemVer(dfxVersion).compare("0.24.1") < 0) {
-      console.log(
-        chalk.red(
-          "Please update dfx to the version >=0.24.1 or specify pocket-ic version in mops.toml",
-        ),
+      cliError(
+        "Please update dfx to the version >=0.24.1 or specify pocket-ic version in mops.toml",
       );
-      process.exit(1);
     } else {
       replicaType = "dfx-pocket-ic";
     }
@@ -88,18 +86,17 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
     let sigint = false;
     process.on("SIGINT", () => {
       if (sigint) {
-        console.log("Force exit");
-        process.exit(0);
+        cliAbort("Force exit");
       }
       sigint = true;
 
       if (replicaStartPromise) {
         console.log("Stopping replica...");
         replica.stop(true).then(() => {
-          process.exit(0);
+          cliAbort();
         });
       } else {
-        process.exit(0);
+        cliAbort();
       }
     });
 
@@ -152,7 +149,7 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       replicaType,
     );
     if (!passed) {
-      process.exit(1);
+      cliError();
     }
   }
 }
@@ -361,12 +358,9 @@ export async function testWithReporter(
                 wasmFile,
               ];
             } else {
-              console.error(
-                chalk.red(
-                  "Minimum wasmtime version is 14.0.0. Please update wasmtime to the latest version",
-                ),
+              cliError(
+                "Minimum wasmtime version is 14.0.0. Please update wasmtime to the latest version",
               );
-              process.exit(1);
             }
 
             let proc = spawn(wasmtimePath, wasmtimeArgs, { signal });

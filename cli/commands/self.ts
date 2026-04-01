@@ -1,7 +1,7 @@
-import process from "node:process";
 import child_process, { execSync } from "node:child_process";
 import chalk from "chalk";
 import { version, globalConfigDir } from "../mops.js";
+import { cliError } from "../error.js";
 import { cleanCache } from "../cache.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -13,8 +13,7 @@ function detectPackageManager() {
     res = execSync("which mops").toString();
   } catch (e) {}
   if (!res) {
-    console.error(chalk.red("Couldn't detect package manager"));
-    process.exit(1);
+    cliError("Couldn't detect package manager");
   }
   if (res.includes("pnpm/")) {
     return "pnpm";
@@ -53,8 +52,7 @@ export async function update() {
 
     proc.on("exit", (res) => {
       if (res !== 0) {
-        console.log(chalk.red("Failed to update."));
-        process.exit(1);
+        cliError("Failed to update.");
       }
       console.log(chalk.green("Success"));
     });

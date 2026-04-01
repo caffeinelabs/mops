@@ -17,6 +17,7 @@ import { checkRequirements } from "../check-requirements.js";
 import { syncLocalCache } from "./install/sync-local-cache.js";
 import { notifyInstalls } from "../notify-installs.js";
 import { resolvePackages } from "../resolve-packages.js";
+import { cliError } from "../error.js";
 
 type AddOptions = {
   verbose?: boolean;
@@ -30,9 +31,7 @@ export async function add(
   { verbose = false, dev = false, lock }: AddOptions = {},
   asName?: string,
 ) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let config = readConfig();
   if (dev) {
@@ -105,7 +104,7 @@ export async function add(
       verbose: verbose,
     });
     if (!res) {
-      process.exit(1);
+      cliError();
     }
   } else if (!pkgDetails.path) {
     let res = await installMopsDep(pkgDetails.name, pkgDetails.version, {

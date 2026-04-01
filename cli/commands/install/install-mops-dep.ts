@@ -20,6 +20,7 @@ import {
 } from "../../api/downloadPackageFiles.js";
 import { installDeps } from "./install-deps.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
+import { cliAbort } from "../../error.js";
 
 type InstallMopsDepOptions = {
   verbose?: boolean;
@@ -43,9 +44,7 @@ export async function installMopsDep(
   threads = threads || 12;
   let depName = getDepName(pkg);
 
-  if (!checkConfigFile()) {
-    return false;
-  }
+  checkConfigFile();
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
   // progress
@@ -102,7 +101,7 @@ export async function installMopsDep(
 
       let onSigInt = () => {
         deleteSync([cacheDir], { force: true });
-        process.exit();
+        cliAbort("");
       };
       process.on("SIGINT", onSigInt);
 

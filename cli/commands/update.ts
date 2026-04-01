@@ -17,9 +17,7 @@ type UpdateOptions = {
 };
 
 export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
   let config = readConfig();
 
   if (

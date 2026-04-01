@@ -4,5 +4,15 @@
   },
   "parserOptions": {
     "sourceType": "module"
+  },
+  "rules": {
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "process",
+        "property": "exit",
+        "message": "Use cliError() or cliAbort() from error.ts instead of process.exit()"
+      }
+    ]
   }
 }

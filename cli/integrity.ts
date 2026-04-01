@@ -1,8 +1,8 @@
-import process from "node:process";
 import fs from "node:fs";
 import path from "node:path";
 import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
+import { cliError } from "./error.js";
 import { getDependencyType, getRootDir, readConfig } from "./mops.js";
 import { mainActor } from "./api/actors.js";
 import { resolvePackages } from "./resolve-packages.js";
@@ -71,8 +71,7 @@ export function getLocalFileHash(fileId: string): string {
   let rootDir = getRootDir();
   let file = path.join(rootDir, ".mops", fileId);
   if (!fs.existsSync(file)) {
-    console.error(`Missing file ${fileId} in .mops dir`);
-    process.exit(1);
+    cliError(`Missing file ${fileId} in .mops dir`);
   }
   let fileData = fs.readFileSync(file);
   return bytesToHex(sha256(fileData));
@@ -117,11 +116,10 @@ export async function checkRemote() {
       let localHash = getLocalFileHash(fileId);
 
       if (localHash !== bytesToHex(remoteHash)) {
-        console.error("Integrity check failed.");
         console.error(
           `Mismatched hash for ${fileId}: ${localHash} vs ${bytesToHex(remoteHash)}`,
         );
-        process.exit(1);
+        cliError("Integrity check failed.");
       }
     }
   }
@@ -134,10 +132,9 @@ export function readLockFile(): LockFile | null {
     try {
       return JSON.parse(fs.readFileSync(lockFile).toString()) as LockFile;
     } catch {
-      console.error(
+      cliError(
         "mops.lock is corrupted. Delete it and run `mops install` to regenerate.",
       );
-      process.exit(1);
     }
   }
   return null;
@@ -207,8 +204,7 @@ export async function checkLockFile(force = false) {
   // check if lock file exists
   if (!fs.existsSync(lockFile)) {
     if (force) {
-      console.error("Missing lock file. Run `mops install` to generate it.");
-      process.exit(1);
+      cliError("Missing lock file. Run `mops install` to generate it.");
     }
     return;
   }
@@ -220,11 +216,10 @@ export async function checkLockFile(force = false) {
 
   // check lock file version
   if (!supportedVersions.includes(lockFileJsonGeneric.version)) {
-    console.error("Integrity check failed");
     console.error(
       `Invalid lock file version: ${lockFileJsonGeneric.version}. Supported versions: ${supportedVersions.join(", ")}`,
     );
-    process.exit(1);
+    cliError("Integrity check failed");
   }
 
   let lockFileJson = lockFileJsonGeneric as LockFile;
@@ -232,22 +227,20 @@ export async function checkLockFile(force = false) {
   // V1: check mops.toml hash
   if (lockFileJson.version === 1) {
     if (lockFileJson.mopsTomlHash !== getMopsTomlHash()) {
-      console.error("Integrity check failed");
       console.error("Mismatched mops.toml hash");
       console.error(`Locked hash: ${lockFileJson.mopsTomlHash}`);
       console.error(`Actual hash: ${getMopsTomlHash()}`);
-      process.exit(1);
+      cliError("Integrity check failed");
     }
   }
 
   // V2, V3: check mops.toml deps hash
   if (lockFileJson.version === 2 || lockFileJson.version === 3) {
     if (lockFileJson.mopsTomlDepsHash !== getMopsTomlDepsHash()) {
-      console.error("Integrity check failed");
       console.error("Mismatched mops.toml dependencies hash");
       console.error(`Locked hash: ${lockFileJson.mopsTomlDepsHash}`);
       console.error(`Actual hash: ${getMopsTomlDepsHash()}`);
-      process.exit(1);
+      cliError("Integrity check failed");
     }
   }
 
@@ -258,61 +251,55 @@ export async function checkLockFile(force = false) {
 
     for (let name of Object.keys(resolvedDeps)) {
       if (lockedDeps[name] !== resolvedDeps[name]) {
-        console.error("Integrity check failed");
         console.error(`Mismatched package ${name}`);
         console.error(`Locked: ${lockedDeps[name]}`);
         console.error(`Actual: ${resolvedDeps[name]}`);
-        process.exit(1);
+        cliError("Integrity check failed");
       }
     }
   }
 
   // check number of packages
   if (Object.keys(lockFileJson.hashes).length !== packageIds.length) {
-    console.error("Integrity check failed");
     console.error(
       `Mismatched number of resolved packages: ${JSON.stringify(Object.keys(lockFileJson.hashes).length)} vs ${JSON.stringify(packageIds.length)}`,
     );
-    process.exit(1);
+    cliError("Integrity check failed");
   }
 
   // check if resolved packages are in the lock file
   for (let packageId of packageIds) {
     if (!(packageId in lockFileJson.hashes)) {
-      console.error("Integrity check failed");
       console.error(`Missing package ${packageId} in lock file`);
-      process.exit(1);
+      cliError("Integrity check failed");
     }
   }
 
   for (let [packageId, hashes] of Object.entries(lockFileJson.hashes)) {
     // check if package is in resolved packages
     if (!packageIds.includes(packageId)) {
-      console.error("Integrity check failed");
       console.error(
         `Package ${packageId} in lock file but not in resolved packages`,
       );
-      process.exit(1);
+      cliError("Integrity check failed");
     }
 
     for (let [fileId, lockedHash] of Object.entries(hashes)) {
       // check if file belongs to package
       if (!fileId.startsWith(packageId + "/")) {
-        console.error("Integrity check failed");
         console.error(
           `File ${fileId} in lock file does not belong to package ${packageId}`,
         );
-        process.exit(1);
+        cliError("Integrity check failed");
       }
 
       // local file hash vs hash from lock file
       let localHash = getLocalFileHash(fileId);
       if (lockedHash !== localHash) {
-        console.error("Integrity check failed");
         console.error(`Mismatched hash for ${fileId}`);
         console.error(`Locked hash: ${lockedHash}`);
         console.error(`Actual hash: ${localHash}`);
-        process.exit(1);
+        cliError("Integrity check failed");
       }
     }
   }

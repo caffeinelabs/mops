@@ -4,9 +4,7 @@ import { getAvailableUpdates } from "./available-updates.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 
 export async function outdated() {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
   let config = readConfig();
 
   let available = await getAvailableUpdates(config);

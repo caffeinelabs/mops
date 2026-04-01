@@ -29,6 +29,7 @@ import { SilentReporter } from "./test/reporters/silent-reporter.js";
 import { findChangelogEntry } from "../helpers/find-changelog-entry.js";
 import { bench } from "./bench.js";
 import { docsCoverage } from "./docs-coverage.js";
+import { cliError } from "../error.js";
 
 export async function publish(
   options: {
@@ -38,9 +39,7 @@ export async function publish(
     verbose?: boolean;
   } = {},
 ) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let rootDir = getRootDir();
   let config = readConfig();
@@ -58,27 +57,20 @@ export async function publish(
         "requirements",
       ].includes(key)
     ) {
-      console.log(chalk.red("Error: ") + `Unknown config section [${key}]`);
-      process.exit(1);
+      cliError(`Error: Unknown config section [${key}]`);
     }
   }
 
   // required fields
   if (!config.package) {
-    console.log(
-      chalk.red("Error: ") +
-        "Please specify [package] section in your mops.toml",
-    );
-    process.exit(1);
+    cliError("Error: Please specify [package] section in your mops.toml");
   }
   for (let key of ["name", "version"]) {
     // @ts-ignore
     if (!config.package[key]) {
-      console.log(
-        chalk.red("Error: ") +
-          `Please specify "${key}" in [package] section in your mops.toml`,
+      cliError(
+        `Error: Please specify "${key}" in [package] section in your mops.toml`,
       );
-      process.exit(1);
     }
   }
 
@@ -115,16 +107,14 @@ export async function publish(
   ];
   for (let key of Object.keys(config.package)) {
     if (!packageKeys.includes(key)) {
-      console.log(chalk.red("Error: ") + `Unknown config key 'package.${key}'`);
-      process.exit(1);
+      cliError(`Error: Unknown config key 'package.${key}'`);
     }
   }
 
   // disabled fields
   for (let key of ["dfx", "moc", "homepage", "documentation", "donation"]) {
     if ((config.package as any)[key]) {
-      console.log(chalk.red("Error: ") + `package.${key} is not supported yet`);
-      process.exit(1);
+      cliError(`Error: package.${key} is not supported yet`);
     }
   }
 
@@ -149,54 +139,41 @@ export async function publish(
   for (let [key, max] of Object.entries(keysMax)) {
     // @ts-ignore
     if (config.package[key] && config.package[key].length > max) {
-      console.log(
-        chalk.red("Error: ") + `package.${key} value max length is ${max}`,
-      );
-      process.exit(1);
+      cliError(`Error: package.${key} value max length is ${max}`);
     }
   }
 
   if (config.dependencies) {
     if (Object.keys(config.dependencies).length > 100) {
-      console.log(chalk.red("Error: ") + "max dependencies is 100");
-      process.exit(1);
+      cliError("Error: max dependencies is 100");
     }
 
     for (let dep of Object.values(config.dependencies)) {
       if (dep.path) {
-        console.log(
-          chalk.red("Error: ") +
-            "you can't publish packages with local dependencies",
-        );
-        process.exit(1);
+        cliError("Error: you can't publish packages with local dependencies");
       }
       delete dep.path;
     }
 
     for (let dep of Object.values(config.dependencies)) {
       if (dep.repo) {
-        console.log(
-          chalk.red("Error: ") +
-            "GitHub dependencies are no longer supported.\nIf you are the owner of the dependency, please publish it to the Mops registry.",
+        cliError(
+          "Error: GitHub dependencies are no longer supported.\nIf you are the owner of the dependency, please publish it to the Mops registry.",
         );
-        process.exit(1);
       }
     }
   }
 
   if (config["dev-dependencies"]) {
     if (Object.keys(config["dev-dependencies"]).length > 100) {
-      console.log(chalk.red("Error: ") + "max dev-dependencies is 100");
-      process.exit(1);
+      cliError("Error: max dev-dependencies is 100");
     }
 
     for (let dep of Object.values(config["dev-dependencies"])) {
       if (dep.path) {
-        console.log(
-          chalk.red("Error: ") +
-            "you can't publish packages with local dev-dependencies",
+        cliError(
+          "Error: you can't publish packages with local dev-dependencies",
         );
-        process.exit(1);
       }
       delete dep.path;
     }
@@ -310,12 +287,10 @@ export async function publish(
 
   // check required files
   if (!files.includes("mops.toml")) {
-    console.log(chalk.red("Error: ") + " please add mops.toml file");
-    process.exit(1);
+    cliError("Error: please add mops.toml file");
   }
   if (!files.includes("README.md")) {
-    console.log(chalk.red("Error: ") + " please add README.md file");
-    process.exit(1);
+    cliError("Error: please add README.md file");
   }
 
   // check allowed exts
@@ -326,22 +301,18 @@ export async function publish(
       !file.toLowerCase().endsWith("notice") &&
       file !== docsFile
     ) {
-      console.log(
-        chalk.red("Error: ") +
-          `file ${file} has unsupported extension. Allowed: .mo, .did, .md, .toml`,
+      cliError(
+        `Error: file ${file} has unsupported extension. Allowed: .mo, .did, .md, .toml`,
       );
-      process.exit(1);
     }
   }
 
   // pre-flight file count check (must match MAX_PACKAGE_FILES in PackagePublisher.mo)
   const FILE_LIMIT = 1000;
   if (files.length > FILE_LIMIT) {
-    console.log(
-      chalk.red("Error: ") +
-        `Too many files (${files.length}). Maximum is ${FILE_LIMIT}.`,
+    cliError(
+      `Error: Too many files (${files.length}). Maximum is ${FILE_LIMIT}.`,
     );
-    process.exit(1);
   }
 
   // parse changelog
@@ -373,8 +344,7 @@ export async function publish(
       config.toolchain?.["pocket-ic"] ? "pocket-ic" : "dfx",
     );
     if (reporter.failed > 0) {
-      console.log(chalk.red("Error: ") + "tests failed");
-      process.exit(1);
+      cliError("Error: tests failed");
     }
   }
 
@@ -391,8 +361,7 @@ export async function publish(
       });
     } catch (err) {
       console.error(err);
-      console.log(chalk.red("Error: ") + "benchmarks failed");
-      process.exit(1);
+      cliError("Error: benchmarks failed");
     }
   }
 
@@ -411,8 +380,7 @@ export async function publish(
   progress();
   let publishing = await actor.startPublish(backendPkgConfig);
   if ("err" in publishing) {
-    console.log(chalk.red("Error: ") + publishing.err);
-    process.exit(1);
+    cliError("Error: " + publishing.err);
   }
   let publishingId = publishing.ok;
 
@@ -460,8 +428,7 @@ export async function publish(
       firstChunk,
     );
     if ("err" in res) {
-      console.log(chalk.red("Error: ") + res.err);
-      process.exit(1);
+      cliError("Error: " + res.err);
     }
     let fileId = res.ok;
 
@@ -475,8 +442,7 @@ export async function publish(
         chunk,
       );
       if ("err" in res) {
-        console.log(chalk.red("Error: ") + res.err);
-        process.exit(1);
+        cliError("Error: " + res.err);
       }
     }
   });
@@ -492,8 +458,7 @@ export async function publish(
 
   let res = await actor.finishPublish(publishingId);
   if ("err" in res) {
-    console.log(chalk.red("Error: ") + res.err);
-    process.exit(1);
+    cliError("Error: " + res.err);
   }
 
   console.log(

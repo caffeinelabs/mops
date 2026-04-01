@@ -13,13 +13,12 @@ import { Config, Dependency } from "./types.js";
 import { getDepCacheDir, getDepCacheName } from "./cache.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { checkLockFileLight, readLockFile } from "./integrity.js";
+import { cliError } from "./error.js";
 
 export async function resolvePackages({
   conflicts = "ignore" as "warning" | "error" | "ignore",
 } = {}): Promise<Record<string, string>> {
-  if (!checkConfigFile()) {
-    return {};
-  }
+  checkConfigFile();
 
   if (checkLockFileLight()) {
     let lockFileJson = readLockFile();
@@ -208,7 +207,7 @@ export async function resolvePackages({
   }
 
   if (conflicts === "error" && hasConflicts) {
-    process.exit(1);
+    cliError();
   }
 
   return Object.fromEntries(

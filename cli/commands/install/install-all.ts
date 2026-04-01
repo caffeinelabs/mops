@@ -27,9 +27,7 @@ export async function installAll({
   lock,
   installFromLockFile,
 }: InstallAllOptions = {}): Promise<boolean> {
-  if (!checkConfigFile()) {
-    return false;
-  }
+  checkConfigFile();
 
   let config = readConfig();
   let deps = Object.values(config.dependencies || {});
