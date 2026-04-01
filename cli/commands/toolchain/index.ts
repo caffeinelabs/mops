@@ -6,7 +6,7 @@ import { execSync } from "node:child_process";
 import chalk from "chalk";
 import prompts from "prompts";
 import { createLogUpdate } from "log-update";
-import { cliError } from "../../error.js";
+import { CliError, cliError } from "../../error.js";
 import {
   checkConfigFile,
   getClosestConfigFile,
@@ -75,27 +75,26 @@ async function init({ reset = false, silent = false } = {}) {
     cliError("Windows is not supported. Please use WSL");
   }
 
-  let mocvDetected = false;
   try {
     let res = execSync("which mocv").toString().trim();
     if (res) {
-      mocvDetected = true;
+      console.error(
+        "Mops is not compatible with mocv. Please uninstall mocv and try again.",
+      );
+      console.log("Steps to uninstall mocv:");
+      console.log('1. Run "mocv reset"');
+      console.log('2. Run "npm uninstall -g mocv"');
+      console.log(
+        'TIP: Alternative to "mocv use <version>" is "mops toolchain use moc <version>" (installs moc only for current project)',
+      );
+      console.log("TIP: More details at https://docs.mops.one/cli/toolchain");
+      if (!process.env.CI || !silent) {
+        cliError();
+      }
     }
-  } catch {}
-
-  if (mocvDetected) {
-    console.error(
-      "Mops is not compatible with mocv. Please uninstall mocv and try again.",
-    );
-    console.log("Steps to uninstall mocv:");
-    console.log('1. Run "mocv reset"');
-    console.log('2. Run "npm uninstall -g mocv"');
-    console.log(
-      'TIP: Alternative to "mocv use <version>" is "mops toolchain use moc <version>" (installs moc only for current project)',
-    );
-    console.log("TIP: More details at https://docs.mops.one/cli/toolchain");
-    if (!process.env.CI || !silent) {
-      cliError();
+  } catch (err) {
+    if (err instanceof CliError) {
+      throw err;
     }
   }
 
