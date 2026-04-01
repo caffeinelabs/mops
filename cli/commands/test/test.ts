@@ -315,7 +315,7 @@ export async function testWithReporter(
           }
           throw error;
         });
-        pipeMMF(proc, mmf).then(resolve);
+        pipeMMF(proc, mmf).then(resolve, reject);
       }
       // build and run wasm
       else if (mode === "wasi") {
