@@ -26,7 +26,7 @@ mops info base@0.10.0
 
 ### `--versions`
 
-List all published versions with publication dates and release notes.
+Print all published versions, one per line. Useful for scripting.
 ```
 mops info base --versions
 ```
