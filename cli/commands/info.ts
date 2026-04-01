@@ -5,7 +5,10 @@ import { resolveVersion } from "../api/resolveVersion.js";
 import type { PackageDetails, User } from "../declarations/main/main.did.js";
 
 function formatUser(user: User): string {
-  let name = user.name || user.displayName || (user.github ? `@${user.github}` : "unknown");
+  let name =
+    user.name ||
+    user.displayName ||
+    (user.github ? `@${user.github}` : "unknown");
   let parts = [name];
   if (user.github) {
     parts.push(chalk.gray(`(github.com/${user.github})`));
@@ -19,15 +22,23 @@ function formatDate(time: bigint): string {
 
 function formatSize(bytes: bigint): string {
   let n = Number(bytes);
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024) {
+    return `${n} B`;
+  }
+  if (n < 1024 * 1024) {
+    return `${(n / 1024).toFixed(1)} KB`;
+  }
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatDownloads(n: bigint): string {
   let num = Number(n);
-  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
-  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  if (num >= 1_000_000) {
+    return `${(num / 1_000_000).toFixed(1)}M`;
+  }
+  if (num >= 1_000) {
+    return `${(num / 1_000).toFixed(1)}K`;
+  }
   return String(num);
 }
 
@@ -89,7 +100,6 @@ export async function info(pkgArg: string) {
     `${label("published")}${formatDate(d.publication.time)} by ${formatUser(d.publisher)}`,
   );
 
-  // owners / maintainers
   if (d.owners.length > 0) {
     console.log(
       `${label("owners")}${d.owners.map(formatUser).join(", ")}`,
@@ -101,25 +111,21 @@ export async function info(pkgArg: string) {
     );
   }
 
-  // downloads
   console.log("");
   console.log(
     `${label("downloads")}${formatDownloads(d.downloadsTotal)} total  ${chalk.gray("|")}  ${formatDownloads(d.downloadsInLast30Days)} last 30d  ${chalk.gray("|")}  ${formatDownloads(d.downloadsInLast7Days)} last 7d`,
   );
 
-  // dependents
   if (d.dependentsCount > 0n) {
     console.log(
       `${label("dependents")}${d.dependentsCount.toString()} package${d.dependentsCount > 1n ? "s" : ""}`,
     );
   }
 
-  // file stats
   console.log(
     `${label("files")}${d.fileStats.sourceFiles.toString()} source files (${formatSize(d.fileStats.sourceSize)})`,
   );
 
-  // deps
   if (c.dependencies.length > 0) {
     console.log("");
     console.log(
@@ -132,7 +138,6 @@ export async function info(pkgArg: string) {
     );
   }
 
-  // keywords
   if (c.keywords.length > 0) {
     console.log("");
     console.log(
@@ -140,38 +145,51 @@ export async function info(pkgArg: string) {
     );
   }
 
-  // versions
   if (d.versions.length > 0) {
     let versionsDisplay = d.versions.slice(-10).reverse().join(", ");
-    let extra = d.versions.length > 10 ? ` ${chalk.gray(`(+${d.versions.length - 10} more)`)}` : "";
+    let extra =
+      d.versions.length > 10
+        ? ` ${chalk.gray(`(+${d.versions.length - 10} more)`)}`
+        : "";
     console.log("");
     console.log(`${label("versions")}${versionsDisplay}${extra}`);
   }
 
-  // quality indicators
   let q = d.quality;
   let qualityItems: string[] = [];
-  if (q.hasTests) qualityItems.push(chalk.green("tests"));
-  if (q.hasDocumentation) qualityItems.push(chalk.green("docs"));
-  if (q.hasRepository) qualityItems.push(chalk.green("repo"));
-  if (q.hasLicense) qualityItems.push(chalk.green("license"));
-  if (q.hasReleaseNotes) qualityItems.push(chalk.green("release notes"));
+  if (q.hasTests) {
+    qualityItems.push(chalk.green("tests"));
+  }
+  if (q.hasDocumentation) {
+    qualityItems.push(chalk.green("docs"));
+  }
+  if (q.hasRepository) {
+    qualityItems.push(chalk.green("repo"));
+  }
+  if (q.hasLicense) {
+    qualityItems.push(chalk.green("license"));
+  }
+  if (q.hasReleaseNotes) {
+    qualityItems.push(chalk.green("release notes"));
+  }
   if (qualityItems.length > 0) {
     console.log("");
     console.log(`${label("quality")}${qualityItems.join(chalk.gray("  ·  "))}`);
   }
 
-  // release notes
   if (d.changes.notes) {
     console.log("");
     console.log(`${label("release notes")}${d.changes.notes}`);
   }
 
-  // toolchain requirements
   if (c.moc || c.dfx) {
     console.log("");
-    if (c.moc) console.log(`${label("moc")}${c.moc}`);
-    if (c.dfx) console.log(`${label("dfx")}${c.dfx}`);
+    if (c.moc) {
+      console.log(`${label("moc")}${c.moc}`);
+    }
+    if (c.dfx) {
+      console.log(`${label("dfx")}${c.dfx}`);
+    }
   }
 
   console.log("");
