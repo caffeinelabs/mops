@@ -81,19 +81,20 @@ export async function build(
     try {
       release = await lock(sentinelPath, {
         stale: 300_000,
-        retries: { retries: 120, minTimeout: 500, maxTimeout: 5_000 },
+        retries: { retries: 60, minTimeout: 500, maxTimeout: 5_000 },
       });
     } catch (err: any) {
       if (err.code === "ELOCKED") {
         cliError(
-          `Another build of canister ${canisterName} is already in progress`,
+          `Timed out waiting for build lock on canister ${canisterName} — another build may be stuck`,
         );
       }
       throw err;
     }
 
-    // proper-lockfile's built-in signal-exit cleanup is unreliable with process.exit() —
-    // ensure the lock is released synchronously so subsequent builds don't stall
+    // proper-lockfile registers its own signal-exit handler, but it doesn't reliably
+    // fire on process.exit(). This manual handler covers that gap. Double-unlock is
+    // harmless (the second call throws and is caught).
     const exitCleanup = () => {
       try {
         unlockSync(sentinelPath);
@@ -214,7 +215,9 @@ export async function build(
       }
     } finally {
       process.removeListener("exit", exitCleanup);
-      await release();
+      try {
+        await release?.();
+      } catch {}
     }
   }
 

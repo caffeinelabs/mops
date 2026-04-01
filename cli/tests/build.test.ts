@@ -100,7 +100,7 @@ describe("build", () => {
     }
   });
 
-  test("parallel builds of the same canister are serialized by lock", async () => {
+  test("parallel builds of the same canister both succeed", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
     try {
       const [a, b] = await Promise.all([
