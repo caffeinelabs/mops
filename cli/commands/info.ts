@@ -101,14 +101,12 @@ export async function info(pkgArg: string) {
   );
 
   if (d.owners.length > 0) {
-    console.log(
-      `${label("owners")}${d.owners.map(formatUser).join(", ")}`,
-    );
+    let owners = d.owners.map(formatUser).join(", ");
+    console.log(`${label("owners")}${owners}`);
   }
   if (d.maintainers.length > 0) {
-    console.log(
-      `${label("maintainers")}${d.maintainers.map(formatUser).join(", ")}`,
-    );
+    let maintainers = d.maintainers.map(formatUser).join(", ");
+    console.log(`${label("maintainers")}${maintainers}`);
   }
 
   console.log("");
