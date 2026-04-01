@@ -89,6 +89,7 @@ export async function info(pkgArg: string, options: InfoOptions = {}) {
   }
 
   if (d.versions.length > 0) {
+    // API returns versions in ascending order (oldest first)
     let versionsDisplay = d.versions.slice(-10).reverse().join(", ");
     let extra =
       d.versions.length > 10

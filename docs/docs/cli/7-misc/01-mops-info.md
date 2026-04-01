@@ -26,7 +26,7 @@ mops info base@0.10.0
 
 ### `--versions`
 
-Print all published versions, one per line. Useful for scripting.
+Print all published versions, one per line (oldest to newest). Useful for scripting.
 ```
 mops info base --versions
 ```
@@ -35,6 +35,7 @@ mops info base --versions
 
 Displays package metadata including:
 - Version and description
+- Latest version indicator (shown when querying a non-latest version)
 - License
 - Repository, homepage, and documentation links
 - Dependencies and dev-dependencies
