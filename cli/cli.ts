@@ -8,7 +8,7 @@ import { getNetwork } from "./api/network.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
 import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
-import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
+import { build } from "./commands/build.js";
 import { bump } from "./commands/bump.js";
 import { check } from "./commands/check.js";
 import { checkCandid } from "./commands/check-candid.js";
@@ -16,6 +16,7 @@ import { checkStable } from "./commands/check-stable.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
+import { info } from "./commands/info.js";
 import { init } from "./commands/init.js";
 import { lint } from "./commands/lint.js";
 import { installAll } from "./commands/install/install-all.js";
@@ -277,6 +278,15 @@ program
   .description("Search for packages")
   .action(async (text) => {
     await search(text);
+  });
+
+// info
+program
+  .command("info <pkg>")
+  .description("Show detailed information about a package from the registry")
+  .option("--versions", "List all published versions, one per line")
+  .action(async (pkg: string, options) => {
+    await info(pkg, options);
   });
 
 // cache
