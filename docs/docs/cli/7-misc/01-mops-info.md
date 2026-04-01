@@ -22,7 +22,16 @@ Show info for a specific version
 mops info base@0.10.0
 ```
 
-### Output
+## Options
+
+### `--versions`
+
+List all published versions with publication dates and release notes.
+```
+mops info base --versions
+```
+
+## Output
 
 Displays package metadata including:
 - Version, description, and license

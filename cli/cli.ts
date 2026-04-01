@@ -284,8 +284,9 @@ program
 program
   .command("info <pkg>")
   .description("Show detailed information about a package from the registry")
-  .action(async (pkg: string) => {
-    await info(pkg);
+  .option("--versions", "List all published versions with dates")
+  .action(async (pkg: string, options) => {
+    await info(pkg, options);
   });
 
 // cache

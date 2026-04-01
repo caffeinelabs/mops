@@ -2,7 +2,11 @@ import process from "node:process";
 import chalk from "chalk";
 import { mainActor } from "../api/actors.js";
 import { resolveVersion } from "../api/resolveVersion.js";
-import type { PackageDetails, User } from "../declarations/main/main.did.js";
+import type {
+  PackageDetails,
+  PackageSummaryWithChanges,
+  User,
+} from "../declarations/main/main.did.js";
 
 function formatUser(user: User): string {
   let name =
@@ -46,7 +50,11 @@ function label(text: string): string {
   return chalk.bold(text.padEnd(16));
 }
 
-export async function info(pkgArg: string) {
+export interface InfoOptions {
+  versions?: boolean;
+}
+
+export async function info(pkgArg: string, options: InfoOptions = {}) {
   let [name, versionArg] = pkgArg.split("@") as [string, string | undefined];
   let actor = await mainActor();
 
@@ -67,6 +75,11 @@ export async function info(pkgArg: string) {
 
   let d: PackageDetails = res.ok;
   let c = d.config;
+
+  if (options.versions) {
+    printVersions(c.name, d.versionHistory);
+    return;
+  }
 
   console.log("");
   console.log(
@@ -188,6 +201,31 @@ export async function info(pkgArg: string) {
     if (c.dfx) {
       console.log(`${label("dfx")}${c.dfx}`);
     }
+  }
+
+  console.log("");
+}
+
+function printVersions(
+  name: string,
+  history: PackageSummaryWithChanges[],
+): void {
+  console.log("");
+  console.log(
+    `${chalk.green.bold(name)} — ${history.length} version${history.length !== 1 ? "s" : ""}`,
+  );
+  console.log("");
+
+  for (let entry of [...history].reverse()) {
+    let ver = entry.config.version;
+    let date = formatDate(entry.publication.time);
+    let notes = entry.changes.notes;
+
+    let line = `  ${chalk.yellow(ver.padEnd(14))}${chalk.gray(date)}`;
+    if (notes) {
+      line += `  ${chalk.dim(notes)}`;
+    }
+    console.log(line);
   }
 
   console.log("");
