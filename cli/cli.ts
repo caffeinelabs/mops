@@ -8,7 +8,7 @@ import { getNetwork } from "./api/network.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
 import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
-import { build, DEFAULT_BUILD_OUTPUT_DIR } from "./commands/build.js";
+import { build } from "./commands/build.js";
 import { bump } from "./commands/bump.js";
 import { check } from "./commands/check.js";
 import { checkCandid } from "./commands/check-candid.js";
