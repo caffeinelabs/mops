@@ -98,15 +98,5 @@ export async function info(pkgArg: string, options: InfoOptions = {}) {
     console.log(`${label("versions")}${versionsDisplay}${extra}`);
   }
 
-  if (c.moc || c.dfx) {
-    console.log("");
-    if (c.moc) {
-      console.log(`${label("moc")}${c.moc}`);
-    }
-    if (c.dfx) {
-      console.log(`${label("dfx")}${c.dfx}`);
-    }
-  }
-
   console.log("");
 }

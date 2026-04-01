@@ -34,13 +34,9 @@ mops info base --versions
 ## Output
 
 Displays package metadata including:
-- Version, description, and license
+- Version and description
+- License
 - Repository, homepage, and documentation links
-- Publisher and publication date
-- Owners and maintainers
-- Download statistics (total, last 30 days, last 7 days)
 - Dependencies and dev-dependencies
 - Keywords
 - Version history
-- Quality indicators (tests, docs, license, etc.)
-- Toolchain requirements (moc, dfx)
