@@ -34,6 +34,7 @@ export async function info(pkgArg: string, options: InfoOptions = {}) {
   let d: PackageDetails = res.ok;
   let c = d.config;
 
+  // d.versions is in ascending order (oldest first)
   if (options.versions) {
     for (let ver of d.versions) {
       console.log(ver);
@@ -89,7 +90,6 @@ export async function info(pkgArg: string, options: InfoOptions = {}) {
   }
 
   if (d.versions.length > 0) {
-    // API returns versions in ascending order (oldest first)
     let versionsDisplay = d.versions.slice(-10).reverse().join(", ");
     let extra =
       d.versions.length > 10

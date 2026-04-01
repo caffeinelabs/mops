@@ -16,6 +16,7 @@ import { checkStable } from "./commands/check-stable.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
+import { info } from "./commands/info.js";
 import { init } from "./commands/init.js";
 import { lint } from "./commands/lint.js";
 import { installAll } from "./commands/install/install-all.js";
@@ -27,7 +28,6 @@ import {
 import { outdated } from "./commands/outdated.js";
 import { addOwner, printOwners, removeOwner } from "./commands/owner.js";
 import { publish } from "./commands/publish.js";
-import { info } from "./commands/info.js";
 import { remove } from "./commands/remove.js";
 import { search } from "./commands/search.js";
 import * as self from "./commands/self.js";
