@@ -3,7 +3,7 @@ import { execa } from "execa";
 import { exists } from "fs-extra";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { cliError } from "../error.js";
+import { CliError, cliError } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import { resolveCanisterConfigs } from "../helpers/resolve-canisters.js";
 import { CanisterConfig, Config } from "../types.js";
@@ -147,6 +147,9 @@ export async function build(
             );
           }
         } catch (err: any) {
+          if (err instanceof CliError) {
+            throw err;
+          }
           cliError(
             `Error during Candid compatibility check for canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
           );
@@ -173,7 +176,7 @@ export async function build(
       );
       await writeFile(wasmPath, newWasm);
     } catch (err: any) {
-      if (err.message?.includes("Build failed for canister")) {
+      if (err instanceof CliError) {
         throw err;
       }
       cliError(
