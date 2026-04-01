@@ -1,3 +1,4 @@
+import process from "node:process";
 import chalk from "chalk";
 import { mainActor } from "../api/actors.js";
 import { resolveVersion } from "../api/resolveVersion.js";
@@ -42,13 +43,14 @@ export async function info(pkgArg: string) {
   try {
     version = await resolveVersion(name, versionArg ?? "");
   } catch (err) {
-    console.error(chalk.red(`Error: ${err}`));
+    let message = err instanceof Error ? err.message : String(err);
+    console.error(chalk.red("Error: ") + message);
     process.exit(1);
   }
 
   let res = await actor.getPackageDetails(name, version);
   if ("err" in res) {
-    console.error(chalk.red(`Package not found: ${name}@${version}`));
+    console.error(chalk.red("Error: ") + res.err);
     process.exit(1);
   }
 
