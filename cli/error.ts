@@ -1,3 +1,4 @@
+import process from "node:process";
 import chalk from "chalk";
 
 export class CliError extends Error {

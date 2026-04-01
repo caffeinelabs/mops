@@ -295,7 +295,7 @@ export async function testWithReporter(
     // print logs immediately for replica tests because we run them one-by-one
     let mmf = new MMF1(mode === "replica" ? "print" : "store", absToRel(file));
 
-    let promise = new Promise<void>((resolve) => {
+    let promise = new Promise<void>((resolve, reject) => {
       let mocArgs = [
         "--hide-warnings",
         "--error-detail=2",
@@ -380,7 +380,7 @@ export async function testWithReporter(
           .finally(() => {
             fs.rmSync(wasmFile, { force: true });
           })
-          .then(resolve);
+          .then(resolve, reject);
       }
       // build and execute in replica
       else if (mode === "replica") {
@@ -467,7 +467,7 @@ export async function testWithReporter(
             globalThis.mopsReplicaTestRunning = false;
             fs.rmSync(wasmFile, { force: true });
           })
-          .then(resolve);
+          .then(resolve, reject);
       }
     });
 
