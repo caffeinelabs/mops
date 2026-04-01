@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops info <pkg>` command to show detailed package metadata from the registry
 
 ## 2.8.1
 
