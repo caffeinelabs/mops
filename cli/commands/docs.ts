@@ -9,7 +9,7 @@ import { create as createTar } from "tar";
 import streamToPromise from "stream-to-promise";
 
 import { getRootDir } from "../mops.js";
-import { cliError } from "../error.js";
+import { CliError } from "../error.js";
 import { toolchain } from "./toolchain/index.js";
 
 let moDocPath: string;
@@ -55,7 +55,7 @@ export async function docs(options: Partial<DocsOptions> = {}) {
   }
 
   // generate docs
-  await new Promise<void>((resolve) => {
+  await new Promise<void>((resolve, reject) => {
     let proc = spawn(moDocPath, [
       `--source=${path.join(rootDir, source)}`,
       `--output=${docsDirRelative}`,
@@ -80,7 +80,9 @@ export async function docs(options: Partial<DocsOptions> = {}) {
     proc.stderr.on("data", (data) => {
       let text = data.toString().trim();
       if (text.includes("syntax error")) {
-        cliError("Error: " + text);
+        proc.kill();
+        reject(new CliError("Error: " + text));
+        return;
       }
       if (
         text.includes("No such file or directory") ||
@@ -100,7 +102,8 @@ export async function docs(options: Partial<DocsOptions> = {}) {
         return;
       }
       if (code !== 0) {
-        cliError("Error: " + code + " " + stderr);
+        reject(new CliError("Error: " + code + " " + stderr));
+        return;
       }
       resolve();
     });

@@ -1,7 +1,7 @@
 import child_process, { execSync } from "node:child_process";
 import chalk from "chalk";
 import { version, globalConfigDir } from "../mops.js";
-import { cliError } from "../error.js";
+import { CliError, cliError } from "../error.js";
 import { cleanCache } from "../cache.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -50,11 +50,15 @@ export async function update() {
       { stdio: "inherit", detached: false },
     );
 
-    proc.on("exit", (res) => {
-      if (res !== 0) {
-        cliError("Failed to update.");
-      }
-      console.log(chalk.green("Success"));
+    await new Promise<void>((resolve, reject) => {
+      proc.on("exit", (res) => {
+        if (res !== 0) {
+          reject(new CliError("Failed to update."));
+        } else {
+          console.log(chalk.green("Success"));
+          resolve();
+        }
+      });
     });
   }
 }

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import process from "node:process";
 
 import { resolve } from "node:path";
-import { cliError } from "./error.js";
+import { cliError, handleCliError } from "./error.js";
 import { getNetwork } from "./api/network.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
 import { add } from "./commands/add.js";
@@ -805,4 +805,4 @@ docsCommand
   });
 program.addCommand(docsCommand);
 
-program.parse();
+program.parseAsync().catch(handleCliError);

@@ -20,7 +20,6 @@ import {
 } from "../../api/downloadPackageFiles.js";
 import { installDeps } from "./install-deps.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
-import { cliAbort } from "../../error.js";
 
 type InstallMopsDepOptions = {
   verbose?: boolean;
@@ -101,7 +100,8 @@ export async function installMopsDep(
 
       let onSigInt = () => {
         deleteSync([cacheDir], { force: true });
-        cliAbort("");
+        // eslint-disable-next-line no-restricted-properties
+        process.exit();
       };
       process.on("SIGINT", onSigInt);
 

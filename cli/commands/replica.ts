@@ -21,8 +21,6 @@ import {
 } from "../helpers/pocket-ic-client.js";
 import { toolchain } from "./toolchain/index.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
-import { cliError } from "../error.js";
-
 type StartOptions = {
   type?: "dfx" | "pocket-ic" | "dfx-pocket-ic";
   dir?: string;
@@ -94,7 +92,8 @@ export class Replica {
         if (data.toString().includes("Failed to bind socket to")) {
           console.error(chalk.red(data.toString()));
           console.log("Please try again after some time");
-          cliError(undefined, 11);
+          // eslint-disable-next-line no-restricted-properties
+          process.exit(11);
         }
       });
 

@@ -33,7 +33,7 @@ import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
 import { getDfxVersion } from "../../helpers/get-dfx-version.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
-import { cliAbort, cliError } from "../../error.js";
+import { cliError } from "../../error.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
 type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
@@ -86,17 +86,21 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
     let sigint = false;
     process.on("SIGINT", () => {
       if (sigint) {
-        cliAbort("Force exit");
+        console.log("Force exit");
+        // eslint-disable-next-line no-restricted-properties
+        process.exit(0);
       }
       sigint = true;
 
       if (replicaStartPromise) {
         console.log("Stopping replica...");
         replica.stop(true).then(() => {
-          cliAbort();
+          // eslint-disable-next-line no-restricted-properties
+          process.exit(0);
         });
       } else {
-        cliAbort();
+        // eslint-disable-next-line no-restricted-properties
+        process.exit(0);
       }
     });
 
