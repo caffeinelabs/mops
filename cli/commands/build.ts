@@ -3,6 +3,7 @@ import { execa } from "execa";
 import { exists } from "fs-extra";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { lock, unlockSync } from "proper-lockfile";
 import { cliError } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import { resolveCanisterConfigs } from "../helpers/resolve-canisters.js";
@@ -70,115 +71,149 @@ export async function build(
     motokoPath = resolveConfigPath(motokoPath);
     const wasmPath = join(outputDir, `${canisterName}.wasm`);
     const mostPath = join(outputDir, `${canisterName}.most`);
-    let args = [
-      "-c",
-      "--idl",
-      "--stable-types",
-      "-o",
-      wasmPath,
-      motokoPath,
-      ...(await sourcesArgs()).flat(),
-      ...getGlobalMocArgs(config),
-    ];
-    args.push(
-      ...collectExtraArgs(config, canister, canisterName, options.extraArgs),
-    );
 
-    const isPublicCandid = true; // always true for now to reduce corner cases
-    const candidVisibility = isPublicCandid ? "icp:public" : "icp:private";
-    if (isPublicCandid) {
-      args.push("--public-metadata", "candid:service");
-      args.push("--public-metadata", "candid:args");
-    }
+    // per-canister lock to prevent parallel builds of the same canister from clobbering output files
+    const lockTarget = join(outputDir, `.${canisterName}.buildlock`);
+    await writeFile(lockTarget, "", { flag: "a" });
+
+    let release: (() => Promise<void>) | undefined;
     try {
-      if (options.verbose) {
-        console.log(chalk.gray(mocPath, JSON.stringify(args)));
-      }
-      const result = await execa(mocPath, args, {
-        stdio: options.verbose ? "inherit" : "pipe",
-        reject: false,
+      release = await lock(lockTarget, {
+        stale: 300_000,
+        retries: { retries: 60, minTimeout: 500, maxTimeout: 5_000 },
       });
+    } catch {
+      cliError(
+        `Failed to acquire build lock for canister ${canisterName} — another build may be stuck`,
+      );
+    }
 
-      if (result.exitCode !== 0) {
-        if (!options.verbose) {
-          if (result.stderr) {
-            console.error(chalk.red(result.stderr));
+    // proper-lockfile registers its own signal-exit handler, but it doesn't reliably
+    // fire on process.exit(). This manual handler covers that gap. Double-unlock is
+    // harmless (the second call throws and is caught).
+    const exitCleanup = () => {
+      try {
+        unlockSync(lockTarget);
+      } catch {}
+    };
+    process.on("exit", exitCleanup);
+
+    try {
+      let args = [
+        "-c",
+        "--idl",
+        "--stable-types",
+        "-o",
+        wasmPath,
+        motokoPath,
+        ...(await sourcesArgs()).flat(),
+        ...getGlobalMocArgs(config),
+      ];
+      args.push(
+        ...collectExtraArgs(config, canister, canisterName, options.extraArgs),
+      );
+
+      const isPublicCandid = true; // always true for now to reduce corner cases
+      const candidVisibility = isPublicCandid ? "icp:public" : "icp:private";
+      if (isPublicCandid) {
+        args.push("--public-metadata", "candid:service");
+        args.push("--public-metadata", "candid:args");
+      }
+      try {
+        if (options.verbose) {
+          console.log(chalk.gray(mocPath, JSON.stringify(args)));
+        }
+        const result = await execa(mocPath, args, {
+          stdio: options.verbose ? "inherit" : "pipe",
+          reject: false,
+        });
+
+        if (result.exitCode !== 0) {
+          if (!options.verbose) {
+            if (result.stderr) {
+              console.error(chalk.red(result.stderr));
+            }
+            if (result.stdout?.trim()) {
+              console.error(chalk.yellow("Build output:"));
+              console.error(result.stdout);
+            }
           }
-          if (result.stdout?.trim()) {
-            console.error(chalk.yellow("Build output:"));
-            console.error(result.stdout);
+          cliError(
+            `Build failed for canister ${canisterName} (exit code: ${result.exitCode})`,
+          );
+        }
+
+        if (options.verbose && result.stdout && result.stdout.trim()) {
+          console.log(result.stdout);
+        }
+
+        options.verbose &&
+          console.log(chalk.gray(`Stable types written to ${mostPath}`));
+
+        const generatedDidPath = join(outputDir, `${canisterName}.did`);
+        const resolvedCandidPath = canister.candid
+          ? resolveConfigPath(canister.candid)
+          : null;
+
+        if (resolvedCandidPath) {
+          try {
+            const compatible = await isCandidCompatible(
+              generatedDidPath,
+              resolvedCandidPath,
+            );
+
+            if (!compatible) {
+              cliError(
+                `Candid compatibility check failed for canister ${canisterName}`,
+              );
+            }
+
+            if (options.verbose) {
+              console.log(
+                chalk.gray(
+                  `Candid compatibility check passed for canister ${canisterName}`,
+                ),
+              );
+            }
+          } catch (err: any) {
+            cliError(
+              `Error during Candid compatibility check for canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
+            );
           }
+        }
+
+        options.verbose &&
+          console.log(chalk.gray(`Adding metadata to ${wasmPath}`));
+        const candidPath = resolvedCandidPath ?? generatedDidPath;
+        const candidText = await readFile(candidPath, "utf-8");
+        const customSections: CustomSection[] = [
+          { name: `${candidVisibility} candid:service`, data: candidText },
+        ];
+        if (canister.initArg) {
+          customSections.push({
+            name: `${candidVisibility} candid:args`,
+            data: canister.initArg,
+          });
+        }
+        const wasmBytes = await readFile(wasmPath);
+        const newWasm = getWasmBindings().add_custom_sections(
+          wasmBytes,
+          customSections,
+        );
+        await writeFile(wasmPath, newWasm);
+      } catch (err: any) {
+        if (err.message?.includes("Build failed for canister")) {
+          throw err;
         }
         cliError(
-          `Build failed for canister ${canisterName} (exit code: ${result.exitCode})`,
+          `Error while compiling canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
         );
       }
-
-      if (options.verbose && result.stdout && result.stdout.trim()) {
-        console.log(result.stdout);
-      }
-
-      options.verbose &&
-        console.log(chalk.gray(`Stable types written to ${mostPath}`));
-
-      const generatedDidPath = join(outputDir, `${canisterName}.did`);
-      const resolvedCandidPath = canister.candid
-        ? resolveConfigPath(canister.candid)
-        : null;
-
-      if (resolvedCandidPath) {
-        try {
-          const compatible = await isCandidCompatible(
-            generatedDidPath,
-            resolvedCandidPath,
-          );
-
-          if (!compatible) {
-            cliError(
-              `Candid compatibility check failed for canister ${canisterName}`,
-            );
-          }
-
-          if (options.verbose) {
-            console.log(
-              chalk.gray(
-                `Candid compatibility check passed for canister ${canisterName}`,
-              ),
-            );
-          }
-        } catch (err: any) {
-          cliError(
-            `Error during Candid compatibility check for canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
-          );
-        }
-      }
-
-      options.verbose &&
-        console.log(chalk.gray(`Adding metadata to ${wasmPath}`));
-      const candidPath = resolvedCandidPath ?? generatedDidPath;
-      const candidText = await readFile(candidPath, "utf-8");
-      const customSections: CustomSection[] = [
-        { name: `${candidVisibility} candid:service`, data: candidText },
-      ];
-      if (canister.initArg) {
-        customSections.push({
-          name: `${candidVisibility} candid:args`,
-          data: canister.initArg,
-        });
-      }
-      const wasmBytes = await readFile(wasmPath);
-      const newWasm = getWasmBindings().add_custom_sections(
-        wasmBytes,
-        customSections,
-      );
-      await writeFile(wasmPath, newWasm);
-    } catch (err: any) {
-      if (err.message?.includes("Build failed for canister")) {
-        throw err;
-      }
-      cliError(
-        `Error while compiling canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
-      );
+    } finally {
+      process.removeListener("exit", exitCleanup);
+      try {
+        await release?.();
+      } catch {}
     }
   }
 

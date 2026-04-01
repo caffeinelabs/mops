@@ -100,6 +100,23 @@ describe("build", () => {
     }
   });
 
+  test("parallel builds of the same canister both succeed", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    try {
+      const [a, b] = await Promise.all([
+        cli(["build", "foo"], { cwd }),
+        cli(["build", "foo"], { cwd }),
+      ]);
+      expect(a.exitCode).toBe(0);
+      expect(b.exitCode).toBe(0);
+      expect(existsSync(path.join(cwd, ".mops/.build/foo.wasm"))).toBe(true);
+      expect(existsSync(path.join(cwd, ".mops/.build/foo.did"))).toBe(true);
+      expect(existsSync(path.join(cwd, ".mops/.build/foo.most"))).toBe(true);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
   // Regression: bin/mops.js must route through environments/nodejs/cli.js
   // so that setWasmBindings() is called before any command runs.
   // The dev entry point (npm run mops) uses tsx and always worked;
