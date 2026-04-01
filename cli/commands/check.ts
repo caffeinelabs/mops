@@ -2,7 +2,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
-import { cliError } from "../error.js";
+import { CliError, cliError } from "../error.js";
 import {
   getGlobalMocArgs,
   getRootDir,
@@ -134,6 +134,9 @@ export async function check(
 
       console.log(chalk.green(`✓ ${file}`));
     } catch (err: any) {
+      if (err instanceof CliError) {
+        throw err;
+      }
       cliError(
         `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,
       );

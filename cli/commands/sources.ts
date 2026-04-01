@@ -14,9 +14,7 @@ export async function sourcesArgs({
   conflicts = "ignore" as "warning" | "error" | "ignore",
   cwd = process.cwd(),
 } = {}): Promise<string[][]> {
-  if (!checkConfigFile()) {
-    return [];
-  }
+  checkConfigFile();
 
   let resolvedPackages = await resolvePackages({ conflicts });
 

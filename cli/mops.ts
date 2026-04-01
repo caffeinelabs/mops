@@ -71,8 +71,7 @@ export let getIdentity = async (): Promise<Identity | undefined> => {
     try {
       return decodeFile(identityPemEncrypted, res.value);
     } catch (e) {
-      console.log(chalk.red("Error: ") + "Invalid password");
-      process.exit(1);
+      cliError("Error: Invalid password");
     }
   }
   if (fs.existsSync(identityPem)) {
@@ -108,17 +107,12 @@ export function resolveConfigPath(configPath: string): string {
   return path.relative(process.cwd(), path.resolve(getRootDir(), configPath));
 }
 
-export function checkConfigFile(exit = false) {
+export function checkConfigFile(): true {
   let configFile = getClosestConfigFile();
   if (!configFile) {
-    console.log(
-      chalk.red("Error: ") +
-        `Config file 'mops.toml' not found. Please run ${chalk.green("mops init")} first`,
+    cliError(
+      `Config file 'mops.toml' not found. Please run ${chalk.green("mops init")} first`,
     );
-    if (exit) {
-      process.exit(1);
-    }
-    return false;
   }
   return true;
 }

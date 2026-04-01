@@ -25,9 +25,7 @@ export async function remove(
   name: string,
   { dev = false, verbose = false, dryRun = false, lock }: RemoveOptions = {},
 ) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   function getTransitiveDependencies(config: Config, exceptPkgId: string) {
     let deps = Object.values(config.dependencies || {});

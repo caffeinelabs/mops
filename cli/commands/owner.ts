@@ -1,14 +1,12 @@
-import process from "node:process";
 import chalk from "chalk";
 import { checkConfigFile, getIdentity, readConfig } from "../mops.js";
 import { mainActor } from "../api/actors.js";
 import { Principal } from "@icp-sdk/core/principal";
 import prompts from "prompts";
+import { cliAbort, cliError } from "../error.js";
 
 export async function printOwners() {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let config = readConfig();
   let actor = await mainActor();
@@ -21,9 +19,7 @@ export async function printOwners() {
 }
 
 export async function addOwner(owner: string, yes = false) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let config = readConfig();
   let principal = Principal.fromText(owner);
@@ -31,8 +27,7 @@ export async function addOwner(owner: string, yes = false) {
   if (!yes) {
     let promptsConfig = {
       onCancel() {
-        console.log("aborted");
-        process.exit(0);
+        cliAbort();
       },
     };
 
@@ -61,15 +56,12 @@ export async function addOwner(owner: string, yes = false) {
       `Added owner ${chalk.bold(owner)} to package ${chalk.bold(config.package?.name)}`,
     );
   } else {
-    console.error(chalk.red("Error: ") + res.err);
-    process.exit(1);
+    cliError("Error: " + res.err);
   }
 }
 
 export async function removeOwner(owner: string, yes = false) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let config = readConfig();
   let principal = Principal.fromText(owner);
@@ -77,8 +69,7 @@ export async function removeOwner(owner: string, yes = false) {
   if (!yes) {
     let promptsConfig = {
       onCancel() {
-        console.log("aborted");
-        process.exit(0);
+        cliAbort();
       },
     };
 
@@ -107,7 +98,6 @@ export async function removeOwner(owner: string, yes = false) {
       `Removed owner ${chalk.bold(owner)} from package ${chalk.bold(config.package?.name)}`,
     );
   } else {
-    console.error(chalk.red("Error: ") + res.err);
-    process.exit(1);
+    cliError("Error: " + res.err);
   }
 }

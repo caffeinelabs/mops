@@ -33,6 +33,7 @@ import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
 import { getDfxVersion } from "../../helpers/get-dfx-version.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
+import { cliError } from "../../error.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
 type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
@@ -68,12 +69,9 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
   if (replicaType === "pocket-ic" && !config.toolchain?.["pocket-ic"]) {
     let dfxVersion = getDfxVersion();
     if (!dfxVersion || new SemVer(dfxVersion).compare("0.24.1") < 0) {
-      console.log(
-        chalk.red(
-          "Please update dfx to the version >=0.24.1 or specify pocket-ic version in mops.toml",
-        ),
+      cliError(
+        "Please update dfx to the version >=0.24.1 or specify pocket-ic version in mops.toml",
       );
-      process.exit(1);
     } else {
       replicaType = "dfx-pocket-ic";
     }
@@ -89,6 +87,7 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
     process.on("SIGINT", () => {
       if (sigint) {
         console.log("Force exit");
+        // eslint-disable-next-line no-restricted-properties
         process.exit(0);
       }
       sigint = true;
@@ -96,9 +95,11 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       if (replicaStartPromise) {
         console.log("Stopping replica...");
         replica.stop(true).then(() => {
+          // eslint-disable-next-line no-restricted-properties
           process.exit(0);
         });
       } else {
+        // eslint-disable-next-line no-restricted-properties
         process.exit(0);
       }
     });
@@ -152,7 +153,7 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       replicaType,
     );
     if (!passed) {
-      process.exit(1);
+      cliError();
     }
   }
 }
@@ -294,7 +295,7 @@ export async function testWithReporter(
     // print logs immediately for replica tests because we run them one-by-one
     let mmf = new MMF1(mode === "replica" ? "print" : "store", absToRel(file));
 
-    let promise = new Promise<void>((resolve) => {
+    let promise = new Promise<void>((resolve, reject) => {
       let mocArgs = [
         "--hide-warnings",
         "--error-detail=2",
@@ -314,7 +315,7 @@ export async function testWithReporter(
           }
           throw error;
         });
-        pipeMMF(proc, mmf).then(resolve);
+        pipeMMF(proc, mmf).then(resolve, reject);
       }
       // build and run wasm
       else if (mode === "wasi") {
@@ -361,12 +362,9 @@ export async function testWithReporter(
                 wasmFile,
               ];
             } else {
-              console.error(
-                chalk.red(
-                  "Minimum wasmtime version is 14.0.0. Please update wasmtime to the latest version",
-                ),
+              cliError(
+                "Minimum wasmtime version is 14.0.0. Please update wasmtime to the latest version",
               );
-              process.exit(1);
             }
 
             let proc = spawn(wasmtimePath, wasmtimeArgs, { signal });
@@ -382,7 +380,7 @@ export async function testWithReporter(
           .finally(() => {
             fs.rmSync(wasmFile, { force: true });
           })
-          .then(resolve);
+          .then(resolve, reject);
       }
       // build and execute in replica
       else if (mode === "replica") {
@@ -469,7 +467,7 @@ export async function testWithReporter(
             globalThis.mopsReplicaTestRunning = false;
             fs.rmSync(wasmFile, { force: true });
           })
-          .then(resolve);
+          .then(resolve, reject);
       }
     });
 

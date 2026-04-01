@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { globSync } from "glob";
 import path from "node:path";
-import { cliError } from "../error.js";
+import { CliError, cliError } from "../error.js";
 import {
   formatDir,
   formatGithubDir,
@@ -182,6 +182,9 @@ export async function lint(
       console.log(chalk.green("✓ Lint succeeded"));
     }
   } catch (err: any) {
+    if (err instanceof CliError) {
+      throw err;
+    }
     cliError(
       `Error while running lintoko${err?.message ? `\n${err.message}` : ""}`,
     );

@@ -25,6 +25,7 @@ import { getDfxVersion } from "../helpers/get-dfx-version.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
 import { sources } from "./sources.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
+import { cliError } from "../error.js";
 
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
@@ -75,12 +76,9 @@ export async function bench(
   if (replicaType === "pocket-ic" && !config.toolchain?.["pocket-ic"]) {
     let dfxVersion = getDfxVersion();
     if (!dfxVersion || new SemVer(dfxVersion).compare("0.24.1") < 0) {
-      console.log(
-        chalk.red(
-          "Please update dfx to the version >=0.24.1 or specify pocket-ic version in mops.toml",
-        ),
+      cliError(
+        "Please update dfx to the version >=0.24.1 or specify pocket-ic version in mops.toml",
       );
-      process.exit(1);
     } else {
       replicaType = "dfx-pocket-ic";
     }

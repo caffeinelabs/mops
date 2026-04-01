@@ -1,14 +1,12 @@
-import process from "node:process";
 import chalk from "chalk";
 import { checkConfigFile, getIdentity, readConfig } from "../mops.js";
 import { mainActor } from "../api/actors.js";
 import { Principal } from "@icp-sdk/core/principal";
 import prompts from "prompts";
+import { cliAbort, cliError } from "../error.js";
 
 export async function printMaintainers() {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let config = readConfig();
   let actor = await mainActor();
@@ -23,9 +21,7 @@ export async function printMaintainers() {
 }
 
 export async function addMaintainer(maintainer: string, yes = false) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let config = readConfig();
   let principal = Principal.fromText(maintainer);
@@ -33,8 +29,7 @@ export async function addMaintainer(maintainer: string, yes = false) {
   if (!yes) {
     let promptsConfig = {
       onCancel() {
-        console.log("aborted");
-        process.exit(0);
+        cliAbort();
       },
     };
 
@@ -63,15 +58,12 @@ export async function addMaintainer(maintainer: string, yes = false) {
       `Added maintainer ${chalk.bold(maintainer)} to package ${chalk.bold(config.package?.name)}`,
     );
   } else {
-    console.error(chalk.red("Error: ") + res.err);
-    process.exit(1);
+    cliError("Error: " + res.err);
   }
 }
 
 export async function removeMaintainer(maintainer: string, yes = false) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let config = readConfig();
   let principal = Principal.fromText(maintainer);
@@ -79,8 +71,7 @@ export async function removeMaintainer(maintainer: string, yes = false) {
   if (!yes) {
     let promptsConfig = {
       onCancel() {
-        console.log("aborted");
-        process.exit(0);
+        cliAbort();
       },
     };
 
@@ -109,7 +100,6 @@ export async function removeMaintainer(maintainer: string, yes = false) {
       `Removed maintainer ${chalk.bold(maintainer)} from package ${chalk.bold(config.package?.name)}`,
     );
   } else {
-    console.error(chalk.red("Error: ") + res.err);
-    process.exit(1);
+    cliError("Error: " + res.err);
   }
 }

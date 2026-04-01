@@ -1,4 +1,3 @@
-import process from "node:process";
 import path from "node:path";
 import { Buffer } from "node:buffer";
 import { unzipSync } from "node:zlib";
@@ -10,6 +9,7 @@ import { deleteSync } from "del";
 import { Octokit } from "octokit";
 import { extract as extractTar } from "tar";
 
+import { cliError } from "../../error.js";
 import { getRootDir } from "../../mops.js";
 
 export const TOOLCHAINS = ["moc", "wasmtime", "pocket-ic", "lintoko"];
@@ -34,8 +34,7 @@ export let downloadAndExtract = async (
   let res = await fetch(url);
 
   if (res.status !== 200) {
-    console.error(`ERROR ${res.status} ${url}`);
-    process.exit(1);
+    cliError(`ERROR ${res.status} ${url}`);
   }
 
   let arrayBuffer = await res.arrayBuffer();
@@ -81,8 +80,7 @@ export let getLatestReleaseTag = async (repo: string): Promise<string> => {
     (release: any) => !release.prerelease && !release.draft,
   );
   if (!release?.tag_name) {
-    console.error(`Failed to fetch latest release tag for ${repo}`);
-    process.exit(1);
+    cliError(`Failed to fetch latest release tag for ${repo}`);
   }
   return release.tag_name.replace(/^v/, "");
 };
@@ -96,8 +94,7 @@ export let getReleases = async (repo: string) => {
     },
   });
   if (res.status !== 200) {
-    console.log("Releases fetch error");
-    process.exit(1);
+    cliError("Releases fetch error");
   }
   return res.data.map((release: any) => {
     return {

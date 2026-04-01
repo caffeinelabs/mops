@@ -4,6 +4,7 @@ import fs from "node:fs";
 import process from "node:process";
 
 import { resolve } from "node:path";
+import { cliError, handleCliError } from "./error.js";
 import { getNetwork } from "./api/network.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
 import { add } from "./commands/add.js";
@@ -122,9 +123,7 @@ program
     ]),
   )
   .action(async (pkg, options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await add(pkg, options);
   });
 
@@ -143,9 +142,7 @@ program
     ]),
   )
   .action(async (pkg, options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await remove(pkg, options);
   });
 
@@ -164,9 +161,7 @@ program
     ]),
   )
   .action(async (options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
 
     let compatible = await checkApiCompatibility();
     if (!compatible) {
@@ -187,7 +182,7 @@ program
     await resolvePackages({ conflicts: "warning" });
 
     if (!ok) {
-      process.exit(1);
+      cliError();
     }
   });
 
@@ -200,9 +195,7 @@ program
   .option("--no-bench", "Do not run benchmarks")
   .option("--verbose")
   .action(async (options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     let compatible = await checkApiCompatibility();
     if (compatible) {
       await publish(options);
@@ -242,9 +235,7 @@ program
       .default("warning"),
   )
   .action(async (options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     if (options.install) {
       await installAll({
         silent: true,
@@ -263,7 +254,7 @@ program
   .command("moc-args")
   .description("Print global moc compiler flags from [moc] config section")
   .action(async () => {
-    checkConfigFile(true);
+    checkConfigFile();
     let config = readConfig();
     let args = getGlobalMocArgs(config);
     if (args.length) {
@@ -304,7 +295,7 @@ program
   .addOption(new Option("--output, -o <output>", "Output directory"))
   .allowUnknownOption(true) // TODO: restrict unknown before "--"
   .action(async (canisters, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(canisters);
     await installAll({
       silent: true,
@@ -333,7 +324,7 @@ program
   )
   .allowUnknownOption(true)
   .action(async (files, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args: fileList } = parseExtraArgs(files);
     await installAll({
       silent: true,
@@ -351,7 +342,7 @@ program
   .command("check-candid <new-candid> <original-candid>")
   .description("Check Candid interface compatibility between two Candid files")
   .action(async (newCandid, originalCandid) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await installAll({
       silent: true,
       lock: "ignore",
@@ -369,7 +360,7 @@ program
   .option("--verbose", "Verbose console output")
   .allowUnknownOption(true)
   .action(async (oldFile, canister, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs } = parseExtraArgs();
     await installAll({
       silent: true,
@@ -408,7 +399,7 @@ program
   .option("-w, --watch", "Enable watch mode")
   .option("--verbose", "Verbose output")
   .action(async (filter, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await installAll({
       silent: true,
       lock: "ignore",
@@ -444,7 +435,7 @@ program
   // .addOption(new Option('--force-gc', 'Force GC'))
   .addOption(new Option("--verbose", "Show more information"))
   .action(async (filter, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await installAll({
       silent: true,
       lock: "ignore",
@@ -458,9 +449,7 @@ program
   .command("template")
   .description("Apply template")
   .action(async () => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await template();
   });
 
@@ -659,9 +648,7 @@ toolchainCommand
   .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
   .addArgument(new Argument("[version]"))
   .action(async (tool, version) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await toolchain.use(tool, version);
   });
 
@@ -672,9 +659,7 @@ toolchainCommand
   )
   .addArgument(new Argument("[tool]").choices(TOOLCHAINS))
   .action(async (tool?: Tool) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await toolchain.update(tool);
   });
 
@@ -732,7 +717,7 @@ program
   .option("-g, --generate", "Generate declarations for Motoko canisters")
   .option("-d, --deploy", "Deploy Motoko canisters")
   .action(async (options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await watch(options);
   });
 
@@ -745,10 +730,10 @@ program
     new Option("--check", "Check code formatting (do not change source files)"),
   )
   .action(async (filter, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     let { ok } = await format(filter, options);
     if (!ok) {
-      process.exit(1);
+      cliError();
     }
   });
 
@@ -766,7 +751,7 @@ program
   )
   .allowUnknownOption(true)
   .action(async (filter, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs } = parseExtraArgs();
     await lint(filter, {
       ...options,
@@ -790,7 +775,7 @@ docsCommand
       .choices(["md", "adoc", "html"]),
   )
   .action(async (options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await docs(options);
   });
 
@@ -815,9 +800,9 @@ docsCommand
     ).default(70),
   )
   .action(async (options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await docsCoverage(options);
   });
 program.addCommand(docsCommand);
 
-program.parse();
+program.parseAsync().catch(handleCliError);

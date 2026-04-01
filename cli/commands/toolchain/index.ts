@@ -6,6 +6,7 @@ import { execSync } from "node:child_process";
 import chalk from "chalk";
 import prompts from "prompts";
 import { createLogUpdate } from "log-update";
+import { CliError, cliError } from "../../error.js";
 import {
   checkConfigFile,
   getClosestConfigFile,
@@ -32,8 +33,7 @@ function getToolUtils(tool: Tool) {
   } else if (tool === "lintoko") {
     return lintoko;
   } else {
-    console.error(`Unknown tool '${tool}'`);
-    process.exit(1);
+    cliError(`Unknown tool '${tool}'`);
   }
 }
 
@@ -72,8 +72,7 @@ async function checkToolchainInited({ strict = false } = {}): Promise<boolean> {
 // update shell config files to set DFX_MOC_PATH to moc-wrapper
 async function init({ reset = false, silent = false } = {}) {
   if (process.platform == "win32") {
-    console.error("Windows is not supported. Please use WSL");
-    process.exit(1);
+    cliError("Windows is not supported. Please use WSL");
   }
 
   try {
@@ -90,10 +89,14 @@ async function init({ reset = false, silent = false } = {}) {
       );
       console.log("TIP: More details at https://docs.mops.one/cli/toolchain");
       if (!process.env.CI || !silent) {
-        process.exit(1);
+        cliError();
       }
     }
-  } catch {}
+  } catch (err) {
+    if (err instanceof CliError) {
+      throw err;
+    }
+  }
 
   let zshrc = path.join(os.homedir(), ".zshrc");
   let bashrc = path.join(os.homedir(), ".bashrc");
@@ -119,7 +122,7 @@ async function init({ reset = false, silent = false } = {}) {
     console.log(
       'TIP: You can add "export DFX_MOC_PATH=moc-wrapper" to your shell config file manually to initialize Mops toolchain',
     );
-    process.exit(1);
+    cliError();
   }
 
   // update all existing shell config files
@@ -322,10 +325,9 @@ async function update(tool?: Tool) {
 
   for (let tool of tools) {
     if (!config.toolchain[tool]) {
-      console.error(
+      cliError(
         `Tool '${tool}' is not defined in [toolchain] section in mops.toml`,
       );
-      process.exit(1);
     }
 
     let toolUtils = getToolUtils(tool);
@@ -359,7 +361,6 @@ async function bin(tool: Tool, { fallback = false } = {}): Promise<string> {
       return execSync("dfx cache show").toString().trim() + "/moc";
     }
     checkConfigFile();
-    process.exit(1);
   }
 
   let config = readConfig();
@@ -392,7 +393,7 @@ async function bin(tool: Tool, { fallback = false } = {}): Promise<string> {
     console.log(
       `Run ${chalk.green(`mops toolchain use ${tool}`)} to install it`,
     );
-    process.exit(1);
+    cliError();
   }
 }
 

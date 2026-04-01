@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
-import { cliError } from "../error.js";
+import { CliError, cliError } from "../error.js";
 
 export interface CheckCandidOptions {
   verbose?: boolean;
@@ -17,6 +17,9 @@ export async function checkCandid(
     }
     console.log(chalk.green("✓ Candid compatibility check passed"));
   } catch (error: any) {
+    if (error instanceof CliError) {
+      throw error;
+    }
     cliError(
       `Error while checking Candid compatibility${error?.message ? `\n${error.message}` : ""}`,
     );

@@ -5,6 +5,7 @@ import { Buffer } from "node:buffer";
 import { createLogUpdate } from "log-update";
 import chalk from "chalk";
 import { deleteSync } from "del";
+import { CliError } from "../../error.js";
 import { checkConfigFile, progressBar, readConfig } from "../../mops.js";
 import { getHighestVersion } from "../../api/getHighestVersion.js";
 import { storageActor } from "../../api/actors.js";
@@ -43,9 +44,7 @@ export async function installMopsDep(
   threads = threads || 12;
   let depName = getDepName(pkg);
 
-  if (!checkConfigFile()) {
-    return false;
-  }
+  checkConfigFile();
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
   // progress
@@ -102,6 +101,7 @@ export async function installMopsDep(
 
       let onSigInt = () => {
         deleteSync([cacheDir], { force: true });
+        // eslint-disable-next-line no-restricted-properties
         process.exit();
       };
       process.on("SIGINT", onSigInt);
@@ -121,6 +121,9 @@ export async function installMopsDep(
           }),
         );
       } catch (err) {
+        if (err instanceof CliError) {
+          throw err;
+        }
         console.error(chalk.red("Error: ") + err);
         deleteSync([cacheDir], { force: true });
         return false;
@@ -128,6 +131,9 @@ export async function installMopsDep(
 
       process.off("SIGINT", onSigInt);
     } catch (err) {
+      if (err instanceof CliError) {
+        throw err;
+      }
       console.error(chalk.red("Error: ") + err);
       return false;
     }

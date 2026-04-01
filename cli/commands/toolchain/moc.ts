@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "fs-extra";
 import { SemVer } from "semver";
 
+import { cliError } from "../../error.js";
 import { globalCacheDir } from "../../mops.js";
 import * as toolchainUtils from "./toolchain-utils.js";
 
@@ -28,12 +29,10 @@ export let download = async (
   { silent = false, verbose = false } = {},
 ) => {
   if (process.platform == "win32") {
-    console.error("Windows is not supported. Please use WSL");
-    process.exit(1);
+    cliError("Windows is not supported. Please use WSL");
   }
   if (!version) {
-    console.error("version is not defined");
-    process.exit(1);
+    cliError("version is not defined");
   }
 
   const destDir = path.join(cacheDir, version);

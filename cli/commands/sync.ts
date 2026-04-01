@@ -15,9 +15,7 @@ type SyncOptions = {
 };
 
 export async function sync({ lock }: SyncOptions = {}) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let missing = await getMissingPackages();
   let unused = await getUnusedPackages();

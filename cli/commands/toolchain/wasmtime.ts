@@ -2,6 +2,7 @@ import process from "node:process";
 import path from "node:path";
 import fs from "fs-extra";
 
+import { cliError } from "../../error.js";
 import { globalCacheDir } from "../../mops.js";
 import * as toolchainUtils from "./toolchain-utils.js";
 
@@ -27,8 +28,7 @@ export let download = async (
   { silent = false, verbose = false } = {},
 ) => {
   if (!version) {
-    console.error("version is not defined");
-    process.exit(1);
+    cliError("version is not defined");
   }
   if (isCached(version)) {
     if (verbose) {
