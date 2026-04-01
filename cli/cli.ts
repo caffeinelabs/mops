@@ -28,6 +28,7 @@ import { outdated } from "./commands/outdated.js";
 import { addOwner, printOwners, removeOwner } from "./commands/owner.js";
 import { publish } from "./commands/publish.js";
 import { remove } from "./commands/remove.js";
+import { info } from "./commands/info.js";
 import { search } from "./commands/search.js";
 import * as self from "./commands/self.js";
 import { sources } from "./commands/sources.js";
@@ -277,6 +278,14 @@ program
   .description("Search for packages")
   .action(async (text) => {
     await search(text);
+  });
+
+// info
+program
+  .command("info <pkg>")
+  .description("Show detailed information about a package from the registry")
+  .action(async (pkg: string) => {
+    await info(pkg);
   });
 
 // cache
