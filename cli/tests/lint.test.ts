@@ -121,6 +121,13 @@ describe("lint", () => {
       expect(result.exitCode).toBe(0);
     });
 
+    test("empty rule dirs array is skipped with a warning", async () => {
+      const cwd = path.join(import.meta.dirname, "lint-extra-empty-value");
+      const result = await cli(["lint"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toMatch(/non-empty array/i);
+    });
+
     test("extra rules do not apply to unmatched files", async () => {
       // Only src/Restricted.mo is matched by the extra glob.
       // Ok.mo should not be checked by the extra rule.

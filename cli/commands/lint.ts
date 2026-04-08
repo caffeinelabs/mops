@@ -192,7 +192,7 @@ export async function lint(
   const commonArgs = buildCommonArgs(options, config);
 
   // --- base run ---
-  let baseArgs: string[] = [...commonArgs];
+  const baseArgs: string[] = [...commonArgs];
   const rules =
     options.rules !== undefined
       ? options.rules
@@ -205,9 +205,10 @@ export async function lint(
   // --- extra runs ---
   const extraEntries = config.lint?.extra;
   if (extraEntries) {
-    const baseFileSet = new Set(
-      filesToLint.map((f) => path.resolve(rootDir, f)),
-    );
+    const isFiltered = filter || (options.files && options.files.length > 0);
+    const baseFileSet = isFiltered
+      ? new Set(filesToLint.map((f) => path.resolve(rootDir, f)))
+      : undefined;
 
     for (const [globPattern, ruleDirs] of Object.entries(extraEntries)) {
       if (!Array.isArray(ruleDirs) || ruleDirs.length === 0) {
@@ -232,9 +233,7 @@ export async function lint(
         cwd: rootDir,
       });
 
-      // When a filter or explicit file list is active, restrict extra runs
-      // to the same file scope as the base run.
-      if (filter || (options.files && options.files.length > 0)) {
+      if (baseFileSet) {
         matchedFiles = matchedFiles.filter((f) =>
           baseFileSet.has(path.resolve(rootDir, f)),
         );
@@ -251,7 +250,7 @@ export async function lint(
         continue;
       }
 
-      let extraArgs: string[] = [...commonArgs];
+      const extraArgs: string[] = [...commonArgs];
       for (const dir of ruleDirs) {
         extraArgs.push("--rules", dir);
       }
