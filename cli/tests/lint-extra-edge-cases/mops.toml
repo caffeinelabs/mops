@@ -1,0 +1,8 @@
+[toolchain]
+lintoko = "0.7.0"
+
+[lint.extra]
+"src/Clean.mo" = ["../lint/lints"]
+"src/also-missing/*.mo" = []
+"src/nonexistent/*.mo" = ["../lint/lints"]
+"src/*.mo" = ["nonexistent-rules"]

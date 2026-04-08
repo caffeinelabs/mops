@@ -1,5 +1,0 @@
-[toolchain]
-lintoko = "0.7.0"
-
-[lint.extra]
-"src/restricted/*.mo" = ["../lint/lints"]

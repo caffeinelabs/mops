@@ -46,97 +46,39 @@ describe("lint", () => {
   });
 
   describe("[lint.extra]", () => {
-    test("extra rules fail on matched file", async () => {
+    test("extra rules on glob-matched files", async () => {
+      // src/restricted/*.mo has violations, Ok.mo does not.
+      // Extra rules apply only to the glob match → fails on restricted/ files.
+      // Filter "Ok" narrows scope so extra is skipped → passes.
       const cwd = path.join(import.meta.dirname, "lint-extra");
-      const result = await cli(["lint"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(/no-bool-switch/);
+      await cliSnapshot(["lint", "--verbose"], { cwd }, 1);
+      await cliSnapshot(["lint", "Ok"], { cwd }, 0);
     });
 
-    test("extra rules pass when matched file is clean", async () => {
-      const cwd = path.join(import.meta.dirname, "lint-extra-pass");
-      const result = await cli(["lint"], { cwd });
-      expect(result.exitCode).toBe(0);
-    });
-
-    test("glob pattern matches directory contents", async () => {
-      const cwd = path.join(import.meta.dirname, "lint-extra-glob");
-      const result = await cli(["lint"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(/no-bool-switch/);
-    });
-
-    test("non-matching glob skips silently (verbose warns)", async () => {
-      const cwd = path.join(import.meta.dirname, "lint-extra-no-match");
-      const result = await cli(["lint"], { cwd });
-      expect(result.exitCode).toBe(0);
-    });
-
-    test("non-matching glob prints warning with --verbose", async () => {
-      const cwd = path.join(import.meta.dirname, "lint-extra-no-match");
-      const result = await cli(["lint", "--verbose"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stderr).toMatch(/no files matched glob/i);
-    });
-
-    test("missing rule directory errors", async () => {
-      const cwd = path.join(import.meta.dirname, "lint-extra-missing-dir");
-      const result = await cli(["lint"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(/rule directory.*not found/i);
-    });
-
-    test("multiple rule directories per glob", async () => {
-      const cwd = path.join(import.meta.dirname, "lint-extra-multi-rules");
-      const result = await cli(["lint"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(/no-bool-switch/);
+    test("edge cases: pass, empty value, no-match, missing dir", async () => {
+      // Single fixture with 4 entries processed in order:
+      //   1. Clean.mo + valid rules → passes
+      //   2. empty array → warns and skips
+      //   3. non-matching glob → skips (verbose warns)
+      //   4. missing rule dir → errors
+      const cwd = path.join(import.meta.dirname, "lint-extra-edge-cases");
+      await cliSnapshot(["lint", "--verbose"], { cwd }, 1);
     });
 
     test("base rules still run alongside extra rules", async () => {
-      // BadBase.mo has a no-bool-switch violation caught by the base lints/ directory.
-      // Restricted.mo (targeted by extra rules) is clean.
-      // This proves the failure comes from the base run, not the extra run.
       const cwd = path.join(import.meta.dirname, "lint-extra-with-base");
-      const result = await cli(["lint"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(/BadBase/);
-      expect(result.stderr).toMatch(/no-bool-switch/);
+      await cliSnapshot(["lint", "--verbose"], { cwd }, 1);
     });
 
-    test("--rules CLI flag does not affect extra runs", async () => {
-      // --rules overrides the base rule dirs with an empty dir (no base violations).
-      // Extra rules still apply independently → Restricted.mo fails.
+    test("--rules CLI flag does not affect extra runs, multi-rules", async () => {
+      // --rules overrides base with an empty dir (no base violations).
+      // Extra runs independently with two rule dirs → Restricted.mo fails.
       const cwd = path.join(import.meta.dirname, "lint-extra-with-cli-rules");
-      const result = await cli(["lint", "--rules", "empty-rules"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(/no-bool-switch/);
-    });
-
-    test("filter scopes extra runs to matching files", async () => {
-      // "Ok" filter means only Ok.mo is linted. Restricted.mo (matched by extra
-      // glob) is excluded because the filter narrows the scope.
-      const cwd = path.join(import.meta.dirname, "lint-extra");
-      const result = await cli(["lint", "Ok"], { cwd });
-      expect(result.exitCode).toBe(0);
-    });
-
-    test("empty rule dirs array is skipped with a warning", async () => {
-      const cwd = path.join(import.meta.dirname, "lint-extra-empty-value");
-      const result = await cli(["lint"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stderr).toMatch(/non-empty array/i);
-    });
-
-    test("extra rules do not apply to unmatched files", async () => {
-      // Only src/Restricted.mo is matched by the extra glob.
-      // Ok.mo should not be checked by the extra rule.
-      // Since Ok.mo has no violations even with extra rules, and Restricted.mo does,
-      // we verify that the error mentions the restricted file specifically.
-      const cwd = path.join(import.meta.dirname, "lint-extra");
-      const result = await cli(["lint", "--verbose"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(/Restricted/);
+      await cliSnapshot(
+        ["lint", "--rules", "empty-rules", "--verbose"],
+        { cwd },
+        1,
+      );
     });
   });
 });

@@ -1,5 +1,0 @@
-[toolchain]
-lintoko = "0.7.0"
-
-[lint.extra]
-"src/Restricted.mo" = ["../lint/lints", "rules-b"]
