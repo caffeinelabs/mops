@@ -104,6 +104,64 @@ Extra flags forwarded to `lintoko`:
 args = ["--severity", "warning"]
 ```
 
+### `extra`
+
+Apply additional lint rules to specific files or directories. Each key is a glob pattern matched against project files, and the value is an array of rule directories. These extra rules run **in addition to** the base rules — they never replace them.
+
+```toml
+[lint.extra]
+"src/main.mo" = ["lint/no-types"]
+"src/Types.mo" = ["lint/types-only"]
+"migrations/*.mo" = ["lint/migration-only", "lint/no-types"]
+```
+
+Each entry triggers a separate `lintoko` invocation on the matched files. If any invocation fails, `mops lint` fails. Globs that match no files are silently skipped (a warning is shown with `--verbose`).
+
+The `--rules` CLI flag only overrides the **base** rule directories — `[lint.extra]` entries always run independently.
+
+#### Example rule files
+
+Here are starter rule files you can place in your project for use with `[lint.extra]`:
+
+**`lint/no-types/no-types.toml`** — forbid type declarations (move types to a separate module):
+
+```toml
+name = "no-types"
+description = "File must not contain type declarations. Move types to a separate Types module."
+query = """
+(typ_dec) @error
+"""
+```
+
+**`lint/types-only/types-only.toml`** — allow only type declarations:
+
+```toml
+name = "types-only"
+description = "File must contain only type declarations. No functions, classes, or variable bindings."
+query = """
+(source_file (exp_dec) @error)
+(source_file (let_dec) @error)
+(source_file (var_dec) @error)
+(source_file (class_dec) @error)
+(source_file (func_dec) @error)
+(source_file (obj_dec) @error)
+"""
+```
+
+**`lint/migration-only/migration-only.toml`** — only `migration()` may be a public function:
+
+```toml
+name = "migration-only"
+description = "Only migration() may be a public function."
+query = """
+(dec_field
+  "public"
+  (func_dec
+    (identifier) @name
+    (#not-eq? @name "migration")) @error)
+"""
+```
+
 ### Combining options
 
 ```toml
@@ -111,10 +169,13 @@ args = ["--severity", "warning"]
 extends = ["base"]
 rules = ["my-extra-rules"]
 args = ["--severity", "warning"]
+
+[lint.extra]
+"src/Types.mo" = ["lint/types-only"]
 ```
 
 :::tip
-The `--rules` CLI flag overrides all configured rule directories (including `[lint] rules`, `extends`, and the default `lint/`/`lints/`). Use it for one-off overrides without changing `mops.toml`.
+The `--rules` CLI flag overrides all configured rule directories (including `[lint] rules`, `extends`, and the default `lint/`/`lints/`). Use it for one-off overrides without changing `mops.toml`. It does not affect `[lint.extra]` entries.
 :::
 
 ## Publishing rules with a package

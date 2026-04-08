@@ -103,6 +103,64 @@ export interface LintOptions {
   extraArgs: string[];
 }
 
+function buildCommonArgs(
+  options: Partial<LintOptions>,
+  config: Config,
+): string[] {
+  const args: string[] = [];
+  if (options.verbose) {
+    args.push("--verbose");
+  }
+  if (options.fix) {
+    args.push("--fix");
+  }
+  if (config.lint?.args) {
+    if (typeof config.lint.args === "string") {
+      cliError(
+        `[lint] config 'args' should be an array of strings in mops.toml config file`,
+      );
+    }
+    args.push(...config.lint.args);
+  }
+  if (options.extraArgs && options.extraArgs.length > 0) {
+    args.push(...options.extraArgs);
+  }
+  return args;
+}
+
+async function runLintoko(
+  lintokoBinPath: string,
+  rootDir: string,
+  args: string[],
+  options: Partial<LintOptions>,
+  label: string,
+): Promise<void> {
+  try {
+    if (options.verbose) {
+      console.log(
+        chalk.blue("lint"),
+        chalk.gray(`Running lintoko (${label}):`),
+      );
+      console.log(chalk.gray(lintokoBinPath));
+      console.log(chalk.gray(JSON.stringify(args)));
+    }
+
+    const result = await execa(lintokoBinPath, args, {
+      cwd: rootDir,
+      stdio: "inherit",
+      reject: false,
+    });
+
+    if (result.exitCode !== 0) {
+      cliError(`Lint failed with exit code ${result.exitCode}`);
+    }
+  } catch (err: any) {
+    cliError(
+      `Error while running lintoko${err?.message ? `\n${err.message}` : ""}`,
+    );
+  }
+}
+
 export async function lint(
   filter: string | undefined,
   options: Partial<LintOptions>,
@@ -131,59 +189,87 @@ export async function lint(
     }
   }
 
-  let args: string[] = [];
-  if (options.verbose) {
-    args.push("--verbose");
-  }
-  if (options.fix) {
-    args.push("--fix");
-  }
+  const commonArgs = buildCommonArgs(options, config);
+
+  // --- base run ---
+  let baseArgs: string[] = [...commonArgs];
   const rules =
     options.rules !== undefined
       ? options.rules
       : await collectLintRules(config, rootDir);
-  rules.forEach((rule) => args.push("--rules", rule));
+  rules.forEach((rule) => baseArgs.push("--rules", rule));
+  baseArgs.push(...filesToLint);
 
-  if (config.lint?.args) {
-    if (typeof config.lint.args === "string") {
-      cliError(
-        `[lint] config 'args' should be an array of strings in mops.toml config file`,
+  await runLintoko(lintokoBinPath, rootDir, baseArgs, options, "base");
+
+  // --- extra runs ---
+  const extraEntries = config.lint?.extra;
+  if (extraEntries) {
+    const baseFileSet = new Set(
+      filesToLint.map((f) => path.resolve(rootDir, f)),
+    );
+
+    for (const [globPattern, ruleDirs] of Object.entries(extraEntries)) {
+      if (!Array.isArray(ruleDirs) || ruleDirs.length === 0) {
+        console.warn(
+          chalk.yellow(
+            `[lint.extra] skipping '${globPattern}': value must be a non-empty array of rule directories`,
+          ),
+        );
+        continue;
+      }
+
+      for (const dir of ruleDirs) {
+        if (!existsSync(path.join(rootDir, dir))) {
+          cliError(
+            `[lint.extra] rule directory '${dir}' not found (referenced by glob '${globPattern}')`,
+          );
+        }
+      }
+
+      let matchedFiles = globSync(path.join(rootDir, globPattern), {
+        ...MOTOKO_GLOB_CONFIG,
+        cwd: rootDir,
+      });
+
+      // When a filter or explicit file list is active, restrict extra runs
+      // to the same file scope as the base run.
+      if (filter || (options.files && options.files.length > 0)) {
+        matchedFiles = matchedFiles.filter((f) =>
+          baseFileSet.has(path.resolve(rootDir, f)),
+        );
+      }
+
+      if (matchedFiles.length === 0) {
+        if (options.verbose) {
+          console.warn(
+            chalk.yellow(
+              `[lint.extra] no files matched glob '${globPattern}', skipping`,
+            ),
+          );
+        }
+        continue;
+      }
+
+      let extraArgs: string[] = [...commonArgs];
+      for (const dir of ruleDirs) {
+        extraArgs.push("--rules", dir);
+      }
+      extraArgs.push(...matchedFiles);
+
+      await runLintoko(
+        lintokoBinPath,
+        rootDir,
+        extraArgs,
+        options,
+        `extra: ${globPattern}`,
       );
     }
-    args.push(...config.lint.args);
   }
 
-  if (options.extraArgs && options.extraArgs.length > 0) {
-    args.push(...options.extraArgs);
-  }
-
-  args.push(...filesToLint);
-
-  try {
-    if (options.verbose) {
-      console.log(chalk.blue("lint"), chalk.gray("Running lintoko:"));
-      console.log(chalk.gray(lintokoBinPath));
-      console.log(chalk.gray(JSON.stringify(args)));
-    }
-
-    const result = await execa(lintokoBinPath, args, {
-      cwd: rootDir,
-      stdio: "inherit",
-      reject: false,
-    });
-
-    if (result.exitCode !== 0) {
-      cliError(`Lint failed with exit code ${result.exitCode}`);
-    }
-
-    if (options.fix) {
-      console.log(chalk.green("✓ Lint fixes applied"));
-    } else {
-      console.log(chalk.green("✓ Lint succeeded"));
-    }
-  } catch (err: any) {
-    cliError(
-      `Error while running lintoko${err?.message ? `\n${err.message}` : ""}`,
-    );
+  if (options.fix) {
+    console.log(chalk.green("✓ Lint fixes applied"));
+  } else {
+    console.log(chalk.green("✓ Lint succeeded"));
   }
 }

@@ -16,7 +16,7 @@ exports[`lint error 1`] = `
 
 Error: Found 1 errors
 Lint failed with exit code 1",
-  "stdout": "lint Running lintoko:
+  "stdout": "lint Running lintoko (base):
 <CACHE>/lintoko/0.7.0/lintoko
 ["--verbose","--rules","lints","<TEST_DIR>/lint/src/Ok.mo","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
 DEBUG file input: <TEST_DIR>/lint/src/Ok.mo
@@ -44,7 +44,7 @@ exports[`lint error 2`] = `
 
 Error: Found 1 errors
 Lint failed with exit code 1",
-  "stdout": "lint Running lintoko:
+  "stdout": "lint Running lintoko (base):
 <CACHE>/lintoko/0.7.0/lintoko
 ["--verbose","--rules","lints","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
 DEBUG file input: <TEST_DIR>/lint/src/NoBoolSwitch.mo
@@ -66,7 +66,7 @@ exports[`lint ok 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "lint Running lintoko:
+  "stdout": "lint Running lintoko (base):
 <CACHE>/lintoko/0.7.0/lintoko
 ["--verbose","--rules","lints","<TEST_DIR>/lint/src/Ok.mo"]
 DEBUG file input: <TEST_DIR>/lint/src/Ok.mo

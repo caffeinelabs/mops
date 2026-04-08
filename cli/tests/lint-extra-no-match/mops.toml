@@ -1,0 +1,5 @@
+[toolchain]
+lintoko = "0.7.0"
+
+[lint.extra]
+"src/nonexistent/*.mo" = ["extra-rules"]

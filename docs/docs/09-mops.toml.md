@@ -170,6 +170,24 @@ rules = ["my-rules"]
 extends = ["some-pkg"]
 ```
 
+### [lint.extra]
+
+Map file globs to additional rule directories. Each entry runs a separate `lintoko` invocation on the matched files, **in addition** to the base rules that always apply to all files.
+
+| Key (glob) | Value (string array)                          |
+| ---------- | --------------------------------------------- |
+| File glob  | Array of rule directory paths to apply        |
+
+Example:
+```toml
+[lint.extra]
+"src/main.mo" = ["lint/no-types"]
+"src/Types.mo" = ["lint/types-only"]
+"migrations/*.mo" = ["lint/migration-only", "lint/no-types"]
+```
+
+Globs that match no files are silently skipped. If any extra lint invocation fails, `mops lint` fails. The `--rules` CLI flag does not affect `[lint.extra]` entries.
+
 
 ## [requirements]
 
