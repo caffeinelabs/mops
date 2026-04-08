@@ -2,4 +2,4 @@
 lintoko = "0.7.0"
 
 [lint.extra]
-"src/restricted/*.mo" = ["../_shared-rules"]
+"src/restricted/*.mo" = ["../lint/lints"]

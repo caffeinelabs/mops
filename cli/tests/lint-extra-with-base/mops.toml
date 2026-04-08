@@ -1,5 +1,8 @@
 [toolchain]
 lintoko = "0.7.0"
 
+[lint]
+rules = ["../lint/lints"]
+
 [lint.extra]
-"src/Restricted.mo" = ["../_shared-rules"]
+"src/Restricted.mo" = ["../lint/lints"]

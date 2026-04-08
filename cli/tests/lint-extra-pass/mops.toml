@@ -2,4 +2,4 @@
 lintoko = "0.7.0"
 
 [lint.extra]
-"src/Clean.mo" = ["../_shared-rules"]
+"src/Clean.mo" = ["../lint/lints"]
