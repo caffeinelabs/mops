@@ -186,7 +186,7 @@ Example:
 "migrations/*.mo" = ["lint/migration-only", "lint/no-types"]
 ```
 
-Globs that match no files are silently skipped. All runs (base and extra) execute even when earlier runs find errors, so you see every failure in a single pass. The `--rules` CLI flag does not affect `[lint.extra]` entries.
+Globs that match no files are skipped with a warning. All runs (base and extra) execute even when earlier runs find errors, so you see every failure in a single pass. The `--rules` CLI flag does not affect `[lint.extra]` entries.
 
 
 ## [requirements]
