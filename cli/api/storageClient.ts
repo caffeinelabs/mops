@@ -354,4 +354,11 @@ export async function downloadBlob(blobHash: string): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
-export { buildMerkleTree };
+export {
+  buildMerkleTree,
+  splitChunks,
+  chunkHash,
+  nodeHash,
+  metadataHash,
+  hashToShaString,
+};
