@@ -26,7 +26,7 @@ exports[`lint [lint.extra] --rules CLI flag does not affect extra runs, multi-ru
    ╰────
 
 Error: Found 2 errors
-Lint failed with exit code 1",
+Lint failed",
   "stdout": "lint Running lintoko (base):
 <CACHE>/lintoko/0.7.0/lintoko
 ["--verbose","--rules","empty-rules","<TEST_DIR>/lint-extra-with-cli-rules/src/Restricted.mo","<TEST_DIR>/lint-extra-with-cli-rules/src/Ok.mo"]
@@ -62,18 +62,8 @@ exports[`lint [lint.extra] base rules still run alongside extra rules 1`] = `
    ╰────
 
 Error: Found 1 errors
-Lint failed with exit code 1",
-  "stdout": "lint Running lintoko (base):
-<CACHE>/lintoko/0.7.0/lintoko
-["--verbose","--rules","../lint/lints","<TEST_DIR>/lint-extra-with-base/src/Restricted.mo","<TEST_DIR>/lint-extra-with-base/src/Ok.mo","<TEST_DIR>/lint-extra-with-base/src/BadBase.mo"]
-DEBUG file input: <TEST_DIR>/lint-extra-with-base/src/Restricted.mo
-DEBUG file input: <TEST_DIR>/lint-extra-with-base/src/Ok.mo
-DEBUG file input: <TEST_DIR>/lint-extra-with-base/src/BadBase.mo
-DEBUG Loading rules from: ../lint/lints
-DEBUG Parsing extra rule at: ../lint/lints/no-bool-switch.toml
-DEBUG Linting file: <TEST_DIR>/lint-extra-with-base/src/BadBase.mo
-DEBUG Linting file: <TEST_DIR>/lint-extra-with-base/src/Ok.mo
-DEBUG Linting file: <TEST_DIR>/lint-extra-with-base/src/Restricted.mo",
+Lint failed",
+  "stdout": "",
 }
 `;
 
@@ -83,18 +73,49 @@ exports[`lint [lint.extra] edge cases: pass, empty value, no-match, missing dir 
   "stderr": "[lint.extra] skipping 'src/also-missing/*.mo': value must be a non-empty array of rule directories
 [lint.extra] no files matched glob 'src/nonexistent/*.mo', skipping
 [lint.extra] rule directory 'nonexistent-rules' not found (referenced by glob 'src/*.mo')",
-  "stdout": "lint Running lintoko (base):
-<CACHE>/lintoko/0.7.0/lintoko
-["--verbose","<TEST_DIR>/lint-extra-edge-cases/src/Clean.mo"]
-DEBUG file input: <TEST_DIR>/lint-extra-edge-cases/src/Clean.mo
-DEBUG Linting file: <TEST_DIR>/lint-extra-edge-cases/src/Clean.mo
-lint Running lintoko (extra: src/Clean.mo):
-<CACHE>/lintoko/0.7.0/lintoko
-["--verbose","--rules","../lint/lints","<TEST_DIR>/lint-extra-edge-cases/src/Clean.mo"]
-DEBUG file input: <TEST_DIR>/lint-extra-edge-cases/src/Clean.mo
-DEBUG Loading rules from: ../lint/lints
-DEBUG Parsing extra rule at: ../lint/lints/no-bool-switch.toml
-DEBUG Linting file: <TEST_DIR>/lint-extra-edge-cases/src/Clean.mo",
+  "stdout": "",
+}
+`;
+
+exports[`lint [lint.extra] example rules: no-types, types-only, migration-only 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-types
+    ╭─[<TEST_DIR>/lint-extra-example-rules/src/Main.mo:6:10]
+  5 │     
+  6 │ ╭─▶   public type User = {
+  7 │ │       name : Text;
+  8 │ │       age : Nat;
+  9 │ ├─▶   };
+    · ╰──── File must not contain type declarations. Move types to a separate Types module.
+ 10 │     };
+    ╰────
+
+Error: Found 1 errors
+  × [ERROR]: types-only
+    ╭─[<TEST_DIR>/lint-extra-example-rules/src/Types.mo:7:10]
+  6 │     
+  7 │ ╭─▶   public func helper() : Text {
+  8 │ │       "oops";
+  9 │ ├─▶   };
+    · ╰──── File must contain only type declarations. No functions, classes, or variable bindings.
+ 10 │     };
+    ╰────
+
+Error: Found 1 errors
+  × [ERROR]: migration-only
+   ╭─[<TEST_DIR>/lint-extra-example-rules/src/Migration.mo:6:10]
+ 5 │     
+ 6 │ ╭─▶   public func notAllowed(old : {}) : {} {
+ 7 │ │       {};
+ 8 │ ├─▶   };
+   · ╰──── Only migration() may be a public function.
+ 9 │     };
+   ╰────
+
+Error: Found 1 errors
+Lint failed",
+  "stdout": "",
 }
 `;
 
@@ -124,32 +145,15 @@ exports[`lint [lint.extra] extra rules on glob-matched files 1`] = `
    ╰────
 
 Error: Found 2 errors
-Lint failed with exit code 1",
-  "stdout": "lint Running lintoko (base):
-<CACHE>/lintoko/0.7.0/lintoko
-["--verbose","<TEST_DIR>/lint-extra/src/Ok.mo","<TEST_DIR>/lint-extra/src/restricted/Restricted.mo","<TEST_DIR>/lint-extra/src/restricted/B.mo"]
-DEBUG file input: <TEST_DIR>/lint-extra/src/Ok.mo
-DEBUG file input: <TEST_DIR>/lint-extra/src/restricted/Restricted.mo
-DEBUG file input: <TEST_DIR>/lint-extra/src/restricted/B.mo
-DEBUG Linting file: <TEST_DIR>/lint-extra/src/Ok.mo
-DEBUG Linting file: <TEST_DIR>/lint-extra/src/restricted/B.mo
-DEBUG Linting file: <TEST_DIR>/lint-extra/src/restricted/Restricted.mo
-lint Running lintoko (extra: src/restricted/*.mo):
-<CACHE>/lintoko/0.7.0/lintoko
-["--verbose","--rules","../lint/lints","<TEST_DIR>/lint-extra/src/restricted/Restricted.mo","<TEST_DIR>/lint-extra/src/restricted/B.mo"]
-DEBUG file input: <TEST_DIR>/lint-extra/src/restricted/Restricted.mo
-DEBUG file input: <TEST_DIR>/lint-extra/src/restricted/B.mo
-DEBUG Loading rules from: ../lint/lints
-DEBUG Parsing extra rule at: ../lint/lints/no-bool-switch.toml
-DEBUG Linting file: <TEST_DIR>/lint-extra/src/restricted/B.mo
-DEBUG Linting file: <TEST_DIR>/lint-extra/src/restricted/Restricted.mo",
+Lint failed",
+  "stdout": "",
 }
 `;
 
 exports[`lint [lint.extra] extra rules on glob-matched files 2`] = `
 {
   "exitCode": 0,
-  "stderr": "",
+  "stderr": "[lint.extra] no files matched glob 'src/restricted/*.mo', skipping",
   "stdout": "✓ Lint succeeded",
 }
 `;
@@ -169,7 +173,7 @@ exports[`lint error 1`] = `
    ╰────
 
 Error: Found 1 errors
-Lint failed with exit code 1",
+Lint failed",
   "stdout": "lint Running lintoko (base):
 <CACHE>/lintoko/0.7.0/lintoko
 ["--verbose","--rules","lints","<TEST_DIR>/lint/src/Ok.mo","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
@@ -197,7 +201,7 @@ exports[`lint error 2`] = `
    ╰────
 
 Error: Found 1 errors
-Lint failed with exit code 1",
+Lint failed",
   "stdout": "lint Running lintoko (base):
 <CACHE>/lintoko/0.7.0/lintoko
 ["--verbose","--rules","lints","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]

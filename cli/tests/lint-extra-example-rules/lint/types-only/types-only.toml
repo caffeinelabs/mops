@@ -1,0 +1,6 @@
+name = "types-only"
+description = "File must contain only type declarations. No functions, classes, or variable bindings."
+query = """
+(dec_field (_) @error)
+(dec_field (typ_dec) @filter)
+"""

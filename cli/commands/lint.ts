@@ -134,7 +134,7 @@ async function runLintoko(
   args: string[],
   options: Partial<LintOptions>,
   label: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
     if (options.verbose) {
       console.log(
@@ -151,9 +151,7 @@ async function runLintoko(
       reject: false,
     });
 
-    if (result.exitCode !== 0) {
-      cliError(`Lint failed with exit code ${result.exitCode}`);
-    }
+    return result.exitCode === 0;
   } catch (err: any) {
     cliError(
       `Error while running lintoko${err?.message ? `\n${err.message}` : ""}`,
@@ -200,7 +198,13 @@ export async function lint(
   rules.forEach((rule) => baseArgs.push("--rules", rule));
   baseArgs.push(...filesToLint);
 
-  await runLintoko(lintokoBinPath, rootDir, baseArgs, options, "base");
+  let failed = !(await runLintoko(
+    lintokoBinPath,
+    rootDir,
+    baseArgs,
+    options,
+    "base",
+  ));
 
   // --- extra runs ---
   const extraEntries = config.lint?.extra;
@@ -240,13 +244,11 @@ export async function lint(
       }
 
       if (matchedFiles.length === 0) {
-        if (options.verbose) {
-          console.warn(
-            chalk.yellow(
-              `[lint.extra] no files matched glob '${globPattern}', skipping`,
-            ),
-          );
-        }
+        console.warn(
+          chalk.yellow(
+            `[lint.extra] no files matched glob '${globPattern}', skipping`,
+          ),
+        );
         continue;
       }
 
@@ -256,17 +258,20 @@ export async function lint(
       }
       extraArgs.push(...matchedFiles);
 
-      await runLintoko(
+      const passed = await runLintoko(
         lintokoBinPath,
         rootDir,
         extraArgs,
         options,
         `extra: ${globPattern}`,
       );
+      failed ||= !passed;
     }
   }
 
-  if (options.fix) {
+  if (failed) {
+    cliError("Lint failed");
+  } else if (options.fix) {
     console.log(chalk.green("✓ Lint fixes applied"));
   } else {
     console.log(chalk.green("✓ Lint succeeded"));

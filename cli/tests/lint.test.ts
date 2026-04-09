@@ -51,7 +51,7 @@ describe("lint", () => {
       // Extra rules apply only to the glob match → fails on restricted/ files.
       // Filter "Ok" narrows scope so extra is skipped → passes.
       const cwd = path.join(import.meta.dirname, "lint-extra");
-      await cliSnapshot(["lint", "--verbose"], { cwd }, 1);
+      await cliSnapshot(["lint"], { cwd }, 1);
       await cliSnapshot(["lint", "Ok"], { cwd }, 0);
     });
 
@@ -59,15 +59,15 @@ describe("lint", () => {
       // Single fixture with 4 entries processed in order:
       //   1. Clean.mo + valid rules → passes
       //   2. empty array → warns and skips
-      //   3. non-matching glob → skips (verbose warns)
+      //   3. non-matching glob → warns and skips
       //   4. missing rule dir → errors
       const cwd = path.join(import.meta.dirname, "lint-extra-edge-cases");
-      await cliSnapshot(["lint", "--verbose"], { cwd }, 1);
+      await cliSnapshot(["lint"], { cwd }, 1);
     });
 
     test("base rules still run alongside extra rules", async () => {
       const cwd = path.join(import.meta.dirname, "lint-extra-with-base");
-      await cliSnapshot(["lint", "--verbose"], { cwd }, 1);
+      await cliSnapshot(["lint"], { cwd }, 1);
     });
 
     test("--rules CLI flag does not affect extra runs, multi-rules", async () => {
@@ -79,6 +79,11 @@ describe("lint", () => {
         { cwd },
         1,
       );
+    });
+
+    test("example rules: no-types, types-only, migration-only", async () => {
+      const cwd = path.join(import.meta.dirname, "lint-extra-example-rules");
+      await cliSnapshot(["lint"], { cwd }, 1);
     });
   });
 });

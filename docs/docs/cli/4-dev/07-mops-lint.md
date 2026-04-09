@@ -97,7 +97,7 @@ Rules from `[lint] extends` are always included on top, regardless of this setti
 
 ### `args`
 
-Extra flags forwarded to `lintoko`:
+Extra flags forwarded to `lintoko` for all invocations (base and `[lint.extra]` runs):
 
 ```toml
 [lint]
@@ -115,52 +115,9 @@ Apply additional lint rules to specific files or directories. Each key is a glob
 "migrations/*.mo" = ["lint/migration-only", "lint/no-types"]
 ```
 
-Each entry triggers a separate `lintoko` invocation on the matched files. If any invocation fails, `mops lint` fails. Globs that match no files are silently skipped (a warning is shown with `--verbose`).
+Each entry triggers a separate `lintoko` invocation on the matched files. All runs (base and extra) execute even when earlier runs find errors, so you see every lint failure in a single pass. If any invocation fails, `mops lint` fails. Globs that match no files are skipped with a warning.
 
 The `--rules` CLI flag only overrides the **base** rule directories — `[lint.extra]` entries always run independently.
-
-#### Example rule files
-
-Here are starter rule files you can place in your project for use with `[lint.extra]`:
-
-**`lint/no-types/no-types.toml`** — forbid type declarations (move types to a separate module):
-
-```toml
-name = "no-types"
-description = "File must not contain type declarations. Move types to a separate Types module."
-query = """
-(typ_dec) @error
-"""
-```
-
-**`lint/types-only/types-only.toml`** — allow only type declarations:
-
-```toml
-name = "types-only"
-description = "File must contain only type declarations. No functions, classes, or variable bindings."
-query = """
-(source_file (exp_dec) @error)
-(source_file (let_dec) @error)
-(source_file (var_dec) @error)
-(source_file (class_dec) @error)
-(source_file (func_dec) @error)
-(source_file (obj_dec) @error)
-"""
-```
-
-**`lint/migration-only/migration-only.toml`** — only `migration()` may be a public function:
-
-```toml
-name = "migration-only"
-description = "Only migration() may be a public function."
-query = """
-(dec_field
-  "public"
-  (func_dec
-    (identifier) @name
-    (#not-eq? @name "migration")) @error)
-"""
-```
 
 ### Combining options
 

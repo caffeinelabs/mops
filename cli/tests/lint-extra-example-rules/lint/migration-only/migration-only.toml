@@ -1,0 +1,9 @@
+name = "migration-only"
+description = "Only migration() may be a public function."
+query = """
+(dec_field
+  "public"
+  (func_dec
+    (identifier) @name
+    (#not-eq? @name "migration")) @error)
+"""
