@@ -13,6 +13,7 @@ const CHUNK_SIZE = 1024 * 1024; // 1 MiB
 const MAX_CONCURRENT_UPLOADS = 10;
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
+const FETCH_TIMEOUT_MS = 120_000;
 const GATEWAY_VERSION = "v1";
 
 const DOMAIN_CHUNK = new TextEncoder().encode("icfs-chunk/");
@@ -211,6 +212,17 @@ export async function getCertificate(
   throw new Error("Expected v3 response body with certificate");
 }
 
+function fetchWithTimeout(
+  url: string | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timeout),
+  );
+}
+
 function getGatewayUrl(): string {
   return process.env["MOPS_STORAGE_GATEWAY_URL"] || "https://blob.caffeine.ai";
 }
@@ -253,7 +265,7 @@ export async function uploadBlob(
       },
     };
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -288,7 +300,7 @@ export async function uploadBlob(
       });
       const url = `${gatewayUrl}/${GATEWAY_VERSION}/chunk/?${queryParams.toString()}`;
 
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: "PUT",
         headers: {
           "Content-Type": "application/octet-stream",
@@ -342,7 +354,7 @@ export function getDownloadUrl(blobHash: string): string {
 export async function downloadBlob(blobHash: string): Promise<Uint8Array> {
   const url = getDownloadUrl(blobHash);
   const response = await withRetry(async () => {
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       throw new Error(
         `Failed to download blob: ${res.status} ${res.statusText}`,
@@ -352,6 +364,15 @@ export async function downloadBlob(blobHash: string): Promise<Uint8Array> {
   });
   const buffer = await response.arrayBuffer();
   return new Uint8Array(buffer);
+}
+
+export function verifyBlobHash(data: Uint8Array, expectedHash: string): void {
+  const { rootHash } = buildMerkleTree(data, "application/gzip");
+  if (rootHash !== expectedHash) {
+    throw new Error(
+      `Blob integrity check failed: expected ${expectedHash} but got ${rootHash}`,
+    );
+  }
 }
 
 export {

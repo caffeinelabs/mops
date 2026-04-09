@@ -1,10 +1,11 @@
+import path from "node:path";
 import { Principal } from "@icp-sdk/core/principal";
 import { Parser as TarParser, type ReadEntry } from "tar";
 import { mainActor, storageActor } from "./actors.js";
 import { resolveVersion } from "./resolveVersion.js";
 import { parallel } from "../parallel.js";
 import { Storage } from "../declarations/storage/storage.did.js";
-import { downloadBlob } from "./storageClient.js";
+import { downloadBlob, verifyBlobHash } from "./storageClient.js";
 
 export async function downloadPackageFiles(
   pkg: string,
@@ -29,16 +30,23 @@ async function downloadBlobPackage(
 ): Promise<Map<string, Array<number>>> {
   let archiveData = await downloadBlob(blobHash);
 
+  verifyBlobHash(archiveData, blobHash);
+
   let filesData = new Map<string, Array<number>>();
 
   await new Promise<void>((resolve, reject) => {
     let parser = new TarParser();
     parser.on("entry", (entry: ReadEntry) => {
+      let entryPath = sanitizeTarPath(entry.path);
+      if (!entryPath) {
+        entry.resume();
+        return;
+      }
       let chunks: Buffer[] = [];
       entry.on("data", (chunk: Buffer) => chunks.push(chunk));
       entry.on("end", () => {
         let data = Buffer.concat(chunks);
-        filesData.set(entry.path, Array.from(data));
+        filesData.set(entryPath, Array.from(data));
       });
     });
     parser.on("end", resolve);
@@ -48,6 +56,18 @@ async function downloadBlobPackage(
   });
 
   return filesData;
+}
+
+function sanitizeTarPath(entryPath: string): string | null {
+  let normalized = path.normalize(entryPath);
+  if (
+    path.isAbsolute(normalized) ||
+    normalized.startsWith("..") ||
+    normalized.includes(`..${path.sep}`)
+  ) {
+    return null;
+  }
+  return normalized;
 }
 
 async function downloadLegacyPackage(

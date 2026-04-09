@@ -68,6 +68,26 @@ describeE2E("E2E: blob upload/download round-trip", () => {
     const downloaded = await downloadBlob(rootHash);
     expect(Buffer.from(downloaded)).toEqual(Buffer.from(archiveData));
   });
+
+  test("uploading the same content twice returns the same hash (content-addressed)", async () => {
+    const archiveData = await createSmallTarGz();
+    const identity = Ed25519KeyIdentity.generate();
+
+    const hash1 = await uploadBlob(archiveData, identity);
+    const hash2 = await uploadBlob(archiveData, identity);
+    expect(hash1).toBe(hash2);
+  });
+
+  test("onProgress callback is called during upload", async () => {
+    const archiveData = await createSmallTarGz();
+    const identity = Ed25519KeyIdentity.generate();
+
+    const progressValues: number[] = [];
+    await uploadBlob(archiveData, identity, (pct) => progressValues.push(pct));
+
+    expect(progressValues.length).toBeGreaterThan(0);
+    expect(progressValues[progressValues.length - 1]).toBe(100);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -75,7 +95,6 @@ describeE2E("E2E: blob upload/download round-trip", () => {
 // ---------------------------------------------------------------------------
 describePublish("E2E: blob publish + install round-trip", () => {
   const fixtureSrc = path.join(import.meta.dirname, "e2e-blob-publish");
-  const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
   const uniqueVersion = `0.0.${Date.now() % 100000}`;
 
   let publishDir: string;

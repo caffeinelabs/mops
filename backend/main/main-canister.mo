@@ -284,20 +284,34 @@ actor class Main() = this {
     ?hex;
   };
 
+  func _isValidBlobHash(hash : Text) : Bool {
+    if (Text.size(hash) != 71) return false;
+    if (not Text.startsWith(hash, #text("sha256:"))) return false;
+    let hexPart = switch (Text.stripStart(hash, #text("sha256:"))) {
+      case null return false;
+      case (?h) h;
+    };
+    for (c in hexPart.chars()) {
+      if (not ((c >= '0' and c <= '9') or (c >= 'a' and c <= 'f'))) {
+        return false;
+      };
+    };
+    true;
+  };
+
   func _callerIsGateway(caller : Principal) : Bool {
     if (Principal.isAnonymous(caller)) return false;
     gatewayPrincipals.get(caller) != null;
   };
 
   public shared func _immutableObjectStorageCreateCertificate(hash : Text) : async CreateCertificateResult {
-    if (Text.size(hash) == 0) {
-      Debug.trap("hash must not be empty");
-    };
-    if (not Text.startsWith(hash, #text("sha256:")) or Text.size(hash) != 71) {
-      Debug.trap("hash must be 'sha256:<64-hex-chars>'");
+    if (not _isValidBlobHash(hash)) {
+      Debug.trap("hash must be 'sha256:<64-lowercase-hex-chars>'");
     };
 
-    pendingBlobDelete.delete(hash);
+    if (liveBlobHashes.get(hash) != null) {
+      pendingBlobDelete.delete(hash);
+    };
 
     { method = "upload"; blob_hash = hash };
   };
@@ -367,6 +381,11 @@ actor class Main() = this {
   public query func getBlobHash(name : PackageName, version : PackageVersion) : async ?Text {
     let packageId = PackageUtils.getPackageId(name, version);
     blobHashByPackageId.get(packageId);
+  };
+
+  public shared ({ caller }) func setCashierId(newCashierId : Principal) : async () {
+    assert (Utils.isAdmin(caller));
+    cashierId := newCashierId;
   };
 
   public shared ({ caller }) func setStorageControllers() : async () {

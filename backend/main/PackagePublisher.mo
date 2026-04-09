@@ -44,6 +44,21 @@ module {
 
   type PackageId = Types.PackageId;
 
+  func _isValidBlobHash(hash : Text) : Bool {
+    if (Text.size(hash) != 71) return false;
+    if (not Text.startsWith(hash, #text("sha256:"))) return false;
+    let hexPart = switch (Text.stripStart(hash, #text("sha256:"))) {
+      case null return false;
+      case (?h) h;
+    };
+    for (c in hexPart.chars()) {
+      if (not ((c >= '0' and c <= '9') or (c >= 'a' and c <= 'f'))) {
+        return false;
+      };
+    };
+    true;
+  };
+
   public class PackagePublisher(registry : Registry.Registry, storageManager : StorageManager.StorageManager) {
     let MAX_PACKAGE_FILES = 1000;
     let MAX_PACKAGE_SIZE = 1024 * 1024 * 28; // 28MB
@@ -530,8 +545,8 @@ module {
     public func finishBlobPublish(caller : Principal, publishingId : PublishingId, blobHash : Text) : async Result.Result<{ config : PackageConfigV3; publication : PackagePublication; isNewPackage : Bool }, PublishingErr> {
       assert (not Principal.isAnonymous(caller));
 
-      if (not Text.startsWith(blobHash, #text("sha256:")) or Text.size(blobHash) != 71) {
-        return #err("Invalid blob hash format. Expected 'sha256:<64-hex-chars>'");
+      if (not _isValidBlobHash(blobHash)) {
+        return #err("Invalid blob hash format. Expected 'sha256:<64-lowercase-hex-chars>'");
       };
 
       let ?publishing = publishingPackages.get(publishingId) else return #err("Publishing package not found");
