@@ -42,6 +42,8 @@ module {
     path : Text;
   };
 
+  type PackageId = Types.PackageId;
+
   public class PackagePublisher(registry : Registry.Registry, storageManager : StorageManager.StorageManager) {
     let MAX_PACKAGE_FILES = 1000;
     let MAX_PACKAGE_SIZE = 1024 * 1024 * 28; // 28MB
@@ -55,12 +57,11 @@ module {
     let publishingBenchmarks = TrieMap.TrieMap<PublishingId, Benchmarks>(Text.equal, Text.hash);
     let publishingDocsCoverage = TrieMap.TrieMap<PublishingId, Float>(Text.equal, Text.hash);
 
-    public func startPublish(caller : Principal, config : PackageConfigV3) : async Result.Result<PublishingId, PublishingErr> {
+    func _validatePublishConfig(caller : Principal, config : PackageConfigV3) : Result.Result<(), PublishingErr> {
       if (Principal.isAnonymous(caller)) {
         return #err("Unauthorized");
       };
 
-      // validate config
       switch (validateConfig(config)) {
         case (#ok) {};
         case (#err(err)) {
@@ -70,12 +71,10 @@ module {
 
       let isNewPackage = registry.getHighestVersion(config.name) == null;
 
-      // check permissions
       if (not isNewPackage and not registry.isOwner(config.name, caller) and not registry.isMaintainer(config.name, caller)) {
         return #err("Only owners and maintainers can publish packages");
       };
 
-      // deny '.' and '_' in name for new packages
       if (isNewPackage) {
         for (char in config.name.chars()) {
           let err = #err("invalid config: unexpected char '" # Char.toText(char) # "' in name '" # config.name # "'");
@@ -85,7 +84,6 @@ module {
         };
       };
 
-      // check if the same version is published
       switch (registry.getPackageVersions(config.name)) {
         case (?versions) {
           let sameVersionOpt = Array.find<PackageVersion>(
@@ -101,7 +99,6 @@ module {
         case (null) {};
       };
 
-      // check dependencies
       for (dep in config.dependencies.vals()) {
         let packageId = PackageUtils.getPackageId(dep.name, dep.version);
         if (dep.repo.size() == 0 and registry.getPackageConfig(PackageUtils.getDepName(dep.name), dep.version) == null) {
@@ -112,12 +109,20 @@ module {
         };
       };
 
-      // check devDependencies
       for (dep in config.devDependencies.vals()) {
         let packageId = PackageUtils.getPackageId(dep.name, dep.version);
         if (dep.repo.size() == 0 and registry.getPackageConfig(PackageUtils.getDepName(dep.name), dep.version) == null) {
           return #err("Dev Dependency " # packageId # " not found in registry");
         };
+      };
+
+      #ok;
+    };
+
+    public func startPublish(caller : Principal, config : PackageConfigV3) : async Result.Result<PublishingId, PublishingErr> {
+      switch (_validatePublishConfig(caller, config)) {
+        case (#err(err)) return #err(err);
+        case (#ok) {};
       };
 
       let publishingId = await generateId();
@@ -128,7 +133,6 @@ module {
 
       await storageManager.ensureUploadableStorages();
 
-      // start
       publishingPackages.put(
         publishingId,
         {
@@ -139,7 +143,32 @@ module {
         },
       );
       publishingFiles.put(publishingId, Buffer.Buffer(10));
+      publishingPackageFileStats.put(publishingId, PackageUtils.defaultPackageFileStats());
 
+      #ok(publishingId);
+    };
+
+    public func startBlobPublish(caller : Principal, config : PackageConfigV3) : async Result.Result<PublishingId, PublishingErr> {
+      switch (_validatePublishConfig(caller, config)) {
+        case (#err(err)) return #err(err);
+        case (#ok) {};
+      };
+
+      let publishingId = await generateId();
+
+      if (publishingPackages.get(publishingId) != null) {
+        return #err("Already publishing");
+      };
+
+      publishingPackages.put(
+        publishingId,
+        {
+          time = Time.now();
+          user = caller;
+          config = config;
+          storage = Principal.fromText("aaaaa-aa");
+        },
+      );
       publishingPackageFileStats.put(publishingId, PackageUtils.defaultPackageFileStats());
 
       #ok(publishingId);
@@ -478,6 +507,44 @@ module {
         storageId = publishing.storage;
         fileIds = publicFileIds;
         fileHashes = Iter.toArray(fileHashes.entries());
+        fileStats = publishingPackageFileStats.get(publishingId);
+        testStats = publishingTestStats.get(publishingId);
+        docsCoverage = Option.get(publishingDocsCoverage.get(publishingId), 0.0);
+      });
+
+      publishingFiles.delete(publishingId);
+      publishingPackages.delete(publishingId);
+      publishingPackageFileStats.delete(publishingId);
+      publishingTestStats.delete(publishingId);
+      publishingNotes.delete(publishingId);
+      publishingBenchmarks.delete(publishingId);
+      publishingDocsCoverage.delete(publishingId);
+
+      #ok({
+        config = publishing.config;
+        publication;
+        isNewPackage;
+      });
+    };
+
+    public func finishBlobPublish(caller : Principal, publishingId : PublishingId, blobHash : Text) : async Result.Result<{ config : PackageConfigV3; publication : PackagePublication; isNewPackage : Bool }, PublishingErr> {
+      assert (not Principal.isAnonymous(caller));
+
+      if (not Text.startsWith(blobHash, #text("sha256:")) or Text.size(blobHash) != 71) {
+        return #err("Invalid blob hash format. Expected 'sha256:<64-hex-chars>'");
+      };
+
+      let ?publishing = publishingPackages.get(publishingId) else return #err("Publishing package not found");
+      assert (publishing.user == caller);
+
+      let isNewPackage = registry.getHighestVersion(publishing.config.name) == null;
+
+      let publication = registry.newBlobPackageRelease({
+        userId = caller;
+        config = publishing.config;
+        notes = Option.get(publishingNotes.get(publishingId), "");
+        blobHash = blobHash;
+        benchmarks = Option.get(publishingBenchmarks.get(publishingId), []);
         fileStats = publishingPackageFileStats.get(publishingId);
         testStats = publishingTestStats.get(publishingId);
         docsCoverage = Option.get(publishingDocsCoverage.get(publishingId), 0.0);

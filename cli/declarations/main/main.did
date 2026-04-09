@@ -272,15 +272,30 @@ type PackageChanges =
    prevDocsCoverage: float64;
    tests: TestsChanges;
  };
+type CreateCertificateResult = 
+ record {
+   blob_hash: text;
+   method: text;
+ };
 type Main = 
  service {
+   _immutableObjectStorageBlobsAreLive: (hashBytesList: vec blob) ->
+    (vec bool) query;
+   _immutableObjectStorageBlobsToDelete: () -> (vec text) query;
+   _immutableObjectStorageConfirmBlobDeletion: (hashBytesList: vec blob) -> ();
+   _immutableObjectStorageCreateCertificate: (hash: text) ->
+    (CreateCertificateResult);
+   _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
    addMaintainer: (packageName: PackageName, newMaintainer: principal) ->
     (Result_3);
    addOwner: (packageName: PackageName, newOwner: principal) -> (Result_3);
    backup: () -> ();
    computeHashesForExistingFiles: () -> ();
+   finishBlobPublish: (publishingId: PublishingId, blobHash: text) -> (Result);
    finishPublish: (publishingId: PublishingId) -> (Result);
    getApiVersion: () -> (Text) query;
+   getBlobHash: (name: PackageName, version: PackageVersion) ->
+    (opt text) query;
    getBackupCanisterId: () -> (principal) query;
    getDefaultPackages: (dfxVersion: text) ->
     (vec record {
@@ -350,6 +365,7 @@ type Main =
    setUserProp: (prop: text, value: text) -> (Result_3);
    startFileUpload: (publishingId: PublishingId, path: Text, chunkCount: 
     nat, firstChunk: blob) -> (Result_2);
+   startBlobPublish: (configPub: PackageConfigV3_Publishing) -> (Result_1);
    startPublish: (configPub: PackageConfigV3_Publishing) -> (Result_1);
    takeSnapshotsIfNeeded: () -> ();
    transformRequest: (arg: TransformArg) -> (HttpRequestResult) query;

@@ -6,6 +6,7 @@ import logUpdate from "log-update";
 import { globbySync } from "globby";
 import { minimatch } from "minimatch";
 import prompts from "prompts";
+import { create as tarCreate } from "tar";
 
 import {
   checkConfigFile,
@@ -15,7 +16,6 @@ import {
   readConfig,
 } from "../mops.js";
 import { mainActor } from "../api/actors.js";
-import { parallel } from "../parallel.js";
 import { docs } from "./docs.js";
 import {
   Benchmarks,
@@ -29,6 +29,7 @@ import { SilentReporter } from "./test/reporters/silent-reporter.js";
 import { findChangelogEntry } from "../helpers/find-changelog-entry.js";
 import { bench } from "./bench.js";
 import { docsCoverage } from "./docs-coverage.js";
+import { uploadBlob } from "../api/storageClient.js";
 
 export async function publish(
   options: {
@@ -396,27 +397,49 @@ export async function publish(
     }
   }
 
-  // progress
-  let total = files.length + 2;
-  let step = 0;
-  function progress() {
-    step++;
-    logUpdate(`Uploading files ${progressBar(step, total)}`);
-  }
-
-  // upload config
   let identity = await getIdentity();
+  if (!identity) {
+    console.log(
+      chalk.red("Error: ") +
+        "Identity not found. Please run `mops init` first.",
+    );
+    process.exit(1);
+  }
   let actor = await mainActor(identity);
 
-  progress();
-  let publishing = await actor.startPublish(backendPkgConfig);
+  // Create tar.gz archive of package files (excluding docs.tgz)
+  let sourceFiles = files.filter((f) => f !== docsFile);
+  console.log("Creating package archive...");
+  let archivePath = path.join(rootDir, ".mops/.publish-archive.tar.gz");
+  fs.mkdirSync(path.dirname(archivePath), { recursive: true });
+  await tarCreate(
+    {
+      gzip: true,
+      file: archivePath,
+      cwd: rootDir,
+      portable: true,
+    },
+    sourceFiles,
+  );
+  let archiveData = new Uint8Array(fs.readFileSync(archivePath));
+  fs.rmSync(archivePath, { force: true });
+
+  let total = 4;
+  let step = 0;
+  function progress(label = "Publishing") {
+    step++;
+    logUpdate(`${label} ${progressBar(step, total)}`);
+  }
+
+  // start blob publish
+  progress("Starting publish");
+  let publishing = await actor.startBlobPublish(backendPkgConfig);
   if ("err" in publishing) {
     console.log(chalk.red("Error: ") + publishing.err);
     process.exit(1);
   }
   let publishingId = publishing.ok;
 
-  // upload test stats
   if (options.test) {
     await actor.uploadTestStats(publishingId, {
       passed: BigInt(reporter.passed),
@@ -424,77 +447,47 @@ export async function publish(
     });
   }
 
-  // upload benchmarks
   if (options.bench) {
     await actor.uploadBenchmarks(publishingId, benchmarks);
   }
 
-  // upload changelog
   if (changelog) {
     await actor.uploadNotes(publishingId, changelog);
   }
 
-  // upload docs coverage
   if (options.docs) {
     await actor.uploadDocsCoverage(publishingId, docsCov);
   }
 
-  // upload files
-  await parallel(8, files, async (file: string) => {
-    progress();
-
-    let chunkSize = 1024 * 1024 + 512 * 1024; // 1.5mb
-    let content = fs.readFileSync(file);
-    let chunkCount = Math.ceil(content.length / chunkSize);
-    let firstChunk = Array.from(content.slice(0, chunkSize));
-
-    // remove path from docs file
-    if (file === docsFile) {
-      file = path.basename(file);
-    }
-
-    let res = await actor.startFileUpload(
-      publishingId,
-      file,
-      BigInt(chunkCount),
-      firstChunk,
-    );
-    if ("err" in res) {
-      console.log(chalk.red("Error: ") + res.err);
-      process.exit(1);
-    }
-    let fileId = res.ok;
-
-    for (let i = 1; i < chunkCount; i++) {
-      let start = i * chunkSize;
-      let chunk = Array.from(content.slice(start, start + chunkSize));
-      let res = await actor.uploadFileChunk(
-        publishingId,
-        fileId,
-        BigInt(i),
-        chunk,
+  // upload to Caffeine Object Storage
+  progress("Uploading to blob storage");
+  let rootHash: string;
+  try {
+    rootHash = await uploadBlob(archiveData, identity, (pct) => {
+      logUpdate(
+        `Uploading to blob storage ${progressBar(Math.round((pct / 100) * 80) + 2 * (100 / total), 100)}`,
       );
-      if ("err" in res) {
-        console.log(chalk.red("Error: ") + res.err);
-        process.exit(1);
-      }
-    }
-  });
+    });
+  } catch (err) {
+    console.log(chalk.red("Error: ") + `Failed to upload blob: ${err}`);
+    process.exit(1);
+  }
+
+  progress("Finishing publish");
 
   fs.rmSync(path.join(rootDir, ".mops/.docs"), {
     force: true,
     recursive: true,
   });
 
-  // finish
-  progress();
-  logUpdate.done();
-
-  let res = await actor.finishPublish(publishingId);
+  let res = await actor.finishBlobPublish(publishingId, rootHash);
   if ("err" in res) {
     console.log(chalk.red("Error: ") + res.err);
     process.exit(1);
   }
+
+  progress("Done");
+  logUpdate.done();
 
   console.log(
     chalk.green("Published ") +

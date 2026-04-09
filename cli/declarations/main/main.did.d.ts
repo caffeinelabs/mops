@@ -45,13 +45,36 @@ export interface HttpRequestResult {
   'body' : Uint8Array | number[],
   'headers' : Array<HttpHeader>,
 }
+export interface CreateCertificateResult {
+  'method' : string,
+  'blob_hash' : string,
+}
 export interface Main {
+  '_immutableObjectStorageBlobsAreLive' : ActorMethod<
+    [Array<Uint8Array | number[]>],
+    Array<boolean>
+  >,
+  '_immutableObjectStorageBlobsToDelete' : ActorMethod<[], Array<string>>,
+  '_immutableObjectStorageConfirmBlobDeletion' : ActorMethod<
+    [Array<Uint8Array | number[]>],
+    undefined
+  >,
+  '_immutableObjectStorageCreateCertificate' : ActorMethod<
+    [string],
+    CreateCertificateResult
+  >,
+  '_immutableObjectStorageUpdateGatewayPrincipals' : ActorMethod<
+    [],
+    undefined
+  >,
   'addMaintainer' : ActorMethod<[PackageName, Principal], Result_3>,
   'addOwner' : ActorMethod<[PackageName, Principal], Result_3>,
   'backup' : ActorMethod<[], undefined>,
   'computeHashesForExistingFiles' : ActorMethod<[], undefined>,
+  'finishBlobPublish' : ActorMethod<[PublishingId, string], Result>,
   'finishPublish' : ActorMethod<[PublishingId], Result>,
   'getApiVersion' : ActorMethod<[], Text>,
+  'getBlobHash' : ActorMethod<[PackageName, PackageVersion], [] | [string]>,
   'getBackupCanisterId' : ActorMethod<[], Principal>,
   'getDefaultPackages' : ActorMethod<
     [string],
@@ -122,6 +145,7 @@ export interface Main {
     [PublishingId, Text, bigint, Uint8Array | number[]],
     Result_2
   >,
+  'startBlobPublish' : ActorMethod<[PackageConfigV3_Publishing], Result_1>,
   'startPublish' : ActorMethod<[PackageConfigV3_Publishing], Result_1>,
   'takeSnapshotsIfNeeded' : ActorMethod<[], undefined>,
   'transformRequest' : ActorMethod<[TransformArg], HttpRequestResult>,

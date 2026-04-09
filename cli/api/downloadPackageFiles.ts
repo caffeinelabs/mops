@@ -1,8 +1,10 @@
 import { Principal } from "@icp-sdk/core/principal";
+import { Parser as TarParser, type ReadEntry } from "tar";
 import { mainActor, storageActor } from "./actors.js";
 import { resolveVersion } from "./resolveVersion.js";
 import { parallel } from "../parallel.js";
 import { Storage } from "../declarations/storage/storage.did.js";
+import { downloadBlob } from "./storageClient.js";
 
 export async function downloadPackageFiles(
   pkg: string,
@@ -12,6 +14,48 @@ export async function downloadPackageFiles(
 ): Promise<Map<string, Array<number>>> {
   version = await resolveVersion(pkg, version);
 
+  let actor = await mainActor();
+  let blobHash = await actor.getBlobHash(pkg, version);
+
+  if (blobHash.length > 0 && blobHash[0]) {
+    return await downloadBlobPackage(blobHash[0]);
+  }
+
+  return await downloadLegacyPackage(pkg, version, threads, onLoad);
+}
+
+async function downloadBlobPackage(
+  blobHash: string,
+): Promise<Map<string, Array<number>>> {
+  let archiveData = await downloadBlob(blobHash);
+
+  let filesData = new Map<string, Array<number>>();
+
+  await new Promise<void>((resolve, reject) => {
+    let parser = new TarParser();
+    parser.on("entry", (entry: ReadEntry) => {
+      let chunks: Buffer[] = [];
+      entry.on("data", (chunk: Buffer) => chunks.push(chunk));
+      entry.on("end", () => {
+        let data = Buffer.concat(chunks);
+        filesData.set(entry.path, Array.from(data));
+      });
+    });
+    parser.on("end", resolve);
+    parser.on("error", reject);
+    parser.write(Buffer.from(archiveData));
+    parser.end();
+  });
+
+  return filesData;
+}
+
+async function downloadLegacyPackage(
+  pkg: string,
+  version: string,
+  threads: number,
+  onLoad: (_fileIds: string[], _fileId: string) => void,
+): Promise<Map<string, Array<number>>> {
   let { storageId, fileIds } = await getPackageFilesInfo(pkg, version);
   let storage = await storageActor(storageId);
 

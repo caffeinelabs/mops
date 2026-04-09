@@ -192,6 +192,11 @@ module {
     #tooOld;
   };
 
+  public type CreateCertificateResult = {
+    method : Text;
+    blob_hash : Text;
+  };
+
   public type Benchmarks = [Benchmark];
 
   type BenchmarkMetric = Text; // instructions, rts_heap_size, rts_logical_stable_memory_size, rts_reclaimed
