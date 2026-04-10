@@ -135,6 +135,7 @@ export default defineConfig({
     "process.env.NODE_ENV": JSON.stringify(
       network === "local" ? "development" : "production",
     ),
+    // Catch-all fallback: Vite replaces longest keys first, so specific process.env.X entries above take priority
     "process.env": "({})",
   },
 });

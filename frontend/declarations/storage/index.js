@@ -14,9 +14,11 @@ export { idlFactory } from './storage.did.js';
   const agent = new HttpAgent({ ...options?.agentOptions });
 
   // Fetch root key for certificate validation during development
-  if(process.env.NODE_ENV !== "production") {
-    agent.fetchRootKey().catch(err=>{
-      console.warn("Unable to fetch root key. Check to ensure that your local replica is running");
+  if (process.env.DFX_NETWORK === "local") {
+    agent.fetchRootKey().catch((err) => {
+      console.warn(
+        "Unable to fetch root key. Check to ensure that your local replica is running"
+      );
       console.error(err);
     });
   }
