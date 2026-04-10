@@ -347,7 +347,7 @@ type Main =
           SemverPart;
         }) -> (Result_6) query;
    getHighestVersion: (name: PackageName) -> (Result_5) query;
-   getMemoryStats: () -> (MemoryStats);
+   getMemoryStats: () -> (MemoryStats) query;
    getMostDownloadedPackages: () -> (vec PackageSummary) query;
    getMostDownloadedPackagesIn7Days: () -> (vec PackageSummary) query;
    getNewPackages: () -> (vec PackageSummary) query;

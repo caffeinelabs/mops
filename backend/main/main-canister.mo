@@ -644,7 +644,7 @@ actor class Main() = this {
     sum * total / sampled;
   };
 
-  public shared ({ caller }) func getMemoryStats() : async MemoryStats {
+  public query ({ caller }) func getMemoryStats() : async MemoryStats {
     assert (Utils.isAdmin(caller));
 
     let dlStats = downloadLog.getMemoryStats();

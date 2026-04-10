@@ -111,7 +111,7 @@ export interface Main {
     Result_6
   >,
   'getHighestVersion' : ActorMethod<[PackageName], Result_5>,
-  'getMemoryStats' : ActorMethod<[], MemoryStats>,
+  'getMemoryStats' : ActorMethod<[], MemoryStats, 'query'>,
   'getMostDownloadedPackages' : ActorMethod<[], Array<PackageSummary>>,
   'getMostDownloadedPackagesIn7Days' : ActorMethod<[], Array<PackageSummary>>,
   'getNewPackages' : ActorMethod<[], Array<PackageSummary>>,

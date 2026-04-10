@@ -342,7 +342,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getHighestVersion' : IDL.Func([PackageName], [Result_5], ['query']),
-    'getMemoryStats' : IDL.Func([], [MemoryStats], []),
+    'getMemoryStats' : IDL.Func([], [MemoryStats], ['query']),
     'getMostDownloadedPackages' : IDL.Func(
         [],
         [IDL.Vec(PackageSummary)],
