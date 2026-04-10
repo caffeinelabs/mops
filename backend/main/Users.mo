@@ -25,6 +25,15 @@ module {
     var _users = TrieMap.TrieMap<Principal, Types.User>(Principal.equal, Principal.hash);
     var _names = Set.new<Text>();
 
+    public func getMemoryStats() : { users : { count : Nat; bytes : Nat } } {
+      var bytes = 0;
+      for ((k, v) in _users.entries()) {
+        let blob = to_candid ((k, v));
+        bytes += blob.size();
+      };
+      { users = { count = _users.size(); bytes } };
+    };
+
     public func toStable() : Stable {
       ?#v2({
         users = Iter.toArray(_users.entries());

@@ -13,6 +13,7 @@ import Option "mo:base/Option";
 import Blob "mo:base/Blob";
 import TelegramBot "mo:telegram-bot";
 
+import { rts_heap_size; rts_memory_size } "mo:prim";
 import IC "mo:ic";
 import { DAY } "mo:time-consts";
 import Backup "mo:backup";
@@ -59,6 +60,46 @@ actor class Main() = this {
   public type TestStats = Types.TestStats;
   public type PublishingId = Text;
   public type Benchmarks = Types.Benchmarks;
+
+  public type StructureStats = {
+    count : Nat;
+    bytes : Nat;
+  };
+
+  public type MemoryStats = {
+    rtsHeapSize : Nat;
+    rtsMemorySize : Nat;
+
+    packageVersions : StructureStats;
+    packageConfigs : StructureStats;
+    highestConfigs : StructureStats;
+    packagePublications : StructureStats;
+    ownersByPackage : StructureStats;
+    maintainersByPackage : StructureStats;
+    fileIdsByPackage : StructureStats;
+    hashByFileId : StructureStats;
+    packageFileStats : StructureStats;
+    packageTestStats : StructureStats;
+    packageBenchmarks : StructureStats;
+    packageNotes : StructureStats;
+    packageDocsCoverage : StructureStats;
+
+    downloadsByPackageName : StructureStats;
+    downloadsByPackageId : StructureStats;
+    dailySnapshots : StructureStats;
+    weeklySnapshots : StructureStats;
+    dailySnapshotsByPackageName : StructureStats;
+    dailySnapshotsByPackageId : StructureStats;
+    weeklySnapshotsByPackageName : StructureStats;
+    weeklySnapshotsByPackageId : StructureStats;
+    dailyTempRecords : StructureStats;
+    weeklyTempRecords : StructureStats;
+
+    storages : StructureStats;
+    storageByFileId : StructureStats;
+
+    users : StructureStats;
+  };
 
   let API_VERSION = "1.3"; // (!) make changes in pair with cli
 
@@ -577,6 +618,99 @@ actor class Main() = this {
 
   public query func getStoragesStats() : async [(StorageManager.StorageId, StorageManager.StorageStats)] {
     storageManager.getStoragesStats();
+  };
+
+  func sumMapBytes<K, V>(
+    map : TrieMap.TrieMap<K, V>,
+    serialize : (K, V) -> Blob,
+  ) : Nat {
+    var sum = 0;
+    for ((k, v) in map.entries()) {
+      sum += serialize(k, v).size();
+    };
+    sum;
+  };
+
+  public query ({ caller }) func getMemoryStats() : async MemoryStats {
+    assert (Utils.isAdmin(caller));
+
+    let dlStats = downloadLog.getMemoryStats();
+    let smStats = storageManager.getMemoryStats();
+    let uStats = users.getMemoryStats();
+
+    {
+      rtsHeapSize = rts_heap_size();
+      rtsMemorySize = rts_memory_size();
+
+      packageVersions = {
+        count = packageVersions.size();
+        bytes = sumMapBytes(packageVersions, func(k : PackageName, v : [PackageVersion]) : Blob = to_candid ((k, v)));
+      };
+      packageConfigs = {
+        count = packageConfigs.size();
+        bytes = sumMapBytes(packageConfigs, func(k : PackageId, v : PackageConfigV3) : Blob = to_candid ((k, v)));
+      };
+      highestConfigs = {
+        count = highestConfigs.size();
+        bytes = sumMapBytes(highestConfigs, func(k : PackageName, v : PackageConfigV3) : Blob = to_candid ((k, v)));
+      };
+      packagePublications = {
+        count = packagePublications.size();
+        bytes = sumMapBytes(packagePublications, func(k : PackageId, v : PackagePublication) : Blob = to_candid ((k, v)));
+      };
+      ownersByPackage = {
+        count = ownersByPackage.size();
+        bytes = sumMapBytes(ownersByPackage, func(k : PackageName, v : [Principal]) : Blob = to_candid ((k, v)));
+      };
+      maintainersByPackage = {
+        count = maintainersByPackage.size();
+        bytes = sumMapBytes(maintainersByPackage, func(k : PackageName, v : [Principal]) : Blob = to_candid ((k, v)));
+      };
+      fileIdsByPackage = {
+        count = fileIdsByPackage.size();
+        bytes = sumMapBytes(fileIdsByPackage, func(k : PackageId, v : [FileId]) : Blob = to_candid ((k, v)));
+      };
+      hashByFileId = {
+        count = hashByFileId.size();
+        bytes = sumMapBytes(hashByFileId, func(k : FileId, v : Blob) : Blob = to_candid ((k, v)));
+      };
+      packageFileStats = {
+        count = packageFileStats.size();
+        bytes = sumMapBytes(packageFileStats, func(k : PackageId, v : PackageFileStats) : Blob = to_candid ((k, v)));
+      };
+      packageTestStats = {
+        count = packageTestStats.size();
+        bytes = sumMapBytes(packageTestStats, func(k : PackageId, v : TestStats) : Blob = to_candid ((k, v)));
+      };
+      packageBenchmarks = {
+        count = packageBenchmarks.size();
+        bytes = sumMapBytes(packageBenchmarks, func(k : PackageId, v : Benchmarks) : Blob = to_candid ((k, v)));
+      };
+      packageNotes = {
+        count = packageNotes.size();
+        bytes = sumMapBytes(packageNotes, func(k : PackageId, v : Text) : Blob = to_candid ((k, v)));
+      };
+      packageDocsCoverage = {
+        count = packageDocsCoverage.size();
+        bytes = sumMapBytes(packageDocsCoverage, func(k : PackageId, v : Float) : Blob = to_candid ((k, v)));
+      };
+
+      downloadsByPackageName = dlStats.downloadsByPackageName;
+      downloadsByPackageId = dlStats.downloadsByPackageId;
+      dailySnapshots = dlStats.dailySnapshots;
+      weeklySnapshots = dlStats.weeklySnapshots;
+      dailySnapshotsByPackageName = dlStats.dailySnapshotsByPackageName;
+      dailySnapshotsByPackageId = dlStats.dailySnapshotsByPackageId;
+      weeklySnapshotsByPackageName = dlStats.weeklySnapshotsByPackageName;
+      weeklySnapshotsByPackageId = dlStats.weeklySnapshotsByPackageId;
+      dailyTempRecords = dlStats.dailyTempRecords;
+      weeklyTempRecords = dlStats.weeklyTempRecords;
+
+      storages = smStats.storages;
+      storageByFileId = smStats.storageByFileId;
+
+      users = uStats.users;
+    };
   };
 
   // USERS

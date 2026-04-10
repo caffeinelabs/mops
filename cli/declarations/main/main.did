@@ -42,6 +42,11 @@ type StreamingCallbackResponse =
  };
 type StreamingCallback = func (StreamingToken) ->
                           (opt StreamingCallbackResponse) query;
+type StructureStats = 
+ record {
+   bytes: nat;
+   count: nat;
+ };
 type StorageStats = 
  record {
    cyclesBalance: nat;
@@ -272,6 +277,37 @@ type PackageChanges =
    prevDocsCoverage: float64;
    tests: TestsChanges;
  };
+type MemoryStats = 
+ record {
+   dailySnapshots: StructureStats;
+   dailySnapshotsByPackageId: StructureStats;
+   dailySnapshotsByPackageName: StructureStats;
+   dailyTempRecords: StructureStats;
+   downloadsByPackageId: StructureStats;
+   downloadsByPackageName: StructureStats;
+   fileIdsByPackage: StructureStats;
+   hashByFileId: StructureStats;
+   highestConfigs: StructureStats;
+   maintainersByPackage: StructureStats;
+   ownersByPackage: StructureStats;
+   packageBenchmarks: StructureStats;
+   packageConfigs: StructureStats;
+   packageDocsCoverage: StructureStats;
+   packageFileStats: StructureStats;
+   packageNotes: StructureStats;
+   packagePublications: StructureStats;
+   packageTestStats: StructureStats;
+   packageVersions: StructureStats;
+   rtsHeapSize: nat;
+   rtsMemorySize: nat;
+   storageByFileId: StructureStats;
+   storages: StructureStats;
+   users: StructureStats;
+   weeklySnapshots: StructureStats;
+   weeklySnapshotsByPackageId: StructureStats;
+   weeklySnapshotsByPackageName: StructureStats;
+   weeklyTempRecords: StructureStats;
+ };
 type Main = 
  service {
    addMaintainer: (packageName: PackageName, newMaintainer: principal) ->
@@ -311,6 +347,7 @@ type Main =
           SemverPart;
         }) -> (Result_6) query;
    getHighestVersion: (name: PackageName) -> (Result_5) query;
+   getMemoryStats: () -> (MemoryStats) query;
    getMostDownloadedPackages: () -> (vec PackageSummary) query;
    getMostDownloadedPackagesIn7Days: () -> (vec PackageSummary) query;
    getNewPackages: () -> (vec PackageSummary) query;

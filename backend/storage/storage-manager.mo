@@ -172,6 +172,29 @@ module {
       );
     };
 
+    public func getMemoryStats() : {
+      storages : { count : Nat; bytes : Nat };
+      storageByFileId : { count : Nat; bytes : Nat };
+    } {
+      var storagesBytes = 0;
+      for ((k, v) in storages.entries()) {
+        let blob = to_candid ((k, v));
+        storagesBytes += blob.size();
+      };
+      var storageByFileIdBytes = 0;
+      for ((k, v) in storageByFileId.entries()) {
+        let blob = to_candid ((k, v));
+        storageByFileIdBytes += blob.size();
+      };
+      {
+        storages = { count = storages.size(); bytes = storagesBytes };
+        storageByFileId = {
+          count = storageByFileId.size();
+          bytes = storageByFileIdBytes;
+        };
+      };
+    };
+
     public func toStable() : Stable {
       return ?{
         storages = Iter.toArray(storages.entries());

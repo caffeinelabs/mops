@@ -419,6 +419,85 @@ module {
       );
     };
 
+    public func getMemoryStats() : {
+      downloadsByPackageName : { count : Nat; bytes : Nat };
+      downloadsByPackageId : { count : Nat; bytes : Nat };
+      dailySnapshots : { count : Nat; bytes : Nat };
+      weeklySnapshots : { count : Nat; bytes : Nat };
+      dailySnapshotsByPackageName : { count : Nat; bytes : Nat };
+      dailySnapshotsByPackageId : { count : Nat; bytes : Nat };
+      weeklySnapshotsByPackageName : { count : Nat; bytes : Nat };
+      weeklySnapshotsByPackageId : { count : Nat; bytes : Nat };
+      dailyTempRecords : { count : Nat; bytes : Nat };
+      weeklyTempRecords : { count : Nat; bytes : Nat };
+    } {
+      func sumDownloadsMapBytes(map : TrieMap.TrieMap<Text.Text, Nat>) : Nat {
+        var sum = 0;
+        for ((k, v) in map.entries()) {
+          let blob = to_candid ((k, v));
+          sum += blob.size();
+        };
+        sum;
+      };
+
+      func sumSnapshotMapBytes(map : TrieMap.TrieMap<Text.Text, Buffer.Buffer<DownloadsSnapshot>>) : Nat {
+        var sum = 0;
+        for ((k, buf) in map.entries()) {
+          let blob = to_candid ((k, Buffer.toArray(buf)));
+          sum += blob.size();
+        };
+        sum;
+      };
+
+      let dailySnapshotsBlob = to_candid (Buffer.toArray(dailySnapshots));
+      let weeklySnapshotsBlob = to_candid (Buffer.toArray(weeklySnapshots));
+      let dailyTempRecordsBlob = to_candid (Buffer.toArray(dailyTempRecords));
+      let weeklyTempRecordsBlob = to_candid (Buffer.toArray(weeklyTempRecords));
+
+      {
+        downloadsByPackageName = {
+          count = downloadsByPackageName.size();
+          bytes = sumDownloadsMapBytes(downloadsByPackageName);
+        };
+        downloadsByPackageId = {
+          count = downloadsByPackageId.size();
+          bytes = sumDownloadsMapBytes(downloadsByPackageId);
+        };
+        dailySnapshots = {
+          count = dailySnapshots.size();
+          bytes = dailySnapshotsBlob.size();
+        };
+        weeklySnapshots = {
+          count = weeklySnapshots.size();
+          bytes = weeklySnapshotsBlob.size();
+        };
+        dailySnapshotsByPackageName = {
+          count = dailySnapshotsByPackageName.size();
+          bytes = sumSnapshotMapBytes(dailySnapshotsByPackageName);
+        };
+        dailySnapshotsByPackageId = {
+          count = dailySnapshotsByPackageId.size();
+          bytes = sumSnapshotMapBytes(dailySnapshotsByPackageId);
+        };
+        weeklySnapshotsByPackageName = {
+          count = weeklySnapshotsByPackageName.size();
+          bytes = sumSnapshotMapBytes(weeklySnapshotsByPackageName);
+        };
+        weeklySnapshotsByPackageId = {
+          count = weeklySnapshotsByPackageId.size();
+          bytes = sumSnapshotMapBytes(weeklySnapshotsByPackageId);
+        };
+        dailyTempRecords = {
+          count = dailyTempRecords.size();
+          bytes = dailyTempRecordsBlob.size();
+        };
+        weeklyTempRecords = {
+          count = weeklyTempRecords.size();
+          bytes = weeklyTempRecordsBlob.size();
+        };
+      };
+    };
+
     public func setTimers<system>() {
       cancelTimers();
       timerId := Timer.recurringTimer<system>(
