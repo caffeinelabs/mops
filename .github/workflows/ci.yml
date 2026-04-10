@@ -33,7 +33,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-      - uses: dfinity/setup-dfx@main
+      - uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
 
       - uses: ./.github/actions/cache-rust-wasm
 
@@ -111,7 +111,7 @@ jobs:
         with:
           node-version: 22
           cache: "npm"
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: ./.github/actions/cache-rust-wasm
 
       - name: Install npm packages
