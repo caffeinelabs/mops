@@ -181,6 +181,7 @@ module {
           time = Time.now();
           user = caller;
           config = config;
+          // Sentinel: blob packages don't use storage canisters
           storage = Principal.fromText("aaaaa-aa");
         },
       );
@@ -542,15 +543,37 @@ module {
       });
     };
 
-    public func finishBlobPublish(caller : Principal, publishingId : PublishingId, blobHash : Text) : async Result.Result<{ config : PackageConfigV3; publication : PackagePublication; isNewPackage : Bool }, PublishingErr> {
+    public func finishBlobPublish(caller : Principal, publishingId : PublishingId, blobHash : Text, archiveSize : Nat, fileCount : Nat) : async Result.Result<{ config : PackageConfigV3; publication : PackagePublication; isNewPackage : Bool }, PublishingErr> {
       assert (not Principal.isAnonymous(caller));
 
       if (not _isValidBlobHash(blobHash)) {
         return #err("Invalid blob hash format. Expected 'sha256:<64-lowercase-hex-chars>'");
       };
 
+      if (archiveSize > MAX_PACKAGE_SIZE) {
+        return #err("Max package size is 28MB");
+      };
+
+      if (fileCount > MAX_PACKAGE_FILES) {
+        return #err("Maximum number of package files: " # Nat.toText(MAX_PACKAGE_FILES));
+      };
+
       let ?publishing = publishingPackages.get(publishingId) else return #err("Publishing package not found");
       assert (publishing.user == caller);
+
+      publishingPackageFileStats.put(
+        publishingId,
+        {
+          sourceFiles = fileCount;
+          sourceSize = archiveSize;
+          docsCount = 0;
+          docsSize = 0;
+          testFiles = 0;
+          testSize = 0;
+          benchFiles = 0;
+          benchSize = 0;
+        },
+      );
 
       let isNewPackage = registry.getHighestVersion(publishing.config.name) == null;
 

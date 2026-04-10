@@ -37,6 +37,10 @@ async function downloadBlobPackage(
   await new Promise<void>((resolve, reject) => {
     let parser = new TarParser();
     parser.on("entry", (entry: ReadEntry) => {
+      if (entry.type !== "File") {
+        entry.resume();
+        return;
+      }
       let entryPath = sanitizeTarPath(entry.path);
       if (!entryPath) {
         entry.resume();

@@ -289,7 +289,7 @@ export const idlFactory = ({ IDL }) => {
     'addOwner' : IDL.Func([PackageName, IDL.Principal], [Result_3], []),
     'backup' : IDL.Func([], [], []),
     'computeHashesForExistingFiles' : IDL.Func([], [], []),
-    'finishBlobPublish' : IDL.Func([PublishingId, IDL.Text], [Result], []),
+    'finishBlobPublish' : IDL.Func([PublishingId, IDL.Text, IDL.Nat, IDL.Nat], [Result], []),
     'finishPublish' : IDL.Func([PublishingId], [Result], []),
     'getApiVersion' : IDL.Func([], [Text], ['query']),
     'getBlobHash' : IDL.Func(

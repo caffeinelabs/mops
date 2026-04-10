@@ -362,8 +362,8 @@ actor class Main() = this {
   };
 
   // Blob publish
-  public shared ({ caller }) func finishBlobPublish(publishingId : PublishingId, blobHash : Text) : async Result.Result<(), Err> {
-    let res = await packagePublisher.finishBlobPublish(caller, publishingId, blobHash);
+  public shared ({ caller }) func finishBlobPublish(publishingId : PublishingId, blobHash : Text, archiveSize : Nat, fileCount : Nat) : async Result.Result<(), Err> {
+    let res = await packagePublisher.finishBlobPublish(caller, publishingId, blobHash, archiveSize, fileCount);
 
     switch (res) {
       case (#err(err)) {
@@ -496,7 +496,7 @@ actor class Main() = this {
       case (?ids) #ok(ids);
       case null {
         if (blobHashByPackageId.get(packageId) != null) {
-          #ok([]);
+          #err("Package '" # packageId # "' uses blob storage. Please upgrade mops CLI to the latest version.");
         } else {
           #err("Package '" # packageId # "' not found");
         };

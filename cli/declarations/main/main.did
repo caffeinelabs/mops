@@ -291,7 +291,7 @@ type Main =
    addOwner: (packageName: PackageName, newOwner: principal) -> (Result_3);
    backup: () -> ();
    computeHashesForExistingFiles: () -> ();
-   finishBlobPublish: (publishingId: PublishingId, blobHash: text) -> (Result);
+   finishBlobPublish: (publishingId: PublishingId, blobHash: text, archiveSize: nat, fileCount: nat) -> (Result);
    finishPublish: (publishingId: PublishingId) -> (Result);
    getApiVersion: () -> (Text) query;
    getBlobHash: (name: PackageName, version: PackageVersion) ->

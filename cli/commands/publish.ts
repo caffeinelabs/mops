@@ -288,7 +288,7 @@ export async function publish(
   ];
   let files = config.package.files || ["**/*.mo"];
   files = [...files, ...defaultFiles];
-  files = globbySync([...files, ...defaultFiles]);
+  files = globbySync([...files, ...defaultFiles], { cwd: rootDir });
 
   if (options.verbose) {
     console.log("Files:");
@@ -462,10 +462,16 @@ export async function publish(
   // upload to Caffeine Object Storage
   progress("Uploading to blob storage");
   let rootHash: string;
+  const uploadStepStart = (step / total) * 100;
+  const uploadStepSize = (1 / total) * 100;
   try {
     rootHash = await uploadBlob(archiveData, identity, (pct) => {
+      const uploadProgress = Math.min(
+        100,
+        Math.round(uploadStepStart + (pct / 100) * uploadStepSize),
+      );
       logUpdate(
-        `Uploading to blob storage ${progressBar(Math.round((pct / 100) * 80) + 2 * (100 / total), 100)}`,
+        `Uploading to blob storage ${progressBar(uploadProgress, 100)}`,
       );
     });
   } catch (err) {
@@ -480,7 +486,12 @@ export async function publish(
     recursive: true,
   });
 
-  let res = await actor.finishBlobPublish(publishingId, rootHash);
+  let res = await actor.finishBlobPublish(
+    publishingId,
+    rootHash,
+    BigInt(archiveData.byteLength),
+    BigInt(sourceFiles.length),
+  );
   if ("err" in res) {
     console.log(chalk.red("Error: ") + res.err);
     process.exit(1);

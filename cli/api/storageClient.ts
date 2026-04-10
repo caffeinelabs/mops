@@ -230,7 +230,7 @@ function getGatewayUrl(): string {
 function getProjectId(): string {
   return (
     process.env["MOPS_STORAGE_PROJECT_ID"] ||
-    "0000000-0000-0000-0000-00000000000"
+    "00000000-0000-0000-0000-000000000000"
   );
 }
 

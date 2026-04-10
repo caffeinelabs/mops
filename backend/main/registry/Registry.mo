@@ -134,6 +134,9 @@ module {
       let publication = {
         user = newRelease.userId;
         time = Time.now();
+        // Blob packages don't use storage canisters; use management canister
+        // principal as a sentinel (PackagePublication requires this field).
+        // Clients must check getBlobHash() before accessing this value.
         storage = Principal.fromText("aaaaa-aa");
       };
       packagePublications.put(packageId, publication);

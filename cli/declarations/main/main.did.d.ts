@@ -71,7 +71,7 @@ export interface Main {
   'addOwner' : ActorMethod<[PackageName, Principal], Result_3>,
   'backup' : ActorMethod<[], undefined>,
   'computeHashesForExistingFiles' : ActorMethod<[], undefined>,
-  'finishBlobPublish' : ActorMethod<[PublishingId, string], Result>,
+  'finishBlobPublish' : ActorMethod<[PublishingId, string, bigint, bigint], Result>,
   'finishPublish' : ActorMethod<[PublishingId], Result>,
   'getApiVersion' : ActorMethod<[], Text>,
   'getBlobHash' : ActorMethod<[PackageName, PackageVersion], [] | [string]>,
