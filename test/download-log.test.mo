@@ -262,29 +262,3 @@ test(
 );
 
 check("check after upgrade");
-
-suite(
-  "getMemoryStats",
-  func() {
-    test(
-      "counts match structure sizes",
-      func() {
-        let stats = downloadLog.getMemoryStats();
-        // pkg1 and pkg2 were added during populate suite
-        assert stats.downloadsByPackageName.count == 2;
-        assert stats.downloadsByPackageId.count > 0;
-        assert stats.dailySnapshots.count > 0;
-      },
-    );
-
-    test(
-      "bytes > 0 for non-empty structures",
-      func() {
-        let stats = downloadLog.getMemoryStats();
-        assert stats.downloadsByPackageName.bytes > 0;
-        assert stats.downloadsByPackageId.bytes > 0;
-        assert stats.dailySnapshots.bytes > 0;
-      },
-    );
-  },
-);

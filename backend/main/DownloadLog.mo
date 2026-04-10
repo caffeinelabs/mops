@@ -484,6 +484,23 @@ module {
         sum * total / sampled;
       };
 
+      func sampleTempRecordBufferBytes(buf : Buffer.Buffer<Record>) : Nat {
+        let total = buf.size();
+        if (total == 0) return 0;
+        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        var sum = 0;
+        var i = 0;
+        var sampled = 0;
+        for (v in buf.vals()) {
+          if (i % stride == 0) {
+            sum += (to_candid (v) : Blob).size();
+            sampled += 1;
+          };
+          i += 1;
+        };
+        sum * total / sampled;
+      };
+
       {
         downloadsByPackageName = {
           count = downloadsByPackageName.size();
@@ -519,11 +536,11 @@ module {
         };
         dailyTempRecords = {
           count = dailyTempRecords.size();
-          bytes = sampleBufferBytes(dailyTempRecords);
+          bytes = sampleTempRecordBufferBytes(dailyTempRecords);
         };
         weeklyTempRecords = {
           count = weeklyTempRecords.size();
-          bytes = sampleBufferBytes(weeklyTempRecords);
+          bytes = sampleTempRecordBufferBytes(weeklyTempRecords);
         };
       };
     };
