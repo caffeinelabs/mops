@@ -102,7 +102,7 @@ actor class Main() = this {
     names : StructureStats;
   };
 
-  let API_VERSION = "1.4"; // (!) make changes in pair with cli
+  let API_VERSION = "1.3"; // (!) make changes in pair with cli
 
   var packageVersions = TrieMap.TrieMap<PackageName, [PackageVersion]>(Text.equal, Text.hash);
   var packageOwners = TrieMap.TrieMap<PackageName, Principal>(Text.equal, Text.hash); // legacy
