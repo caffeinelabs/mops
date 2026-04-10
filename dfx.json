@@ -74,7 +74,7 @@
       "packtool": "mops sources"
     }
   },
-  "dfx": "0.29.1",
+  "dfx": "0.31.0",
   "networks": {
     "local": {
       "type": "ephemeral",
