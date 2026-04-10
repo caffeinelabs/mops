@@ -176,21 +176,47 @@ module {
       storages : { count : Nat; bytes : Nat };
       storageByFileId : { count : Nat; bytes : Nat };
     } {
-      var storagesBytes = 0;
-      for ((k, v) in storages.entries()) {
-        let blob = to_candid ((k, v));
-        storagesBytes += blob.size();
+      let SAMPLE_SIZE : Nat = 10_000;
+
+      func sampleStoragesBytes() : Nat {
+        let total = storages.size();
+        if (total == 0) return 0;
+        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        var sum = 0;
+        var i = 0;
+        var sampled = 0;
+        for ((k, v) in storages.entries()) {
+          if (i % stride == 0) {
+            sum += (to_candid ((k, v)) : Blob).size();
+            sampled += 1;
+          };
+          i += 1;
+        };
+        sum * total / sampled;
       };
-      var storageByFileIdBytes = 0;
-      for ((k, v) in storageByFileId.entries()) {
-        let blob = to_candid ((k, v));
-        storageByFileIdBytes += blob.size();
+
+      func sampleStorageByFileIdBytes() : Nat {
+        let total = storageByFileId.size();
+        if (total == 0) return 0;
+        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        var sum = 0;
+        var i = 0;
+        var sampled = 0;
+        for ((k, v) in storageByFileId.entries()) {
+          if (i % stride == 0) {
+            sum += (to_candid ((k, v)) : Blob).size();
+            sampled += 1;
+          };
+          i += 1;
+        };
+        sum * total / sampled;
       };
+
       {
-        storages = { count = storages.size(); bytes = storagesBytes };
+        storages = { count = storages.size(); bytes = sampleStoragesBytes() };
         storageByFileId = {
           count = storageByFileId.size();
-          bytes = storageByFileIdBytes;
+          bytes = sampleStorageByFileIdBytes();
         };
       };
     };

@@ -26,12 +26,21 @@ module {
     var _names = Set.new<Text>();
 
     public func getMemoryStats() : { users : { count : Nat; bytes : Nat } } {
-      var bytes = 0;
+      let SAMPLE_SIZE : Nat = 10_000;
+      let total = _users.size();
+      let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+      var sum = 0;
+      var i = 0;
+      var sampled = 0;
       for ((k, v) in _users.entries()) {
-        let blob = to_candid ((k, v));
-        bytes += blob.size();
+        if (i % stride == 0) {
+          sum += (to_candid ((k, v)) : Blob).size();
+          sampled += 1;
+        };
+        i += 1;
       };
-      { users = { count = _users.size(); bytes } };
+      let bytes = if (sampled == 0) 0 else sum * total / sampled;
+      { users = { count = total; bytes } };
     };
 
     public func toStable() : Stable {

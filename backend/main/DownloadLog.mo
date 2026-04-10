@@ -431,69 +431,99 @@ module {
       dailyTempRecords : { count : Nat; bytes : Nat };
       weeklyTempRecords : { count : Nat; bytes : Nat };
     } {
-      func sumDownloadsMapBytes(map : TrieMap.TrieMap<Text.Text, Nat>) : Nat {
+      let SAMPLE_SIZE : Nat = 10_000;
+
+      func sampleDownloadsMapBytes(map : TrieMap.TrieMap<Text.Text, Nat>) : Nat {
+        let total = map.size();
+        if (total == 0) return 0;
+        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
         var sum = 0;
+        var i = 0;
+        var sampled = 0;
         for ((k, v) in map.entries()) {
-          let blob = to_candid ((k, v));
-          sum += blob.size();
+          if (i % stride == 0) {
+            sum += (to_candid ((k, v)) : Blob).size();
+            sampled += 1;
+          };
+          i += 1;
         };
-        sum;
+        sum * total / sampled;
       };
 
-      func sumSnapshotMapBytes(map : TrieMap.TrieMap<Text.Text, Buffer.Buffer<DownloadsSnapshot>>) : Nat {
+      func sampleSnapshotMapBytes(map : TrieMap.TrieMap<Text.Text, Buffer.Buffer<DownloadsSnapshot>>) : Nat {
+        let total = map.size();
+        if (total == 0) return 0;
+        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
         var sum = 0;
+        var i = 0;
+        var sampled = 0;
         for ((k, buf) in map.entries()) {
-          let blob = to_candid ((k, Buffer.toArray(buf)));
-          sum += blob.size();
+          if (i % stride == 0) {
+            sum += (to_candid ((k, Buffer.toArray(buf))) : Blob).size();
+            sampled += 1;
+          };
+          i += 1;
         };
-        sum;
+        sum * total / sampled;
       };
 
-      let dailySnapshotsBlob = to_candid (Buffer.toArray(dailySnapshots));
-      let weeklySnapshotsBlob = to_candid (Buffer.toArray(weeklySnapshots));
-      let dailyTempRecordsBlob = to_candid (Buffer.toArray(dailyTempRecords));
-      let weeklyTempRecordsBlob = to_candid (Buffer.toArray(weeklyTempRecords));
+      func sampleBufferBytes(buf : Buffer.Buffer<DownloadsSnapshot>) : Nat {
+        let total = buf.size();
+        if (total == 0) return 0;
+        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        var sum = 0;
+        var i = 0;
+        var sampled = 0;
+        for (v in buf.vals()) {
+          if (i % stride == 0) {
+            sum += (to_candid (v) : Blob).size();
+            sampled += 1;
+          };
+          i += 1;
+        };
+        sum * total / sampled;
+      };
 
       {
         downloadsByPackageName = {
           count = downloadsByPackageName.size();
-          bytes = sumDownloadsMapBytes(downloadsByPackageName);
+          bytes = sampleDownloadsMapBytes(downloadsByPackageName);
         };
         downloadsByPackageId = {
           count = downloadsByPackageId.size();
-          bytes = sumDownloadsMapBytes(downloadsByPackageId);
+          bytes = sampleDownloadsMapBytes(downloadsByPackageId);
         };
         dailySnapshots = {
           count = dailySnapshots.size();
-          bytes = dailySnapshotsBlob.size();
+          bytes = sampleBufferBytes(dailySnapshots);
         };
         weeklySnapshots = {
           count = weeklySnapshots.size();
-          bytes = weeklySnapshotsBlob.size();
+          bytes = sampleBufferBytes(weeklySnapshots);
         };
         dailySnapshotsByPackageName = {
           count = dailySnapshotsByPackageName.size();
-          bytes = sumSnapshotMapBytes(dailySnapshotsByPackageName);
+          bytes = sampleSnapshotMapBytes(dailySnapshotsByPackageName);
         };
         dailySnapshotsByPackageId = {
           count = dailySnapshotsByPackageId.size();
-          bytes = sumSnapshotMapBytes(dailySnapshotsByPackageId);
+          bytes = sampleSnapshotMapBytes(dailySnapshotsByPackageId);
         };
         weeklySnapshotsByPackageName = {
           count = weeklySnapshotsByPackageName.size();
-          bytes = sumSnapshotMapBytes(weeklySnapshotsByPackageName);
+          bytes = sampleSnapshotMapBytes(weeklySnapshotsByPackageName);
         };
         weeklySnapshotsByPackageId = {
           count = weeklySnapshotsByPackageId.size();
-          bytes = sumSnapshotMapBytes(weeklySnapshotsByPackageId);
+          bytes = sampleSnapshotMapBytes(weeklySnapshotsByPackageId);
         };
         dailyTempRecords = {
           count = dailyTempRecords.size();
-          bytes = dailyTempRecordsBlob.size();
+          bytes = sampleBufferBytes(dailyTempRecords);
         };
         weeklyTempRecords = {
           count = weeklyTempRecords.size();
-          bytes = weeklyTempRecordsBlob.size();
+          bytes = sampleBufferBytes(weeklyTempRecords);
         };
       };
     };
