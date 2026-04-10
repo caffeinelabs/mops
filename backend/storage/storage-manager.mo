@@ -176,7 +176,7 @@ module {
       storages : { count : Nat; bytes : Nat };
       storageByFileId : { count : Nat; bytes : Nat };
     } {
-      let SAMPLE_SIZE : Nat = 10_000;
+      let SAMPLE_SIZE : Nat = 1_000;
 
       func sampleStoragesBytes() : Nat {
         let total = storages.size();

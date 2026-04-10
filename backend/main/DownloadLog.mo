@@ -431,7 +431,7 @@ module {
       dailyTempRecords : { count : Nat; bytes : Nat };
       weeklyTempRecords : { count : Nat; bytes : Nat };
     } {
-      let SAMPLE_SIZE : Nat = 10_000;
+      let SAMPLE_SIZE : Nat = 1_000;
 
       func sampleDownloadsMapBytes(map : TrieMap.TrieMap<Text.Text, Nat>) : Nat {
         let total = map.size();

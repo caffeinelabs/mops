@@ -621,7 +621,7 @@ actor class Main() = this {
     storageManager.getStoragesStats();
   };
 
-  let SAMPLE_SIZE : Nat = 10_000;
+  let SAMPLE_SIZE : Nat = 1_000;
 
   // Serializes a random sample of up to SAMPLE_SIZE entries and extrapolates
   // the total byte count, keeping to_candid allocations bounded.

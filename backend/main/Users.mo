@@ -29,7 +29,7 @@ module {
       users : { count : Nat; bytes : Nat };
       names : { count : Nat; bytes : Nat };
     } {
-      let SAMPLE_SIZE : Nat = 10_000;
+      let SAMPLE_SIZE : Nat = 1_000;
 
       let usersTotal = _users.size();
       let usersStride = if (usersTotal <= SAMPLE_SIZE) 1 else (usersTotal + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
