@@ -1,0 +1,5 @@
+name = "no-types"
+description = "File must not contain type declarations. Move types to a separate Types module."
+query = """
+(typ_dec) @error
+"""

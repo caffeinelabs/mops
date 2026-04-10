@@ -1,0 +1,7 @@
+[toolchain]
+lintoko = "0.7.0"
+
+[lint.extra]
+"src/Main.mo" = ["lint/no-types"]
+"src/Types.mo" = ["lint/types-only"]
+"src/Migration.mo" = ["lint/migration-only"]

@@ -31,6 +31,7 @@ export type Config = {
     args?: string[];
     rules?: string[];
     extends?: string[] | true;
+    extra?: Record<string, string[]>;
   };
 };
 
