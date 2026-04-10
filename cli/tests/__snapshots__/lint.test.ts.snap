@@ -1,5 +1,163 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`lint [lint.extra] --rules CLI flag does not affect extra runs, multi-rules 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-bool-switch
+   ╭─[<TEST_DIR>/lint-extra-with-cli-rules/src/Restricted.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+  × [ERROR]: no-bool-switch-2
+   ╭─[<TEST_DIR>/lint-extra-with-cli-rules/src/Restricted.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Duplicate detection: don't switch on boolean values
+ 7 │       };
+   ╰────
+
+Error: Found 2 errors
+Lint failed",
+  "stdout": "lint Running lintoko (base):
+<CACHE>/lintoko/0.7.0/lintoko
+["--verbose","--rules","empty-rules","<TEST_DIR>/lint-extra-with-cli-rules/src/Restricted.mo","<TEST_DIR>/lint-extra-with-cli-rules/src/Ok.mo"]
+DEBUG file input: <TEST_DIR>/lint-extra-with-cli-rules/src/Restricted.mo
+DEBUG file input: <TEST_DIR>/lint-extra-with-cli-rules/src/Ok.mo
+DEBUG Loading rules from: empty-rules
+DEBUG Linting file: <TEST_DIR>/lint-extra-with-cli-rules/src/Ok.mo
+DEBUG Linting file: <TEST_DIR>/lint-extra-with-cli-rules/src/Restricted.mo
+lint Running lintoko (extra: src/Restricted.mo):
+<CACHE>/lintoko/0.7.0/lintoko
+["--verbose","--rules","../lint/lints","--rules","rules-b","<TEST_DIR>/lint-extra-with-cli-rules/src/Restricted.mo"]
+DEBUG file input: <TEST_DIR>/lint-extra-with-cli-rules/src/Restricted.mo
+DEBUG Loading rules from: ../lint/lints
+DEBUG Parsing extra rule at: ../lint/lints/no-bool-switch.toml
+DEBUG Loading rules from: rules-b
+DEBUG Parsing extra rule at: rules-b/no-bool-switch-2.toml
+DEBUG Linting file: <TEST_DIR>/lint-extra-with-cli-rules/src/Restricted.mo",
+}
+`;
+
+exports[`lint [lint.extra] base rules still run alongside extra rules 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-bool-switch
+   ╭─[<TEST_DIR>/lint-extra-with-base/src/BadBase.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+Error: Found 1 errors
+Lint failed",
+  "stdout": "",
+}
+`;
+
+exports[`lint [lint.extra] edge cases: pass, empty value, no-match, missing dir 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "[lint.extra] skipping 'src/also-missing/*.mo': value must be a non-empty array of rule directories
+[lint.extra] no files matched glob 'src/nonexistent/*.mo', skipping
+[lint.extra] rule directory 'nonexistent-rules' not found (referenced by glob 'src/*.mo')",
+  "stdout": "",
+}
+`;
+
+exports[`lint [lint.extra] example rules: no-types, types-only, migration-only 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-types
+    ╭─[<TEST_DIR>/lint-extra-example-rules/src/Main.mo:6:10]
+  5 │     
+  6 │ ╭─▶   public type User = {
+  7 │ │       name : Text;
+  8 │ │       age : Nat;
+  9 │ ├─▶   };
+    · ╰──── File must not contain type declarations. Move types to a separate Types module.
+ 10 │     };
+    ╰────
+
+Error: Found 1 errors
+  × [ERROR]: types-only
+    ╭─[<TEST_DIR>/lint-extra-example-rules/src/Types.mo:7:10]
+  6 │     
+  7 │ ╭─▶   public func helper() : Text {
+  8 │ │       "oops";
+  9 │ ├─▶   };
+    · ╰──── File must contain only type declarations. No functions, classes, or variable bindings.
+ 10 │     };
+    ╰────
+
+Error: Found 1 errors
+  × [ERROR]: migration-only
+   ╭─[<TEST_DIR>/lint-extra-example-rules/src/Migration.mo:6:10]
+ 5 │     
+ 6 │ ╭─▶   public func notAllowed(old : {}) : {} {
+ 7 │ │       {};
+ 8 │ ├─▶   };
+   · ╰──── Only migration() may be a public function.
+ 9 │     };
+   ╰────
+
+Error: Found 1 errors
+Lint failed",
+  "stdout": "",
+}
+`;
+
+exports[`lint [lint.extra] extra rules on glob-matched files 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "  × [ERROR]: no-bool-switch
+   ╭─[<TEST_DIR>/lint-extra/src/restricted/B.mo:3:5]
+ 2 │       public func anotherBoolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case true { false };
+ 5 │ │         case false { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+  × [ERROR]: no-bool-switch
+   ╭─[<TEST_DIR>/lint-extra/src/restricted/Restricted.mo:3:5]
+ 2 │       public func boolSwitch(b : Bool) : Bool {
+ 3 │ ╭─▶     switch (b) {
+ 4 │ │         case false { false };
+ 5 │ │         case true { true };
+ 6 │ ├─▶     };
+   · ╰──── Don't switch on boolean values, use if instead
+ 7 │       };
+   ╰────
+
+Error: Found 2 errors
+Lint failed",
+  "stdout": "",
+}
+`;
+
+exports[`lint [lint.extra] extra rules on glob-matched files 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "[lint.extra] no files matched glob 'src/restricted/*.mo', skipping",
+  "stdout": "✓ Lint succeeded",
+}
+`;
+
 exports[`lint error 1`] = `
 {
   "exitCode": 1,
@@ -15,8 +173,8 @@ exports[`lint error 1`] = `
    ╰────
 
 Error: Found 1 errors
-Lint failed with exit code 1",
-  "stdout": "lint Running lintoko:
+Lint failed",
+  "stdout": "lint Running lintoko (base):
 <CACHE>/lintoko/0.7.0/lintoko
 ["--verbose","--rules","lints","<TEST_DIR>/lint/src/Ok.mo","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
 DEBUG file input: <TEST_DIR>/lint/src/Ok.mo
@@ -43,8 +201,8 @@ exports[`lint error 2`] = `
    ╰────
 
 Error: Found 1 errors
-Lint failed with exit code 1",
-  "stdout": "lint Running lintoko:
+Lint failed",
+  "stdout": "lint Running lintoko (base):
 <CACHE>/lintoko/0.7.0/lintoko
 ["--verbose","--rules","lints","<TEST_DIR>/lint/src/NoBoolSwitch.mo"]
 DEBUG file input: <TEST_DIR>/lint/src/NoBoolSwitch.mo
@@ -66,7 +224,7 @@ exports[`lint ok 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "lint Running lintoko:
+  "stdout": "lint Running lintoko (base):
 <CACHE>/lintoko/0.7.0/lintoko
 ["--verbose","--rules","lints","<TEST_DIR>/lint/src/Ok.mo"]
 DEBUG file input: <TEST_DIR>/lint/src/Ok.mo

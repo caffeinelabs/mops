@@ -1,0 +1,9 @@
+name = "no-bool-switch-2"
+description = "Duplicate detection: don't switch on boolean values"
+query = """
+(switch_exp
+ (case [
+   (lit_pat (bool_literal))
+   (tup_pat . (lit_pat (bool_literal)) @trailing)
+   ])) @error
+"""

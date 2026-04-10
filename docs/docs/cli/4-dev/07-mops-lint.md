@@ -97,12 +97,27 @@ Rules from `[lint] extends` are always included on top, regardless of this setti
 
 ### `args`
 
-Extra flags forwarded to `lintoko`:
+Extra flags forwarded to `lintoko` for all invocations (base and `[lint.extra]` runs):
 
 ```toml
 [lint]
 args = ["--severity", "warning"]
 ```
+
+### `extra`
+
+Apply additional lint rules to specific files or directories. Each key is a glob pattern matched against project files, and the value is an array of rule directories. These extra rules run **in addition to** the base rules — they never replace them.
+
+```toml
+[lint.extra]
+"src/main.mo" = ["lint/no-types"]
+"src/Types.mo" = ["lint/types-only"]
+"migrations/*.mo" = ["lint/migration-only", "lint/no-types"]
+```
+
+Each entry triggers a separate `lintoko` invocation on the matched files. All runs (base and extra) execute even when earlier runs find errors, so you see every lint failure in a single pass. If any invocation fails, `mops lint` fails. Globs that match no files are skipped with a warning.
+
+The `--rules` CLI flag only overrides the **base** rule directories — `[lint.extra]` entries always run independently.
 
 ### Combining options
 
@@ -111,10 +126,13 @@ args = ["--severity", "warning"]
 extends = ["base"]
 rules = ["my-extra-rules"]
 args = ["--severity", "warning"]
+
+[lint.extra]
+"src/Types.mo" = ["lint/types-only"]
 ```
 
 :::tip
-The `--rules` CLI flag overrides all configured rule directories (including `[lint] rules`, `extends`, and the default `lint/`/`lints/`). Use it for one-off overrides without changing `mops.toml`.
+The `--rules` CLI flag overrides all configured rule directories (including `[lint] rules`, `extends`, and the default `lint/`/`lints/`). Use it for one-off overrides without changing `mops.toml`. It does not affect `[lint.extra]` entries.
 :::
 
 ## Publishing rules with a package
