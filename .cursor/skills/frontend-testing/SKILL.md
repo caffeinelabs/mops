@@ -1,15 +1,15 @@
 ---
 name: frontend-testing
-description: Test frontend changes end-to-end and deploy to staging for human verification. Use when testing frontend PRs, verifying frontend migrations, testing UI changes, or when the user asks to test the frontend before production. Covers automated checks, local dev server testing, and staging deployment with production data.
+description: Test frontend changes end-to-end and deploy to staging for verification. Use when testing frontend PRs, verifying frontend migrations, testing UI changes, or when the user asks to test the frontend before production. Covers automated checks, local dev server testing, staging deployment with production data, and browser-based verification.
 ---
 
 # Frontend Testing
 
-Full testing workflow for frontend changes. The agent runs automated checks, deploys to staging with production data, verifies the deployed app via the browser MCP, then hands the staging link to the human for a final check.
+Full testing workflow for frontend changes. The agent runs automated checks and local dev server tests (Phases 1–2), then hands off deployment to the human (Phase 3), and finally verifies the deployed app via the browser MCP (Phase 4).
 
 ## Phase 1: Automated Checks
 
-Run these from the repo root:
+Run from the repo root:
 
 ```bash
 npm run lint
@@ -21,7 +21,7 @@ All must pass before proceeding. Fix any failures introduced by the frontend cha
 
 ## Phase 2: Local Dev Server Testing
 
-First, kill anything on ports 3000/3001 to avoid port conflicts:
+Kill anything on ports 3000/3001 to avoid conflicts:
 
 ```bash
 lsof -ti:3000,3001 | xargs kill -9 2>/dev/null; echo "ports cleared"
@@ -33,7 +33,7 @@ Start the main frontend dev server (from repo root):
 cd frontend && DFX_NETWORK=ic npx vite --port 3000
 ```
 
-Start the cli-releases frontend (from repo root):
+Start the cli-releases frontend (from repo root, in a separate terminal):
 
 ```bash
 cd cli-releases/frontend && npx vite preview --port 3001
@@ -45,84 +45,84 @@ cd cli-releases/frontend && npx vite preview --port 3001
 2. **HTML shell serves** — `curl -s http://localhost:3000/` returns HTML with `<div id="root">`. Same for `http://localhost:3001/`.
 3. **SPA routes serve** — `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/core` returns 200.
 
-**Do NOT use the browser MCP on localhost** — the embedded browser shows a blank page for this SPA on the Vite dev server. All browser-based verification happens in Phase 4 against the deployed staging build.
+**Do NOT use the browser MCP on localhost** — the embedded browser shows a blank page for this SPA on the Vite dev server. Browser-based verification happens in Phase 4 against the deployed staging build.
 
 Kill the dev servers after checks pass.
 
-## Phase 3: Deploy to Staging
+## Phase 3: Deploy to Staging (Human)
+
+**This phase must be run by the human in their terminal.** The agent cannot reliably run `dfx deploy` due to a `ColorOutOfRange` TTY panic in dfx v0.29.1 within Cursor's shell, and potential macOS keychain prompts for identity access.
+
+Print the following instructions for the human and wait for confirmation before proceeding to Phase 4.
+
+---
+
+### Instructions for the human
 
 Deploy the frontend to the staging `assets` canister pointed at the **production** backend.
 
-### How it works
+**How it works**: `frontend/vite.config.ts` reads `canister_ids.json` at build time, keyed by `DFX_NETWORK`. Swapping `main.staging` to the production canister ID makes the staging frontend talk to the production backend.
 
-`frontend/vite.config.ts` reads `canister_ids.json` at build time, keyed by `DFX_NETWORK`. Swapping `main.staging` to the production ID makes the staging frontend talk to the production backend.
-
-### Prerequisites
-
+**Prerequisites**:
 - `dfx` installed via `dfxvm`
 - `dfx identity` with controller access to staging canisters (e.g. `mops`)
-- Dependencies installed
+- Dependencies installed (`npm install` in repo root)
 
-**Important**: `dfxvm` automatically uses the dfx version pinned in `dfx.json` (currently `0.29.1`). This means `dfx --version` will show the project-pinned version, NOT the dfxvm default — this is correct behavior. Do NOT run `dfxvm update`, `dfxvm install`, or `dfxvm default` to "fix" this.
+**Important**: `dfxvm` automatically uses the dfx version pinned in `dfx.json`. Do NOT run `dfxvm update`, `dfxvm install`, or `dfxvm default` to "fix" the version — this is correct behavior.
 
-### Deploy steps
-
-**Run each step individually. Do not paste them as a single script.**
-
-**Step 1** — From the **repo root**, swap the staging main canister ID to production:
+**Run each command individually from the repo root:**
 
 ```bash
+# 1. Swap staging main canister ID to production
 PROD_MAIN=$(jq -r '.main.ic' canister_ids.json)
 jq --arg id "$PROD_MAIN" '.main.staging = $id' canister_ids.json > tmp && mv tmp canister_ids.json
-```
 
-**Step 2** — Verify the swap. Both values must be identical:
-
-```bash
+# 2. Verify the swap — both values must be identical
 jq '.main' canister_ids.json
-```
 
-If they differ, the swap failed — do not proceed.
+# 3. Deploy
+dfx deploy assets --network staging -y
 
-**Step 3** — Build and deploy (from repo root):
-
-```bash
-DFX_NETWORK=staging dfx deploy assets --network staging -y
-```
-
-`dfx deploy` may print a `ColorOutOfRange` panic (dfx v0.29.1 bug) — ignore it. Look for "Module hash" in the output to confirm success.
-
-**Step 4** — Revert `canister_ids.json` immediately:
-
-```bash
+# 4. Revert canister_ids.json immediately — never commit the swap
 git checkout canister_ids.json
 ```
 
-Verify `git status` shows no changes to `canister_ids.json`. **Never commit the swap.**
+After deployment, tell the agent to continue with Phase 4 verification.
+
+---
 
 ## Phase 4: Verify Staging Deploy
 
-Use the browser MCP (`cursor-ide-browser`) to verify the deployed build. The staging URL is:
+The staging URL is: **https://ogp6e-diaaa-aaaam-qajta-cai.icp0.io**
 
-**https://ogp6e-diaaa-aaaam-qajta-cai.icp0.io**
+This phase can be done by the agent (via browser MCP), the human (manually), or both.
 
-### Verification steps
+### Agent verification (browser MCP)
 
-1. Navigate to the staging URL
-2. Wait 5s, then take a snapshot
-3. **Check package count** — look for "Total packages" in the page. It must show **200+** packages (production data). If it shows ~15, the canister ID swap in Phase 3 failed — go back and redeploy.
-4. Click into the `core` package — verify all tabs render: Code, Docs, Readme, Versions, Dependencies, Dependents, Tests, Benchmarks
-5. Check `browser_console_messages` for critical errors
-6. Navigate back to homepage and try search (e.g. "core")
+Use `cursor-ide-browser` to verify the deployed build:
 
-### If verification fails
+1. Navigate to the staging URL, wait 5s, take a snapshot
+2. **Check package count** — "Total packages" must show **200+** (production data). If ~15, the canister ID swap in Phase 3 failed.
+3. Click into the `core` package — verify all tabs render: Code, Docs, Readme, Versions, Dependencies, Dependents, Tests, Benchmarks
+4. Check `browser_console_messages` — no `process is not defined` or `Package not found` errors. `Invalid asm.js` warnings are pre-existing and acceptable.
+5. Navigate back to homepage — verify layout, fonts, and styling match production (`https://mops.one`)
 
-- **~15 packages instead of 200+**: The swap didn't take effect. Re-run Phase 3 from Step 1, verifying Step 2 output carefully before deploying.
+### Human verification
+
+Give the human the staging link and ask them to visually compare with production:
+
+- **https://ogp6e-diaaa-aaaam-qajta-cai.icp0.io** (staging)
+- **https://mops.one** (production)
+
+Key things to check: fonts, button styles, layout, package detail pages, search.
+
+### Troubleshooting
+
+- **~15 packages instead of 200+**: The `canister_ids.json` swap didn't work. Human needs to redo Phase 3, verifying Step 2 output before deploying.
 - **Page blank or doesn't load**: Check `dfx canister status assets --network staging` for cycle balance.
-- **`core` package not found**: This means the frontend is talking to the staging backend (which doesn't have `core`). Same fix — redo the swap.
-
-After verification passes, give the human the staging link for a final visual check.
+- **`core` package not found**: The `ic-mops` npm package is querying the staging backend. Ensure the code has `window.MOPS_NETWORK` set to `"ic"` for non-local deployments (see `frontend/components/package/Package.svelte`).
 
 ## Safety Notes
 
 - Staging frontend is **read-only** against production — it only queries, never mutates.
+- The `canister_ids.json` swap is temporary and must be reverted after deploy. Never commit it.
