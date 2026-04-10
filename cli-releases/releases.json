@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.8.1"
+    "latest": "2.9.0"
   },
   "versions": {
     "0.41.0": {
@@ -368,6 +368,14 @@
       "commitHash": "225b327db8ae98908ee6a150f0555ac90dd14894",
       "url": "https://cli.mops.one/versions/2.8.1.tgz",
       "hash": "68be42bc87d060c13d7c33c342e643d6550c09b0a76ec19c3390577beb64a472"
+    },
+    "2.9.0": {
+      "time": 1775810872956,
+      "size": 2406398,
+      "relseaseNotes": "* Add `mops info <pkg>` command to show detailed package metadata from the registry\n* Add `[lint.extra]` config for applying additional lint rules to specific files via glob patterns\n",
+      "commitHash": "8b97eaddfc48d12232a1a4ee75fed33a48f3ada0",
+      "url": "https://cli.mops.one/versions/2.9.0.tgz",
+      "hash": "e1a1d5f44534d11da11272b7905d391fa0e387e78cf14aacabf3542b2b764775"
     }
   }
 }
