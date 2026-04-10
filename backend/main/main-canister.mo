@@ -101,7 +101,7 @@ actor class Main() = this {
     users : StructureStats;
   };
 
-  let API_VERSION = "1.3"; // (!) make changes in pair with cli
+  let API_VERSION = "1.4"; // (!) make changes in pair with cli
 
   var packageVersions = TrieMap.TrieMap<PackageName, [PackageVersion]>(Text.equal, Text.hash);
   var packageOwners = TrieMap.TrieMap<PackageName, Principal>(Text.equal, Text.hash); // legacy
@@ -631,7 +631,7 @@ actor class Main() = this {
     sum;
   };
 
-  public query ({ caller }) func getMemoryStats() : async MemoryStats {
+  public shared ({ caller }) func getMemoryStats() : async MemoryStats {
     assert (Utils.isAdmin(caller));
 
     let dlStats = downloadLog.getMemoryStats();

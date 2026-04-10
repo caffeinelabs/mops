@@ -15,7 +15,7 @@ import { getPackageId } from "./helpers/get-package-id.js";
 import { FILE_PATH_REGEX } from "./constants.js";
 
 // (!) make changes in pair with backend
-export let apiVersion = "1.3";
+export let apiVersion = "1.4";
 
 export let globalConfigDir = "";
 export let globalCacheDir = "";

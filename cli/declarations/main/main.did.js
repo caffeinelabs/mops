@@ -196,6 +196,40 @@ export const idlFactory = ({ IDL }) => {
     'cyclesBalance' : IDL.Nat,
     'memorySize' : IDL.Nat,
   });
+  const StructureStats = IDL.Record({
+    'count' : IDL.Nat,
+    'bytes' : IDL.Nat,
+  });
+  const MemoryStats = IDL.Record({
+    'rtsHeapSize' : IDL.Nat,
+    'rtsMemorySize' : IDL.Nat,
+    'packageVersions' : StructureStats,
+    'packageConfigs' : StructureStats,
+    'highestConfigs' : StructureStats,
+    'packagePublications' : StructureStats,
+    'ownersByPackage' : StructureStats,
+    'maintainersByPackage' : StructureStats,
+    'fileIdsByPackage' : StructureStats,
+    'hashByFileId' : StructureStats,
+    'packageFileStats' : StructureStats,
+    'packageTestStats' : StructureStats,
+    'packageBenchmarks' : StructureStats,
+    'packageNotes' : StructureStats,
+    'packageDocsCoverage' : StructureStats,
+    'downloadsByPackageName' : StructureStats,
+    'downloadsByPackageId' : StructureStats,
+    'dailySnapshots' : StructureStats,
+    'weeklySnapshots' : StructureStats,
+    'dailySnapshotsByPackageName' : StructureStats,
+    'dailySnapshotsByPackageId' : StructureStats,
+    'weeklySnapshotsByPackageName' : StructureStats,
+    'weeklySnapshotsByPackageId' : StructureStats,
+    'dailyTempRecords' : StructureStats,
+    'weeklyTempRecords' : StructureStats,
+    'storages' : StructureStats,
+    'storageByFileId' : StructureStats,
+    'users' : StructureStats,
+  });
   const Header = IDL.Tuple(IDL.Text, IDL.Text);
   const Request = IDL.Record({
     'url' : IDL.Text,
@@ -308,6 +342,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getHighestVersion' : IDL.Func([PackageName], [Result_5], ['query']),
+    'getMemoryStats' : IDL.Func([], [MemoryStats], []),
     'getMostDownloadedPackages' : IDL.Func(
         [],
         [IDL.Vec(PackageSummary)],

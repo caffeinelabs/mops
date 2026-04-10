@@ -189,6 +189,18 @@ test(
 );
 
 test(
+  "getMemoryStats count and bytes",
+  func() {
+    let before = users.getMemoryStats();
+    let newUser = fuzz.principal.random();
+    users.ensureUser(newUser);
+    let after = users.getMemoryStats();
+    assert after.users.count == before.users.count + 1;
+    assert after.users.bytes > 0;
+  },
+);
+
+test(
   "stable",
   func() {
     let users2 = Users.Users();
