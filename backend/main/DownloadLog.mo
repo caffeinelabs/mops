@@ -453,17 +453,35 @@ module {
       func sampleSnapshotMapBytes(map : TrieMap.TrieMap<Text.Text, Buffer.Buffer<DownloadsSnapshot>>) : Nat {
         let total = map.size();
         if (total == 0) return 0;
+        // Budget: at most SAMPLE_SIZE to_candid calls total.
+        // numSampledKeys keys are visited; each gets perKeyBudget element samples.
+        let numSampledKeys = Nat.min(total, SAMPLE_SIZE);
+        let perKeyBudget = Nat.max(1, SAMPLE_SIZE / numSampledKeys);
         let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
         var sum = 0;
         var i = 0;
         var sampled = 0;
-        for ((k, buf) in map.entries()) {
+        for ((_, buf) in map.entries()) {
           if (i % stride == 0) {
-            sum += (to_candid ((k, Buffer.toArray(buf))) : Blob).size();
+            let bufTotal = buf.size();
+            if (bufTotal > 0) {
+              // Use index arithmetic so we only touch perKeyBudget elements.
+              let bufStride = if (bufTotal <= perKeyBudget) 1 else bufTotal / perKeyBudget;
+              var j = 0;
+              var bufSum = 0;
+              var bufSampled = 0;
+              while (j < bufTotal) {
+                bufSum += (to_candid (buf.get(j)) : Blob).size();
+                bufSampled += 1;
+                j += bufStride;
+              };
+              sum += bufSum * bufTotal / bufSampled;
+            };
             sampled += 1;
           };
           i += 1;
         };
+        if (sampled == 0) return 0;
         sum * total / sampled;
       };
 
