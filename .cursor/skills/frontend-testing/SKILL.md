@@ -1,6 +1,6 @@
 ---
 name: frontend-testing
-description: Test frontend changes end-to-end and deploy to staging for verification. Use when testing frontend PRs, verifying frontend migrations, testing UI changes, or when the user asks to test the frontend before production. Covers automated checks, local dev server testing, staging deployment with production data, and browser-based verification.
+description: Test frontend changes end-to-end and deploy to staging for verification. Use when testing frontend PRs, verifying frontend migrations, testing UI changes, or when the user asks to test the frontend before production. Covers automated checks, local dev server testing, staging deployment, and browser-based verification.
 ---
 
 # Frontend Testing
@@ -59,9 +59,7 @@ Print the following instructions for the human and wait for confirmation before 
 
 ### Instructions for the human
 
-Deploy the frontend to the staging `assets` canister pointed at the **production** backend.
-
-**How it works**: `frontend/vite.config.ts` reads `canister_ids.json` at build time, keyed by `DFX_NETWORK`. Swapping `main.staging` to the production canister ID makes the staging frontend talk to the production backend.
+Deploy the frontend to the staging `assets` canister.
 
 **Prerequisites**:
 - `dfx` installed via `dfxvm`
@@ -70,21 +68,10 @@ Deploy the frontend to the staging `assets` canister pointed at the **production
 
 **Important**: `dfxvm` automatically uses the dfx version pinned in `dfx.json`. Do NOT run `dfxvm update`, `dfxvm install`, or `dfxvm default` to "fix" the version — this is correct behavior.
 
-**Run each command individually from the repo root:**
+**Run from the repo root:**
 
 ```bash
-# 1. Swap staging main canister ID to production
-PROD_MAIN=$(jq -r '.main.ic' canister_ids.json)
-jq --arg id "$PROD_MAIN" '.main.staging = $id' canister_ids.json > tmp && mv tmp canister_ids.json
-
-# 2. Verify the swap — both values must be identical
-jq '.main' canister_ids.json
-
-# 3. Deploy
 dfx deploy assets --network staging -y
-
-# 4. Revert canister_ids.json immediately — never commit the swap
-git checkout canister_ids.json
 ```
 
 After deployment, tell the agent to continue with Phase 4 verification.
@@ -99,13 +86,13 @@ This phase can be done by the agent (via browser MCP), the human (manually), or 
 
 ### Agent verification (browser MCP)
 
-Use `cursor-ide-browser` to verify the deployed build:
+Use `user-browsermcp` to verify the deployed build:
 
 1. Navigate to the staging URL, wait 5s, take a snapshot
-2. **Check package count** — "Total packages" must show **200+** (production data). If ~15, the canister ID swap in Phase 3 failed.
-3. Click into the `core` package — verify all tabs render: Code, Docs, Readme, Versions, Dependencies, Dependents, Tests, Benchmarks
+2. **Check package count** — "Total packages" must show a non-zero number and packages should be listed on the homepage.
+3. Click into a package — verify tabs render: Code, Docs, Readme, Versions, Dependencies, Dependents, Tests, Benchmarks
 4. Check `browser_console_messages` — no `process is not defined` or `Package not found` errors. `Invalid asm.js` warnings are pre-existing and acceptable.
-5. Navigate back to homepage — verify layout, fonts, and styling match production (`https://mops.one`)
+5. Navigate back to homepage — verify layout, fonts, and styling look correct
 
 ### Human verification
 
@@ -118,11 +105,5 @@ Key things to check: fonts, button styles, layout, package detail pages, search.
 
 ### Troubleshooting
 
-- **~15 packages instead of 200+**: The `canister_ids.json` swap didn't work. Human needs to redo Phase 3, verifying Step 2 output before deploying.
 - **Page blank or doesn't load**: Check `dfx canister status assets --network staging` for cycle balance.
-- **`core` package not found**: The `ic-mops` npm package is querying the staging backend. Ensure the code has `window.MOPS_NETWORK` set to `"ic"` for non-local deployments (see `frontend/components/package/Package.svelte`).
-
-## Safety Notes
-
-- Staging frontend is **read-only** against production — it only queries, never mutates.
-- The `canister_ids.json` swap is temporary and must be reverted after deploy. Never commit it.
+- **`Package not found` errors**: The `ic-mops` npm package may be querying the wrong backend. Ensure the code has `window.MOPS_NETWORK` set to `"ic"` for non-local deployments (see `frontend/components/package/Package.svelte`).
