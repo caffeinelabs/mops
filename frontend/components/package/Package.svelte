@@ -83,7 +83,7 @@
 		};
 
 		let downloadCode = async () => {
-			window.MOPS_NETWORK = process.env.DFX_NETWORK;
+			window.MOPS_NETWORK = process.env.DFX_NETWORK === "local" ? "local" : "ic";
 			fileIds = await getFileIds(packageDetails.config.name, packageDetails.config.version);
 		};
 
