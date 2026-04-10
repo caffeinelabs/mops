@@ -135,5 +135,6 @@ export default defineConfig({
     "process.env.NODE_ENV": JSON.stringify(
       network === "local" ? "development" : "production",
     ),
+    "process.env": "({})",
   },
 });
