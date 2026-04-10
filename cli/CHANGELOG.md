@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.9.0
 - Add `mops info <pkg>` command to show detailed package metadata from the registry
 - Add `[lint.extra]` config for applying additional lint rules to specific files via glob patterns
 
