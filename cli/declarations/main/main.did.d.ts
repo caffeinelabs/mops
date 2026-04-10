@@ -78,6 +78,7 @@ export interface MemoryStats {
   'storages' : StructureStats,
   'storageByFileId' : StructureStats,
   'users' : StructureStats,
+  'names' : StructureStats,
 }
 export interface Main {
   'addMaintainer' : ActorMethod<[PackageName, Principal], Result_3>,

@@ -25,22 +25,46 @@ module {
     var _users = TrieMap.TrieMap<Principal, Types.User>(Principal.equal, Principal.hash);
     var _names = Set.new<Text>();
 
-    public func getMemoryStats() : { users : { count : Nat; bytes : Nat } } {
+    public func getMemoryStats() : {
+      users : { count : Nat; bytes : Nat };
+      names : { count : Nat; bytes : Nat };
+    } {
       let SAMPLE_SIZE : Nat = 10_000;
-      let total = _users.size();
-      let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
-      var sum = 0;
-      var i = 0;
-      var sampled = 0;
-      for ((k, v) in _users.entries()) {
-        if (i % stride == 0) {
-          sum += (to_candid ((k, v)) : Blob).size();
-          sampled += 1;
+
+      let usersTotal = _users.size();
+      let usersStride = if (usersTotal <= SAMPLE_SIZE) 1 else (usersTotal + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
+      var usersSum = 0;
+      var usersI = 0;
+      var usersSampled = 0;
+      label sampleUsers for ((k, v) in _users.entries()) {
+        if (usersSampled >= SAMPLE_SIZE) break sampleUsers;
+        if (usersI % usersStride == 0) {
+          usersSum += (to_candid ((k, v)) : Blob).size();
+          usersSampled += 1;
         };
-        i += 1;
+        usersI += 1;
       };
-      let bytes = if (sampled == 0) 0 else sum * total / sampled;
-      { users = { count = total; bytes } };
+      let usersBytes = if (usersSampled == 0) 0 else usersSum * usersTotal / usersSampled;
+
+      let namesTotal = Set.size(_names);
+      let namesStride = if (namesTotal <= SAMPLE_SIZE) 1 else (namesTotal + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
+      var namesSum = 0;
+      var namesI = 0;
+      var namesSampled = 0;
+      label sampleNames for (k in Set.keys(_names)) {
+        if (namesSampled >= SAMPLE_SIZE) break sampleNames;
+        if (namesI % namesStride == 0) {
+          namesSum += (to_candid (k) : Blob).size();
+          namesSampled += 1;
+        };
+        namesI += 1;
+      };
+      let namesBytes = if (namesSampled == 0) 0 else namesSum * namesTotal / namesSampled;
+
+      {
+        users = { count = usersTotal; bytes = usersBytes };
+        names = { count = namesTotal; bytes = namesBytes };
+      };
     };
 
     public func toStable() : Stable {

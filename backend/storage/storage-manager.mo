@@ -181,11 +181,12 @@ module {
       func sampleStoragesBytes() : Nat {
         let total = storages.size();
         if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
         var sum = 0;
         var i = 0;
         var sampled = 0;
-        for ((k, v) in storages.entries()) {
+        label sampleLoop for ((k, v) in storages.entries()) {
+          if (sampled >= SAMPLE_SIZE) break sampleLoop;
           if (i % stride == 0) {
             sum += (to_candid ((k, v)) : Blob).size();
             sampled += 1;
@@ -198,11 +199,12 @@ module {
       func sampleStorageByFileIdBytes() : Nat {
         let total = storageByFileId.size();
         if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
         var sum = 0;
         var i = 0;
         var sampled = 0;
-        for ((k, v) in storageByFileId.entries()) {
+        label sampleLoop for ((k, v) in storageByFileId.entries()) {
+          if (sampled >= SAMPLE_SIZE) break sampleLoop;
           if (i % stride == 0) {
             sum += (to_candid ((k, v)) : Blob).size();
             sampled += 1;

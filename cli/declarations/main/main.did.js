@@ -229,6 +229,7 @@ export const idlFactory = ({ IDL }) => {
     'storages' : StructureStats,
     'storageByFileId' : StructureStats,
     'users' : StructureStats,
+    'names' : StructureStats,
   });
   const Header = IDL.Tuple(IDL.Text, IDL.Text);
   const Request = IDL.Record({

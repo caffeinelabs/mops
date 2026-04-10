@@ -436,11 +436,12 @@ module {
       func sampleDownloadsMapBytes(map : TrieMap.TrieMap<Text.Text, Nat>) : Nat {
         let total = map.size();
         if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
         var sum = 0;
         var i = 0;
         var sampled = 0;
-        for ((k, v) in map.entries()) {
+        label sampleLoop for ((k, v) in map.entries()) {
+          if (sampled >= SAMPLE_SIZE) break sampleLoop;
           if (i % stride == 0) {
             sum += (to_candid ((k, v)) : Blob).size();
             sampled += 1;
@@ -457,20 +458,21 @@ module {
         // numSampledKeys keys are visited; each gets perKeyBudget element samples.
         let numSampledKeys = Nat.min(total, SAMPLE_SIZE);
         let perKeyBudget = Nat.max(1, SAMPLE_SIZE / numSampledKeys);
-        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
         var sum = 0;
         var i = 0;
         var sampled = 0;
-        for ((_, buf) in map.entries()) {
+        label sampleLoop for ((_, buf) in map.entries()) {
+          if (sampled >= SAMPLE_SIZE) break sampleLoop;
           if (i % stride == 0) {
             let bufTotal = buf.size();
             if (bufTotal > 0) {
               // Use index arithmetic so we only touch perKeyBudget elements.
-              let bufStride = if (bufTotal <= perKeyBudget) 1 else bufTotal / perKeyBudget;
+              let bufStride = if (bufTotal <= perKeyBudget) 1 else (bufTotal + perKeyBudget - 1) / perKeyBudget;
               var j = 0;
               var bufSum = 0;
               var bufSampled = 0;
-              while (j < bufTotal) {
+              while (j < bufTotal and bufSampled < perKeyBudget) {
                 bufSum += (to_candid (buf.get(j)) : Blob).size();
                 bufSampled += 1;
                 j += bufStride;
@@ -488,11 +490,12 @@ module {
       func sampleBufferBytes(buf : Buffer.Buffer<DownloadsSnapshot>) : Nat {
         let total = buf.size();
         if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
         var sum = 0;
         var i = 0;
         var sampled = 0;
-        for (v in buf.vals()) {
+        label sampleLoop for (v in buf.vals()) {
+          if (sampled >= SAMPLE_SIZE) break sampleLoop;
           if (i % stride == 0) {
             sum += (to_candid (v) : Blob).size();
             sampled += 1;
@@ -505,11 +508,12 @@ module {
       func sampleTempRecordBufferBytes(buf : Buffer.Buffer<Record>) : Nat {
         let total = buf.size();
         if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
         var sum = 0;
         var i = 0;
         var sampled = 0;
-        for (v in buf.vals()) {
+        label sampleLoop for (v in buf.vals()) {
+          if (sampled >= SAMPLE_SIZE) break sampleLoop;
           if (i % stride == 0) {
             sum += (to_candid (v) : Blob).size();
             sampled += 1;

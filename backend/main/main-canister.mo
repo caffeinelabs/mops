@@ -99,6 +99,7 @@ actor class Main() = this {
     storageByFileId : StructureStats;
 
     users : StructureStats;
+    names : StructureStats;
   };
 
   let API_VERSION = "1.4"; // (!) make changes in pair with cli
@@ -630,11 +631,12 @@ actor class Main() = this {
   ) : Nat {
     let total = map.size();
     if (total == 0) return 0;
-    let stride = if (total <= SAMPLE_SIZE) 1 else total / SAMPLE_SIZE;
+    let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
     var sum = 0;
     var i = 0;
     var sampled = 0;
-    for ((k, v) in map.entries()) {
+    label sampleLoop for ((k, v) in map.entries()) {
+      if (sampled >= SAMPLE_SIZE) break sampleLoop;
       if (i % stride == 0) {
         sum += serialize(k, v).size();
         sampled += 1;
@@ -723,6 +725,7 @@ actor class Main() = this {
       storageByFileId = smStats.storageByFileId;
 
       users = uStats.users;
+      names = uStats.names;
     };
   };
 
