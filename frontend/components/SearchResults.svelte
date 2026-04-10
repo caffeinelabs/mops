@@ -3,7 +3,7 @@
 	import {debounce} from "throttle-debounce";
 	import {link, currentURL} from "svelte-spa-history-router";
 
-	import {PackageSummary} from "/declarations/main/main.did.js";
+	import type {PackageSummary} from "/declarations/main/main.did.js";
 	import {mainActor} from "/logic/actors";
 
 	import Header from "./Header.svelte";

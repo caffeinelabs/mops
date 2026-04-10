@@ -1,4 +1,4 @@
-import { PackageQuality } from "/declarations/main/main.did";
+import type { PackageQuality } from "/declarations/main/main.did";
 
 export let getQualityPoints = (quality: PackageQuality) => {
   let maxBasePoints = 6;

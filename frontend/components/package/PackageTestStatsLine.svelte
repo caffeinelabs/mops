@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {PackageDetails} from "/declarations/main/main.did.js";
+	import type {PackageDetails} from "/declarations/main/main.did.js";
 
 	type NestedStats = { [key : string] : NestedStats | boolean };
 

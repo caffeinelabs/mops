@@ -2,7 +2,7 @@
 	import {Line} from "svelte-chartjs";
 	import {Chart as ChartJS, LineElement, LinearScale, CategoryScale, TimeScale, PointElement, Filler} from "chart.js";
 	import "chartjs-adapter-date-fns";
-	import {DownloadsSnapshot} from "/declarations/main/main.did.js";
+	import type {DownloadsSnapshot} from "/declarations/main/main.did.js";
 
 	ChartJS.register([LineElement, PointElement, LinearScale, CategoryScale, TimeScale, Filler]);
 

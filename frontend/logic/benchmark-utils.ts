@@ -1,4 +1,4 @@
-import { Benchmark } from "/declarations/main/main.did.js";
+import type { Benchmark } from "/declarations/main/main.did.js";
 
 export function getMetricNum(
   benchmark: Benchmark,

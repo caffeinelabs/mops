@@ -1,6 +1,6 @@
 <script lang="ts">
 	import PackageTestStatsLine from "./PackageTestStatsLine.svelte";
-	import {PackageDetails} from "/declarations/main/main.did.js";
+	import type {PackageDetails} from "/declarations/main/main.did.js";
 
 	export let packageDetails : PackageDetails;
 

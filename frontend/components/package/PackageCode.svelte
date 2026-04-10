@@ -7,7 +7,7 @@
 	import "@wooorm/starry-night/style/light";
 
 	import {getStarryNight} from "/logic/get-starry-night";
-	import {PackageDetails} from "/declarations/main/main.did.js";
+	import type {PackageDetails} from "/declarations/main/main.did.js";
 	import PackageCodeTreeView from "./PackageCodeTreeView.svelte";
 	import {mainActor} from "/logic/actors";
 	import Loader from "../Loader.svelte";

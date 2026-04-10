@@ -4,7 +4,7 @@
 	import {currentURL, routeParams, push, link} from "svelte-spa-history-router";
 	import {getFileIds} from "ic-mops/api/downloadPackageFiles";
 
-	import {PackageDetails, PackageSummary, PackageSummaryWithChanges} from "/declarations/main/main.did.js";
+	import type {PackageDetails, PackageSummary, PackageSummaryWithChanges} from "/declarations/main/main.did.js";
 	import {mainActor, storageActor} from "/logic/actors";
 
 	import Header from "../Header.svelte";

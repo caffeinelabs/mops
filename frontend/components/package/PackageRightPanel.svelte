@@ -1,6 +1,6 @@
 <script lang="ts">
 	import {filesize} from "filesize";
-	import {DepsStatus, PackageDetails} from "/declarations/main/main.did.js";
+	import type {DepsStatus, PackageDetails} from "/declarations/main/main.did.js";
 	import {getDocsCoverageColor} from "/logic/get-docs-coverage-color.js";
 	import DownloadTrend from "../DownloadTrend.svelte";
 	import githubImg from "/img/github.svg";
