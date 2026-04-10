@@ -3,5 +3,6 @@ target/
 dist/
 .dfx/
 .mops/
+mops.lock
 
 .DS_Store
