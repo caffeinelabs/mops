@@ -16,8 +16,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-      - uses: dfinity/setup-dfx@main
-      - uses: dfinity/setup-mops@v1
+      - uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
+      - uses: dfinity/setup-mops@3e94e453352269b34137b5ce49f09a8df81bed7d # v1.4.1
         with:
           mops-version: 1.0.0
       - name: Run tests
