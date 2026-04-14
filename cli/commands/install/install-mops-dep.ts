@@ -7,6 +7,7 @@ import chalk from "chalk";
 import { deleteSync } from "del";
 import { checkConfigFile, progressBar, readConfig } from "../../mops.js";
 import { getHighestVersion } from "../../api/getHighestVersion.js";
+import { getPackageVersions } from "../../api/getPackageVersions.js";
 import { storageActor } from "../../api/actors.js";
 import { parallel } from "../../parallel.js";
 import {
@@ -20,6 +21,12 @@ import {
 } from "../../api/downloadPackageFiles.js";
 import { installDeps } from "./install-deps.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
+import {
+  isRange,
+  parseRange,
+  highestSatisfying,
+  formatRange,
+} from "../../semver.js";
 
 type InstallMopsDepOptions = {
   verbose?: boolean;
@@ -67,6 +74,22 @@ export async function installMopsDep(
       return false;
     }
     version = versionRes.ok;
+  } else if (isRange(version)) {
+    let range = parseRange(version);
+    let versionsRes = await getPackageVersions(depName);
+    if ("err" in versionsRes) {
+      console.log(chalk.red("Error: ") + versionsRes.err);
+      return false;
+    }
+    let resolved = highestSatisfying(versionsRes.ok, range);
+    if (!resolved) {
+      console.log(
+        chalk.red("Error: ") +
+          `No version of "${depName}" satisfies ${formatRange(range)}`,
+      );
+      return false;
+    }
+    version = resolved;
   }
 
   let cacheName = getMopsDepCacheName(depName, version);

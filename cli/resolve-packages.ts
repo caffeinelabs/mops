@@ -10,9 +10,49 @@ import {
 } from "./mops.js";
 import { VesselConfig, readVesselConfig } from "./vessel.js";
 import { Config, Dependency } from "./types.js";
-import { getDepCacheDir, getDepCacheName } from "./cache.js";
+import {
+  findCachedVersions,
+  getDepCacheDir,
+  getDepCacheName,
+} from "./cache.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { checkLockFileLight, readLockFile } from "./integrity.js";
+import {
+  compareVersions,
+  highestSatisfying,
+  isRange,
+  parseRange,
+  satisfies,
+  stripRangePrefix,
+} from "./semver.js";
+
+type VersionConstraint = {
+  isMopsPackage: boolean;
+  version: string;
+  dependencyOf: string;
+};
+
+function resolveRangeFromCache(
+  name: string,
+  version: string,
+  cache: Map<string, string>,
+): string {
+  let key = `${name}@${version}`;
+  let cached = cache.get(key);
+  if (cached !== undefined) return cached;
+
+  let bareVersion = stripRangePrefix(version);
+  if (!isRange(version)) {
+    cache.set(key, bareVersion);
+    return bareVersion;
+  }
+
+  let installed = findCachedVersions(name);
+  let best = highestSatisfying(installed, parseRange(version));
+  let resolved = best || bareVersion;
+  cache.set(key, resolved);
+  return resolved;
+}
 
 export async function resolvePackages({
   conflicts = "ignore" as "warning" | "error" | "ignore",
@@ -31,37 +71,8 @@ export async function resolvePackages({
 
   let rootDir = getRootDir();
   let packages: Record<string, Dependency & { isRoot: boolean }> = {};
-  let versions: Record<
-    string,
-    Array<{
-      isMopsPackage: boolean;
-      version: string;
-      dependencyOf: string;
-    }>
-  > = {};
-
-  let compareVersions = (a: string = "0.0.0", b: string = "0.0.0") => {
-    let ap = a.split(".").map((x: string) => parseInt(x) || 0) as [
-      number,
-      number,
-      number,
-    ];
-    let bp = b.split(".").map((x: string) => parseInt(x) || 0) as [
-      number,
-      number,
-      number,
-    ];
-    if (ap[0] - bp[0]) {
-      return Math.sign(ap[0] - bp[0]);
-    }
-    if (ap[0] === bp[0] && ap[1] - bp[1]) {
-      return Math.sign(ap[1] - bp[1]);
-    }
-    if (ap[0] === bp[0] && ap[1] === bp[1] && ap[2] - bp[2]) {
-      return Math.sign(ap[2] - bp[2]);
-    }
-    return 0;
-  };
+  let versions: Record<string, Array<VersionConstraint>> = {};
+  let rangeCache = new Map<string, string>();
 
   const gitVerRegex = new RegExp(/v(\d{1,2}\.\d{1,2}\.\d{1,2})(-.*)?$/);
 
@@ -93,7 +104,14 @@ export async function resolvePackages({
     for (const pkgDetails of allDeps) {
       const { name, repo, version } = pkgDetails;
 
-      // take root dep version or bigger one
+      // For version comparison, use resolved versions (not range floors)
+      let resolvedCurrent = version
+        ? resolveRangeFromCache(name, version, rangeCache)
+        : "";
+      let resolvedExisting = packages[name]?.version
+        ? resolveRangeFromCache(name, packages[name]!.version || "", rangeCache)
+        : "";
+
       if (
         isRoot ||
         !packages[name] ||
@@ -101,7 +119,7 @@ export async function resolvePackages({
           ((repo &&
             packages[name]?.repo &&
             compareGitVersions(packages[name]?.repo || "", repo) === -1) ||
-            compareVersions(packages[name]?.version, version) === -1))
+            compareVersions(resolvedExisting, resolvedCurrent) === -1))
       ) {
         let temp = {
           ...pkgDetails,
@@ -109,7 +127,6 @@ export async function resolvePackages({
         };
         packages[name] = temp;
 
-        // normalize path relative to the root config dir
         if (pkgDetails.path) {
           temp.path = path.relative(
             rootDir,
@@ -121,7 +138,6 @@ export async function resolvePackages({
       let nestedConfig;
       let localNestedDir = "";
 
-      // read nested config
       if (repo) {
         let cacheDir = getDepCacheName(name, repo);
         nestedConfig =
@@ -137,13 +153,13 @@ export async function resolvePackages({
           nestedConfig = readConfig(mopsToml);
         }
       } else if (version) {
-        let cacheDir = getDepCacheName(name, version);
+        let resolved = resolveRangeFromCache(name, version, rangeCache);
+        let cacheDir = getDepCacheName(name, resolved);
         nestedConfig = readConfig(
           path.join(getDepCacheDir(cacheDir), "mops.toml"),
         );
       }
 
-      // collect nested deps
       if (nestedConfig) {
         await collectDeps(nestedConfig, localNestedDir, false);
       }
@@ -180,13 +196,14 @@ export async function resolvePackages({
   let config = readConfig();
   await collectDeps(config, rootDir, true);
 
-  // show conflicts
   let hasConflicts = false;
 
   if (conflicts !== "ignore") {
     for (let [dep, vers] of Object.entries(versions)) {
+      let mopsVers = vers.filter((x) => x.isMopsPackage);
+
       let majors = new Set(
-        vers.filter((x) => x.isMopsPackage).map((x) => x.version.split(".")[0]),
+        mopsVers.map((x) => stripRangePrefix(x.version).split(".")[0]),
       );
       if (majors.size > 1) {
         console.error(
@@ -196,13 +213,39 @@ export async function resolvePackages({
         );
 
         for (let { version, dependencyOf } of [...vers].reverse()) {
+          let bare = stripRangePrefix(version);
           console.error(
             chalk.reset("  ") +
-              `${dep} ${chalk.bold.red(version.split(".")[0])}.${version.split(".").slice(1).join(".")} is dependency of ${chalk.bold(dependencyOf)}`,
+              `${dep} ${chalk.bold.red(bare.split(".")[0])}.${bare.split(".").slice(1).join(".")} is dependency of ${chalk.bold(dependencyOf)}`,
           );
         }
 
         hasConflicts = true;
+      }
+
+      // Check range constraint satisfaction
+      let resolved = packages[dep];
+      if (resolved?.version) {
+        let resolvedExact = resolveRangeFromCache(
+          dep,
+          resolved.version,
+          rangeCache,
+        );
+        for (let constraint of mopsVers) {
+          if (isRange(constraint.version)) {
+            let range = parseRange(constraint.version);
+            if (!satisfies(resolvedExact, range)) {
+              console.error(
+                chalk.reset("") +
+                  chalk.redBright(
+                    conflicts === "error" ? "Error!" : "Warning!",
+                  ),
+                `Resolved version ${dep}@${resolvedExact} does not satisfy constraint "${constraint.version}" required by ${chalk.bold(constraint.dependencyOf)}`,
+              );
+              hasConflicts = true;
+            }
+          }
+        }
       }
     }
   }
@@ -222,7 +265,7 @@ export async function resolvePackages({
         } else if (pkg.repo) {
           version = pkg.repo;
         } else if (pkg.version) {
-          version = pkg.version;
+          version = resolveRangeFromCache(name, pkg.version, rangeCache);
         } else {
           return [name, ""];
         }

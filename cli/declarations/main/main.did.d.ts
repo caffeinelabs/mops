@@ -77,6 +77,7 @@ export interface Main {
     Result_6
   >,
   'getHighestVersion' : ActorMethod<[PackageName], Result_5>,
+  'getPackageVersions' : ActorMethod<[PackageName], Result_9>,
   'getMostDownloadedPackages' : ActorMethod<[], Array<PackageSummary>>,
   'getMostDownloadedPackagesIn7Days' : ActorMethod<[], Array<PackageSummary>>,
   'getNewPackages' : ActorMethod<[], Array<PackageSummary>>,
@@ -297,6 +298,8 @@ export type Result_6 = { 'ok' : Array<[PackageName, PackageVersion]> } |
 export type Result_7 = { 'ok' : Array<FileId> } |
   { 'err' : Err };
 export type Result_8 = { 'ok' : Array<[FileId, Uint8Array | number[]]> } |
+  { 'err' : Err };
+export type Result_9 = { 'ok' : Array<PackageVersion> } |
   { 'err' : Err };
 export interface Script { 'value' : string, 'name' : string }
 export type SemverPart = { 'major' : null } |

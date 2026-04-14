@@ -67,13 +67,34 @@ module {
     compare(x, y) == #equal;
   };
 
+  public func stripRangePrefix(ver : Version) : Version {
+    let chars = ver.chars();
+    switch (chars.next()) {
+      case (?'^') Text.fromIter(chars);
+      case (?'~') Text.fromIter(chars);
+      case _ ver;
+    };
+  };
+
+  public func isRange(ver : Version) : Bool {
+    switch (ver.chars().next()) {
+      case (?'^') true;
+      case (?'~') true;
+      case _ false;
+    };
+  };
+
+  public func validateVersionOrRange(ver : Version) : Result.Result<(), Err> {
+    validate(stripRangePrefix(ver));
+  };
+
   // TODO: support 1.2.3-pre.1
   public func validate(ver : Version) : Result.Result<(), Err> {
     var dots = 0;
     var prevChar = '.';
     var index = 0;
     var digitSeq = 0;
-    let wrongFormatErr = #err("invalid version: wrong version fromat '" # ver # "'. Expected version format is 'xx.xx.xx'");
+    let wrongFormatErr = #err("invalid version: wrong version format '" # ver # "'. Expected version format is 'xx.xx.xx'");
 
     for (char in ver.chars()) {
       let unexpectedCharErr = #err("invalid version: unexpected char '" # Char.toText(char) # "' in '" # ver # "' at index " # Nat.toText(index));

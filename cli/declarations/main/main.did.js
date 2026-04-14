@@ -29,6 +29,7 @@ export const idlFactory = ({ IDL }) => {
     'err' : Err,
   });
   const Result_5 = IDL.Variant({ 'ok' : PackageVersion, 'err' : Err });
+  const Result_9 = IDL.Variant({ 'ok' : IDL.Vec(PackageVersion), 'err' : Err });
   const User = IDL.Record({
     'id' : IDL.Principal,
     'emailVerified' : IDL.Bool,
@@ -308,6 +309,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getHighestVersion' : IDL.Func([PackageName], [Result_5], ['query']),
+    'getPackageVersions' : IDL.Func([PackageName], [Result_9], ['query']),
     'getMostDownloadedPackages' : IDL.Func(
         [],
         [IDL.Vec(PackageSummary)],

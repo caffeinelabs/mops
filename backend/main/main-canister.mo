@@ -267,6 +267,10 @@ actor class Main() = this {
     Result.fromOption(registry.getHighestVersion(name), "Package '" # name # "' not found");
   };
 
+  public query func getPackageVersions(name : PackageName) : async Result.Result<[PackageVersion], Err> {
+    Result.fromOption(registry.getPackageVersions(name), "Package '" # name # "' not found");
+  };
+
   func _getHighestSemver(name : PackageName, currentVersion : PackageVersion, semverPart : SemverPart) : Result.Result<PackageVersion, Err> {
     let packageId = PackageUtils.getPackageId(name, currentVersion);
     if (packageConfigs.get(packageId) == null) {

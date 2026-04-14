@@ -36,9 +36,31 @@ Make sure there is no `/tree/main/` in the URL.
 
 | Field                 | Description                                     |
 | --------------------- | ----------------------------------------------- |
-| `<mops_package_name>`<br/>Example: `base`        | Version in format x.y.z (e.g. `0.1.2`)              |
-| `<mops_package_name>@<pinned_version>`<br/>Example: `base@0.11.0`        | Version in format x.y.z (e.g. `0.1.2`)              |
+| `<mops_package_name>`<br/>Example: `core`        | Exact version `x.y.z` (e.g. `0.1.2`), caret range `^x.y.z`, or tilde range `~x.y.z` |
+| `<mops_package_name>@<pinned_version>`<br/>Example: `core@0.11.0`        | Version in format x.y.z (e.g. `0.1.2`)              |
 | `<local_package_name>`<br/>Example: `shared` | Local path starting with `./`, `../`, or `/`<br/>Example: `./packages/shared` |
+
+### Version ranges
+
+You can use version range operators to allow compatible version updates:
+
+```toml
+[dependencies]
+core = "1.2.3"       # exact version
+core = "^1.2.3"      # caret: >=1.2.3, <2.0.0 (compatible updates)
+core = "~1.2.3"      # tilde: >=1.2.3, <1.3.0 (patch updates only)
+```
+
+**Caret (`^`)** allows updates that do not modify the leftmost non-zero component:
+- `^1.2.3` = `>=1.2.3, <2.0.0`
+- `^0.2.3` = `>=0.2.3, <0.3.0`
+- `^0.0.3` = `>=0.0.3, <0.0.4`
+
+**Tilde (`~`)** allows only patch-level updates:
+- `~1.2.3` = `>=1.2.3, <1.3.0`
+- `~0.2.3` = `>=0.2.3, <0.3.0`
+
+When you run `mops add <package>`, the caret range (`^`) is used by default.
 
 :::note
 GitHub dependencies are not allowed in `[dependencies]`. Please publish the dependency to the Mops registry instead.

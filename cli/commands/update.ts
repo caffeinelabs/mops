@@ -9,6 +9,7 @@ import { add } from "./add.js";
 import { getAvailableUpdates } from "./available-updates.js";
 import { checkIntegrity } from "../integrity.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
+import { isRange, stripRangePrefix } from "../semver.js";
 
 type UpdateOptions = {
   verbose?: boolean;
@@ -73,11 +74,12 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
       let allDeps = [...Object.keys(config.dependencies || {}), ...devDeps];
 
       let dev = false;
+      let bareOld = stripRangePrefix(dep[1]);
       for (let d of devDeps) {
         let pinnedVersion = getDepPinnedVersion(d);
         if (
           getDepName(d) === dep[0] &&
-          (!pinnedVersion || dep[1].startsWith(pinnedVersion))
+          (!pinnedVersion || bareOld.startsWith(pinnedVersion))
         ) {
           dev = true;
           break;
@@ -89,11 +91,12 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
           let pinnedVersion = getDepPinnedVersion(d);
           return (
             getDepName(d) === dep[0] &&
-            (!pinnedVersion || dep[1].startsWith(pinnedVersion))
+            (!pinnedVersion || bareOld.startsWith(pinnedVersion))
           );
         }) || dep[0];
 
-      await add(`${dep[0]}@${dep[2]}`, { dev, lock }, asName);
+      let rangePrefix = isRange(dep[1]) ? dep[1][0] : "";
+      await add(`${dep[0]}@${rangePrefix}${dep[2]}`, { dev, lock }, asName);
     }
   }
 

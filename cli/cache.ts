@@ -77,6 +77,16 @@ export let copyCache = (cacheName: string, dest: string) => {
   });
 };
 
+export function findCachedVersions(name: string): string[] {
+  let packagesDir = path.join(getGlobalCacheDir(), "packages");
+  if (!fs.existsSync(packagesDir)) return [];
+  let prefix = name + "@";
+  return fs
+    .readdirSync(packagesDir)
+    .filter((entry) => entry.startsWith(prefix))
+    .map((entry) => entry.slice(prefix.length));
+}
+
 export let cacheSize = async () => {
   let dir = path.join(getGlobalCacheDir());
   fs.mkdirSync(dir, { recursive: true });
