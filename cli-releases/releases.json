@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.9.0"
+    "latest": "2.10.0"
   },
   "versions": {
     "0.41.0": {
@@ -376,6 +376,14 @@
       "commitHash": "8b97eaddfc48d12232a1a4ee75fed33a48f3ada0",
       "url": "https://cli.mops.one/versions/2.9.0.tgz",
       "hash": "e1a1d5f44534d11da11272b7905d391fa0e387e78cf14aacabf3542b2b764775"
+    },
+    "2.10.0": {
+      "time": 1776170062063,
+      "size": 2406954,
+      "relseaseNotes": "* `mops check` and `mops check-stable` now apply per-canister `[canisters.<name>].args` (previously only `mops build` applied them)\n* `mops check` now accepts canister names as arguments (e.g. `mops check backend`) to check a specific canister\n* `mops check-stable` now works without arguments, checking all canisters with `[check-stable]` configured\n* `mops check-stable` now accepts canister names as arguments (e.g. `mops check-stable backend`)\n",
+      "commitHash": "f02c9b3f00432493e8c4daedf4778ddedc07ef4e",
+      "url": "https://cli.mops.one/versions/2.10.0.tgz",
+      "hash": "85b587774d4258e41baeaa8150ad62230849c40cc5f832fee8298217f56081d2"
     }
   }
 }
