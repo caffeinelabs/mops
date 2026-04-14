@@ -9,6 +9,42 @@ module {
     bytes : Nat;
   };
 
+  public type MemoryStats = {
+    rtsHeapSize : Nat;
+    rtsMemorySize : Nat;
+
+    packageVersions : StructureStats;
+    packageConfigs : StructureStats;
+    highestConfigs : StructureStats;
+    packagePublications : StructureStats;
+    ownersByPackage : StructureStats;
+    maintainersByPackage : StructureStats;
+    fileIdsByPackage : StructureStats;
+    hashByFileId : StructureStats;
+    packageFileStats : StructureStats;
+    packageTestStats : StructureStats;
+    packageBenchmarks : StructureStats;
+    packageNotes : StructureStats;
+    packageDocsCoverage : StructureStats;
+
+    downloadsByPackageName : StructureStats;
+    downloadsByPackageId : StructureStats;
+    dailySnapshots : StructureStats;
+    weeklySnapshots : StructureStats;
+    dailySnapshotsByPackageName : StructureStats;
+    dailySnapshotsByPackageId : StructureStats;
+    weeklySnapshotsByPackageName : StructureStats;
+    weeklySnapshotsByPackageId : StructureStats;
+    dailyTempRecords : StructureStats;
+    weeklyTempRecords : StructureStats;
+
+    storages : StructureStats;
+    storageByFileId : StructureStats;
+
+    users : StructureStats;
+    names : StructureStats;
+  };
+
   public let SAMPLE_SIZE : Nat = 1_000;
 
   // Serializes a systematic sample of up to SAMPLE_SIZE elements from an

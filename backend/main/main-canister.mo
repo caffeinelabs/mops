@@ -64,42 +64,6 @@ actor class Main() = this {
 
   public type StructureStats = MemoryStats.StructureStats;
 
-  public type MemoryStats = {
-    rtsHeapSize : Nat;
-    rtsMemorySize : Nat;
-
-    packageVersions : StructureStats;
-    packageConfigs : StructureStats;
-    highestConfigs : StructureStats;
-    packagePublications : StructureStats;
-    ownersByPackage : StructureStats;
-    maintainersByPackage : StructureStats;
-    fileIdsByPackage : StructureStats;
-    hashByFileId : StructureStats;
-    packageFileStats : StructureStats;
-    packageTestStats : StructureStats;
-    packageBenchmarks : StructureStats;
-    packageNotes : StructureStats;
-    packageDocsCoverage : StructureStats;
-
-    downloadsByPackageName : StructureStats;
-    downloadsByPackageId : StructureStats;
-    dailySnapshots : StructureStats;
-    weeklySnapshots : StructureStats;
-    dailySnapshotsByPackageName : StructureStats;
-    dailySnapshotsByPackageId : StructureStats;
-    weeklySnapshotsByPackageName : StructureStats;
-    weeklySnapshotsByPackageId : StructureStats;
-    dailyTempRecords : StructureStats;
-    weeklyTempRecords : StructureStats;
-
-    storages : StructureStats;
-    storageByFileId : StructureStats;
-
-    users : StructureStats;
-    names : StructureStats;
-  };
-
   let API_VERSION = "1.3"; // (!) make changes in pair with cli
 
   var packageVersions = TrieMap.TrieMap<PackageName, [PackageVersion]>(Text.equal, Text.hash);
@@ -619,7 +583,7 @@ actor class Main() = this {
     storageManager.getStoragesStats();
   };
 
-  public query ({ caller }) func getMemoryStats() : async MemoryStats {
+  public query ({ caller }) func getMemoryStats() : async MemoryStats.MemoryStats {
     assert (Utils.isAdmin(caller));
 
     let dlStats = downloadLog.getMemoryStats();
@@ -627,6 +591,7 @@ actor class Main() = this {
     let uStats = users.getMemoryStats();
 
     {
+      dlStats and smStats and uStats with
       rtsHeapSize = rts_heap_size();
       rtsMemorySize = rts_memory_size();
 
@@ -643,23 +608,6 @@ actor class Main() = this {
       packageBenchmarks = MemoryStats.statsForMap(packageBenchmarks, func(k : PackageId, v : Benchmarks) : Blob = to_candid ((k, v)));
       packageNotes = MemoryStats.statsForMap(packageNotes, func(k : PackageId, v : Text) : Blob = to_candid ((k, v)));
       packageDocsCoverage = MemoryStats.statsForMap(packageDocsCoverage, func(k : PackageId, v : Float) : Blob = to_candid ((k, v)));
-
-      downloadsByPackageName = dlStats.downloadsByPackageName;
-      downloadsByPackageId = dlStats.downloadsByPackageId;
-      dailySnapshots = dlStats.dailySnapshots;
-      weeklySnapshots = dlStats.weeklySnapshots;
-      dailySnapshotsByPackageName = dlStats.dailySnapshotsByPackageName;
-      dailySnapshotsByPackageId = dlStats.dailySnapshotsByPackageId;
-      weeklySnapshotsByPackageName = dlStats.weeklySnapshotsByPackageName;
-      weeklySnapshotsByPackageId = dlStats.weeklySnapshotsByPackageId;
-      dailyTempRecords = dlStats.dailyTempRecords;
-      weeklyTempRecords = dlStats.weeklyTempRecords;
-
-      storages = smStats.storages;
-      storageByFileId = smStats.storageByFileId;
-
-      users = uStats.users;
-      names = uStats.names;
     };
   };
 
@@ -936,8 +884,6 @@ actor class Main() = this {
     maintainersByPackage := TrieMap.fromEntries<PackageName, [Principal]>(maintainersByPackageStable.vals(), Text.equal, Text.hash);
     maintainersByPackageStable := [];
 
-    // packageOwners is legacy (migrated to ownersByPackage); clear stable storage so
-    // entries are not carried forward across upgrades.
     packageOwners := TrieMap.fromEntries<PackageName, Principal>(packageOwnersStable.vals(), Text.equal, Text.hash);
     packageOwnersStable := [];
 
