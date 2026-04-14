@@ -12,6 +12,7 @@ import Set "mo:map/Set";
 
 import Types "./types";
 import { isLetter; isLowerCaseLetter } "./utils/is-letter";
+import MemoryStats "./MemoryStats";
 
 module {
   public type Stable = ?{
@@ -26,44 +27,18 @@ module {
     var _names = Set.new<Text>();
 
     public func getMemoryStats() : {
-      users : { count : Nat; bytes : Nat };
-      names : { count : Nat; bytes : Nat };
+      users : MemoryStats.StructureStats;
+      names : MemoryStats.StructureStats;
     } {
-      let SAMPLE_SIZE : Nat = 1_000;
-
-      let usersTotal = _users.size();
-      let usersStride = if (usersTotal <= SAMPLE_SIZE) 1 else (usersTotal + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
-      var usersSum = 0;
-      var usersI = 0;
-      var usersSampled = 0;
-      label sampleUsers for ((k, v) in _users.entries()) {
-        if (usersSampled >= SAMPLE_SIZE) break sampleUsers;
-        if (usersI % usersStride == 0) {
-          usersSum += (to_candid ((k, v)) : Blob).size();
-          usersSampled += 1;
-        };
-        usersI += 1;
-      };
-      let usersBytes = if (usersSampled == 0) 0 else usersSum * usersTotal / usersSampled;
-
-      let namesTotal = Set.size(_names);
-      let namesStride = if (namesTotal <= SAMPLE_SIZE) 1 else (namesTotal + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
-      var namesSum = 0;
-      var namesI = 0;
-      var namesSampled = 0;
-      label sampleNames for (k in Set.keys(_names)) {
-        if (namesSampled >= SAMPLE_SIZE) break sampleNames;
-        if (namesI % namesStride == 0) {
-          namesSum += (to_candid (k) : Blob).size();
-          namesSampled += 1;
-        };
-        namesI += 1;
-      };
-      let namesBytes = if (namesSampled == 0) 0 else namesSum * namesTotal / namesSampled;
-
       {
-        users = { count = usersTotal; bytes = usersBytes };
-        names = { count = namesTotal; bytes = namesBytes };
+        users = {
+          count = _users.size();
+          bytes = MemoryStats.sampleMapBytes(_users, func(k : Principal, v : Types.User) : Blob = to_candid ((k, v)));
+        };
+        names = {
+          count = Set.size(_names);
+          bytes = MemoryStats.sampleIterBytes(Set.keys(_names), Set.size(_names), func(k : Text) : Blob = to_candid (k));
+        };
       };
     };
 

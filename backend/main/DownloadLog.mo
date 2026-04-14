@@ -16,6 +16,7 @@ import DateComponents "mo:datetime/Components";
 
 import Types "./types";
 import PackageUtils "./utils/package-utils";
+import MemoryStats "./MemoryStats";
 
 module {
   public type DownloadsSnapshot = Types.DownloadsSnapshot;
@@ -420,149 +421,57 @@ module {
     };
 
     public func getMemoryStats() : {
-      downloadsByPackageName : { count : Nat; bytes : Nat };
-      downloadsByPackageId : { count : Nat; bytes : Nat };
-      dailySnapshots : { count : Nat; bytes : Nat };
-      weeklySnapshots : { count : Nat; bytes : Nat };
-      dailySnapshotsByPackageName : { count : Nat; bytes : Nat };
-      dailySnapshotsByPackageId : { count : Nat; bytes : Nat };
-      weeklySnapshotsByPackageName : { count : Nat; bytes : Nat };
-      weeklySnapshotsByPackageId : { count : Nat; bytes : Nat };
-      dailyTempRecords : { count : Nat; bytes : Nat };
-      weeklyTempRecords : { count : Nat; bytes : Nat };
+      downloadsByPackageName : MemoryStats.StructureStats;
+      downloadsByPackageId : MemoryStats.StructureStats;
+      dailySnapshots : MemoryStats.StructureStats;
+      weeklySnapshots : MemoryStats.StructureStats;
+      dailySnapshotsByPackageName : MemoryStats.StructureStats;
+      dailySnapshotsByPackageId : MemoryStats.StructureStats;
+      weeklySnapshotsByPackageName : MemoryStats.StructureStats;
+      weeklySnapshotsByPackageId : MemoryStats.StructureStats;
+      dailyTempRecords : MemoryStats.StructureStats;
+      weeklyTempRecords : MemoryStats.StructureStats;
     } {
-      let SAMPLE_SIZE : Nat = 1_000;
-
-      func sampleDownloadsMapBytes(map : TrieMap.TrieMap<Text.Text, Nat>) : Nat {
-        let total = map.size();
-        if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
-        var sum = 0;
-        var i = 0;
-        var sampled = 0;
-        label sampleLoop for ((k, v) in map.entries()) {
-          if (sampled >= SAMPLE_SIZE) break sampleLoop;
-          if (i % stride == 0) {
-            sum += (to_candid ((k, v)) : Blob).size();
-            sampled += 1;
-          };
-          i += 1;
-        };
-        sum * total / sampled;
-      };
-
-      func sampleSnapshotMapBytes(map : TrieMap.TrieMap<Text.Text, Buffer.Buffer<DownloadsSnapshot>>) : Nat {
-        let total = map.size();
-        if (total == 0) return 0;
-        // Budget: at most SAMPLE_SIZE to_candid calls total.
-        // numSampledKeys keys are visited; each gets perKeyBudget element samples.
-        let numSampledKeys = Nat.min(total, SAMPLE_SIZE);
-        let perKeyBudget = Nat.max(1, SAMPLE_SIZE / numSampledKeys);
-        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
-        var sum = 0;
-        var i = 0;
-        var sampled = 0;
-        label sampleLoop for ((_, buf) in map.entries()) {
-          if (sampled >= SAMPLE_SIZE) break sampleLoop;
-          if (i % stride == 0) {
-            let bufTotal = buf.size();
-            if (bufTotal > 0) {
-              // Use index arithmetic so we only touch perKeyBudget elements.
-              let bufStride = if (bufTotal <= perKeyBudget) 1 else (bufTotal + perKeyBudget - 1) / perKeyBudget;
-              var j = 0;
-              var bufSum = 0;
-              var bufSampled = 0;
-              while (j < bufTotal and bufSampled < perKeyBudget) {
-                bufSum += (to_candid (buf.get(j)) : Blob).size();
-                bufSampled += 1;
-                j += bufStride;
-              };
-              sum += bufSum * bufTotal / bufSampled;
-            };
-            sampled += 1;
-          };
-          i += 1;
-        };
-        if (sampled == 0) return 0;
-        sum * total / sampled;
-      };
-
-      func sampleBufferBytes(buf : Buffer.Buffer<DownloadsSnapshot>) : Nat {
-        let total = buf.size();
-        if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
-        var sum = 0;
-        var i = 0;
-        var sampled = 0;
-        label sampleLoop for (v in buf.vals()) {
-          if (sampled >= SAMPLE_SIZE) break sampleLoop;
-          if (i % stride == 0) {
-            sum += (to_candid (v) : Blob).size();
-            sampled += 1;
-          };
-          i += 1;
-        };
-        sum * total / sampled;
-      };
-
-      func sampleTempRecordBufferBytes(buf : Buffer.Buffer<Record>) : Nat {
-        let total = buf.size();
-        if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
-        var sum = 0;
-        var i = 0;
-        var sampled = 0;
-        label sampleLoop for (v in buf.vals()) {
-          if (sampled >= SAMPLE_SIZE) break sampleLoop;
-          if (i % stride == 0) {
-            sum += (to_candid (v) : Blob).size();
-            sampled += 1;
-          };
-          i += 1;
-        };
-        sum * total / sampled;
-      };
-
       {
         downloadsByPackageName = {
           count = downloadsByPackageName.size();
-          bytes = sampleDownloadsMapBytes(downloadsByPackageName);
+          bytes = MemoryStats.sampleMapBytes(downloadsByPackageName, func(k : Text.Text, v : Nat) : Blob = to_candid ((k, v)));
         };
         downloadsByPackageId = {
           count = downloadsByPackageId.size();
-          bytes = sampleDownloadsMapBytes(downloadsByPackageId);
+          bytes = MemoryStats.sampleMapBytes(downloadsByPackageId, func(k : Text.Text, v : Nat) : Blob = to_candid ((k, v)));
         };
         dailySnapshots = {
           count = dailySnapshots.size();
-          bytes = sampleBufferBytes(dailySnapshots);
+          bytes = MemoryStats.sampleBufferBytes(dailySnapshots, func(v : DownloadsSnapshot) : Blob = to_candid (v));
         };
         weeklySnapshots = {
           count = weeklySnapshots.size();
-          bytes = sampleBufferBytes(weeklySnapshots);
+          bytes = MemoryStats.sampleBufferBytes(weeklySnapshots, func(v : DownloadsSnapshot) : Blob = to_candid (v));
         };
         dailySnapshotsByPackageName = {
           count = dailySnapshotsByPackageName.size();
-          bytes = sampleSnapshotMapBytes(dailySnapshotsByPackageName);
+          bytes = MemoryStats.sampleMapOfBuffersBytes(dailySnapshotsByPackageName, func(v : DownloadsSnapshot) : Blob = to_candid (v));
         };
         dailySnapshotsByPackageId = {
           count = dailySnapshotsByPackageId.size();
-          bytes = sampleSnapshotMapBytes(dailySnapshotsByPackageId);
+          bytes = MemoryStats.sampleMapOfBuffersBytes(dailySnapshotsByPackageId, func(v : DownloadsSnapshot) : Blob = to_candid (v));
         };
         weeklySnapshotsByPackageName = {
           count = weeklySnapshotsByPackageName.size();
-          bytes = sampleSnapshotMapBytes(weeklySnapshotsByPackageName);
+          bytes = MemoryStats.sampleMapOfBuffersBytes(weeklySnapshotsByPackageName, func(v : DownloadsSnapshot) : Blob = to_candid (v));
         };
         weeklySnapshotsByPackageId = {
           count = weeklySnapshotsByPackageId.size();
-          bytes = sampleSnapshotMapBytes(weeklySnapshotsByPackageId);
+          bytes = MemoryStats.sampleMapOfBuffersBytes(weeklySnapshotsByPackageId, func(v : DownloadsSnapshot) : Blob = to_candid (v));
         };
         dailyTempRecords = {
           count = dailyTempRecords.size();
-          bytes = sampleTempRecordBufferBytes(dailyTempRecords);
+          bytes = MemoryStats.sampleBufferBytes(dailyTempRecords, func(v : Record) : Blob = to_candid (v));
         };
         weeklyTempRecords = {
           count = weeklyTempRecords.size();
-          bytes = sampleTempRecordBufferBytes(weeklyTempRecords);
+          bytes = MemoryStats.sampleBufferBytes(weeklyTempRecords, func(v : Record) : Blob = to_candid (v));
         };
       };
     };

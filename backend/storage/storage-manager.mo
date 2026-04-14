@@ -11,6 +11,7 @@ import { ic } "mo:ic";
 
 import Types "./types";
 import Storage "./storage-canister";
+import MemoryStats "../main/MemoryStats";
 
 module {
   public type StorageId = Principal;
@@ -173,52 +174,17 @@ module {
     };
 
     public func getMemoryStats() : {
-      storages : { count : Nat; bytes : Nat };
-      storageByFileId : { count : Nat; bytes : Nat };
+      storages : MemoryStats.StructureStats;
+      storageByFileId : MemoryStats.StructureStats;
     } {
-      let SAMPLE_SIZE : Nat = 1_000;
-
-      func sampleStoragesBytes() : Nat {
-        let total = storages.size();
-        if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
-        var sum = 0;
-        var i = 0;
-        var sampled = 0;
-        label sampleLoop for ((k, v) in storages.entries()) {
-          if (sampled >= SAMPLE_SIZE) break sampleLoop;
-          if (i % stride == 0) {
-            sum += (to_candid ((k, v)) : Blob).size();
-            sampled += 1;
-          };
-          i += 1;
-        };
-        sum * total / sampled;
-      };
-
-      func sampleStorageByFileIdBytes() : Nat {
-        let total = storageByFileId.size();
-        if (total == 0) return 0;
-        let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
-        var sum = 0;
-        var i = 0;
-        var sampled = 0;
-        label sampleLoop for ((k, v) in storageByFileId.entries()) {
-          if (sampled >= SAMPLE_SIZE) break sampleLoop;
-          if (i % stride == 0) {
-            sum += (to_candid ((k, v)) : Blob).size();
-            sampled += 1;
-          };
-          i += 1;
-        };
-        sum * total / sampled;
-      };
-
       {
-        storages = { count = storages.size(); bytes = sampleStoragesBytes() };
+        storages = {
+          count = storages.size();
+          bytes = MemoryStats.sampleMapBytes(storages, func(k : StorageId, v : StorageStats) : Blob = to_candid ((k, v)));
+        };
         storageByFileId = {
           count = storageByFileId.size();
-          bytes = sampleStorageByFileIdBytes();
+          bytes = MemoryStats.sampleMapBytes(storageByFileId, func(k : FileId, v : StorageId) : Blob = to_candid ((k, v)));
         };
       };
     };
