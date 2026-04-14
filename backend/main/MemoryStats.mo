@@ -56,7 +56,7 @@ module {
     serialize : V -> Blob,
   ) : Nat {
     if (total == 0) return 0;
-    let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
+    let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1 : Nat) / SAMPLE_SIZE;
     var sum = 0;
     var i = 0;
     var sampled = 0;
@@ -81,7 +81,7 @@ module {
     if (total == 0) return 0;
     let numSampledKeys = Nat.min(total, SAMPLE_SIZE);
     let perKeyBudget = Nat.max(1, SAMPLE_SIZE / numSampledKeys);
-    let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1) / SAMPLE_SIZE;
+    let stride = if (total <= SAMPLE_SIZE) 1 else (total + SAMPLE_SIZE - 1 : Nat) / SAMPLE_SIZE;
     var sum = 0;
     var i = 0;
     var sampled = 0;
@@ -90,7 +90,7 @@ module {
       if (i % stride == 0) {
         let bufTotal = buf.size();
         if (bufTotal > 0) {
-          let bufStride = if (bufTotal <= perKeyBudget) 1 else (bufTotal + perKeyBudget - 1) / perKeyBudget;
+          let bufStride = if (bufTotal <= perKeyBudget) 1 else (bufTotal + perKeyBudget - 1 : Nat) / perKeyBudget;
           var j = 0;
           var bufSum = 0;
           var bufSampled = 0;

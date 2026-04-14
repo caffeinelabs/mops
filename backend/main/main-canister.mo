@@ -62,8 +62,6 @@ actor class Main() = this {
   public type PublishingId = Text;
   public type Benchmarks = Types.Benchmarks;
 
-  public type StructureStats = MemoryStats.StructureStats;
-
   let API_VERSION = "1.3"; // (!) make changes in pair with cli
 
   var packageVersions = TrieMap.TrieMap<PackageName, [PackageVersion]>(Text.equal, Text.hash);
