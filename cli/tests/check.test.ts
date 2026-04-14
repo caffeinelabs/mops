@@ -80,10 +80,7 @@ describe("check", () => {
   });
 
   test("[canisters.X].args applied to canister check", async () => {
-    const cwd = path.join(
-      import.meta.dirname,
-      "check/canisters-canister-args",
-    );
+    const cwd = path.join(import.meta.dirname, "check/canisters-canister-args");
     const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/warning \[M0194\]/);

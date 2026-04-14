@@ -8,10 +8,7 @@ import {
   readConfig,
   resolveConfigPath,
 } from "../mops.js";
-import {
-  AutofixResult,
-  autofixMotoko,
-} from "../helpers/autofix-motoko.js";
+import { AutofixResult, autofixMotoko } from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import {
   filterCanisters,

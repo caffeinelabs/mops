@@ -97,7 +97,9 @@ export async function checkStable(
     const stablePath = resolveStablePath(canister, name, {
       required: !!canisterNames,
     });
-    if (!stablePath) continue;
+    if (!stablePath) {
+      continue;
+    }
 
     await runStableCheck({
       oldFile: stablePath,
