@@ -16,6 +16,7 @@ import DateComponents "mo:datetime/Components";
 
 import Types "./types";
 import PackageUtils "./utils/package-utils";
+import MemoryStats "./MemoryStats";
 
 module {
   public type DownloadsSnapshot = Types.DownloadsSnapshot;
@@ -417,6 +418,33 @@ module {
           item.0;
         },
       );
+    };
+
+    public func getMemoryStats() : {
+      downloadsByPackageName : MemoryStats.StructureStats;
+      downloadsByPackageId : MemoryStats.StructureStats;
+      dailySnapshots : MemoryStats.StructureStats;
+      weeklySnapshots : MemoryStats.StructureStats;
+      dailySnapshotsByPackageName : MemoryStats.StructureStats;
+      dailySnapshotsByPackageId : MemoryStats.StructureStats;
+      weeklySnapshotsByPackageName : MemoryStats.StructureStats;
+      weeklySnapshotsByPackageId : MemoryStats.StructureStats;
+      dailyTempRecords : MemoryStats.StructureStats;
+      weeklyTempRecords : MemoryStats.StructureStats;
+    } {
+      let serializeSnapshot = func(v : DownloadsSnapshot) : Blob = to_candid (v);
+      {
+        downloadsByPackageName = MemoryStats.statsForMap(downloadsByPackageName, func(k : Text.Text, v : Nat) : Blob = to_candid ((k, v)));
+        downloadsByPackageId = MemoryStats.statsForMap(downloadsByPackageId, func(k : Text.Text, v : Nat) : Blob = to_candid ((k, v)));
+        dailySnapshots = MemoryStats.statsForBuffer(dailySnapshots, serializeSnapshot);
+        weeklySnapshots = MemoryStats.statsForBuffer(weeklySnapshots, serializeSnapshot);
+        dailySnapshotsByPackageName = MemoryStats.statsForMapOfBuffers(dailySnapshotsByPackageName, serializeSnapshot);
+        dailySnapshotsByPackageId = MemoryStats.statsForMapOfBuffers(dailySnapshotsByPackageId, serializeSnapshot);
+        weeklySnapshotsByPackageName = MemoryStats.statsForMapOfBuffers(weeklySnapshotsByPackageName, serializeSnapshot);
+        weeklySnapshotsByPackageId = MemoryStats.statsForMapOfBuffers(weeklySnapshotsByPackageId, serializeSnapshot);
+        dailyTempRecords = MemoryStats.statsForBuffer(dailyTempRecords, func(v : Record) : Blob = to_candid (v));
+        weeklyTempRecords = MemoryStats.statsForBuffer(weeklyTempRecords, func(v : Record) : Blob = to_candid (v));
+      };
     };
 
     public func setTimers<system>() {

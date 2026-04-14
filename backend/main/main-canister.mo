@@ -13,6 +13,7 @@ import Option "mo:base/Option";
 import Blob "mo:base/Blob";
 import TelegramBot "mo:telegram-bot";
 
+import { rts_heap_size; rts_memory_size } "mo:prim";
 import IC "mo:ic";
 import { DAY } "mo:time-consts";
 import Backup "mo:backup";
@@ -29,6 +30,7 @@ import Storage "../storage/storage-canister";
 import Users "./Users";
 import Badges "./badges";
 
+import MemoryStats "./MemoryStats";
 import Registry "./registry/Registry";
 import PackagePublisher "./PackagePublisher";
 import { searchInRegistry } "./registry/searchInRegistry";
@@ -577,6 +579,34 @@ actor class Main() = this {
 
   public query func getStoragesStats() : async [(StorageManager.StorageId, StorageManager.StorageStats)] {
     storageManager.getStoragesStats();
+  };
+
+  public query ({ caller }) func getMemoryStats() : async MemoryStats.MemoryStats {
+    assert (Utils.isAdmin(caller));
+
+    let dlStats = downloadLog.getMemoryStats();
+    let smStats = storageManager.getMemoryStats();
+    let uStats = users.getMemoryStats();
+
+    {
+      dlStats and smStats and uStats with
+      rtsHeapSize = rts_heap_size();
+      rtsMemorySize = rts_memory_size();
+
+      packageVersions = MemoryStats.statsForMap(packageVersions, func(k : PackageName, v : [PackageVersion]) : Blob = to_candid ((k, v)));
+      packageConfigs = MemoryStats.statsForMap(packageConfigs, func(k : PackageId, v : PackageConfigV3) : Blob = to_candid ((k, v)));
+      highestConfigs = MemoryStats.statsForMap(highestConfigs, func(k : PackageName, v : PackageConfigV3) : Blob = to_candid ((k, v)));
+      packagePublications = MemoryStats.statsForMap(packagePublications, func(k : PackageId, v : PackagePublication) : Blob = to_candid ((k, v)));
+      ownersByPackage = MemoryStats.statsForMap(ownersByPackage, func(k : PackageName, v : [Principal]) : Blob = to_candid ((k, v)));
+      maintainersByPackage = MemoryStats.statsForMap(maintainersByPackage, func(k : PackageName, v : [Principal]) : Blob = to_candid ((k, v)));
+      fileIdsByPackage = MemoryStats.statsForMap(fileIdsByPackage, func(k : PackageId, v : [FileId]) : Blob = to_candid ((k, v)));
+      hashByFileId = MemoryStats.statsForMap(hashByFileId, func(k : FileId, v : Blob) : Blob = to_candid ((k, v)));
+      packageFileStats = MemoryStats.statsForMap(packageFileStats, func(k : PackageId, v : PackageFileStats) : Blob = to_candid ((k, v)));
+      packageTestStats = MemoryStats.statsForMap(packageTestStats, func(k : PackageId, v : TestStats) : Blob = to_candid ((k, v)));
+      packageBenchmarks = MemoryStats.statsForMap(packageBenchmarks, func(k : PackageId, v : Benchmarks) : Blob = to_candid ((k, v)));
+      packageNotes = MemoryStats.statsForMap(packageNotes, func(k : PackageId, v : Text) : Blob = to_candid ((k, v)));
+      packageDocsCoverage = MemoryStats.statsForMap(packageDocsCoverage, func(k : PackageId, v : Float) : Blob = to_candid ((k, v)));
+    };
   };
 
   // USERS

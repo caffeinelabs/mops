@@ -12,6 +12,7 @@ import Set "mo:map/Set";
 
 import Types "./types";
 import { isLetter; isLowerCaseLetter } "./utils/is-letter";
+import MemoryStats "./MemoryStats";
 
 module {
   public type Stable = ?{
@@ -24,6 +25,16 @@ module {
   public class Users() {
     var _users = TrieMap.TrieMap<Principal, Types.User>(Principal.equal, Principal.hash);
     var _names = Set.new<Text>();
+
+    public func getMemoryStats() : {
+      users : MemoryStats.StructureStats;
+      names : MemoryStats.StructureStats;
+    } {
+      {
+        users = MemoryStats.statsForMap(_users, func(k : Principal, v : Types.User) : Blob = to_candid ((k, v)));
+        names = MemoryStats.statsForIter(Set.keys(_names), Set.size(_names), func(k : Text) : Blob = to_candid (k));
+      };
+    };
 
     public func toStable() : Stable {
       ?#v2({
