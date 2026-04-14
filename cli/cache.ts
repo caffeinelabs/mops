@@ -79,6 +79,10 @@ export let copyCache = (cacheName: string, dest: string) => {
 
 let cachedDirEntries: string[] | null = null;
 
+export function resetCachedDirEntries() {
+  cachedDirEntries = null;
+}
+
 export function findCachedVersions(name: string): string[] {
   if (!cachedDirEntries) {
     let packagesDir = path.join(getGlobalCacheDir(), "packages");

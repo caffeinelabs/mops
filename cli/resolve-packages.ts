@@ -14,6 +14,7 @@ import {
   findCachedVersions,
   getDepCacheDir,
   getDepCacheName,
+  resetCachedDirEntries,
 } from "./cache.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { checkLockFileLight, readLockFile } from "./integrity.js";
@@ -60,6 +61,9 @@ export async function resolvePackages({
       return lockFileJson.deps;
     }
   }
+
+  // Invalidate cached dir listing so we pick up freshly installed packages
+  resetCachedDirEntries();
 
   let rootDir = getRootDir();
   let packages: Record<string, Dependency & { isRoot: boolean }> = {};

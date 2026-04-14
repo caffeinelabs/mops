@@ -6,6 +6,7 @@ import { Config } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
 import { semver, isRange, stripRangePrefix } from "../semver.js";
+import { checkLockFileLight, readLockFile } from "../integrity.js";
 
 // [pkg, oldVersion, newVersion]
 export async function getAvailableUpdates(
@@ -37,7 +38,15 @@ export async function getAvailableUpdates(
     return "";
   };
 
-  // Split into ranged and non-ranged deps
+  // Read lock file for comparing currently resolved versions
+  let lockedDeps: Record<string, string> = {};
+  if (checkLockFileLight()) {
+    let lockFileJson = readLockFile();
+    if (lockFileJson && lockFileJson.version === 3) {
+      lockedDeps = lockFileJson.deps;
+    }
+  }
+
   let rangedDeps = depsToUpdate.filter((dep) => isRange(dep.version || ""));
   let exactDeps = depsToUpdate.filter((dep) => !isRange(dep.version || ""));
 
@@ -85,8 +94,12 @@ export async function getAvailableUpdates(
 
   return results
     .filter((dep) => {
-      let current = getCurrentVersion(dep[0], dep[1]);
-      return stripRangePrefix(current) !== dep[1];
+      let currentConfigVer = getCurrentVersion(dep[0], dep[1]);
+      // For ranged deps, compare against the locked/resolved version
+      let currentResolved = isRange(currentConfigVer)
+        ? lockedDeps[dep[0]] || stripRangePrefix(currentConfigVer)
+        : currentConfigVer;
+      return currentResolved !== dep[1];
     })
     .map((dep) => [
       dep[0],
