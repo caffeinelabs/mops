@@ -6,7 +6,11 @@ import { join } from "node:path";
 import { lock, unlockSync } from "proper-lockfile";
 import { cliError } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
-import { resolveCanisterConfigs } from "../helpers/resolve-canisters.js";
+import {
+  filterCanisters,
+  resolveCanisterConfigs,
+  validateCanisterArgs,
+} from "../helpers/resolve-canisters.js";
 import { CanisterConfig, Config } from "../types.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
@@ -41,26 +45,11 @@ export async function build(
     cliError(`No Motoko canisters found in mops.toml configuration`);
   }
 
-  if (canisterNames) {
-    let invalidNames = canisterNames.filter((name) => !(name in canisters));
-    if (invalidNames.length) {
-      cliError(
-        `Motoko canister(s) not found in mops.toml configuration: ${invalidNames.join(", ")}`,
-      );
-    }
-  }
-
   if (!(await exists(outputDir))) {
     await mkdir(outputDir, { recursive: true });
   }
 
-  const filteredCanisters = canisterNames
-    ? Object.fromEntries(
-        Object.entries(canisters).filter(([name]) =>
-          canisterNames.includes(name),
-        ),
-      )
-    : canisters;
+  const filteredCanisters = filterCanisters(canisters, canisterNames);
 
   for (let [canisterName, canister] of Object.entries(filteredCanisters)) {
     console.log(chalk.blue("build canister"), chalk.bold(canisterName));
@@ -249,11 +238,7 @@ function collectExtraArgs(
     args.push(...config.build.args);
   }
   if (canister.args) {
-    if (typeof canister.args === "string") {
-      cliError(
-        `Canister config 'args' should be an array of strings for canister ${canisterName}`,
-      );
-    }
+    validateCanisterArgs(canister, canisterName);
     args.push(...canister.args);
   }
   if (extraArgs) {

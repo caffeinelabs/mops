@@ -5,7 +5,14 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
 import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
-import { resolveSingleCanister } from "../helpers/resolve-canisters.js";
+import { CanisterConfig } from "../types.js";
+import {
+  filterCanisters,
+  looksLikeFile,
+  resolveCanisterConfigs,
+  resolveSingleCanister,
+  validateCanisterArgs,
+} from "../helpers/resolve-canisters.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -16,29 +23,103 @@ export interface CheckStableOptions {
   extraArgs: string[];
 }
 
+export function resolveStablePath(
+  canister: CanisterConfig,
+  canisterName: string,
+  options?: { required?: boolean },
+): string | null {
+  const stableConfig = canister["check-stable"];
+  if (!stableConfig) {
+    if (options?.required) {
+      cliError(
+        `Canister '${canisterName}' has no [canisters.${canisterName}.check-stable] configuration in mops.toml`,
+      );
+    }
+    return null;
+  }
+  const stablePath = resolveConfigPath(stableConfig.path);
+  if (!existsSync(stablePath)) {
+    if (stableConfig.skipIfMissing) {
+      return null;
+    }
+    cliError(
+      `Deployed file not found: ${stablePath} (canister '${canisterName}')\n` +
+        "Set skipIfMissing = true in [canisters." +
+        canisterName +
+        ".check-stable] to skip this check when the file is missing.",
+    );
+  }
+  return stablePath;
+}
+
 export async function checkStable(
-  oldFile: string,
-  canisterName: string | undefined,
+  args: string[],
   options: Partial<CheckStableOptions> = {},
 ): Promise<void> {
   const config = readConfig();
-  const { name, canister } = resolveSingleCanister(config, canisterName);
-
-  if (!canister.main) {
-    cliError(`No main file specified for canister '${name}' in mops.toml`);
-  }
-
   const mocPath = await toolchain.bin("moc", { fallback: true });
   const globalMocArgs = getGlobalMocArgs(config);
 
-  await runStableCheck({
-    oldFile,
-    canisterMain: resolveConfigPath(canister.main),
-    canisterName: name,
-    mocPath,
-    globalMocArgs,
-    options,
-  });
+  if (args.length > 0 && looksLikeFile(args[0]!)) {
+    const oldFile = args[0]!;
+    const canisterName = args[1];
+    const { name, canister } = resolveSingleCanister(config, canisterName);
+
+    if (!canister.main) {
+      cliError(`No main file specified for canister '${name}' in mops.toml`);
+    }
+
+    validateCanisterArgs(canister, name);
+
+    await runStableCheck({
+      oldFile,
+      canisterMain: resolveConfigPath(canister.main),
+      canisterName: name,
+      mocPath,
+      globalMocArgs,
+      canisterArgs: canister.args ?? [],
+      options,
+    });
+    return;
+  }
+
+  const canisters = resolveCanisterConfigs(config);
+  const canisterNames = args.length > 0 ? args : undefined;
+  const filteredCanisters = filterCanisters(canisters, canisterNames);
+
+  let checked = 0;
+  for (const [name, canister] of Object.entries(filteredCanisters)) {
+    if (!canister.main) {
+      cliError(`No main file specified for canister '${name}' in mops.toml`);
+    }
+
+    validateCanisterArgs(canister, name);
+    const stablePath = resolveStablePath(canister, name, {
+      required: !!canisterNames,
+    });
+    if (!stablePath) continue;
+
+    await runStableCheck({
+      oldFile: stablePath,
+      canisterMain: resolveConfigPath(canister.main),
+      canisterName: name,
+      mocPath,
+      globalMocArgs,
+      canisterArgs: canister.args ?? [],
+      options,
+    });
+    checked++;
+  }
+
+  if (checked === 0 && !canisterNames) {
+    cliError(
+      "No canisters with [check-stable] configuration found in mops.toml.\n" +
+        "Either pass an old file: mops check-stable <old-file> [canister]\n" +
+        "Or configure check-stable for a canister:\n\n" +
+        "  [canisters.backend.check-stable]\n" +
+        '  path = "deployed.mo"',
+    );
+  }
 }
 
 export interface RunStableCheckParams {
@@ -47,6 +128,8 @@ export interface RunStableCheckParams {
   canisterName: string;
   mocPath: string;
   globalMocArgs: string[];
+  canisterArgs: string[];
+  sources?: string[];
   options?: Partial<CheckStableOptions>;
 }
 
@@ -59,10 +142,11 @@ export async function runStableCheck(
     canisterName,
     mocPath,
     globalMocArgs,
+    canisterArgs,
     options = {},
   } = params;
 
-  const sources = (await sourcesArgs()).flat();
+  const sources = params.sources ?? (await sourcesArgs()).flat();
   const isOldMostFile = oldFile.endsWith(".most");
 
   if (!existsSync(oldFile)) {
@@ -80,6 +164,7 @@ export async function runStableCheck(
           join(CHECK_STABLE_DIR, "old.most"),
           sources,
           globalMocArgs,
+          canisterArgs,
           options,
         );
 
@@ -89,6 +174,7 @@ export async function runStableCheck(
       join(CHECK_STABLE_DIR, "new.most"),
       sources,
       globalMocArgs,
+      canisterArgs,
       options,
     );
 
@@ -134,6 +220,7 @@ async function generateStableTypes(
   outputPath: string,
   sources: string[],
   globalMocArgs: string[],
+  canisterArgs: string[],
   options: Partial<CheckStableOptions>,
 ): Promise<string> {
   const base = basename(outputPath, ".most");
@@ -145,6 +232,7 @@ async function generateStableTypes(
     moFile,
     ...sources,
     ...globalMocArgs,
+    ...canisterArgs,
     ...(options.extraArgs ?? []),
   ];
 

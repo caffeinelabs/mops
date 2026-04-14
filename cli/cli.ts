@@ -330,9 +330,9 @@ program
 
 // check
 program
-  .command("check [files...]")
+  .command("check [args...]")
   .description(
-    "Check Motoko files for syntax errors and type issues. If no files are specified, checks all canister entrypoints from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured, and runs linting if lintoko is configured in [toolchain] and rule directories are present",
+    "Check Motoko canisters or files for syntax errors and type issues. Arguments can be canister names or .mo file paths. If no arguments are given, checks all canisters from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured, and runs linting if lintoko is configured in [toolchain] and rule directories are present",
   )
   .option("--verbose", "Verbose console output")
   .addOption(
@@ -342,15 +342,15 @@ program
     ),
   )
   .allowUnknownOption(true)
-  .action(async (files, options) => {
+  .action(async (args, options) => {
     checkConfigFile(true);
-    const { extraArgs, args: fileList } = parseExtraArgs(files);
+    const { extraArgs, args: argList } = parseExtraArgs(args);
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await check(fileList, {
+    await check(argList, {
       ...options,
       extraArgs,
     });
@@ -372,21 +372,21 @@ program
 
 // check-stable
 program
-  .command("check-stable <old-file> [canister]")
+  .command("check-stable [args...]")
   .description(
-    "Check stable variable compatibility between an old version (.mo or .most file) and the current canister entrypoint",
+    "Check stable variable compatibility. With no arguments, checks all canisters with [check-stable] configured. Arguments can be canister names or an old file path followed by an optional canister name",
   )
   .option("--verbose", "Verbose console output")
   .allowUnknownOption(true)
-  .action(async (oldFile, canister, options) => {
+  .action(async (args, options) => {
     checkConfigFile(true);
-    const { extraArgs } = parseExtraArgs();
+    const { extraArgs, args: argList } = parseExtraArgs(args);
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await checkStable(oldFile, canister, {
+    await checkStable(argList, {
       ...options,
       extraArgs,
     });

@@ -32,11 +32,11 @@ exports[`check error 2`] = `
 }
 `;
 
-exports[`check no args falls back to [canisters] entrypoints 1`] = `
+exports[`check no args checks all canisters 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
-  "stdout": "✓ Ok.mo",
+  "stdout": "✓ backend",
 }
 `;
 

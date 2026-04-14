@@ -97,7 +97,7 @@ Each canister entry specifies the entrypoint file and optional compiler settings
 | Field    | Description                                                     |
 | -------- | --------------------------------------------------------------- |
 | main     | Path to the main Motoko file (required)                         |
-| args     | Array of additional `moc` arguments for this canister (optional)|
+| args     | Array of additional `moc` arguments for this canister (optional). Applied after `[moc].args` in `check`, `check-stable`, and `build`. |
 | candid   | Path to a Candid interface file for compatibility checking (optional) |
 | initArg  | Candid-encoded initialization arguments (optional)              |
 
@@ -108,6 +108,16 @@ main = "src/main.mo"
 args = ["--incremental-gc"]
 candid = "candid/backend.did"
 initArg = "(\"Hello\")"
+```
+
+Multi-canister example with per-canister flags:
+```toml
+[canisters.backend]
+main = "src/backend/main.mo"
+args = ["--enhanced-migration=migrations/backend"]
+
+[canisters.frontend]
+main = "src/frontend/main.mo"
 ```
 
 ### `[canisters.<name>.check-stable]`

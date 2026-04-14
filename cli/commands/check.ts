@@ -1,5 +1,4 @@
 import path from "node:path";
-import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
@@ -9,13 +8,19 @@ import {
   readConfig,
   resolveConfigPath,
 } from "../mops.js";
-import { autofixMotoko } from "../helpers/autofix-motoko.js";
+import {
+  AutofixResult,
+  autofixMotoko,
+} from "../helpers/autofix-motoko.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import {
+  filterCanisters,
+  looksLikeFile,
   resolveCanisterConfigs,
-  resolveCanisterEntrypoints,
+  validateCanisterArgs,
 } from "../helpers/resolve-canisters.js";
-import { runStableCheck } from "./check-stable.js";
+import { CanisterConfig, Config } from "../types.js";
+import { resolveStablePath, runStableCheck } from "./check-stable.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 import { collectLintRules, lint } from "./lint.js";
@@ -33,52 +38,197 @@ export interface CheckOptions {
   extraArgs: string[];
 }
 
-export async function check(
-  files: string | string[],
-  options: Partial<CheckOptions> = {},
-): Promise<void> {
-  const explicitFiles = Array.isArray(files) ? files : files ? [files] : [];
-  let fileList = [...explicitFiles];
-
-  const config = readConfig();
-
-  if (fileList.length === 0) {
-    fileList = resolveCanisterEntrypoints(config).map(resolveConfigPath);
-  }
-
-  if (fileList.length === 0) {
-    cliError(
-      "No Motoko files specified and no canisters defined in mops.toml.\n" +
-        "Either pass files: mops check <files...>\n" +
-        "Or define canisters in mops.toml:\n\n" +
-        "  [canisters.backend]\n" +
-        '  main = "src/main.mo"',
-    );
-  }
-  const mocPath = await toolchain.bin("moc", { fallback: true });
-  const sources = await sourcesArgs();
-  const globalMocArgs = getGlobalMocArgs(config);
-
-  // --all-libs enables richer diagnostics with edit suggestions from moc (requires moc >= 1.3.0)
+function logAllLibsSupport(verbose?: boolean): boolean {
   const allLibs = supportsAllLibsFlag();
-
   if (!allLibs) {
     console.log(
       chalk.yellow(
         `moc < ${MOC_ALL_LIBS_MIN_VERSION}: some diagnostic hints may be missing`,
       ),
     );
-  } else if (options.verbose) {
+  } else if (verbose) {
     console.log(
       chalk.blue("check"),
       chalk.gray("Using --all-libs for richer diagnostics"),
     );
   }
+  return allLibs;
+}
+
+function logAutofixResult(
+  fixResult: AutofixResult | null,
+  verbose?: boolean,
+): void {
+  if (fixResult) {
+    for (const [file, codes] of fixResult.fixedFiles) {
+      const unique = [...new Set(codes)].sort();
+      const n = codes.length;
+      const rel = path.relative(process.cwd(), file);
+      console.log(
+        chalk.green(
+          `Fixed ${rel} (${n} ${n === 1 ? "fix" : "fixes"}: ${unique.join(", ")})`,
+        ),
+      );
+    }
+    const fileCount = fixResult.fixedFiles.size;
+    console.log(
+      chalk.green(
+        `\n✓ ${fixResult.totalFixCount} ${fixResult.totalFixCount === 1 ? "fix" : "fixes"} applied to ${fileCount} ${fileCount === 1 ? "file" : "files"}`,
+      ),
+    );
+  } else if (verbose) {
+    console.log(chalk.yellow("No fixes were needed"));
+  }
+}
+
+export async function check(
+  args: string[],
+  options: Partial<CheckOptions> = {},
+): Promise<void> {
+  const config = readConfig();
+  const canisters = resolveCanisterConfigs(config);
+  const hasCanisters = Object.keys(canisters).length > 0;
+  const fileArgs = args.filter(looksLikeFile);
+  const nonFileArgs = args.filter((a) => !looksLikeFile(a));
+  const isFileMode = fileArgs.length > 0;
+
+  if (isFileMode && nonFileArgs.length > 0) {
+    cliError(
+      `Cannot mix file paths and canister names: ${args.join(", ")}\n` +
+        "Pass either file paths (e.g. mops check src/main.mo) or canister names (e.g. mops check backend)",
+    );
+  }
+
+  if (isFileMode) {
+    await checkFiles(config, args, options);
+  } else {
+    if (!hasCanisters) {
+      cliError(
+        "No canisters defined in mops.toml.\n" +
+          "Either pass files: mops check <files...>\n" +
+          "Or define canisters in mops.toml:\n\n" +
+          "  [canisters.backend]\n" +
+          '  main = "src/main.mo"',
+      );
+    }
+
+    const canisterNames = args.length > 0 ? args : undefined;
+    const filtered = filterCanisters(canisters, canisterNames);
+    await checkCanisters(config, filtered, options);
+  }
+
+  if (config.toolchain?.lintoko) {
+    const rootDir = getRootDir();
+    const lintRules = await collectLintRules(config, rootDir);
+    const lintFiles = isFileMode ? fileArgs : undefined;
+    await lint(undefined, {
+      verbose: options.verbose,
+      fix: options.fix,
+      rules: lintRules,
+      files: lintFiles,
+    });
+  }
+}
+
+async function checkCanisters(
+  config: Config,
+  canisters: Record<string, CanisterConfig>,
+  options: Partial<CheckOptions>,
+): Promise<void> {
+  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const sources = (await sourcesArgs()).flat();
+  const globalMocArgs = getGlobalMocArgs(config);
+  const allLibs = logAllLibsSupport(options.verbose);
+
+  for (const [canisterName, canister] of Object.entries(canisters)) {
+    if (!canister.main) {
+      cliError(
+        `No main file specified for canister '${canisterName}' in mops.toml`,
+      );
+    }
+
+    validateCanisterArgs(canister, canisterName);
+    const motokoPath = resolveConfigPath(canister.main);
+
+    const mocArgs = [
+      "--check",
+      ...(allLibs ? ["--all-libs"] : []),
+      ...sources,
+      ...globalMocArgs,
+      ...(canister.args ?? []),
+      ...(options.extraArgs ?? []),
+    ];
+
+    if (options.fix) {
+      if (options.verbose) {
+        console.log(
+          chalk.blue("check"),
+          chalk.gray(`Attempting to fix ${canisterName}`),
+        );
+      }
+
+      const fixResult = await autofixMotoko(mocPath, [motokoPath], mocArgs);
+      logAutofixResult(fixResult, options.verbose);
+    }
+
+    try {
+      const args = [motokoPath, ...mocArgs];
+      if (options.verbose) {
+        console.log(
+          chalk.blue("check"),
+          chalk.gray(`Checking canister ${canisterName}:`),
+        );
+        console.log(chalk.gray(mocPath, JSON.stringify(args)));
+      }
+
+      const result = await execa(mocPath, args, {
+        stdio: "inherit",
+        reject: false,
+      });
+
+      if (result.exitCode !== 0) {
+        cliError(
+          `✗ Check failed for canister ${canisterName} (exit code: ${result.exitCode})`,
+        );
+      }
+
+      console.log(chalk.green(`✓ ${canisterName}`));
+    } catch (err: any) {
+      cliError(
+        `Error while checking canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
+      );
+    }
+
+    const stablePath = resolveStablePath(canister, canisterName);
+    if (stablePath) {
+      await runStableCheck({
+        oldFile: stablePath,
+        canisterMain: motokoPath,
+        canisterName,
+        mocPath,
+        globalMocArgs,
+        canisterArgs: canister.args ?? [],
+        sources,
+        options: { verbose: options.verbose, extraArgs: options.extraArgs },
+      });
+    }
+  }
+}
+
+async function checkFiles(
+  config: Config,
+  files: string[],
+  options: Partial<CheckOptions>,
+): Promise<void> {
+  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const sources = (await sourcesArgs()).flat();
+  const globalMocArgs = getGlobalMocArgs(config);
+  const allLibs = logAllLibsSupport(options.verbose);
 
   const mocArgs = [
     "--check",
     ...(allLibs ? ["--all-libs"] : []),
-    ...sources.flat(),
+    ...sources,
     ...globalMocArgs,
     ...(options.extraArgs ?? []),
   ];
@@ -88,32 +238,11 @@ export async function check(
       console.log(chalk.blue("check"), chalk.gray("Attempting to fix files"));
     }
 
-    const fixResult = await autofixMotoko(mocPath, fileList, mocArgs);
-    if (fixResult) {
-      for (const [file, codes] of fixResult.fixedFiles) {
-        const unique = [...new Set(codes)].sort();
-        const n = codes.length;
-        const rel = path.relative(process.cwd(), file);
-        console.log(
-          chalk.green(
-            `Fixed ${rel} (${n} ${n === 1 ? "fix" : "fixes"}: ${unique.join(", ")})`,
-          ),
-        );
-      }
-      const fileCount = fixResult.fixedFiles.size;
-      console.log(
-        chalk.green(
-          `\n✓ ${fixResult.totalFixCount} ${fixResult.totalFixCount === 1 ? "fix" : "fixes"} applied to ${fileCount} ${fileCount === 1 ? "file" : "files"}`,
-        ),
-      );
-    } else {
-      if (options.verbose) {
-        console.log(chalk.yellow("No fixes were needed"));
-      }
-    }
+    const fixResult = await autofixMotoko(mocPath, files, mocArgs);
+    logAutofixResult(fixResult, options.verbose);
   }
 
-  for (const file of fileList) {
+  for (const file of files) {
     try {
       const args = [file, ...mocArgs];
       if (options.verbose) {
@@ -138,50 +267,5 @@ export async function check(
         `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,
       );
     }
-  }
-
-  const canisters = resolveCanisterConfigs(config);
-  for (const [name, canister] of Object.entries(canisters)) {
-    const stableConfig = canister["check-stable"];
-    if (!stableConfig) {
-      continue;
-    }
-
-    if (!canister.main) {
-      cliError(`No main file specified for canister '${name}' in mops.toml`);
-    }
-
-    const stablePath = resolveConfigPath(stableConfig.path);
-    if (!existsSync(stablePath)) {
-      if (stableConfig.skipIfMissing) {
-        continue;
-      }
-      cliError(
-        `Deployed file not found: ${stablePath} (canister '${name}')\n` +
-          "Set skipIfMissing = true in [canisters." +
-          name +
-          ".check-stable] to skip this check when the file is missing.",
-      );
-    }
-
-    await runStableCheck({
-      oldFile: stablePath,
-      canisterMain: resolveConfigPath(canister.main),
-      canisterName: name,
-      mocPath,
-      globalMocArgs,
-      options: { verbose: options.verbose, extraArgs: options.extraArgs },
-    });
-  }
-
-  if (config.toolchain?.lintoko) {
-    const rootDir = getRootDir();
-    const lintRules = await collectLintRules(config, rootDir);
-    await lint(undefined, {
-      verbose: options.verbose,
-      fix: options.fix,
-      rules: lintRules,
-      files: explicitFiles.length > 0 ? explicitFiles : undefined,
-    });
   }
 }

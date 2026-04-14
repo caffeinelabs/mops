@@ -5,23 +5,30 @@ sidebar_label: mops check
 
 # `mops check`
 
-Check Motoko files for syntax errors and type issues
+Check Motoko canisters or files for syntax errors and type issues
 
 ```
-mops check [files...]
+mops check [args...]
 ```
 
 Runs the Motoko compiler in check-only mode (`moc --check`). All package sources from the project are automatically included.
 
-When no files are specified, checks all canister entrypoints defined in the `[canisters]` section of `mops.toml`.
+Arguments can be **canister names** (as defined in `[canisters]`) or **file paths** (`.mo` files). When no arguments are given, checks all canisters defined in the `[canisters]` section of `mops.toml`.
+
+When checking canisters, per-canister `[canisters.<name>].args` from `mops.toml` are applied alongside global `[moc].args`.
 
 Exits with a non-zero code if any file has errors, making it suitable for CI pipelines. Warnings do not cause a failure by default.
 
 ### Examples
 
-Check all canister entrypoints defined in `mops.toml`
+Check all canisters defined in `mops.toml`
 ```
 mops check
+```
+
+Check a specific canister
+```
+mops check backend
 ```
 
 Check a single file
@@ -46,9 +53,15 @@ mops check -- -Werror
 
 ## Arguments
 
-### `[files...]`
+### `[args...]`
 
-One or more paths to Motoko files to check. When omitted, all canister entrypoints from `mops.toml` are checked.
+Canister names or file paths to check.
+
+- **Canister names** — resolved from `[canisters.<name>]` in `mops.toml`. Per-canister `args` are applied.
+- **File paths** — `.mo` files to check directly. Only global `[moc].args` and CLI `-- flags` are applied.
+- **No arguments** — checks all canisters defined in `mops.toml`.
+
+You cannot mix canister names and file paths in the same invocation.
 
 ## Options
 
@@ -113,7 +126,7 @@ mops check --fix
 `--fix` is forwarded to both the Motoko compiler and lintoko, so both type-level and lint fixes are applied in a single invocation.
 
 :::note
-When files are passed explicitly (e.g. `mops check src/Main.mo`), linting is scoped to those same files. When no files are specified and `mops check` resolves entrypoints from `[canisters]`, linting covers all `.mo` files in the project.
+When file paths are passed explicitly (e.g. `mops check src/Main.mo`), linting is scoped to those files. When checking canisters (by name or with no arguments), linting covers all `.mo` files in the project.
 :::
 
 :::info

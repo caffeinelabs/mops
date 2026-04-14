@@ -49,12 +49,19 @@ describe("check", () => {
     await cliSnapshot(["check", "Warning.mo"], { cwd }, 1);
   });
 
-  test("no args falls back to [canisters] entrypoints", async () => {
+  test("no args checks all canisters", async () => {
     const cwd = path.join(import.meta.dirname, "check/canisters");
     await cliSnapshot(["check"], { cwd }, 0);
   });
 
-  test("canister entrypoint resolved relative to config root when run from subdirectory", async () => {
+  test("canister name filters to specific canister", async () => {
+    const cwd = path.join(import.meta.dirname, "check/canisters");
+    const result = await cli(["check", "backend"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/✓ backend/);
+  });
+
+  test("canister resolved relative to config root when run from subdirectory", async () => {
     const fixtureRoot = path.join(
       import.meta.dirname,
       "check/canisters-subdir",
@@ -65,21 +72,38 @@ describe("check", () => {
     expect(result.stdout).toMatch(/✓/);
   });
 
-  test("[moc] args applied when using canister fallback", async () => {
+  test("[moc] args applied to canister check", async () => {
     const cwd = path.join(import.meta.dirname, "check/canisters-moc-args");
     const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/warning \[M0194\]/);
   });
 
-  test("canister entrypoint with errors", async () => {
+  test("[canisters.X].args applied to canister check", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "check/canisters-canister-args",
+    );
+    const result = await cli(["check"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/warning \[M0194\]/);
+  });
+
+  test("canister with errors", async () => {
     const cwd = path.join(import.meta.dirname, "check/canisters-error");
     const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/error/i);
   });
 
-  test("--fix with canister fallback", async () => {
+  test("invalid canister name errors", async () => {
+    const cwd = path.join(import.meta.dirname, "check/canisters");
+    const result = await cli(["check", "nonexistent"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/not found in mops\.toml/);
+  });
+
+  test("--fix with canister", async () => {
     const cwd = path.join(import.meta.dirname, "check/canisters");
     const result = await cli(["check", "--fix"], { cwd });
     expect(result.exitCode).toBe(0);

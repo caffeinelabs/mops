@@ -59,6 +59,27 @@ describe("check-stable", () => {
     expect(existsSync(path.join(cwd, "new.wasm"))).toBe(false);
   });
 
+  test("[canisters.X].args are passed to moc (enhanced migration)", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/canister-args");
+    const result = await cli(["check-stable", "old.most"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
+  test("no args checks all canisters with [check-stable] config", async () => {
+    const cwd = path.join(import.meta.dirname, "check/deployed-compatible");
+    const result = await cli(["check-stable"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
+  test("canister name filters to specific canister", async () => {
+    const cwd = path.join(import.meta.dirname, "check/deployed-compatible");
+    const result = await cli(["check-stable", "backend"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
   test("errors when old file does not exist", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/compatible");
     const result = await cli(["check-stable", "nonexistent.mo"], { cwd });
