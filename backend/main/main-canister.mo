@@ -30,7 +30,7 @@ import Storage "../storage/storage-canister";
 import Users "./Users";
 import Badges "./badges";
 
-import MemoryStatsHelper "./MemoryStats";
+import MemoryStats "./MemoryStats";
 import Registry "./registry/Registry";
 import PackagePublisher "./PackagePublisher";
 import { searchInRegistry } "./registry/searchInRegistry";
@@ -62,7 +62,7 @@ actor class Main() = this {
   public type PublishingId = Text;
   public type Benchmarks = Types.Benchmarks;
 
-  public type StructureStats = MemoryStatsHelper.StructureStats;
+  public type StructureStats = MemoryStats.StructureStats;
 
   public type MemoryStats = {
     rtsHeapSize : Nat;
@@ -630,58 +630,19 @@ actor class Main() = this {
       rtsHeapSize = rts_heap_size();
       rtsMemorySize = rts_memory_size();
 
-      packageVersions = {
-        count = packageVersions.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(packageVersions, func(k : PackageName, v : [PackageVersion]) : Blob = to_candid ((k, v)));
-      };
-      packageConfigs = {
-        count = packageConfigs.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(packageConfigs, func(k : PackageId, v : PackageConfigV3) : Blob = to_candid ((k, v)));
-      };
-      highestConfigs = {
-        count = highestConfigs.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(highestConfigs, func(k : PackageName, v : PackageConfigV3) : Blob = to_candid ((k, v)));
-      };
-      packagePublications = {
-        count = packagePublications.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(packagePublications, func(k : PackageId, v : PackagePublication) : Blob = to_candid ((k, v)));
-      };
-      ownersByPackage = {
-        count = ownersByPackage.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(ownersByPackage, func(k : PackageName, v : [Principal]) : Blob = to_candid ((k, v)));
-      };
-      maintainersByPackage = {
-        count = maintainersByPackage.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(maintainersByPackage, func(k : PackageName, v : [Principal]) : Blob = to_candid ((k, v)));
-      };
-      fileIdsByPackage = {
-        count = fileIdsByPackage.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(fileIdsByPackage, func(k : PackageId, v : [FileId]) : Blob = to_candid ((k, v)));
-      };
-      hashByFileId = {
-        count = hashByFileId.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(hashByFileId, func(k : FileId, v : Blob) : Blob = to_candid ((k, v)));
-      };
-      packageFileStats = {
-        count = packageFileStats.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(packageFileStats, func(k : PackageId, v : PackageFileStats) : Blob = to_candid ((k, v)));
-      };
-      packageTestStats = {
-        count = packageTestStats.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(packageTestStats, func(k : PackageId, v : TestStats) : Blob = to_candid ((k, v)));
-      };
-      packageBenchmarks = {
-        count = packageBenchmarks.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(packageBenchmarks, func(k : PackageId, v : Benchmarks) : Blob = to_candid ((k, v)));
-      };
-      packageNotes = {
-        count = packageNotes.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(packageNotes, func(k : PackageId, v : Text) : Blob = to_candid ((k, v)));
-      };
-      packageDocsCoverage = {
-        count = packageDocsCoverage.size();
-        bytes = MemoryStatsHelper.sampleMapBytes(packageDocsCoverage, func(k : PackageId, v : Float) : Blob = to_candid ((k, v)));
-      };
+      packageVersions = MemoryStats.statsForMap(packageVersions, func(k : PackageName, v : [PackageVersion]) : Blob = to_candid ((k, v)));
+      packageConfigs = MemoryStats.statsForMap(packageConfigs, func(k : PackageId, v : PackageConfigV3) : Blob = to_candid ((k, v)));
+      highestConfigs = MemoryStats.statsForMap(highestConfigs, func(k : PackageName, v : PackageConfigV3) : Blob = to_candid ((k, v)));
+      packagePublications = MemoryStats.statsForMap(packagePublications, func(k : PackageId, v : PackagePublication) : Blob = to_candid ((k, v)));
+      ownersByPackage = MemoryStats.statsForMap(ownersByPackage, func(k : PackageName, v : [Principal]) : Blob = to_candid ((k, v)));
+      maintainersByPackage = MemoryStats.statsForMap(maintainersByPackage, func(k : PackageName, v : [Principal]) : Blob = to_candid ((k, v)));
+      fileIdsByPackage = MemoryStats.statsForMap(fileIdsByPackage, func(k : PackageId, v : [FileId]) : Blob = to_candid ((k, v)));
+      hashByFileId = MemoryStats.statsForMap(hashByFileId, func(k : FileId, v : Blob) : Blob = to_candid ((k, v)));
+      packageFileStats = MemoryStats.statsForMap(packageFileStats, func(k : PackageId, v : PackageFileStats) : Blob = to_candid ((k, v)));
+      packageTestStats = MemoryStats.statsForMap(packageTestStats, func(k : PackageId, v : TestStats) : Blob = to_candid ((k, v)));
+      packageBenchmarks = MemoryStats.statsForMap(packageBenchmarks, func(k : PackageId, v : Benchmarks) : Blob = to_candid ((k, v)));
+      packageNotes = MemoryStats.statsForMap(packageNotes, func(k : PackageId, v : Text) : Blob = to_candid ((k, v)));
+      packageDocsCoverage = MemoryStats.statsForMap(packageDocsCoverage, func(k : PackageId, v : Float) : Blob = to_candid ((k, v)));
 
       downloadsByPackageName = dlStats.downloadsByPackageName;
       downloadsByPackageId = dlStats.downloadsByPackageId;

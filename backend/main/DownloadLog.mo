@@ -432,47 +432,18 @@ module {
       dailyTempRecords : MemoryStats.StructureStats;
       weeklyTempRecords : MemoryStats.StructureStats;
     } {
+      let serializeSnapshot = func(v : DownloadsSnapshot) : Blob = to_candid (v);
       {
-        downloadsByPackageName = {
-          count = downloadsByPackageName.size();
-          bytes = MemoryStats.sampleMapBytes(downloadsByPackageName, func(k : Text.Text, v : Nat) : Blob = to_candid ((k, v)));
-        };
-        downloadsByPackageId = {
-          count = downloadsByPackageId.size();
-          bytes = MemoryStats.sampleMapBytes(downloadsByPackageId, func(k : Text.Text, v : Nat) : Blob = to_candid ((k, v)));
-        };
-        dailySnapshots = {
-          count = dailySnapshots.size();
-          bytes = MemoryStats.sampleBufferBytes(dailySnapshots, func(v : DownloadsSnapshot) : Blob = to_candid (v));
-        };
-        weeklySnapshots = {
-          count = weeklySnapshots.size();
-          bytes = MemoryStats.sampleBufferBytes(weeklySnapshots, func(v : DownloadsSnapshot) : Blob = to_candid (v));
-        };
-        dailySnapshotsByPackageName = {
-          count = dailySnapshotsByPackageName.size();
-          bytes = MemoryStats.sampleMapOfBuffersBytes(dailySnapshotsByPackageName, func(v : DownloadsSnapshot) : Blob = to_candid (v));
-        };
-        dailySnapshotsByPackageId = {
-          count = dailySnapshotsByPackageId.size();
-          bytes = MemoryStats.sampleMapOfBuffersBytes(dailySnapshotsByPackageId, func(v : DownloadsSnapshot) : Blob = to_candid (v));
-        };
-        weeklySnapshotsByPackageName = {
-          count = weeklySnapshotsByPackageName.size();
-          bytes = MemoryStats.sampleMapOfBuffersBytes(weeklySnapshotsByPackageName, func(v : DownloadsSnapshot) : Blob = to_candid (v));
-        };
-        weeklySnapshotsByPackageId = {
-          count = weeklySnapshotsByPackageId.size();
-          bytes = MemoryStats.sampleMapOfBuffersBytes(weeklySnapshotsByPackageId, func(v : DownloadsSnapshot) : Blob = to_candid (v));
-        };
-        dailyTempRecords = {
-          count = dailyTempRecords.size();
-          bytes = MemoryStats.sampleBufferBytes(dailyTempRecords, func(v : Record) : Blob = to_candid (v));
-        };
-        weeklyTempRecords = {
-          count = weeklyTempRecords.size();
-          bytes = MemoryStats.sampleBufferBytes(weeklyTempRecords, func(v : Record) : Blob = to_candid (v));
-        };
+        downloadsByPackageName = MemoryStats.statsForMap(downloadsByPackageName, func(k : Text.Text, v : Nat) : Blob = to_candid ((k, v)));
+        downloadsByPackageId = MemoryStats.statsForMap(downloadsByPackageId, func(k : Text.Text, v : Nat) : Blob = to_candid ((k, v)));
+        dailySnapshots = MemoryStats.statsForBuffer(dailySnapshots, serializeSnapshot);
+        weeklySnapshots = MemoryStats.statsForBuffer(weeklySnapshots, serializeSnapshot);
+        dailySnapshotsByPackageName = MemoryStats.statsForMapOfBuffers(dailySnapshotsByPackageName, serializeSnapshot);
+        dailySnapshotsByPackageId = MemoryStats.statsForMapOfBuffers(dailySnapshotsByPackageId, serializeSnapshot);
+        weeklySnapshotsByPackageName = MemoryStats.statsForMapOfBuffers(weeklySnapshotsByPackageName, serializeSnapshot);
+        weeklySnapshotsByPackageId = MemoryStats.statsForMapOfBuffers(weeklySnapshotsByPackageId, serializeSnapshot);
+        dailyTempRecords = MemoryStats.statsForBuffer(dailyTempRecords, func(v : Record) : Blob = to_candid (v));
+        weeklyTempRecords = MemoryStats.statsForBuffer(weeklyTempRecords, func(v : Record) : Blob = to_candid (v));
       };
     };
 

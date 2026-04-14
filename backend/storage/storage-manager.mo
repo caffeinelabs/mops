@@ -178,14 +178,8 @@ module {
       storageByFileId : MemoryStats.StructureStats;
     } {
       {
-        storages = {
-          count = storages.size();
-          bytes = MemoryStats.sampleMapBytes(storages, func(k : StorageId, v : StorageStats) : Blob = to_candid ((k, v)));
-        };
-        storageByFileId = {
-          count = storageByFileId.size();
-          bytes = MemoryStats.sampleMapBytes(storageByFileId, func(k : FileId, v : StorageId) : Blob = to_candid ((k, v)));
-        };
+        storages = MemoryStats.statsForMap(storages, func(k : StorageId, v : StorageStats) : Blob = to_candid ((k, v)));
+        storageByFileId = MemoryStats.statsForMap(storageByFileId, func(k : FileId, v : StorageId) : Blob = to_candid ((k, v)));
       };
     };
 

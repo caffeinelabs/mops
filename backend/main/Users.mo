@@ -31,14 +31,8 @@ module {
       names : MemoryStats.StructureStats;
     } {
       {
-        users = {
-          count = _users.size();
-          bytes = MemoryStats.sampleMapBytes(_users, func(k : Principal, v : Types.User) : Blob = to_candid ((k, v)));
-        };
-        names = {
-          count = Set.size(_names);
-          bytes = MemoryStats.sampleIterBytes(Set.keys(_names), Set.size(_names), func(k : Text) : Blob = to_candid (k));
-        };
+        users = MemoryStats.statsForMap(_users, func(k : Principal, v : Types.User) : Blob = to_candid ((k, v)));
+        names = MemoryStats.statsForIter(Set.keys(_names), Set.size(_names), func(k : Text) : Blob = to_candid (k));
       };
     };
 
