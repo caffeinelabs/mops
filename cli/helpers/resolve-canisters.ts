@@ -14,11 +14,22 @@ export function resolveCanisterConfigs(
   );
 }
 
-export function resolveCanisterEntrypoints(config: Config): string[] {
-  const canisters = resolveCanisterConfigs(config);
-  return Object.values(canisters)
-    .map((c) => c.main)
-    .filter((main): main is string => Boolean(main));
+export function filterCanisters(
+  canisters: Record<string, CanisterConfig>,
+  names?: string[],
+): Record<string, CanisterConfig> {
+  if (!names) {
+    return canisters;
+  }
+  const invalidNames = names.filter((name) => !(name in canisters));
+  if (invalidNames.length) {
+    cliError(
+      `Canister(s) not found in mops.toml: ${invalidNames.join(", ")}. Available: ${Object.keys(canisters).join(", ")}`,
+    );
+  }
+  return Object.fromEntries(
+    Object.entries(canisters).filter(([name]) => names.includes(name)),
+  );
 }
 
 export function resolveSingleCanister(
@@ -49,4 +60,24 @@ export function resolveSingleCanister(
   }
 
   return { name: names[0]!, canister: canisters[names[0]!]! };
+}
+
+export function looksLikeFile(arg: string): boolean {
+  return (
+    arg.endsWith(".mo") ||
+    arg.endsWith(".most") ||
+    arg.includes("/") ||
+    arg.includes("\\")
+  );
+}
+
+export function validateCanisterArgs(
+  canister: CanisterConfig,
+  canisterName: string,
+): void {
+  if (canister.args && typeof canister.args === "string") {
+    cliError(
+      `Canister config 'args' should be an array of strings for canister ${canisterName}`,
+    );
+  }
 }

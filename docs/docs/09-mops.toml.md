@@ -71,7 +71,7 @@ File paths must start with `/`, `./`, or `../`.
 
 ## [moc]
 
-Global Motoko compiler flags applied to all `moc` invocations (`check`, `build`, `test`, `bench`, `watch`).
+Global Motoko compiler flags applied to all `moc` invocations (`check`, `check-stable`, `build`, `test`, `bench`, `watch`).
 
 | Field | Description |
 | ----- | ----------- |
@@ -83,7 +83,7 @@ Example:
 args = ["--default-persistent-actors", "-W=M0223,M0236,M0237"]
 ```
 
-These flags are applied before command-specific flags (`[build].args`, `[canisters.<name>].args`) and CLI `-- flags`.
+These flags are applied before per-canister `[canisters.<name>].args` and CLI `-- flags`. For `mops build`, `[build].args` are also applied (after `[moc].args`, before per-canister args).
 
 Use `mops moc-args` to print the moc flags defined in `mops.toml` (useful when invoking `moc` directly).
 
@@ -97,7 +97,7 @@ Each canister entry specifies the entrypoint file and optional compiler settings
 | Field    | Description                                                     |
 | -------- | --------------------------------------------------------------- |
 | main     | Path to the main Motoko file (required)                         |
-| args     | Array of additional `moc` arguments for this canister (optional)|
+| args     | Array of additional `moc` arguments for this canister (optional). Applied after `[moc].args` in `check`, `check-stable`, and `build`. |
 | candid   | Path to a Candid interface file for compatibility checking (optional) |
 | initArg  | Candid-encoded initialization arguments (optional)              |
 
@@ -108,6 +108,16 @@ main = "src/main.mo"
 args = ["--incremental-gc"]
 candid = "candid/backend.did"
 initArg = "(\"Hello\")"
+```
+
+Multi-canister example with per-canister flags:
+```toml
+[canisters.backend]
+main = "src/backend/main.mo"
+args = ["--enhanced-migration=migrations/backend"]
+
+[canisters.frontend]
+main = "src/frontend/main.mo"
 ```
 
 ### `[canisters.<name>.check-stable]`
