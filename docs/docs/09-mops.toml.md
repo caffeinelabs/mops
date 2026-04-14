@@ -71,7 +71,7 @@ File paths must start with `/`, `./`, or `../`.
 
 ## [moc]
 
-Global Motoko compiler flags applied to all `moc` invocations (`check`, `build`, `test`, `bench`, `watch`).
+Global Motoko compiler flags applied to all `moc` invocations (`check`, `check-stable`, `build`, `test`, `bench`, `watch`).
 
 | Field | Description |
 | ----- | ----------- |
