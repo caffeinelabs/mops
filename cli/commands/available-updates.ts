@@ -5,12 +5,7 @@ import { getPackageVersions } from "../api/getPackageVersions.js";
 import { Config } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
-import {
-  isRange,
-  parseRange,
-  highestSatisfying,
-  stripRangePrefix,
-} from "../semver.js";
+import { semver, isRange, stripRangePrefix } from "../semver.js";
 
 // [pkg, oldVersion, newVersion]
 export async function getAvailableUpdates(
@@ -52,10 +47,9 @@ export async function getAvailableUpdates(
   let rangedResults = await Promise.all(
     rangedDeps.map(async (dep) => {
       let name = getDepName(dep.name);
-      let range = parseRange(dep.version || "");
       let versionsRes = await getPackageVersions(name);
       if ("err" in versionsRes) return null;
-      let highest = highestSatisfying(versionsRes.ok, range);
+      let highest = semver.maxSatisfying(versionsRes.ok, dep.version || "");
       return highest ? ([name, highest] as [string, string]) : null;
     }),
   );
@@ -77,7 +71,7 @@ export async function getAvailableUpdates(
               ? { minor: null }
               : { patch: null };
         }
-        return [name, stripRangePrefix(dep.version || ""), semverPart];
+        return [name, dep.version || "", semverPart];
       }),
     );
 

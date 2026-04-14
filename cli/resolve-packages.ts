@@ -17,14 +17,7 @@ import {
 } from "./cache.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { checkLockFileLight, readLockFile } from "./integrity.js";
-import {
-  compareVersions,
-  highestSatisfying,
-  isRange,
-  parseRange,
-  satisfies,
-  stripRangePrefix,
-} from "./semver.js";
+import { semver, isRange, stripRangePrefix } from "./semver.js";
 
 type VersionConstraint = {
   isMopsPackage: boolean;
@@ -48,8 +41,7 @@ function resolveRangeFromCache(
   }
 
   let installed = findCachedVersions(name);
-  let best = highestSatisfying(installed, parseRange(version));
-  let resolved = best || bareVersion;
+  let resolved = semver.maxSatisfying(installed, version) || bareVersion;
   cache.set(key, resolved);
   return resolved;
 }
@@ -81,7 +73,7 @@ export async function resolvePackages({
     const { branch: b } = parseGithubURL(repoB);
 
     if (gitVerRegex.test(a) && gitVerRegex.test(b)) {
-      return compareVersions(a.substring(1), b.substring(1));
+      return semver.compare(a.substring(1), b.substring(1));
     } else if (!gitVerRegex.test(a)) {
       return -1;
     } else {
@@ -119,7 +111,10 @@ export async function resolvePackages({
           ((repo &&
             packages[name]?.repo &&
             compareGitVersions(packages[name]?.repo || "", repo) === -1) ||
-            compareVersions(resolvedExisting, resolvedCurrent) === -1))
+            semver.compare(
+              resolvedExisting || "0.0.0",
+              resolvedCurrent || "0.0.0",
+            ) === -1))
       ) {
         let temp = {
           ...pkgDetails,
@@ -233,8 +228,7 @@ export async function resolvePackages({
         );
         for (let constraint of mopsVers) {
           if (isRange(constraint.version)) {
-            let range = parseRange(constraint.version);
-            if (!satisfies(resolvedExact, range)) {
+            if (!semver.satisfies(resolvedExact, constraint.version)) {
               console.error(
                 chalk.reset("") +
                   chalk.redBright(

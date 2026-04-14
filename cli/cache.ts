@@ -77,12 +77,17 @@ export let copyCache = (cacheName: string, dest: string) => {
   });
 };
 
+let cachedDirEntries: string[] | null = null;
+
 export function findCachedVersions(name: string): string[] {
-  let packagesDir = path.join(getGlobalCacheDir(), "packages");
-  if (!fs.existsSync(packagesDir)) return [];
+  if (!cachedDirEntries) {
+    let packagesDir = path.join(getGlobalCacheDir(), "packages");
+    cachedDirEntries = fs.existsSync(packagesDir)
+      ? fs.readdirSync(packagesDir)
+      : [];
+  }
   let prefix = name + "@";
-  return fs
-    .readdirSync(packagesDir)
+  return cachedDirEntries
     .filter((entry) => entry.startsWith(prefix))
     .map((entry) => entry.slice(prefix.length));
 }

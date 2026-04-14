@@ -21,12 +21,7 @@ import {
 } from "../../api/downloadPackageFiles.js";
 import { installDeps } from "./install-deps.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
-import {
-  isRange,
-  parseRange,
-  highestSatisfying,
-  formatRange,
-} from "../../semver.js";
+import { semver, isRange } from "../../semver.js";
 
 type InstallMopsDepOptions = {
   verbose?: boolean;
@@ -75,17 +70,16 @@ export async function installMopsDep(
     }
     version = versionRes.ok;
   } else if (isRange(version)) {
-    let range = parseRange(version);
     let versionsRes = await getPackageVersions(depName);
     if ("err" in versionsRes) {
       console.log(chalk.red("Error: ") + versionsRes.err);
       return false;
     }
-    let resolved = highestSatisfying(versionsRes.ok, range);
+    let resolved = semver.maxSatisfying(versionsRes.ok, version);
     if (!resolved) {
       console.log(
         chalk.red("Error: ") +
-          `No version of "${depName}" satisfies ${formatRange(range)}`,
+          `No version of "${depName}" satisfies ${version}`,
       );
       return false;
     }
