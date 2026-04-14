@@ -938,7 +938,7 @@ actor class Main() = this {
 
     // packageOwners is legacy (migrated to ownersByPackage); clear stable storage so
     // entries are not carried forward across upgrades.
-    packageOwners := TrieMap.TrieMap<PackageName, Principal>(Text.equal, Text.hash);
+    packageOwners := TrieMap.fromEntries<PackageName, Principal>(packageOwnersStable.vals(), Text.equal, Text.hash);
     packageOwnersStable := [];
 
     fileIdsByPackage := TrieMap.fromEntries<PackageId, [FileId]>(fileIdsByPackageStable.vals(), Text.equal, Text.hash);
