@@ -110,14 +110,17 @@ export async function installMopsDep(
       try {
         await Promise.all(
           Array.from(filesData.entries()).map(async ([filePath, data]) => {
-            await fs.promises.mkdir(
-              path.join(cacheDir, path.dirname(filePath)),
-              { recursive: true },
-            );
-            await fs.promises.writeFile(
-              path.join(cacheDir, filePath),
-              Buffer.from(data),
-            );
+            let resolvedPath = path.resolve(cacheDir, filePath);
+            if (
+              !resolvedPath.startsWith(cacheDir + path.sep) &&
+              resolvedPath !== cacheDir
+            ) {
+              throw new Error(`Path traversal detected: ${filePath}`);
+            }
+            await fs.promises.mkdir(path.dirname(resolvedPath), {
+              recursive: true,
+            });
+            await fs.promises.writeFile(resolvedPath, Buffer.from(data));
           }),
         );
       } catch (err) {

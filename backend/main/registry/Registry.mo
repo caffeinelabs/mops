@@ -34,6 +34,17 @@ module {
     docsCoverage : Float;
   };
 
+  public type NewBlobPackageReleaseArgs = {
+    userId : Principal;
+    config : PackageConfigV3;
+    notes : Text;
+    blobHash : Text;
+    fileStats : ?PackageFileStats;
+    testStats : ?TestStats;
+    benchmarks : Benchmarks;
+    docsCoverage : Float;
+  };
+
   public class Registry(
     packageVersions : TrieMap.TrieMap<PackageName, [PackageVersion]>,
     ownersByPackage : TrieMap.TrieMap<PackageName, [Principal]>,
@@ -48,6 +59,7 @@ module {
     packageBenchmarks : TrieMap.TrieMap<PackageId, Benchmarks>,
     packageNotes : TrieMap.TrieMap<PackageId, Text>,
     packageDocsCoverage : TrieMap.TrieMap<PackageId, Float>,
+    blobHashByPackageId : TrieMap.TrieMap<PackageId, Text>,
   ) {
 
     // -----------------------------
@@ -82,6 +94,54 @@ module {
       for ((fileId, hash) in newRelease.fileHashes.vals()) {
         hashByFileId.put(fileId, hash);
       };
+
+      switch (newRelease.fileStats) {
+        case (?fileStats) {
+          packageFileStats.put(packageId, fileStats);
+        };
+        case (null) {};
+      };
+
+      switch (newRelease.testStats) {
+        case (?testStats) {
+          packageTestStats.put(packageId, testStats);
+        };
+        case (null) {};
+      };
+
+      packageBenchmarks.put(packageId, newRelease.benchmarks);
+      packageNotes.put(packageId, newRelease.notes);
+      packageDocsCoverage.put(packageId, newRelease.docsCoverage);
+
+      publication;
+    };
+
+    public func newBlobPackageRelease(newRelease : NewBlobPackageReleaseArgs) : PackagePublication {
+      let packageId = PackageUtils.getPackageId(newRelease.config.name, newRelease.config.version);
+
+      _updateHighestConfig(newRelease.config);
+
+      let versions = Option.get(packageVersions.get(newRelease.config.name), []);
+      packageVersions.put(newRelease.config.name, Array.append(versions, [newRelease.config.version]));
+
+      packageConfigs.put(packageId, newRelease.config);
+
+      let owners = getPackageOwners(newRelease.config.name);
+      if (owners.size() == 0) {
+        ownersByPackage.put(newRelease.config.name, [newRelease.userId]);
+      };
+
+      let publication = {
+        user = newRelease.userId;
+        time = Time.now();
+        // Blob packages don't use storage canisters; use management canister
+        // principal as a sentinel (PackagePublication requires this field).
+        // Clients must check getBlobHash() before accessing this value.
+        storage = Principal.fromText("aaaaa-aa");
+      };
+      packagePublications.put(packageId, publication);
+
+      blobHashByPackageId.put(packageId, newRelease.blobHash);
 
       switch (newRelease.fileStats) {
         case (?fileStats) {

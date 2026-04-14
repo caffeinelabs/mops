@@ -31,7 +31,15 @@ type LockFileV3 = {
   deps: Record<string, string>;
 };
 
-type LockFile = LockFileV1 | LockFileV2 | LockFileV3;
+type LockFileV4 = {
+  version: 4;
+  mopsTomlDepsHash: string;
+  hashes: Record<string, Record<string, string>>;
+  blobHashes: Record<string, string>;
+  deps: Record<string, string>;
+};
+
+type LockFile = LockFileV1 | LockFileV2 | LockFileV3 | LockFileV4;
 
 export async function checkIntegrity(lock?: "check" | "update" | "ignore") {
   let force = !!lock;
@@ -56,6 +64,27 @@ async function getFileHashesFromRegistry(): Promise<
   let fileHashesByPackageIds =
     await actor.getFileHashesByPackageIds(packageIds);
   return fileHashesByPackageIds;
+}
+
+async function getBlobHashesFromRegistry(): Promise<Record<string, string>> {
+  let packageIds = await getResolvedMopsPackageIds();
+  let actor = await mainActor();
+  let blobHashes: Record<string, string> = {};
+
+  await Promise.all(
+    packageIds.map(async (packageId) => {
+      let [name, version] = packageId.split("@");
+      if (!name || !version) {
+        return;
+      }
+      let result = await actor.getBlobHash(name, version);
+      if (result.length > 0 && result[0]) {
+        blobHashes[packageId] = result[0];
+      }
+    }),
+  );
+
+  return blobHashes;
 }
 
 async function getResolvedMopsPackageIds(): Promise<string[]> {
@@ -149,7 +178,8 @@ export function checkLockFileLight(): boolean {
   if (existingLockFileJson) {
     let mopsTomlDepsHash = getMopsTomlDepsHash();
     if (
-      existingLockFileJson.version === 3 &&
+      (existingLockFileJson.version === 3 ||
+        existingLockFileJson.version === 4) &&
       mopsTomlDepsHash === existingLockFileJson.mopsTomlDepsHash
     ) {
       return true;
@@ -159,21 +189,28 @@ export function checkLockFileLight(): boolean {
 }
 
 export async function updateLockFile() {
-  // if lock file exists and mops.toml hasn't changed, don't update it
   if (checkLockFileLight()) {
     return;
   }
 
   let resolvedDeps = await resolvePackages();
 
-  let fileHashes = await getFileHashesFromRegistry();
+  let [fileHashes, blobHashes] = await Promise.all([
+    getFileHashesFromRegistry(),
+    getBlobHashesFromRegistry(),
+  ]);
 
-  let lockFileJson: LockFileV3 = {
-    version: 3,
+  let blobPackageIds = new Set(Object.keys(blobHashes));
+
+  let lockFileJson: LockFileV4 = {
+    version: 4,
     mopsTomlDepsHash: getMopsTomlDepsHash(),
     deps: resolvedDeps,
     hashes: fileHashes.reduce(
       (acc, [packageId, fileHashes]) => {
+        if (blobPackageIds.has(packageId)) {
+          return acc;
+        }
         acc[packageId] = fileHashes.reduce(
           (acc, [fileId, hash]) => {
             acc[fileId] = bytesToHex(new Uint8Array(hash));
@@ -185,6 +222,7 @@ export async function updateLockFile() {
       },
       {} as Record<string, Record<string, string>>,
     ),
+    blobHashes,
   };
 
   let rootDir = getRootDir();
@@ -200,11 +238,10 @@ export async function updateLockFile() {
 
 // compare hashes of local files with hashes from the lock file
 export async function checkLockFile(force = false) {
-  let supportedVersions = [1, 2, 3];
+  let supportedVersions = [1, 2, 3, 4];
   let rootDir = getRootDir();
   let lockFile = path.join(rootDir, "mops.lock");
 
-  // check if lock file exists
   if (!fs.existsSync(lockFile)) {
     if (force) {
       console.error("Missing lock file. Run `mops install` to generate it.");
@@ -218,7 +255,6 @@ export async function checkLockFile(force = false) {
   );
   let packageIds = await getResolvedMopsPackageIds();
 
-  // check lock file version
   if (!supportedVersions.includes(lockFileJsonGeneric.version)) {
     console.error("Integrity check failed");
     console.error(
@@ -240,8 +276,12 @@ export async function checkLockFile(force = false) {
     }
   }
 
-  // V2, V3: check mops.toml deps hash
-  if (lockFileJson.version === 2 || lockFileJson.version === 3) {
+  // V2, V3, V4: check mops.toml deps hash
+  if (
+    lockFileJson.version === 2 ||
+    lockFileJson.version === 3 ||
+    lockFileJson.version === 4
+  ) {
     if (lockFileJson.mopsTomlDepsHash !== getMopsTomlDepsHash()) {
       console.error("Integrity check failed");
       console.error("Mismatched mops.toml dependencies hash");
@@ -251,8 +291,8 @@ export async function checkLockFile(force = false) {
     }
   }
 
-  // V3: check locked deps (including GitHub and local packages)
-  if (lockFileJson.version === 3) {
+  // V3, V4: check locked deps
+  if (lockFileJson.version === 3 || lockFileJson.version === 4) {
     let lockedDeps = { ...lockFileJson.deps };
     let resolvedDeps = await resolvePackages();
 
@@ -267,26 +307,32 @@ export async function checkLockFile(force = false) {
     }
   }
 
-  // check number of packages
-  if (Object.keys(lockFileJson.hashes).length !== packageIds.length) {
+  // V4: count includes both hashes and blobHashes
+  let blobHashes =
+    lockFileJson.version === 4
+      ? lockFileJson.blobHashes
+      : ({} as Record<string, string>);
+  let totalLockedPackages =
+    Object.keys(lockFileJson.hashes).length + Object.keys(blobHashes).length;
+
+  if (totalLockedPackages !== packageIds.length) {
     console.error("Integrity check failed");
     console.error(
-      `Mismatched number of resolved packages: ${JSON.stringify(Object.keys(lockFileJson.hashes).length)} vs ${JSON.stringify(packageIds.length)}`,
+      `Mismatched number of resolved packages: ${totalLockedPackages} vs ${packageIds.length}`,
     );
     process.exit(1);
   }
 
-  // check if resolved packages are in the lock file
   for (let packageId of packageIds) {
-    if (!(packageId in lockFileJson.hashes)) {
+    if (!(packageId in lockFileJson.hashes) && !(packageId in blobHashes)) {
       console.error("Integrity check failed");
       console.error(`Missing package ${packageId} in lock file`);
       process.exit(1);
     }
   }
 
+  // check per-file hashes for legacy packages
   for (let [packageId, hashes] of Object.entries(lockFileJson.hashes)) {
-    // check if package is in resolved packages
     if (!packageIds.includes(packageId)) {
       console.error("Integrity check failed");
       console.error(
@@ -296,7 +342,6 @@ export async function checkLockFile(force = false) {
     }
 
     for (let [fileId, lockedHash] of Object.entries(hashes)) {
-      // check if file belongs to package
       if (!fileId.startsWith(packageId + "/")) {
         console.error("Integrity check failed");
         console.error(
@@ -305,7 +350,6 @@ export async function checkLockFile(force = false) {
         process.exit(1);
       }
 
-      // local file hash vs hash from lock file
       let localHash = getLocalFileHash(fileId);
       if (lockedHash !== localHash) {
         console.error("Integrity check failed");
@@ -313,6 +357,39 @@ export async function checkLockFile(force = false) {
         console.error(`Locked hash: ${lockedHash}`);
         console.error(`Actual hash: ${localHash}`);
         process.exit(1);
+      }
+    }
+  }
+
+  // V4: verify blob hashes against the registry
+  if (Object.keys(blobHashes).length > 0) {
+    let actor = await mainActor();
+    for (let [packageId, lockedBlobHash] of Object.entries(blobHashes)) {
+      if (!packageIds.includes(packageId)) {
+        console.error("Integrity check failed");
+        console.error(
+          `Package ${packageId} in lock file but not in resolved packages`,
+        );
+        process.exit(1);
+      }
+
+      let [name, version] = packageId.split("@");
+      if (name && version) {
+        let result = await actor.getBlobHash(name, version);
+        if (result.length === 0 || !result[0]) {
+          console.error("Integrity check failed");
+          console.error(
+            `Package ${packageId} has blob hash in lock file but not in registry`,
+          );
+          process.exit(1);
+        }
+        if (result[0] !== lockedBlobHash) {
+          console.error("Integrity check failed");
+          console.error(`Mismatched blob hash for ${packageId}`);
+          console.error(`Locked hash: ${lockedBlobHash}`);
+          console.error(`Registry hash: ${result[0]}`);
+          process.exit(1);
+        }
       }
     }
   }

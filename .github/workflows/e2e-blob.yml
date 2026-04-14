@@ -1,0 +1,67 @@
+name: E2E Blob Storage
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 * * 0" # Sundays at 08:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-blob:
+    runs-on: ubuntu-latest
+    name: E2E blob upload/download
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install npm packages
+        run: |
+          npm ci --ignore-scripts
+          npm run ci:postinstall
+
+      - name: Run E2E blob storage tests
+        env:
+          MOPS_TEST_E2E: "1"
+          MOPS_NETWORK: staging
+        run: |
+          cd cli && NODE_OPTIONS="--experimental-vm-modules" \
+            npx jest tests/e2e-blob-storage.test.ts --testTimeout 180000
+
+  e2e-blob-publish:
+    runs-on: ubuntu-latest
+    name: E2E blob publish + install
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install npm packages
+        run: |
+          npm ci --ignore-scripts
+          npm run ci:postinstall
+
+      - name: Write identity PEM
+        env:
+          MOPS_IDENTITY_PEM: ${{ secrets.MOPS_IDENTITY_PEM }}
+        run: |
+          mkdir -p ~/.config/mops
+          echo "$MOPS_IDENTITY_PEM" > ~/.config/mops/identity.pem
+
+      - name: Run E2E publish + install tests
+        env:
+          MOPS_TEST_E2E: "1"
+          MOPS_IDENTITY_PEM: ${{ secrets.MOPS_IDENTITY_PEM }}
+          MOPS_NETWORK: staging
+        run: |
+          cd cli && NODE_OPTIONS="--experimental-vm-modules" \
+            npx jest tests/e2e-blob-storage.test.ts --testTimeout 180000

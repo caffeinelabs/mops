@@ -11,6 +11,7 @@ import Principal "mo:base/Principal";
 import Order "mo:base/Order";
 import Option "mo:base/Option";
 import Blob "mo:base/Blob";
+import Nat8 "mo:base/Nat8";
 import TelegramBot "mo:telegram-bot";
 
 import IC "mo:ic";
@@ -60,7 +61,7 @@ actor class Main() = this {
   public type PublishingId = Text;
   public type Benchmarks = Types.Benchmarks;
 
-  let API_VERSION = "1.3"; // (!) make changes in pair with cli
+  let API_VERSION = "1.4"; // (!) make changes in pair with cli
 
   var packageVersions = TrieMap.TrieMap<PackageName, [PackageVersion]>(Text.equal, Text.hash);
   var packageOwners = TrieMap.TrieMap<PackageName, Principal>(Text.equal, Text.hash); // legacy
@@ -78,6 +79,13 @@ actor class Main() = this {
   var packageNotes = TrieMap.TrieMap<PackageId, Text>(Text.equal, Text.hash);
   var packageDocsCoverage = TrieMap.TrieMap<PackageId, Float>(Text.equal, Text.hash);
 
+  // Caffeine Object Storage state
+  var blobHashByPackageId = TrieMap.TrieMap<PackageId, Text>(Text.equal, Text.hash);
+  var liveBlobHashes = TrieMap.TrieMap<Text, ()>(Text.equal, Text.hash);
+  var pendingBlobDelete = TrieMap.TrieMap<Text, ()>(Text.equal, Text.hash);
+  var gatewayPrincipals = TrieMap.TrieMap<Principal, ()>(Principal.equal, Principal.hash);
+  stable var cashierId : Principal = Principal.fromText("72ch2-fiaaa-aaaar-qbsvq-cai");
+
   var registry = Registry.Registry(
     packageVersions,
     ownersByPackage,
@@ -92,6 +100,7 @@ actor class Main() = this {
     packageBenchmarks,
     packageNotes,
     packageDocsCoverage,
+    blobHashByPackageId,
   );
 
   let downloadLog = DownloadLog.DownloadLog();
@@ -128,6 +137,14 @@ actor class Main() = this {
       requirements = Option.get(configPub.requirements, []);
     };
     await packagePublisher.startPublish(caller, config);
+  };
+
+  public shared ({ caller }) func startBlobPublish(configPub : Types.PackageConfigV3_Publishing) : async Result.Result<PublishingId, Err> {
+    let config : PackageConfigV3 = {
+      configPub with
+      requirements = Option.get(configPub.requirements, []);
+    };
+    await packagePublisher.startBlobPublish(caller, config);
   };
 
   public shared ({ caller }) func startFileUpload(publishingId : PublishingId, path : Text.Text, chunkCount : Nat, firstChunk : Blob) : async Result.Result<FileId, Err> {
@@ -169,18 +186,7 @@ actor class Main() = this {
         #err(err);
       };
       case (#ok(publishResult)) {
-        // Send Telegram notification
-        let telegramBot = TelegramBot.TelegramBot(telegramBotToken, transformTelegramRequest);
-        let message = _formatTelegramMessage(publishResult.config, publishResult.publication, publishResult.isNewPackage);
-        let tgRes = await telegramBot.sendMessage("@mops_feed", message, null);
-
-        switch (tgRes) {
-          case (#err(err)) {
-            Debug.print("Failed to send message to telegram: " # err);
-          };
-          case (#ok) {};
-        };
-
+        await _sendTelegramNotification(publishResult.config, publishResult.publication, publishResult.isNewPackage);
         #ok;
       };
     };
@@ -219,6 +225,18 @@ actor class Main() = this {
     };
   };
 
+  func _sendTelegramNotification(config : PackageConfigV3, publication : PackagePublication, isNewPackage : Bool) : async () {
+    let telegramBot = TelegramBot.TelegramBot(telegramBotToken, transformTelegramRequest);
+    let message = _formatTelegramMessage(config, publication, isNewPackage);
+    let tgRes = await telegramBot.sendMessage("@mops_feed", message, null);
+    switch (tgRes) {
+      case (#err(err)) {
+        Debug.print("Failed to send message to telegram: " # err);
+      };
+      case (#ok) {};
+    };
+  };
+
   public shared ({ caller }) func computeHashesForExistingFiles() : async () {
     assert (Utils.isAdmin(caller));
 
@@ -240,6 +258,134 @@ actor class Main() = this {
         hashByFileId.put(fileId, hasher.sum());
       };
     };
+  };
+
+  // CAFFEINE OBJECT STORAGE PROTOCOL
+
+  public type CreateCertificateResult = Types.CreateCertificateResult;
+
+  func _rebuildLiveBlobHashes() {
+    liveBlobHashes := TrieMap.TrieMap<Text, ()>(Text.equal, Text.hash);
+    for ((_, blobHash) in blobHashByPackageId.entries()) {
+      liveBlobHashes.put(blobHash, ());
+    };
+  };
+
+  func _bytesToHash(bytes : Blob) : ?Text {
+    let arr = Blob.toArray(bytes);
+    if (arr.size() != 32) return null;
+    let hexDigits : [Char] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
+    var hex = "sha256:";
+    for (b in arr.vals()) {
+      let n = Nat8.toNat(b);
+      hex #= Text.fromChar(hexDigits[n / 16]);
+      hex #= Text.fromChar(hexDigits[n % 16]);
+    };
+    ?hex;
+  };
+
+  func _isValidBlobHash(hash : Text) : Bool {
+    if (Text.size(hash) != 71) return false;
+    if (not Text.startsWith(hash, #text("sha256:"))) return false;
+    let hexPart = switch (Text.stripStart(hash, #text("sha256:"))) {
+      case null return false;
+      case (?h) h;
+    };
+    for (c in hexPart.chars()) {
+      if (not ((c >= '0' and c <= '9') or (c >= 'a' and c <= 'f'))) {
+        return false;
+      };
+    };
+    true;
+  };
+
+  func _callerIsGateway(caller : Principal) : Bool {
+    if (Principal.isAnonymous(caller)) return false;
+    gatewayPrincipals.get(caller) != null;
+  };
+
+  public shared func _immutableObjectStorageCreateCertificate(hash : Text) : async CreateCertificateResult {
+    if (not _isValidBlobHash(hash)) {
+      Debug.trap("hash must be 'sha256:<64-lowercase-hex-chars>'");
+    };
+
+    if (liveBlobHashes.get(hash) != null) {
+      pendingBlobDelete.delete(hash);
+    };
+
+    { method = "upload"; blob_hash = hash };
+  };
+
+  public shared query func _immutableObjectStorageBlobsAreLive(hashBytesList : [Blob]) : async [Bool] {
+    Array.map<Blob, Bool>(
+      hashBytesList,
+      func(hashBytes : Blob) : Bool {
+        switch (_bytesToHash(hashBytes)) {
+          case null false;
+          case (?hash) {
+            liveBlobHashes.get(hash) != null and pendingBlobDelete.get(hash) == null;
+          };
+        };
+      },
+    );
+  };
+
+  public shared query ({ caller }) func _immutableObjectStorageBlobsToDelete() : async [Text] {
+    if (not _callerIsGateway(caller)) return [];
+    Iter.toArray(pendingBlobDelete.keys());
+  };
+
+  public shared ({ caller }) func _immutableObjectStorageConfirmBlobDeletion(hashBytesList : [Blob]) : async () {
+    if (not _callerIsGateway(caller)) return;
+    for (hashBytes in hashBytesList.vals()) {
+      switch (_bytesToHash(hashBytes)) {
+        case null {};
+        case (?hash) {
+          pendingBlobDelete.delete(hash);
+        };
+      };
+    };
+  };
+
+  public shared func _immutableObjectStorageUpdateGatewayPrincipals() : async () {
+    let cashier : actor {
+      storage_gateway_principal_list_v1 : shared query () -> async [Principal];
+    } = actor (Principal.toText(cashierId));
+    let principals = await cashier.storage_gateway_principal_list_v1();
+    let existing = Iter.toArray(gatewayPrincipals.keys());
+    for (p in existing.vals()) {
+      gatewayPrincipals.delete(p);
+    };
+    for (p in principals.vals()) {
+      gatewayPrincipals.put(p, ());
+    };
+  };
+
+  // Blob publish
+  public shared ({ caller }) func finishBlobPublish(publishingId : PublishingId, blobHash : Text, archiveSize : Nat, fileCount : Nat) : async Result.Result<(), Err> {
+    let res = await packagePublisher.finishBlobPublish(caller, publishingId, blobHash, archiveSize, fileCount);
+
+    switch (res) {
+      case (#err(err)) {
+        #err(err);
+      };
+      case (#ok(publishResult)) {
+        liveBlobHashes.put(blobHash, ());
+
+        await _sendTelegramNotification(publishResult.config, publishResult.publication, publishResult.isNewPackage);
+        #ok;
+      };
+    };
+  };
+
+  public query func getBlobHash(name : PackageName, version : PackageVersion) : async ?Text {
+    let packageId = PackageUtils.getPackageId(name, version);
+    blobHashByPackageId.get(packageId);
+  };
+
+  public shared ({ caller }) func setCashierId(newCashierId : Principal) : async () {
+    assert (Utils.isAdmin(caller));
+    cashierId := newCashierId;
   };
 
   public shared ({ caller }) func setStorageControllers() : async () {
@@ -346,7 +492,16 @@ actor class Main() = this {
 
   public query func getFileIds(name : PackageName, version : PackageVersion) : async Result.Result<[FileId], Err> {
     let packageId = PackageUtils.getPackageId(name, version);
-    Result.fromOption(fileIdsByPackage.get(packageId), "Package '" # packageId # "' not found");
+    switch (fileIdsByPackage.get(packageId)) {
+      case (?ids) #ok(ids);
+      case null {
+        if (blobHashByPackageId.get(packageId) != null) {
+          #err("Package '" # packageId # "' uses blob storage. Please upgrade mops CLI to the latest version.");
+        } else {
+          #err("Package '" # packageId # "' not found");
+        };
+      };
+    };
   };
 
   func _getFileHashes(packageId : PackageId) : Result.Result<[(FileId, Blob)], Err> {
@@ -663,6 +818,11 @@ actor class Main() = this {
       #storageManager : StorageManager.Stable;
       #users : Users.Stable;
     };
+    #v10 : {
+      #blobHashByPackageId : [(PackageId, Text)];
+      #pendingBlobDelete : [(Text, ())];
+      #gatewayPrincipals : [(Principal, ())];
+    };
   };
 
   public shared ({ caller }) func backup() : async () {
@@ -676,7 +836,7 @@ actor class Main() = this {
   };
 
   func _backup() : async () {
-    let backup = backupManager.NewBackup("v9");
+    let backup = backupManager.NewBackup("v10");
     await backup.startBackup();
     await backup.uploadChunk(to_candid (#v9(#packagePublications(Iter.toArray(packagePublications.entries()))) : BackupChunk));
     await backup.uploadChunk(to_candid (#v9(#packageVersions(Iter.toArray(packageVersions.entries()))) : BackupChunk));
@@ -694,6 +854,9 @@ actor class Main() = this {
     await backup.uploadChunk(to_candid (#v9(#highestConfigs(Iter.toArray(highestConfigs.entries()))) : BackupChunk));
     await backup.uploadChunk(to_candid (#v9(#packageConfigs(Iter.toArray(packageConfigs.entries()))) : BackupChunk));
     await backup.uploadChunk(to_candid (#v9(#packageDocsCoverage(Iter.toArray(packageDocsCoverage.entries()))) : BackupChunk));
+    await backup.uploadChunk(to_candid (#v10(#blobHashByPackageId(Iter.toArray(blobHashByPackageId.entries()))) : BackupChunk));
+    await backup.uploadChunk(to_candid (#v10(#pendingBlobDelete(Iter.toArray(pendingBlobDelete.entries()))) : BackupChunk));
+    await backup.uploadChunk(to_candid (#v10(#gatewayPrincipals(Iter.toArray(gatewayPrincipals.entries()))) : BackupChunk));
     await backup.finishBackup();
   };
 
@@ -705,63 +868,82 @@ actor class Main() = this {
     await backupManager.restore(
       backupId,
       func(blob : Blob) {
-        let ?#v9(chunk) : ?BackupChunk = from_candid (blob) else Debug.trap("Failed to restore chunk");
+        let ?backupChunk : ?BackupChunk = from_candid (blob) else Debug.trap("Failed to restore chunk");
 
-        switch (chunk) {
-          case (#packagePublications(packagePublicationsStable)) {
-            packagePublications := TrieMap.fromEntries<PackageId, PackagePublication>(packagePublicationsStable.vals(), Text.equal, Text.hash);
+        switch (backupChunk) {
+          case (#v9(chunk)) {
+            switch (chunk) {
+              case (#packagePublications(data)) {
+                packagePublications := TrieMap.fromEntries<PackageId, PackagePublication>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#packageVersions(data)) {
+                packageVersions := TrieMap.fromEntries<PackageName, [PackageVersion]>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#ownersByPackage(data)) {
+                ownersByPackage := TrieMap.fromEntries<PackageName, [Principal]>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#maintainersByPackage(data)) {
+                maintainersByPackage := TrieMap.fromEntries<PackageName, [Principal]>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#fileIdsByPackage(data)) {
+                fileIdsByPackage := TrieMap.fromEntries<PackageId, [FileId]>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#hashByFileId(data)) {
+                hashByFileId := TrieMap.fromEntries<FileId, Blob>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#packageFileStats(data)) {
+                packageFileStats := TrieMap.fromEntries<PackageId, PackageFileStats>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#packageTestStats(data)) {
+                packageTestStats := TrieMap.fromEntries<PackageId, TestStats>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#packageBenchmarks(data)) {
+                packageBenchmarks := TrieMap.fromEntries<PackageId, Benchmarks>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#packageNotes(data)) {
+                packageNotes := TrieMap.fromEntries<PackageId, Text>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#packageDocsCoverage(data)) {
+                packageDocsCoverage := TrieMap.fromEntries<PackageId, Float>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#downloadLog(data)) {
+                downloadLog.cancelTimers();
+                downloadLog.loadStable(data);
+              };
+              case (#storageManager(data)) {
+                storageManager.loadStable(data);
+              };
+              case (#users(data)) {
+                users.loadStable(data);
+              };
+              case (#highestConfigs(data)) {
+                highestConfigs := TrieMap.fromEntries<PackageName, PackageConfigV3>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#packageConfigs(data)) {
+                packageConfigs := TrieMap.fromEntries<PackageId, PackageConfigV3>(data.vals(), Text.equal, Text.hash);
+              };
+            };
           };
-          case (#packageVersions(packageVersionsStable)) {
-            packageVersions := TrieMap.fromEntries<PackageName, [PackageVersion]>(packageVersionsStable.vals(), Text.equal, Text.hash);
-          };
-          case (#ownersByPackage(ownersByPackageStable)) {
-            ownersByPackage := TrieMap.fromEntries<PackageName, [Principal]>(ownersByPackageStable.vals(), Text.equal, Text.hash);
-          };
-          case (#maintainersByPackage(maintainersByPackageStable)) {
-            maintainersByPackage := TrieMap.fromEntries<PackageName, [Principal]>(maintainersByPackageStable.vals(), Text.equal, Text.hash);
-          };
-          case (#fileIdsByPackage(fileIdsByPackageStable)) {
-            fileIdsByPackage := TrieMap.fromEntries<PackageId, [FileId]>(fileIdsByPackageStable.vals(), Text.equal, Text.hash);
-          };
-          case (#hashByFileId(hashByFileIdStable)) {
-            hashByFileId := TrieMap.fromEntries<FileId, Blob>(hashByFileIdStable.vals(), Text.equal, Text.hash);
-          };
-          case (#packageFileStats(packageFileStatsStable)) {
-            packageFileStats := TrieMap.fromEntries<PackageId, PackageFileStats>(packageFileStatsStable.vals(), Text.equal, Text.hash);
-          };
-          case (#packageTestStats(packageTestStatsStable)) {
-            packageTestStats := TrieMap.fromEntries<PackageId, TestStats>(packageTestStatsStable.vals(), Text.equal, Text.hash);
-          };
-          case (#packageBenchmarks(packageBenchmarksStable)) {
-            packageBenchmarks := TrieMap.fromEntries<PackageId, Benchmarks>(packageBenchmarksStable.vals(), Text.equal, Text.hash);
-          };
-          case (#packageNotes(packageNotesStable)) {
-            packageNotes := TrieMap.fromEntries<PackageId, Text>(packageNotesStable.vals(), Text.equal, Text.hash);
-          };
-          case (#packageDocsCoverage(packageDocsCoverageStable)) {
-            packageDocsCoverage := TrieMap.fromEntries<PackageId, Float>(packageDocsCoverageStable.vals(), Text.equal, Text.hash);
-          };
-          case (#downloadLog(downloadLogStable)) {
-            downloadLog.cancelTimers();
-            downloadLog.loadStable(downloadLogStable);
-          };
-          case (#storageManager(storageManagerStable)) {
-            storageManager.loadStable(storageManagerStable);
-          };
-          case (#users(usersStable)) {
-            users.loadStable(usersStable);
-          };
-          case (#highestConfigs(highestConfigsStable)) {
-            highestConfigs := TrieMap.fromEntries<PackageName, PackageConfigV3>(highestConfigsStable.vals(), Text.equal, Text.hash);
-          };
-          case (#packageConfigs(packageConfigsStable)) {
-            packageConfigs := TrieMap.fromEntries<PackageId, PackageConfigV3>(packageConfigsStable.vals(), Text.equal, Text.hash);
+          case (#v10(chunk)) {
+            switch (chunk) {
+              case (#blobHashByPackageId(data)) {
+                blobHashByPackageId := TrieMap.fromEntries<PackageId, Text>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#pendingBlobDelete(data)) {
+                pendingBlobDelete := TrieMap.fromEntries<Text, ()>(data.vals(), Text.equal, Text.hash);
+              };
+              case (#gatewayPrincipals(data)) {
+                gatewayPrincipals := TrieMap.fromEntries<Principal, ()>(data.vals(), Principal.equal, Principal.hash);
+              };
+            };
           };
         };
       },
     );
 
     downloadLog.setTimers<system>();
+
+    _rebuildLiveBlobHashes();
 
     // re-init registry
     registry := Registry.Registry(
@@ -778,6 +960,7 @@ actor class Main() = this {
       packageBenchmarks,
       packageNotes,
       packageDocsCoverage,
+      blobHashByPackageId,
     );
     packagePublisher := PackagePublisher.PackagePublisher(registry, storageManager);
   };
@@ -804,6 +987,10 @@ actor class Main() = this {
   stable var storageManagerStable : StorageManager.Stable = null;
   stable var usersStable : Users.Stable = null;
 
+  stable var blobHashByPackageIdStable : [(PackageId, Text)] = [];
+  stable var pendingBlobDeleteStable : [(Text, ())] = [];
+  stable var gatewayPrincipalsStable : [(Principal, ())] = [];
+
   system func preupgrade() {
     packagePublicationsStable := Iter.toArray(packagePublications.entries());
     packageVersionsStable := Iter.toArray(packageVersions.entries());
@@ -824,6 +1011,10 @@ actor class Main() = this {
 
     highestConfigsStableV3 := Iter.toArray(highestConfigs.entries());
     packageConfigsStableV3 := Iter.toArray(packageConfigs.entries());
+
+    blobHashByPackageIdStable := Iter.toArray(blobHashByPackageId.entries());
+    pendingBlobDeleteStable := Iter.toArray(pendingBlobDelete.entries());
+    gatewayPrincipalsStable := Iter.toArray(gatewayPrincipals.entries());
   };
 
   system func postupgrade() {
@@ -887,6 +1078,17 @@ actor class Main() = this {
     users.loadStable(usersStable);
     usersStable := null;
 
+    blobHashByPackageId := TrieMap.fromEntries<PackageId, Text>(blobHashByPackageIdStable.vals(), Text.equal, Text.hash);
+    blobHashByPackageIdStable := [];
+
+    pendingBlobDelete := TrieMap.fromEntries<Text, ()>(pendingBlobDeleteStable.vals(), Text.equal, Text.hash);
+    pendingBlobDeleteStable := [];
+
+    gatewayPrincipals := TrieMap.fromEntries<Principal, ()>(gatewayPrincipalsStable.vals(), Principal.equal, Principal.hash);
+    gatewayPrincipalsStable := [];
+
+    _rebuildLiveBlobHashes();
+
     registry := Registry.Registry(
       packageVersions,
       ownersByPackage,
@@ -901,6 +1103,7 @@ actor class Main() = this {
       packageBenchmarks,
       packageNotes,
       packageDocsCoverage,
+      blobHashByPackageId,
     );
 
     packagePublisher := PackagePublisher.PackagePublisher(registry, storageManager);

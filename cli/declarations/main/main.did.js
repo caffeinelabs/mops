@@ -259,13 +259,44 @@ export const idlFactory = ({ IDL }) => {
     'context' : IDL.Vec(IDL.Nat8),
     'response' : HttpRequestResult,
   });
+  const CreateCertificateResult = IDL.Record({
+    'method' : IDL.Text,
+    'blob_hash' : IDL.Text,
+  });
   const Main = IDL.Service({
+    '_immutableObjectStorageBlobsAreLive' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [IDL.Vec(IDL.Bool)],
+        ['query'],
+      ),
+    '_immutableObjectStorageBlobsToDelete' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Text)],
+        ['query'],
+      ),
+    '_immutableObjectStorageConfirmBlobDeletion' : IDL.Func(
+        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [],
+        [],
+      ),
+    '_immutableObjectStorageCreateCertificate' : IDL.Func(
+        [IDL.Text],
+        [CreateCertificateResult],
+        [],
+      ),
+    '_immutableObjectStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     'addMaintainer' : IDL.Func([PackageName, IDL.Principal], [Result_3], []),
     'addOwner' : IDL.Func([PackageName, IDL.Principal], [Result_3], []),
     'backup' : IDL.Func([], [], []),
     'computeHashesForExistingFiles' : IDL.Func([], [], []),
+    'finishBlobPublish' : IDL.Func([PublishingId, IDL.Text, IDL.Nat, IDL.Nat], [Result], []),
     'finishPublish' : IDL.Func([PublishingId], [Result], []),
     'getApiVersion' : IDL.Func([], [Text], ['query']),
+    'getBlobHash' : IDL.Func(
+        [PackageName, PackageVersion],
+        [IDL.Opt(IDL.Text)],
+        ['query'],
+      ),
     'getBackupCanisterId' : IDL.Func([], [IDL.Principal], ['query']),
     'getDefaultPackages' : IDL.Func(
         [IDL.Text],
@@ -384,6 +415,7 @@ export const idlFactory = ({ IDL }) => {
         [Result_2],
         [],
       ),
+    'startBlobPublish' : IDL.Func([PackageConfigV3_Publishing], [Result_1], []),
     'startPublish' : IDL.Func([PackageConfigV3_Publishing], [Result_1], []),
     'takeSnapshotsIfNeeded' : IDL.Func([], [], []),
     'transformRequest' : IDL.Func(
