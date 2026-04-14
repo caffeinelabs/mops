@@ -2,7 +2,7 @@
 	import {onMount} from "svelte";
 	import Loader from "./Loader.svelte";
 	import PackageCard from "./package/PackageCard.svelte";
-	import {PackageSummary} from "/declarations/main/main.did.js";
+	import type {PackageSummary} from "/declarations/main/main.did.js";
 	import {mainActor} from "/logic/actors";
 
 	export let type : "recently-updated" | "most-downloaded" | "new" = "recently-updated";

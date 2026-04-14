@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {Benchmarks, Benchmark} from "/declarations/main/main.did.js";
+	import type {Benchmarks, Benchmark} from "/declarations/main/main.did.js";
 	import PackageBenchmark from "./PackageBenchmark.svelte";
 	import ColorizedValue from "../ColorizedValue.svelte";
 	import {getMetricDiff} from "/logic/benchmark-utils";

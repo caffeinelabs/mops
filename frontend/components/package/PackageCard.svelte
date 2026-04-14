@@ -3,7 +3,7 @@
 	import {formatDistanceStrict} from "date-fns";
 	import DateEl from "../Date.svelte";
 
-	import {PackageSummary} from "/declarations/main/main.did.js";
+	import type {PackageSummary} from "/declarations/main/main.did.js";
 	import PackageQualityIcon from "./PackageQualityIcon.svelte";
 
 	export let pkg : PackageSummary;

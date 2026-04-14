@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {link} from "svelte-spa-history-router";
 
-	import {DepChange, PackageSummaryWithChanges} from "/declarations/main/main.did.js";
+	import type {DepChange, PackageSummaryWithChanges} from "/declarations/main/main.did.js";
 	import {markdownToHtml} from "/logic/markdown-to-html";
 	import {getDocsCoverageColor} from "/logic/get-docs-coverage-color.js";
 	import Date from "../Date.svelte";

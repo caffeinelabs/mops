@@ -63,14 +63,14 @@
 	<Router {routes}/>
 </div>
 
-<style global>
-	:root {
+<style>
+	:global(:root) {
 		--color-primary: hsl(73deg 20% 44%);
 		--color-primary-light: hsl(72deg 24% 55%);
 		--color-secondary: rgb(213 217 208);
 	}
 
-	body {
+	:global(body) {
 		margin: 0;
 		font-family: sans-serif;
 		-webkit-font-smoothing: antialiased;
@@ -78,11 +78,11 @@
 		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 	}
 
-	button {
+	:global(button) {
 		font-weight: 600;
 	}
 
-	button:not(:disabled) {
+	:global(button:not(:disabled)) {
 		cursor: pointer;
 	}
 
@@ -93,7 +93,7 @@
 		height: 100vh; */
 	}
 
-	.app-loader {
+	:global(.app-loader) {
 		height: 100vh;
 		width: 100vw;
 		display: flex;
@@ -101,22 +101,22 @@
 		justify-content: center;
 	}
 
-	.app-content {
+	:global(.app-content) {
 		flex-grow: 1;
 		overflow: auto;
 	}
 
-	[hidden] {
+	:global([hidden]) {
 		display: none !important;
 	}
 
-	a {
+	:global(a) {
 		color: #7c8659;
 		font-weight: 500;
 		text-decoration: none;
 	}
 
-	input, button, select, textarea {
+	:global(input), :global(button), :global(select), :global(textarea) {
 		font-family: inherit;
 		font-size: inherit;
 		padding: 0.4em;
@@ -126,29 +126,29 @@
 		border-radius: 2px;
 	}
 
-	input:disabled {
+	:global(input:disabled) {
 		color: #ccc;
 	}
 
-	button {
+	:global(button) {
 		color: #333;
 		background-color: #f4f4f4;
 		outline: none;
 	}
 
-	button:disabled {
+	:global(button:disabled) {
 		color: #999;
 	}
 
-	button:not(:disabled):active {
+	:global(button:not(:disabled):active) {
 		background-color: #ddd;
 	}
 
-	select:focus:not(:focus-visible) {
+	:global(select:focus:not(:focus-visible)) {
 		outline: none;
 	}
 
-	button:focus-visible {
+	:global(button:focus-visible) {
 		border-color: #666;
 	}
 </style>

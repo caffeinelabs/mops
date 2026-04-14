@@ -27,23 +27,27 @@
     "js-untar": "^2.0.0",
     "markdown-it": "14.1.0",
     "pako": "^2.1.0",
-    "svelte-chartjs": "3.1.5",
+    "svelte-chartjs": "4.0.1",
     "svelte-spa-history-router": "2.1.1",
     "throttle-debounce": "5.0.2"
   },
+  "overrides": {
+    "@dfinity/agent@1.0.1": {
+      "@dfinity/candid": "1.0.1"
+    }
+  },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "3.0.2",
+    "@sveltejs/vite-plugin-svelte": "7.0.0",
     "@types/throttle-debounce": "5.0.2",
     "@types/markdown-it": "13.0.7",
-    "@types/node": "20.11.30",
+    "@types/node": "22.15.3",
     "@types/pako": "2.0.4",
     "buffer": "^6.0.3",
-    "eslint-plugin-svelte": "2.35.1",
-    "svelte": "4.2.12",
-    "svelte-check": "3.6.8",
-    "svelte-preprocess": "5.1.3",
+    "eslint-plugin-svelte": "2.46.1",
+    "svelte": "5.55.2",
+    "svelte-check": "4.4.6",
     "typescript": "5.4.3",
-    "vite": "5.2.6",
-    "vite-plugin-static-copy": "1.0.2"
+    "vite": "8.0.8",
+    "vite-plugin-static-copy": "4.0.1"
   }
 }

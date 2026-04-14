@@ -13,7 +13,7 @@ interface CanisterIds {
   [key: string]: { [key in Network]: string };
 }
 
-let canisterIds: CanisterIds;
+let canisterIds: CanisterIds = {};
 try {
   canisterIds = JSON.parse(
     fs
@@ -135,5 +135,7 @@ export default defineConfig({
     "process.env.NODE_ENV": JSON.stringify(
       network === "local" ? "development" : "production",
     ),
+    // Catch-all fallback: Vite replaces longest keys first, so specific process.env.X entries above take priority
+    "process.env": "({})",
   },
 });

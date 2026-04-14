@@ -1,6 +1,6 @@
 <script lang="ts">
 	import {filesize} from "filesize";
-	import {Benchmark} from "/declarations/main/main.did.js";
+	import type {Benchmark} from "/declarations/main/main.did.js";
 	import ColorizedValue from "../ColorizedValue.svelte";
 	import {getMetricDiff, getMetricNum} from "/logic/benchmark-utils";
 

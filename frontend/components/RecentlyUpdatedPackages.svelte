@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {onMount} from "svelte";
 	import Loader from "./Loader.svelte";
-	import {PackageSummaryWithChanges} from "/declarations/main/main.did.js";
+	import type {PackageSummaryWithChanges} from "/declarations/main/main.did.js";
 	import {mainActor} from "/logic/actors";
 	import PackageVersionSummary from "./package/PackageVersionSummary.svelte";
 
