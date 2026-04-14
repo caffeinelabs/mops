@@ -60,11 +60,6 @@ type Script =
    name: text;
    value: text;
  };
-type Result_9 = 
- variant {
-   err: Err;
-   ok: vec PackageVersion;
- };
 type Result_8 = 
  variant {
    err: Err;
@@ -316,7 +311,6 @@ type Main =
           SemverPart;
         }) -> (Result_6) query;
    getHighestVersion: (name: PackageName) -> (Result_5) query;
-   getPackageVersions: (name: PackageName) -> (Result_9) query;
    getMostDownloadedPackages: () -> (vec PackageSummary) query;
    getMostDownloadedPackagesIn7Days: () -> (vec PackageSummary) query;
    getNewPackages: () -> (vec PackageSummary) query;

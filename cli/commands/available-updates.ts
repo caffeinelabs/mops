@@ -1,11 +1,14 @@
 import process from "node:process";
 import chalk from "chalk";
 import { mainActor } from "../api/actors.js";
-import { getPackageVersions } from "../api/getPackageVersions.js";
 import { Config } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
-import { semver, isRange, stripRangePrefix } from "../semver.js";
+import {
+  isRange,
+  stripRangePrefix,
+  rangeToSemverPart,
+} from "../semver.js";
 import { checkLockFileLight, readLockFile } from "../integrity.js";
 
 // [pkg, oldVersion, newVersion]
@@ -25,6 +28,8 @@ export async function getAvailableUpdates(
       getDepPinnedVersion(dep.name).split(".").length !== 3,
   );
 
+  if (depsToUpdate.length === 0) return [];
+
   let getCurrentVersion = (pkg: string, updateVersion: string) => {
     for (let dep of allDeps) {
       if (getDepName(dep.name) === pkg && dep.version) {
@@ -38,7 +43,6 @@ export async function getAvailableUpdates(
     return "";
   };
 
-  // Read lock file for comparing currently resolved versions
   let lockedDeps: Record<string, string> = {};
   if (checkLockFileLight()) {
     let lockFileJson = readLockFile();
@@ -47,55 +51,37 @@ export async function getAvailableUpdates(
     }
   }
 
-  let rangedDeps = depsToUpdate.filter((dep) => isRange(dep.version || ""));
-  let exactDeps = depsToUpdate.filter((dep) => !isRange(dep.version || ""));
-
-  let results: Array<[string, string]> = [];
-
-  // Resolve ranged deps using getPackageVersions + local filtering
-  let rangedResults = await Promise.all(
-    rangedDeps.map(async (dep) => {
+  // Single batch call for all deps (both ranged and exact)
+  let actor = await mainActor();
+  let res = await actor.getHighestSemverBatch(
+    depsToUpdate.map((dep) => {
       let name = getDepName(dep.name);
-      let versionsRes = await getPackageVersions(name);
-      if ("err" in versionsRes) return null;
-      let highest = semver.maxSatisfying(versionsRes.ok, dep.version || "");
-      return highest ? ([name, highest] as [string, string]) : null;
+      let version = dep.version || "";
+
+      if (isRange(version)) {
+        return [name, stripRangePrefix(version), rangeToSemverPart(version)];
+      }
+
+      let semverPart: SemverPart = { major: null };
+      let pinnedVersion = getDepPinnedVersion(dep.name);
+      if (pinnedVersion) {
+        semverPart =
+          pinnedVersion.split(".").length === 1
+            ? { minor: null }
+            : { patch: null };
+      }
+      return [name, version, semverPart];
     }),
   );
-  for (let r of rangedResults) {
-    if (r) results.push(r);
+
+  if ("err" in res) {
+    console.log(chalk.red("Error:"), res.err);
+    process.exit(1);
   }
 
-  // Resolve exact deps using existing getHighestSemverBatch
-  if (exactDeps.length > 0) {
-    let actor = await mainActor();
-    let res = await actor.getHighestSemverBatch(
-      exactDeps.map((dep) => {
-        let semverPart: SemverPart = { major: null };
-        let name = getDepName(dep.name);
-        let pinnedVersion = getDepPinnedVersion(dep.name);
-        if (pinnedVersion) {
-          semverPart =
-            pinnedVersion.split(".").length === 1
-              ? { minor: null }
-              : { patch: null };
-        }
-        return [name, dep.version || "", semverPart];
-      }),
-    );
-
-    if ("err" in res) {
-      console.log(chalk.red("Error:"), res.err);
-      process.exit(1);
-    }
-
-    results.push(...res.ok);
-  }
-
-  return results
+  return res.ok
     .filter((dep) => {
       let currentConfigVer = getCurrentVersion(dep[0], dep[1]);
-      // For ranged deps, compare against the locked/resolved version
       let currentResolved = isRange(currentConfigVer)
         ? lockedDeps[dep[0]] || stripRangePrefix(currentConfigVer)
         : currentConfigVer;

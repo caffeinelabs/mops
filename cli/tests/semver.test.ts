@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { semver, isRange, stripRangePrefix } from "../semver";
+import { semver, isRange, stripRangePrefix, rangeToSemverPart } from "../semver";
 
 describe("isRange", () => {
   test("caret is range", () => expect(isRange("^1.0.0")).toBe(true));
@@ -41,5 +41,28 @@ describe("semver re-export works for version ranges", () => {
     expect(semver.compare("1.0.0", "2.0.0")).toBe(-1);
     expect(semver.compare("1.0.0", "1.0.0")).toBe(0);
     expect(semver.compare("2.0.0", "1.0.0")).toBe(1);
+  });
+});
+
+describe("rangeToSemverPart", () => {
+  test("caret major>0 maps to #major", () => {
+    expect(rangeToSemverPart("^1.2.3")).toEqual({ major: null });
+    expect(rangeToSemverPart("^2.0.0")).toEqual({ major: null });
+  });
+
+  test("caret 0.minor>0 maps to #minor", () => {
+    expect(rangeToSemverPart("^0.2.3")).toEqual({ minor: null });
+    expect(rangeToSemverPart("^0.1.0")).toEqual({ minor: null });
+  });
+
+  test("caret 0.0.z maps to #patch", () => {
+    expect(rangeToSemverPart("^0.0.3")).toEqual({ patch: null });
+    expect(rangeToSemverPart("^0.0.0")).toEqual({ patch: null });
+  });
+
+  test("tilde always maps to #minor", () => {
+    expect(rangeToSemverPart("~1.2.3")).toEqual({ minor: null });
+    expect(rangeToSemverPart("~0.2.3")).toEqual({ minor: null });
+    expect(rangeToSemverPart("~0.0.3")).toEqual({ minor: null });
   });
 });
