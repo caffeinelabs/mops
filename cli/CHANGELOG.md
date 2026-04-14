@@ -2,6 +2,12 @@
 
 ## Next
 
+## 2.10.0
+- `mops check` and `mops check-stable` now apply per-canister `[canisters.<name>].args` (previously only `mops build` applied them)
+- `mops check` now accepts canister names as arguments (e.g. `mops check backend`) to check a specific canister
+- `mops check-stable` now works without arguments, checking all canisters with `[check-stable]` configured
+- `mops check-stable` now accepts canister names as arguments (e.g. `mops check-stable backend`)
+
 ## 2.9.0
 - Add `mops info <pkg>` command to show detailed package metadata from the registry
 - Add `[lint.extra]` config for applying additional lint rules to specific files via glob patterns
