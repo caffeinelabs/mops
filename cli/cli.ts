@@ -332,7 +332,7 @@ program
 program
   .command("check [args...]")
   .description(
-    "Check Motoko canisters or files for syntax errors and type issues. Arguments can be canister names or .mo file paths. If no arguments are given, checks all canisters from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured, and runs linting if lintoko is configured in [toolchain] and rule directories are present",
+    "Check Motoko canisters or files for syntax errors and type issues. Arguments can be canister names or file paths. If no arguments are given, checks all canisters from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured, and runs linting if lintoko is configured in [toolchain]",
   )
   .option("--verbose", "Verbose console output")
   .addOption(

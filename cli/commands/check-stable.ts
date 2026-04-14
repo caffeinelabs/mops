@@ -60,8 +60,9 @@ export async function checkStable(
   const mocPath = await toolchain.bin("moc", { fallback: true });
   const globalMocArgs = getGlobalMocArgs(config);
 
-  if (args.length > 0 && looksLikeFile(args[0]!)) {
-    const oldFile = args[0]!;
+  const firstArg = args[0];
+  if (firstArg && looksLikeFile(firstArg)) {
+    const oldFile = firstArg;
     const canisterName = args[1];
     const { name, canister } = resolveSingleCanister(config, canisterName);
 
@@ -86,6 +87,7 @@ export async function checkStable(
   const canisters = resolveCanisterConfigs(config);
   const canisterNames = args.length > 0 ? args : undefined;
   const filteredCanisters = filterCanisters(canisters, canisterNames);
+  const sources = (await sourcesArgs()).flat();
 
   let checked = 0;
   for (const [name, canister] of Object.entries(filteredCanisters)) {
@@ -108,6 +110,7 @@ export async function checkStable(
       mocPath,
       globalMocArgs,
       canisterArgs: canister.args ?? [],
+      sources,
       options,
     });
     checked++;

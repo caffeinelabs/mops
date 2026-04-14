@@ -35,7 +35,7 @@ export interface CheckOptions {
   extraArgs: string[];
 }
 
-function logAllLibsSupport(verbose?: boolean): boolean {
+function checkAllLibsSupport(verbose?: boolean): boolean {
   const allLibs = supportsAllLibsFlag();
   if (!allLibs) {
     console.log(
@@ -97,7 +97,7 @@ export async function check(
   }
 
   if (isFileMode) {
-    await checkFiles(config, args, options);
+    await checkFiles(config, fileArgs, options);
   } else {
     if (!hasCanisters) {
       cliError(
@@ -135,7 +135,7 @@ async function checkCanisters(
   const mocPath = await toolchain.bin("moc", { fallback: true });
   const sources = (await sourcesArgs()).flat();
   const globalMocArgs = getGlobalMocArgs(config);
-  const allLibs = logAllLibsSupport(options.verbose);
+  const allLibs = checkAllLibsSupport(options.verbose);
 
   for (const [canisterName, canister] of Object.entries(canisters)) {
     if (!canister.main) {
@@ -220,7 +220,7 @@ async function checkFiles(
   const mocPath = await toolchain.bin("moc", { fallback: true });
   const sources = (await sourcesArgs()).flat();
   const globalMocArgs = getGlobalMocArgs(config);
-  const allLibs = logAllLibsSupport(options.verbose);
+  const allLibs = checkAllLibsSupport(options.verbose);
 
   const mocArgs = [
     "--check",

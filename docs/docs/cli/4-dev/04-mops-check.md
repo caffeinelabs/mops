@@ -13,7 +13,7 @@ mops check [args...]
 
 Runs the Motoko compiler in check-only mode (`moc --check`). All package sources from the project are automatically included.
 
-Arguments can be **canister names** (as defined in `[canisters]`) or **file paths** (`.mo` files). When no arguments are given, checks all canisters defined in the `[canisters]` section of `mops.toml`.
+Arguments can be **canister names** (as defined in `[canisters]`) or **file paths**. When no arguments are given, checks all canisters defined in the `[canisters]` section of `mops.toml`.
 
 When checking canisters, per-canister `[canisters.<name>].args` from `mops.toml` are applied alongside global `[moc].args`.
 
