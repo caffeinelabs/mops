@@ -142,7 +142,7 @@ mops migrate freeze               # move next-migration to the permanent chain
 mops migrate freeze backend       # specify canister explicitly
 ```
 
-When `[canisters.<name>.migrations]` is configured, `mops check` and `mops build` automatically inject `--enhanced-migration`. Do not add `--enhanced-migration` to `[canisters.<name>].args` when using managed migrations — mops will error.
+When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, and `mops check-stable` automatically inject `--enhanced-migration`. Do not add `--enhanced-migration` to `[canisters.<name>].args` when using managed migrations — mops will error.
 
 Typical workflow: make a breaking change → `mops check` fails with a hint → `mops migrate new Name` → edit migration → `mops check` passes → `mops build` → deploy → `mops migrate freeze`.
 

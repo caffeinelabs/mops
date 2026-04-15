@@ -141,7 +141,7 @@ skipIfMissing = true
 
 ### `[canisters.<name>.migrations]`
 
-Configure managed enhanced orthogonal persistence migrations for a canister. When set, `mops check` and `mops build` auto-inject `--enhanced-migration` and you can use [`mops migrate`](/cli/mops-migrate) commands to manage the migration chain.
+Configure managed enhanced orthogonal persistence migrations for a canister. When set, `mops check`, `mops build`, and `mops check-stable` auto-inject `--enhanced-migration` and you can use [`mops migrate`](/cli/mops-migrate) commands to manage the migration chain.
 
 | Field       | Description                                                     |
 | ----------- | --------------------------------------------------------------- |
