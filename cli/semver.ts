@@ -17,22 +17,33 @@ export function stripRangePrefix(spec: string): string {
 /**
  * Map a range spec to the SemverPart that getHighestSemverBatch expects.
  *
- *   ^1.2.3 (major>0) → #major   (highest within same major)
- *   ^0.2.3 (minor>0) → #minor   (highest within same minor)
- *   ^0.0.3            → #patch   (highest within same patch = exact)
- *   ~X.Y.Z            → #minor   (highest within same minor)
+ * Backend semantics:
+ *   #major → any higher version (no constraint)
+ *   #minor → highest within same major
+ *   #patch → highest within same major.minor
+ *
+ * Mapping:
+ *   ^1.2.3 (major>0) → #minor  (same major)
+ *   ^0.2.3 (minor>0) → #patch  (same major.minor)
+ *   ^0.0.3            → null    (exact pin, caller must handle)
+ *   ~X.Y.Z            → #patch  (same major.minor)
  */
-export function rangeToSemverPart(spec: string): SemverPart {
+export function rangeToSemverPart(spec: string): SemverPart | null {
   let bare = stripRangePrefix(spec);
   let parsed = semver.parse(bare);
-  if (!parsed) return { major: null };
-
-  if (spec.startsWith("~")) {
+  if (!parsed) {
     return { minor: null };
   }
 
-  // caret
-  if (parsed.major !== 0) return { major: null };
-  if (parsed.minor !== 0) return { minor: null };
-  return { patch: null };
+  if (spec.startsWith("~")) {
+    return { patch: null };
+  }
+
+  if (parsed.major !== 0) {
+    return { minor: null };
+  }
+  if (parsed.minor !== 0) {
+    return { patch: null };
+  }
+  return null;
 }

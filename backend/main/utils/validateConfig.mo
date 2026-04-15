@@ -248,7 +248,7 @@ module {
     };
 
     if (dep.repo.size() == 0) {
-      let versionValid = Semver.validateVersionOrRange(dep.version);
+      let versionValid = Semver.validate(dep.version);
       if (Result.isErr(versionValid)) {
         return versionValid;
       };
@@ -261,8 +261,8 @@ module {
 
     let (_name, aliasVersion) = PackageUtils.parseDepName(dep.name);
     if (aliasVersion.size() > 0) {
-      let bareVersion = Semver.stripRangePrefix(dep.version);
-      if (not Text.startsWith(bareVersion, #text(aliasVersion))) {
+      // check alias prefix
+      if (not Text.startsWith(dep.version, #text(aliasVersion))) {
         return #err("Dependency alias version must be a prefix of the dependency version\nName: " # dep.name # "\nAlias: " # aliasVersion # "\nVersion: " # dep.version);
       };
     };

@@ -24,6 +24,7 @@ import {
   Requirement,
 } from "../declarations/main/main.did.js";
 import { Dependency } from "../types.js";
+import { stripRangePrefix } from "../semver.js";
 import { testWithReporter } from "./test/test.js";
 import { SilentReporter } from "./test/reporters/silent-reporter.js";
 import { findChangelogEntry } from "../helpers/find-changelog-entry.js";
@@ -234,7 +235,7 @@ export async function publish(
   let toBackendDep = (dep: Dependency): DependencyV2 => {
     return {
       ...dep,
-      version: dep.version || "",
+      version: stripRangePrefix(dep.version || ""),
       repo: dep.repo || "",
     };
   };

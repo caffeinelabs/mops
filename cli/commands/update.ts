@@ -69,32 +69,21 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
       console.log(chalk.green("All dependencies are up to date!"));
     }
   } else {
-    for (let dep of available) {
-      let devDeps = Object.keys(config["dev-dependencies"] || {});
-      let allDeps = [...Object.keys(config.dependencies || {}), ...devDeps];
+    let devDepKeys = Object.keys(config["dev-dependencies"] || {});
+    let allDepKeys = [...Object.keys(config.dependencies || {}), ...devDepKeys];
 
-      let dev = false;
+    for (let dep of available) {
       let bareOld = stripRangePrefix(dep[1]);
-      for (let d of devDeps) {
+      let matchesName = (d: string) => {
         let pinnedVersion = getDepPinnedVersion(d);
-        if (
+        return (
           getDepName(d) === dep[0] &&
           (!pinnedVersion || bareOld.startsWith(pinnedVersion))
-        ) {
-          dev = true;
-          break;
-        }
-      }
+        );
+      };
 
-      let asName =
-        allDeps.find((d) => {
-          let pinnedVersion = getDepPinnedVersion(d);
-          return (
-            getDepName(d) === dep[0] &&
-            (!pinnedVersion || bareOld.startsWith(pinnedVersion))
-          );
-        }) || dep[0];
-
+      let dev = devDepKeys.some(matchesName);
+      let asName = allDepKeys.find(matchesName) || dep[0];
       let rangePrefix = isRange(dep[1]) ? dep[1][0] : "";
       await add(`${dep[0]}@${rangePrefix}${dep[2]}`, { dev, lock }, asName);
     }

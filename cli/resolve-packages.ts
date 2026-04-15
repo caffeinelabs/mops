@@ -33,7 +33,9 @@ function resolveRangeFromCache(
 ): string {
   let key = `${name}@${version}`;
   let cached = cache.get(key);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) {
+    return cached;
+  }
 
   let bareVersion = stripRangePrefix(version);
   if (!isRange(version)) {
@@ -222,7 +224,6 @@ export async function resolvePackages({
         hasConflicts = true;
       }
 
-      // Check range constraint satisfaction
       let resolved = packages[dep];
       if (resolved?.version) {
         let resolvedExact = resolveRangeFromCache(
