@@ -145,7 +145,7 @@ async function checkCanisters(
       );
     }
 
-    validateCanisterArgs(canister, canisterName);
+    validateCanisterArgs(canister, canisterName, config);
     const motokoPath = resolveConfigPath(canister.main);
 
     const migration = await prepareMigrationArgs(

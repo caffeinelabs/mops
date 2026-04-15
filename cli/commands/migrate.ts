@@ -56,12 +56,14 @@ function resolveMigrationCanister(canisterName?: string): {
   return { name: withMigrations[0]![0], canister: withMigrations[0]![1] };
 }
 
+const VALID_NAME_RE = /^[A-Za-z][A-Za-z0-9_]*$/;
+
 function generateTimestamp(): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   return (
-    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
-    `_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+    `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}` +
+    `_${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`
   );
 }
 
@@ -76,6 +78,13 @@ export async function migrateNew(
   name: string,
   canisterName?: string,
 ): Promise<void> {
+  if (!VALID_NAME_RE.test(name)) {
+    cliError(
+      `Invalid migration name: "${name}"\n` +
+        "Name must start with a letter and contain only letters, digits, and underscores.",
+    );
+  }
+
   const { name: resolvedName, canister } =
     resolveMigrationCanister(canisterName);
   const migrations = canister.migrations!;

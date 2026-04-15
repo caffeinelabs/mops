@@ -247,7 +247,7 @@ function collectExtraArgs(
     args.push(...config.build.args);
   }
   if (canister.args) {
-    validateCanisterArgs(canister, canisterName);
+    validateCanisterArgs(canister, canisterName, config);
     args.push(...canister.args);
   }
   if (extraArgs) {

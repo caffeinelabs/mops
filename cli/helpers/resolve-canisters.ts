@@ -74,21 +74,27 @@ export function looksLikeFile(arg: string): boolean {
 export function validateCanisterArgs(
   canister: CanisterConfig,
   canisterName: string,
+  config?: Config,
 ): void {
   if (canister.args && typeof canister.args === "string") {
     cliError(
       `Canister config 'args' should be an array of strings for canister ${canisterName}`,
     );
   }
-  if (
-    canister.migrations &&
-    canister.args?.some((a) => a.startsWith("--enhanced-migration"))
-  ) {
-    cliError(
-      `Canister '${canisterName}' has both [migrations] config and --enhanced-migration in args.\n` +
-        "Remove --enhanced-migration from [canisters." +
-        canisterName +
-        "].args — it is managed automatically when [migrations] is configured.",
-    );
+  if (!canister.migrations) {
+    return;
+  }
+  const flagSources: [string, string[] | undefined][] = [
+    [`[canisters.${canisterName}].args`, canister.args],
+    ["[moc].args", config?.moc?.args],
+    ["[build].args", config?.build?.args],
+  ];
+  for (const [section, args] of flagSources) {
+    if (args?.some((a) => a.startsWith("--enhanced-migration"))) {
+      cliError(
+        `Canister '${canisterName}' has [migrations] config but --enhanced-migration in ${section}.\n` +
+          "Remove --enhanced-migration — it is managed automatically when [migrations] is configured.",
+      );
+    }
   }
 }

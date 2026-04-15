@@ -48,6 +48,15 @@ describe("migrate", () => {
       expect(result.stderr).toMatch(/next migration already exists/i);
     });
 
+    test("errors on invalid migration name", async () => {
+      const cwd = await makeTempFixture("basic");
+      for (const name of ["../evil", "has space", "123start", "foo/bar"]) {
+        const result = await cli(["migrate", "new", name], { cwd });
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toMatch(/invalid migration name/i);
+      }
+    });
+
     test("errors when [migrations] not configured", async () => {
       const cwd = await makeTempFixture("basic");
       await writeFile(

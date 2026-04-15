@@ -71,12 +71,13 @@ export async function checkStable(
       cliError(`No main file specified for canister '${name}' in mops.toml`);
     }
 
-    validateCanisterArgs(canister, name);
+    validateCanisterArgs(canister, name, config);
 
     const migration = await prepareMigrationArgs(
       canister.migrations,
       name,
       "check",
+      options.verbose,
     );
     try {
       await runStableCheck({
@@ -106,7 +107,7 @@ export async function checkStable(
       cliError(`No main file specified for canister '${name}' in mops.toml`);
     }
 
-    validateCanisterArgs(canister, name);
+    validateCanisterArgs(canister, name, config);
     const stablePath = resolveStablePath(canister, name, {
       required: !!canisterNames,
     });
@@ -118,6 +119,7 @@ export async function checkStable(
       canister.migrations,
       name,
       "check",
+      options.verbose,
     );
     try {
       await runStableCheck({

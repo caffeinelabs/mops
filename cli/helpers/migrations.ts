@@ -36,10 +36,13 @@ export function getNextMigrationFile(nextDir: string): string | null {
 }
 
 export function validateNextMigrationOrder(
-  chainDir: string,
+  chainDirOrFiles: string | string[],
   nextFile: string,
 ): void {
-  const chainFiles = getMigrationFiles(chainDir);
+  const chainFiles =
+    typeof chainDirOrFiles === "string"
+      ? getMigrationFiles(chainDirOrFiles)
+      : chainDirOrFiles;
   const lastChainFile = chainFiles[chainFiles.length - 1];
   if (lastChainFile && nextFile <= lastChainFile) {
     cliError(
@@ -64,17 +67,13 @@ export function validateMigrationsConfig(
       `[canisters.${canisterName}.migrations] is missing required field "next"`,
     );
   }
-  if (
-    migrations["check-limit"] !== undefined &&
-    migrations["check-limit"] <= 0
-  ) {
-    cliError(`[canisters.${canisterName}.migrations] check-limit must be > 0`);
-  }
-  if (
-    migrations["build-limit"] !== undefined &&
-    migrations["build-limit"] <= 0
-  ) {
-    cliError(`[canisters.${canisterName}.migrations] build-limit must be > 0`);
+  for (const field of ["check-limit", "build-limit"] as const) {
+    const value = migrations[field];
+    if (value !== undefined && (!Number.isInteger(value) || value <= 0)) {
+      cliError(
+        `[canisters.${canisterName}.migrations] ${field} must be a positive integer`,
+      );
+    }
   }
 }
 
@@ -109,7 +108,7 @@ export async function prepareMigrationArgs(
   const chainFiles = getMigrationFiles(chainDir);
 
   if (nextFile) {
-    validateNextMigrationOrder(chainDir, nextFile);
+    validateNextMigrationOrder(chainFiles, nextFile);
   }
 
   const limit =
