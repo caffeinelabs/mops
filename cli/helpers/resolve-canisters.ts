@@ -80,4 +80,15 @@ export function validateCanisterArgs(
       `Canister config 'args' should be an array of strings for canister ${canisterName}`,
     );
   }
+  if (
+    canister.migrations &&
+    canister.args?.some((a) => a.startsWith("--enhanced-migration"))
+  ) {
+    cliError(
+      `Canister '${canisterName}' has both [migrations] config and --enhanced-migration in args.\n` +
+        "Remove --enhanced-migration from [canisters." +
+        canisterName +
+        "].args — it is managed automatically when [migrations] is configured.",
+    );
+  }
 }

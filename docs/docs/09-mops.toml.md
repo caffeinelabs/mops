@@ -114,7 +114,10 @@ Multi-canister example with per-canister flags:
 ```toml
 [canisters.backend]
 main = "src/backend/main.mo"
-args = ["--enhanced-migration=migrations/backend"]
+
+[canisters.backend.migrations]
+chain = "migrations/backend"
+next = "next-migration/backend"
 
 [canisters.frontend]
 main = "src/frontend/main.mo"
@@ -135,6 +138,32 @@ Example:
 path = ".old/src/main.most"
 skipIfMissing = true
 ```
+
+### `[canisters.<name>.migrations]`
+
+Configure managed enhanced orthogonal persistence migrations for a canister. When set, `mops check` and `mops build` auto-inject `--enhanced-migration` and you can use [`mops migrate`](/cli/mops-migrate) commands to manage the migration chain.
+
+| Field       | Description                                                     |
+| ----------- | --------------------------------------------------------------- |
+| chain       | Path to the directory containing frozen migration files (required) |
+| next        | Path to the staging directory for the next migration (required). Must contain 0 or 1 `.mo` files |
+| check-limit | Max number of migrations to include when running `mops check` (optional). When set, only the last N migrations from the chain are used |
+| build-limit | Max number of migrations to include when running `mops build` (optional). When set, only the last N migrations from the chain are used |
+
+Example:
+```toml
+[canisters.backend.migrations]
+chain = "migrations"
+next = "next-migration"
+check-limit = 1
+build-limit = 100
+```
+
+Migration files must be named so they sort lexicographically in the correct order. The recommended naming convention is `YYYYMMDD_HHMMSS_Name.mo` (e.g. `20250415_120000_AddEmail.mo`).
+
+:::note
+When `[migrations]` is configured, do not add `--enhanced-migration` to `[canisters.<name>].args` — mops manages this flag automatically.
+:::
 
 Shorthand — when only the entrypoint is needed:
 ```toml

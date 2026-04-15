@@ -4,6 +4,7 @@ import { rm } from "node:fs/promises";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
+import { prepareMigrationArgs } from "../helpers/migrations.js";
 import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
 import { CanisterConfig } from "../types.js";
 import {
@@ -72,15 +73,25 @@ export async function checkStable(
 
     validateCanisterArgs(canister, name);
 
-    await runStableCheck({
-      oldFile,
-      canisterMain: resolveConfigPath(canister.main),
-      canisterName: name,
-      mocPath,
-      globalMocArgs,
-      canisterArgs: canister.args ?? [],
-      options,
-    });
+    const migration = await prepareMigrationArgs(
+      canister.migrations,
+      name,
+      "check",
+    );
+    try {
+      await runStableCheck({
+        oldFile,
+        canisterMain: resolveConfigPath(canister.main),
+        canisterName: name,
+        mocPath,
+        globalMocArgs,
+        canisterArgs: [...migration.migrationArgs, ...(canister.args ?? [])],
+        options,
+        hasMigrations: !!canister.migrations,
+      });
+    } finally {
+      await migration.cleanup();
+    }
     return;
   }
 
@@ -103,16 +114,26 @@ export async function checkStable(
       continue;
     }
 
-    await runStableCheck({
-      oldFile: stablePath,
-      canisterMain: resolveConfigPath(canister.main),
-      canisterName: name,
-      mocPath,
-      globalMocArgs,
-      canisterArgs: canister.args ?? [],
-      sources,
-      options,
-    });
+    const migration = await prepareMigrationArgs(
+      canister.migrations,
+      name,
+      "check",
+    );
+    try {
+      await runStableCheck({
+        oldFile: stablePath,
+        canisterMain: resolveConfigPath(canister.main),
+        canisterName: name,
+        mocPath,
+        globalMocArgs,
+        canisterArgs: [...migration.migrationArgs, ...(canister.args ?? [])],
+        sources,
+        options,
+        hasMigrations: !!canister.migrations,
+      });
+    } finally {
+      await migration.cleanup();
+    }
     checked++;
   }
 
@@ -136,6 +157,7 @@ export interface RunStableCheckParams {
   canisterArgs: string[];
   sources?: string[];
   options?: Partial<CheckStableOptions>;
+  hasMigrations?: boolean;
 }
 
 export async function runStableCheck(
@@ -203,6 +225,13 @@ export async function runStableCheck(
     if (result.exitCode !== 0) {
       if (result.stderr) {
         console.error(result.stderr);
+      }
+      if (params.hasMigrations) {
+        console.error(
+          chalk.yellow(
+            "Hint: You may need a migration. Run `mops migrate new <Name>` to create one.",
+          ),
+        );
       }
       cliError(
         `✗ Stable compatibility check failed for canister '${canisterName}'`,

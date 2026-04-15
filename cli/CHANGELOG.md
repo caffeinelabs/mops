@@ -1,6 +1,11 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced orthogonal persistence migration chains
+- Add `[canisters.<name>.migrations]` config section with `chain`, `next`, `check-limit`, and `build-limit` fields
+- `mops check` and `mops build` now auto-inject `--enhanced-migration` when `[migrations]` is configured
+- `mops check` emits a hint to create a migration when a stable compatibility check fails and `[migrations]` is configured
+- Migration chain trimming: only the last N migrations are passed to `moc` based on `check-limit`/`build-limit` settings
 
 ## 2.10.0
 - `mops check` and `mops check-stable` now apply per-canister `[canisters.<name>].args` (previously only `mops build` applied them)

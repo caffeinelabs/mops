@@ -31,7 +31,12 @@ args = ["--default-persistent-actors", "-W=M0223,M0236,M0237"]
 
 [canisters.backend]
 main = "src/backend/main.mo"
-args = ["--enhanced-migration=src/backend/migrations", "-A=M0254"]
+
+[canisters.backend.migrations]
+chain = "src/backend/migrations"
+next = "src/backend/next-migration"
+check-limit = 1
+build-limit = 100
 
 [canisters.backend.check-stable]
 path = ".old/src/backend/dist/backend.most"
@@ -62,8 +67,9 @@ Flags are applied in this order (later overrides earlier):
 
 1. `[moc].args` — global, all commands (check, build, test, etc.)
 2. `[build].args` — build only (e.g. `--release`)
-3. `[canisters.<name>].args` — per-canister (e.g. `--enhanced-migration=...`)
-4. CLI `-- <flags>` — one-off overrides
+3. `[canisters.<name>.migrations]` — auto-injected `--enhanced-migration` (managed by mops)
+4. `[canisters.<name>].args` — per-canister
+5. CLI `-- <flags>` — one-off overrides
 
 ## Core Commands
 
@@ -124,6 +130,21 @@ mops toolchain bin moc               # print path to binary
 ```
 
 **Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry.
+
+### `mops migrate`
+
+Manage enhanced orthogonal persistence migration chains:
+
+```bash
+mops migrate new AddEmail         # create a new migration file in next-migration/
+mops migrate new AddEmail backend # specify canister explicitly
+mops migrate freeze               # move next-migration to the permanent chain
+mops migrate freeze backend       # specify canister explicitly
+```
+
+When `[canisters.<name>.migrations]` is configured, `mops check` and `mops build` automatically inject `--enhanced-migration`. Do not add `--enhanced-migration` to `[canisters.<name>].args` when using managed migrations — mops will error.
+
+Typical workflow: make a breaking change → `mops check` fails with a hint → `mops migrate new Name` → edit migration → `mops check` passes → `mops build` → deploy → `mops migrate freeze`.
 
 ### `mops remove <package>`
 

@@ -16,6 +16,7 @@ import {
   resolveCanisterConfigs,
   validateCanisterArgs,
 } from "../helpers/resolve-canisters.js";
+import { prepareMigrationArgs } from "../helpers/migrations.js";
 import { CanisterConfig, Config } from "../types.js";
 import { resolveStablePath, runStableCheck } from "./check-stable.js";
 import { sourcesArgs } from "./sources.js";
@@ -147,67 +148,79 @@ async function checkCanisters(
     validateCanisterArgs(canister, canisterName);
     const motokoPath = resolveConfigPath(canister.main);
 
-    const mocArgs = [
-      "--check",
-      ...(allLibs ? ["--all-libs"] : []),
-      ...sources,
-      ...globalMocArgs,
-      ...(canister.args ?? []),
-      ...(options.extraArgs ?? []),
-    ];
-
-    if (options.fix) {
-      if (options.verbose) {
-        console.log(
-          chalk.blue("check"),
-          chalk.gray(`Attempting to fix ${canisterName}`),
-        );
-      }
-
-      const fixResult = await autofixMotoko(mocPath, [motokoPath], mocArgs);
-      logAutofixResult(fixResult, options.verbose);
-    }
-
+    const migration = await prepareMigrationArgs(
+      canister.migrations,
+      canisterName,
+      "check",
+      options.verbose,
+    );
     try {
-      const args = [motokoPath, ...mocArgs];
-      if (options.verbose) {
-        console.log(
-          chalk.blue("check"),
-          chalk.gray(`Checking canister ${canisterName}:`),
-        );
-        console.log(chalk.gray(mocPath, JSON.stringify(args)));
+      const mocArgs = [
+        "--check",
+        ...(allLibs ? ["--all-libs"] : []),
+        ...sources,
+        ...globalMocArgs,
+        ...migration.migrationArgs,
+        ...(canister.args ?? []),
+        ...(options.extraArgs ?? []),
+      ];
+
+      if (options.fix) {
+        if (options.verbose) {
+          console.log(
+            chalk.blue("check"),
+            chalk.gray(`Attempting to fix ${canisterName}`),
+          );
+        }
+
+        const fixResult = await autofixMotoko(mocPath, [motokoPath], mocArgs);
+        logAutofixResult(fixResult, options.verbose);
       }
 
-      const result = await execa(mocPath, args, {
-        stdio: "inherit",
-        reject: false,
-      });
+      try {
+        const args = [motokoPath, ...mocArgs];
+        if (options.verbose) {
+          console.log(
+            chalk.blue("check"),
+            chalk.gray(`Checking canister ${canisterName}:`),
+          );
+          console.log(chalk.gray(mocPath, JSON.stringify(args)));
+        }
 
-      if (result.exitCode !== 0) {
+        const result = await execa(mocPath, args, {
+          stdio: "inherit",
+          reject: false,
+        });
+
+        if (result.exitCode !== 0) {
+          cliError(
+            `✗ Check failed for canister ${canisterName} (exit code: ${result.exitCode})`,
+          );
+        }
+
+        console.log(chalk.green(`✓ ${canisterName}`));
+      } catch (err: any) {
         cliError(
-          `✗ Check failed for canister ${canisterName} (exit code: ${result.exitCode})`,
+          `Error while checking canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
         );
       }
 
-      console.log(chalk.green(`✓ ${canisterName}`));
-    } catch (err: any) {
-      cliError(
-        `Error while checking canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
-      );
-    }
-
-    const stablePath = resolveStablePath(canister, canisterName);
-    if (stablePath) {
-      await runStableCheck({
-        oldFile: stablePath,
-        canisterMain: motokoPath,
-        canisterName,
-        mocPath,
-        globalMocArgs,
-        canisterArgs: canister.args ?? [],
-        sources,
-        options: { verbose: options.verbose, extraArgs: options.extraArgs },
-      });
+      const stablePath = resolveStablePath(canister, canisterName);
+      if (stablePath) {
+        await runStableCheck({
+          oldFile: stablePath,
+          canisterMain: motokoPath,
+          canisterName,
+          mocPath,
+          globalMocArgs,
+          canisterArgs: [...migration.migrationArgs, ...(canister.args ?? [])],
+          sources,
+          options: { verbose: options.verbose, extraArgs: options.extraArgs },
+          hasMigrations: !!canister.migrations,
+        });
+      }
+    } finally {
+      await migration.cleanup();
     }
   }
 }
