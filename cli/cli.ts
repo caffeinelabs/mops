@@ -710,7 +710,7 @@ program.addCommand(toolchainCommand);
 
 // migrate
 const migrateCommand = new Command("migrate").description(
-  "Migration management for enhanced orthogonal persistence",
+  "Migration management for enhanced migrations",
 );
 
 migrateCommand

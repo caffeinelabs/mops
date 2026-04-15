@@ -1,7 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
-- Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced orthogonal persistence migration chains
+- Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced migration chains
 - Add `[canisters.<name>.migrations]` config section with `chain`, `next`, `check-limit`, and `build-limit` fields
 - `mops check`, `mops build`, and `mops check-stable` now auto-inject `--enhanced-migration` when `[migrations]` is configured
 - `mops check` and `mops check-stable` emit a hint to create a migration when a stable compatibility check fails and `[migrations]` is configured

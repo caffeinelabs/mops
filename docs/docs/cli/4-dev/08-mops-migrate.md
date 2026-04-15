@@ -5,7 +5,7 @@ sidebar_label: mops migrate
 
 # `mops migrate`
 
-Manage enhanced orthogonal persistence migration chains.
+Manage enhanced migration chains.
 
 Migration files define how canister state transforms from one version to the next. Each migration is a Motoko module with a `migration` function that takes the old state shape and returns the new one.
 

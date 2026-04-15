@@ -133,7 +133,7 @@ mops toolchain bin moc               # print path to binary
 
 ### `mops migrate`
 
-Manage enhanced orthogonal persistence migration chains:
+Manage enhanced migration chains:
 
 ```bash
 mops migrate new AddEmail         # create a new migration file in next-migration/
