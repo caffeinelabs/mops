@@ -73,7 +73,7 @@ module {
     var prevChar = '.';
     var index = 0;
     var digitSeq = 0;
-    let wrongFormatErr = #err("invalid version: wrong version format '" # ver # "'. Expected version format is 'xx.xx.xx'");
+    let wrongFormatErr = #err("invalid version: wrong version fromat '" # ver # "'. Expected version format is 'xx.xx.xx'");
 
     for (char in ver.chars()) {
       let unexpectedCharErr = #err("invalid version: unexpected char '" # Char.toText(char) # "' in '" # ver # "' at index " # Nat.toText(index));
