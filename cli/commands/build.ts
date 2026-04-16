@@ -11,6 +11,7 @@ import {
   resolveCanisterConfigs,
   validateCanisterArgs,
 } from "../helpers/resolve-canisters.js";
+import { prepareMigrationArgs } from "../helpers/migrations.js";
 import { CanisterConfig, Config } from "../types.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
@@ -87,6 +88,12 @@ export async function build(
     };
     process.on("exit", exitCleanup);
 
+    const migration = await prepareMigrationArgs(
+      canister.migrations,
+      canisterName,
+      "build",
+      options.verbose,
+    );
     try {
       let args = [
         "-c",
@@ -97,6 +104,7 @@ export async function build(
         motokoPath,
         ...(await sourcesArgs()).flat(),
         ...getGlobalMocArgs(config),
+        ...migration.migrationArgs,
       ];
       args.push(
         ...collectExtraArgs(config, canister, canisterName, options.extraArgs),
@@ -199,6 +207,7 @@ export async function build(
         );
       }
     } finally {
+      await migration.cleanup();
       process.removeListener("exit", exitCleanup);
       try {
         await release?.();
@@ -238,7 +247,7 @@ function collectExtraArgs(
     args.push(...config.build.args);
   }
   if (canister.args) {
-    validateCanisterArgs(canister, canisterName);
+    validateCanisterArgs(canister, canisterName, config);
     args.push(...canister.args);
   }
   if (extraArgs) {

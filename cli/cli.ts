@@ -43,6 +43,7 @@ import {
   importPem,
   setUserProp,
 } from "./commands/user.js";
+import { migrateNew, migrateFreeze } from "./commands/migrate.js";
 import { watch } from "./commands/watch/watch.js";
 import {
   apiVersion,
@@ -706,6 +707,29 @@ toolchainCommand
   });
 
 program.addCommand(toolchainCommand);
+
+// migrate
+const migrateCommand = new Command("migrate").description(
+  "Manage enhanced migration chains",
+);
+
+migrateCommand
+  .command("new <name> [canister]")
+  .description("Create a new migration file in the next-migration directory")
+  .action(async (name, canister) => {
+    checkConfigFile(true);
+    await migrateNew(name, canister);
+  });
+
+migrateCommand
+  .command("freeze [canister]")
+  .description("Move the next migration into the frozen chain")
+  .action(async (canister) => {
+    checkConfigFile(true);
+    await migrateFreeze(canister);
+  });
+
+program.addCommand(migrateCommand);
 
 // self
 const selfCommand = new Command("self").description("Mops CLI management");

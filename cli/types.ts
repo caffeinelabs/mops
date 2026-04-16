@@ -35,6 +35,13 @@ export type Config = {
   };
 };
 
+export type MigrationsConfig = {
+  chain: string;
+  next?: string;
+  "check-limit"?: number;
+  "build-limit"?: number;
+};
+
 export type CanisterConfig = {
   main?: string;
   args?: string[];
@@ -44,6 +51,7 @@ export type CanisterConfig = {
     path: string;
     skipIfMissing?: boolean;
   };
+  migrations?: MigrationsConfig;
 };
 
 export type Dependencies = Record<string, Dependency>;

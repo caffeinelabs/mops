@@ -1,0 +1,12 @@
+// Version: 4.0.0
+{
+  "20250101_000000_Init" : {} -> {a : Nat};
+  "20250201_000000_AddName" : (old : {a : Nat}) -> {a : Nat; name : Text};
+  "20250301_000000_AddEmail" :
+    (old : {a : Nat; name : Text}) -> {a : Nat; email : Text; name : Text}
+}
+actor  {
+  stable a : Nat;
+  stable email : Text;
+  stable name : Text
+};

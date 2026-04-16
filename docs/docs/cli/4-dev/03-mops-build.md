@@ -94,6 +94,12 @@ Default `.mops/.build`
 
 The `--output` CLI flag takes precedence over this config value.
 
+## Enhanced Migration Support
+
+When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops build` automatically injects the `--enhanced-migration` flag. The frozen migration chain and any pending next migration are included in the compiled WASM.
+
+See [`mops migrate`](/cli/mops-migrate) for the full migration workflow and chain trimming configuration.
+
 ## Candid Compatibility
 
 If a `candid` field is specified in the canister configuration, the build command will automatically check that the generated Candid interface is compatible with the specified interface.
