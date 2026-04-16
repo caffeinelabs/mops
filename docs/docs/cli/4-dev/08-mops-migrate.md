@@ -7,7 +7,7 @@ sidebar_label: mops migrate
 
 Manage enhanced migration chains.
 
-Migration files define how canister state transforms from one version to the next. Each migration is a Motoko module with a `migration` function that takes the old state shape and returns the new one.
+Migration files define how canister state transforms from one version to the next. They let you batch multiple incompatible stable state changes and deploy them together in a single upgrade. Each migration is a Motoko module with a `migration` function that takes the old state shape and returns the new one.
 
 ## `mops migrate new`
 
@@ -15,7 +15,7 @@ Migration files define how canister state transforms from one version to the nex
 mops migrate new <Name> [canister]
 ```
 
-Create a new migration file in the staging directory configured by `[canisters.<name>.migrations].next`.
+Create a new migration file in the `next` directory configured by `[canisters.<name>.migrations].next`.
 
 - **`<Name>`** — descriptive name for the migration (e.g. `AddEmail`, `RemoveCounter`)
 - **`[canister]`** — canister name. Auto-detected if exactly one canister has `[migrations]` configured
@@ -35,7 +35,7 @@ mops migrate new RemoveCounter backend
 mops migrate freeze [canister]
 ```
 
-Move the migration file from the `next` staging directory into the `chain` directory, making it part of the permanent migration chain.
+Move the migration file from the `next` directory into the `chain` directory, making it part of the permanent migration chain.
 
 - **`[canister]`** — canister name. Auto-detected if exactly one canister has `[migrations]` configured
 

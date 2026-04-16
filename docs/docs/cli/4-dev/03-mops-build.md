@@ -96,7 +96,7 @@ The `--output` CLI flag takes precedence over this config value.
 
 ## Enhanced Migration Support
 
-When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops build` automatically injects the `--enhanced-migration` flag. The migration chain (and any staged next-migration) is included in the compiled WASM.
+When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops build` automatically injects the `--enhanced-migration` flag. The frozen migration chain and any pending next migration are included in the compiled WASM.
 
 See [`mops migrate`](/cli/mops-migrate) for the full migration workflow and chain trimming configuration.
 
