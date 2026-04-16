@@ -34,7 +34,7 @@ main = "src/backend/main.mo"
 
 [canisters.backend.migrations]
 chain = "src/backend/migrations"
-next = "src/backend/next-migration"
+next = "src/backend/next-migration"   # optional — needed for `mops migrate new/freeze`
 check-limit = 1
 build-limit = 100
 

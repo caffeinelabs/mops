@@ -62,11 +62,6 @@ export function validateMigrationsConfig(
       `[canisters.${canisterName}.migrations] is missing required field "chain"`,
     );
   }
-  if (!migrations.next) {
-    cliError(
-      `[canisters.${canisterName}.migrations] is missing required field "next"`,
-    );
-  }
   for (const field of ["check-limit", "build-limit"] as const) {
     const value = migrations[field];
     if (value !== undefined && (!Number.isInteger(value) || value <= 0)) {
@@ -95,8 +90,10 @@ export async function prepareMigrationArgs(
   validateMigrationsConfig(migrations, canisterName);
 
   const chainDir = resolveConfigPath(migrations.chain);
-  const nextDir = resolveConfigPath(migrations.next);
-  const nextFile = getNextMigrationFile(nextDir);
+  const nextDir = migrations.next
+    ? resolveConfigPath(migrations.next)
+    : undefined;
+  const nextFile = nextDir ? getNextMigrationFile(nextDir) : null;
 
   if (!existsSync(chainDir) && !nextFile) {
     cliError(
@@ -136,7 +133,7 @@ export async function prepareMigrationArgs(
     symlinkSync(target, join(tempDir, file));
   }
 
-  if (nextFile) {
+  if (nextFile && nextDir) {
     const target = resolve(nextDir, nextFile);
     symlinkSync(target, join(tempDir, nextFile));
   }

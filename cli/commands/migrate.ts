@@ -28,7 +28,7 @@ function resolveMigrationCanister(canisterName?: string): {
         "Add a [canisters.<name>.migrations] section first:\n\n" +
         "  [canisters.backend.migrations]\n" +
         '  chain = "migrations"\n' +
-        '  next = "next-migration"',
+        '  next = "next-migration"   # required for migrate new/freeze',
     );
   }
 
@@ -90,6 +90,13 @@ export async function migrateNew(
   const migrations = canister.migrations!;
   validateMigrationsConfig(migrations, resolvedName);
 
+  if (!migrations.next) {
+    cliError(
+      `[canisters.${resolvedName}.migrations] is missing the "next" field.\n` +
+        'Add next = "next-migration" to use `mops migrate new/freeze`.',
+    );
+  }
+
   const chainDir = resolveConfigPath(migrations.chain);
   const nextDir = resolveConfigPath(migrations.next);
 
@@ -126,6 +133,13 @@ export async function migrateFreeze(canisterName?: string): Promise<void> {
     resolveMigrationCanister(canisterName);
   const migrations = canister.migrations!;
   validateMigrationsConfig(migrations, resolvedName);
+
+  if (!migrations.next) {
+    cliError(
+      `[canisters.${resolvedName}.migrations] is missing the "next" field.\n` +
+        'Add next = "next-migration" to use `mops migrate new/freeze`.',
+    );
+  }
 
   const chainDir = resolveConfigPath(migrations.chain);
   const nextDir = resolveConfigPath(migrations.next);

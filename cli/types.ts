@@ -37,7 +37,7 @@ export type Config = {
 
 export type MigrationsConfig = {
   chain: string;
-  next: string;
+  next?: string;
   "check-limit"?: number;
   "build-limit"?: number;
 };
