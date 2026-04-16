@@ -1,11 +1,11 @@
 import Prim "mo:prim";
 
 actor {
-  let a : Nat;
-  let b : Text;
-  let c : Bool;
+  let id : Nat;
+  let name : Text;
+  let email : Text;
 
   public func check() : async () {
-    Prim.debugPrint(debug_show { a; b; c });
+    Prim.debugPrint(debug_show { id; name; email });
   };
 };

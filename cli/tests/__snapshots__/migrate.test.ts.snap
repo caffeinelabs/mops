@@ -1,0 +1,102 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`migrate build build produces .most with full migration chain 1`] = `
+"// Version: 4.0.0
+{
+  "20250101_000000_Init" : {} -> {a : Nat};
+  "20250201_000000_AddName" : (old : {a : Nat}) -> {a : Nat; name : Text};
+  "20250301_000000_AddEmail" :
+    (old : {a : Nat; name : Text}) -> {a : Nat; email : Text; name : Text}
+}
+actor  {
+  stable a : Nat;
+  stable email : Text;
+  stable name : Text
+};
+"
+`;
+
+exports[`migrate build build with build-limit produces trimmed .most 1`] = `
+"// Version: 4.0.0
+{
+  "20250201_000000_AddName" : (old : {a : Nat}) -> {a : Nat; name : Text};
+  "20250301_000000_AddEmail" :
+    (old : {a : Nat; name : Text}) -> {a : Nat; email : Text; name : Text}
+}
+actor  {
+  stable a : Nat;
+  stable email : Text;
+  stable name : Text
+};
+"
+`;
+
+exports[`migrate check check fails without next migration, passes with it 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "src/main.mo:3.1-11.2: Compatibility error [M0169], the stable variable \`a\` of version \`20250301_000000_AddEmail\` cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
+migrations/20250101_000000_Init.mo:0.1: warning [M0254], initial actor requires field \`id\` of type
+  Nat
+✗ Check failed for canister backend (exit code: 1)",
+  "stdout": "",
+}
+`;
+
+exports[`migrate check check fails without next migration, passes with it 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ backend
+✓ Stable compatibility check passed for canister 'backend'",
+}
+`;
+
+exports[`migrate check check with trimming shows reduced chain 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "check Using --all-libs for richer diagnostics
+migrations Prepared 2 migration(s) for backend (trimmed from 3)
+check Checking canister backend:
+<CACHE>moc-wrapper ["src/main.mo","--check","--all-libs","--default-persistent-actors","--enhanced-migration=.mops/.migrations/backend","-A=M0254"]
+✓ backend
+check-stable Generating stable types for src/main.mo
+<CACHE>moc-wrapper ["--stable-types","-o",".mops/.check-stable/new.wasm","src/main.mo","--default-persistent-actors","--enhanced-migration=.mops/.migrations/backend","-A=M0254"]
+check-stable Comparing deployed.most ↔ .mops/.check-stable/new.most
+<CACHE>moc-wrapper ["--stable-compatible","deployed.most",".mops/.check-stable/new.most"]
+✓ Stable compatibility check passed for canister 'backend'",
+}
+`;
+
+exports[`migrate migrate freeze moves the file from next to chain 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Frozen migration: 20250401_000000_RenameId.mo → migrations/",
+}
+`;
+
+exports[`migrate migrate new creates a migration file with timestamp and template 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Created migration: next-migration/<TIMESTAMP>_AddPhone.mo",
+  "template": "module {
+  public func migration(old : {}) : {} {
+    {}
+  }
+}
+",
+}
+`;
+
+exports[`migrate stable check hint stable check fails with hint when deployed.most is incompatible 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "(unknown location): Compatibility error [M0169], the stable variable \`a\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
+(unknown location): Compatibility error [M0169], the stable variable \`name\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
+Hint: You may need a migration. Run \`mops migrate new <Name>\` to create one.
+✗ Stable compatibility check failed for canister 'backend'",
+  "stdout": "✓ backend",
+}
+`;

@@ -10,3 +10,6 @@ main = "src/main.mo"
 [canisters.backend.migrations]
 chain = "migrations"
 next = "next-migration"
+
+[canisters.backend.check-stable]
+path = "deployed.most"

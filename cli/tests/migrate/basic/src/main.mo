@@ -2,9 +2,10 @@ import Prim "mo:prim";
 
 actor {
   let a : Nat;
-  let b : Text;
+  let name : Text;
+  let email : Text;
 
   public func check() : async () {
-    Prim.debugPrint(debug_show { a; b });
+    Prim.debugPrint(debug_show { a; name; email });
   };
 };

@@ -1,8 +1,5 @@
 module {
-  public func migration(_ : {}) : { a : Nat; b : Text } {
-    {
-      a = 42;
-      b = "hello";
-    };
+  public func migration(_ : {}) : { a : Nat } {
+    { a = 0 };
   };
 };
