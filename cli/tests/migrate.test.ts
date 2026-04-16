@@ -181,6 +181,19 @@ describe("migrate", () => {
       );
       expect(most).toMatchSnapshot();
     });
+
+    test("build-limit counts next migration as part of the chain", async () => {
+      const cwd = await makeTempFixture("with-next");
+      await patchMigrations(cwd, "build-limit = 2");
+      const result = await cli(["build"], { cwd });
+      expect(result.exitCode).toBe(0);
+
+      const most = readFileSync(
+        path.join(cwd, ".mops", ".build", "backend.most"),
+        "utf-8",
+      );
+      expect(most).toMatchSnapshot();
+    });
   });
 
   describe("stable check hint", () => {

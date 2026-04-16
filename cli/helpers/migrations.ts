@@ -108,9 +108,19 @@ export async function prepareMigrationArgs(
     validateNextMigrationOrder(chainFiles, nextFile);
   }
 
+  // Treat chain + next as one virtual merged list
+  type MigrationEntry = { file: string; dir: string };
+  const allMigrations: MigrationEntry[] = chainFiles.map((f) => ({
+    file: f,
+    dir: chainDir,
+  }));
+  if (nextFile && nextDir) {
+    allMigrations.push({ file: nextFile, dir: nextDir });
+  }
+
   const limit =
     mode === "check" ? migrations["check-limit"] : migrations["build-limit"];
-  const isTrimming = limit !== undefined && limit < chainFiles.length;
+  const isTrimming = limit !== undefined && limit < allMigrations.length;
   const needsTempDir = nextFile !== null || isTrimming;
 
   if (!needsTempDir) {
@@ -125,26 +135,19 @@ export async function prepareMigrationArgs(
   mkdirSync(tempDir, { recursive: true });
 
   const filesToInclude = isTrimming
-    ? chainFiles.slice(-limit)
-    : [...chainFiles];
+    ? allMigrations.slice(-limit)
+    : allMigrations;
 
-  for (const file of filesToInclude) {
-    const target = resolve(chainDir, file);
-    symlinkSync(target, join(tempDir, file));
-  }
-
-  if (nextFile && nextDir) {
-    const target = resolve(nextDir, nextFile);
-    symlinkSync(target, join(tempDir, nextFile));
+  for (const { file, dir } of filesToInclude) {
+    symlinkSync(resolve(dir, file), join(tempDir, file));
   }
 
   if (verbose) {
-    const total = filesToInclude.length + (nextFile ? 1 : 0);
     console.log(
       chalk.blue("migrations"),
       chalk.gray(
-        `Prepared ${total} migration(s) for ${canisterName}` +
-          (isTrimming ? ` (trimmed from ${chainFiles.length})` : ""),
+        `Prepared ${filesToInclude.length} migration(s) for ${canisterName}` +
+          (isTrimming ? ` (trimmed from ${allMigrations.length})` : ""),
       ),
     );
   }

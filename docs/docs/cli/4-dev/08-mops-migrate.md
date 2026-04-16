@@ -79,4 +79,6 @@ Large migration chains increase WASM size and compilation time. Use `check-limit
 - **`check-limit`** — only the last N migrations are included during `mops check` and `mops check-stable`. Set to `1` for fastest type-checking.
 - **`build-limit`** — only the last N migrations are included during `mops build`. Set higher (e.g. `100`) so the deployed WASM can apply multiple pending migrations.
 
+The limits count the full virtual chain (frozen + pending next migration). This means `mops build` produces identical results whether a migration is still pending or already frozen.
+
 Already-applied migrations are skipped at runtime by the Motoko RTS, so trimming is safe. When trimming is active, M0254 warnings are automatically suppressed.

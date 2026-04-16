@@ -31,6 +31,23 @@ actor  {
 "
 `;
 
+exports[`migrate build build-limit counts next migration as part of the chain 1`] = `
+"// Version: 4.0.0
+{
+  "20250301_000000_AddEmail" :
+    (old : {a : Nat; name : Text}) -> {a : Nat; email : Text; name : Text};
+  "20250401_000000_RenameId" :
+    (old : {a : Nat; email : Text; name : Text}) ->
+      {email : Text; id : Nat; name : Text}
+}
+actor  {
+  stable email : Text;
+  stable id : Nat;
+  stable name : Text
+};
+"
+`;
+
 exports[`migrate check check fails without next migration, passes with it 1`] = `
 {
   "exitCode": 1,
