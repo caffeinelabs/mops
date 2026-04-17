@@ -262,12 +262,6 @@ async function applyInit({
   writeConfig(config, configFile);
   console.log(chalk.green("Created"), "mops.toml");
 
-  // Without dfx.json, nothing else pins moc — do it here.
-  // toolchain.use reads mops.toml, so it must run after writeConfig above.
-  if (!dfxJsonData) {
-    await toolchain.use("moc", "latest");
-  }
-
   // add src/lib.mo
   if (type === "package" && !existsSync(path.join(process.cwd(), "src"))) {
     await template("lib.mo");
@@ -310,6 +304,12 @@ async function applyInit({
   if (Object.keys(config.dependencies || {}).length) {
     console.log("Installing dependencies...");
     await installAll({ verbose: true });
+  }
+
+  // Without dfx.json, nothing else pins moc — do it here. Must run after
+  // installAll because toolchain.use validates installed dep manifests.
+  if (!dfxJsonData) {
+    await toolchain.use("moc", "latest");
   }
 
   console.log(chalk.green("Done!"));
