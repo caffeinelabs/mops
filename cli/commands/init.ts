@@ -222,32 +222,29 @@ async function applyInit({
     }
   }
 
-  // For projects, populate default dependencies.
-  // With dfx.json: backend picks defaults keyed on the dfx version (legacy path).
-  // Without dfx.json: backend falls through to latest core.
+  // get default packages
   if (type === "project") {
     let compatible = await checkApiCompatibility();
     if (!compatible) {
       return;
     }
 
-    let dfxVersion = "";
-    if (dfxJsonData) {
-      dfxVersion = dfxJsonData.dfx || "";
-      if (!dfxVersion) {
-        try {
-          let res = execSync("dfx --version").toString();
-          let match = res.match(/\d+\.\d+\.\d+/);
-          if (match) {
-            dfxVersion = match[0];
-          }
-        } catch {}
-      }
-      console.log(`Fetching default packages for dfx ${dfxVersion}...`);
-    } else {
-      console.log("Fetching default packages...");
+    let dfxVersion = dfxJsonData?.dfx || "";
+    // Skip `dfx --version` fallback without dfx.json — otherwise a stale global
+    // dfx would force legacy `base` defaults on a non-dfx project.
+    if (dfxJsonData && !dfxVersion) {
+      try {
+        let res = execSync("dfx --version").toString();
+        let match = res.match(/\d+\.\d+\.\d+/);
+        if (match) {
+          dfxVersion = match[0];
+        }
+      } catch {}
     }
 
+    console.log(
+      `Fetching default packages${dfxVersion ? ` for dfx ${dfxVersion}` : ""}...`,
+    );
     let actor = await mainActor();
     let defaultPackages = await actor.getDefaultPackages(dfxVersion);
 
