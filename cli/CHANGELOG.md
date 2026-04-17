@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops init` on projects without `dfx.json` now treats them as standalone Motoko projects: adds latest `core` to `[dependencies]` and pins the latest `moc` in `[toolchain]`, instead of falling back to the installed dfx's default packages
 
 ## 2.11.0
 - Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced migration chains

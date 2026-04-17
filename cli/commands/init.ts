@@ -11,6 +11,7 @@ import { installAll } from "./install/install-all.js";
 import { VesselConfig, readVesselConfig } from "../vessel.js";
 import { Config, Dependencies } from "../types.js";
 import { template } from "./template.js";
+import { toolchain } from "./toolchain/index.js";
 import { kebabCase } from "change-case";
 
 export async function init({ yes = false } = {}) {
@@ -222,24 +223,38 @@ async function applyInit({
   }
 
   // get default packages
+  //
+  // Branching on dfx.json presence:
+  // - With dfx.json: query the backend by the detected dfx version. The backend
+  //   returns `base` pinned to whatever ships with that dfx (for older dfx
+  //   versions whose bundled moc can't use `core`), or latest `core` for newer
+  //   dfx versions (>= 0.28) via its fallthrough case.
+  // - Without dfx.json: this is a standalone Motoko project. We pin the latest
+  //   moc in [toolchain] ourselves and ask the backend with an empty version
+  //   string, which falls through to the latest `core`.
   if (type === "project") {
     let compatible = await checkApiCompatibility();
     if (!compatible) {
       return;
     }
 
-    let dfxVersion = dfxJsonData?.dfx || "";
-    if (!dfxVersion) {
-      try {
-        let res = execSync("dfx --version").toString();
-        let match = res.match(/\d+\.\d+\.\d+/);
-        if (match) {
-          dfxVersion = match[0];
-        }
-      } catch {}
+    let dfxVersion = "";
+    if (dfxJsonData) {
+      dfxVersion = dfxJsonData.dfx || "";
+      if (!dfxVersion) {
+        try {
+          let res = execSync("dfx --version").toString();
+          let match = res.match(/\d+\.\d+\.\d+/);
+          if (match) {
+            dfxVersion = match[0];
+          }
+        } catch {}
+      }
+      console.log(`Fetching default packages for dfx ${dfxVersion}...`);
+    } else {
+      console.log("Fetching default packages...");
     }
 
-    console.log(`Fetching default packages for dfx ${dfxVersion}...`);
     let actor = await mainActor();
     let defaultPackages = await actor.getDefaultPackages(dfxVersion);
 
@@ -256,6 +271,12 @@ async function applyInit({
   let configFile = path.join(process.cwd(), "mops.toml");
   writeConfig(config, configFile);
   console.log(chalk.green("Created"), "mops.toml");
+
+  // standalone Motoko project: pin latest moc. toolchain.use reads mops.toml,
+  // so it must run after writeConfig above.
+  if (type === "project" && !dfxJsonData) {
+    await toolchain.use("moc", "latest");
+  }
 
   // add src/lib.mo
   if (type === "package" && !existsSync(path.join(process.cwd(), "src"))) {

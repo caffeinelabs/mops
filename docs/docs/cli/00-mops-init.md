@@ -49,7 +49,9 @@ When accepted, adds `.github/workflows/mops-test.yml` that runs `mops test` on p
 ## What it creates
 
 1. **`dfx.json`** — sets `defaults.build.packtool = "mops sources"` if `dfx.json` is present. Existing indentation is preserved.
-2. **`mops.toml`** — with `[package]` metadata for packages; for projects, populated with the default package set for your detected `dfx` version (fetched from the registry).
+2. **`mops.toml`** — with `[package]` metadata for packages. For projects:
+   - **With `dfx.json`** — populated with the default package set for your detected `dfx` version: `base` pinned to the version shipped with that dfx, or latest `core` for dfx versions whose bundled `moc` supports it.
+   - **Without `dfx.json`** — standalone Motoko project. Adds latest `core` to `[dependencies]` and pins the latest `moc` in `[toolchain]`.
 3. **`src/lib.mo`** — starter module (package only, when `src/` doesn't exist).
 4. **`test/lib.test.mo`** — starter test (package only, when you opted in and `test/` doesn't exist).
 5. **`LICENSE`** (and `NOTICE` for Apache-2.0) — package only, filled with the current year and copyright owner.
@@ -69,7 +71,7 @@ If `vessel.dhall` exists, `mops init` reads it and copies the listed dependencie
 
 ### `--yes`, `-y`
 
-Skip prompts and initialize as a **project** with defaults: no `[package]` section, no starter files, GitHub workflow enabled, default packages installed. Useful for CI and scripted scaffolding.
+Skip prompts and initialize as a **project** with defaults: no `[package]` section, no starter files, GitHub workflow enabled, default packages installed per the rules in [What it creates](#what-it-creates). Useful for CI and scripted scaffolding.
 
 ```
 mops init --yes
