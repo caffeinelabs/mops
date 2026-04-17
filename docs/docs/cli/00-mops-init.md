@@ -49,9 +49,7 @@ When accepted, adds `.github/workflows/mops-test.yml` that runs `mops test` on p
 ## What it creates
 
 1. **`dfx.json`** — sets `defaults.build.packtool = "mops sources"` if `dfx.json` is present. Existing indentation is preserved.
-2. **`mops.toml`** — with `[package]` metadata for packages. For projects, `[dependencies]` is populated:
-   - **Without `dfx.json`** — latest `core`.
-   - **With `dfx.json`** — default package set keyed on your detected `dfx` version: latest `core` when the bundled `moc` supports it, otherwise `base` pinned to the version shipped with that dfx (legacy).
+2. **`mops.toml`** — `[package]` metadata for packages. For projects, `[dependencies]` is populated with the default package set keyed on your `dfx` version (from `dfx.json` or `dfx --version` on `PATH`): latest `core` for modern `dfx` (≥ 0.28), empty, or missing; otherwise `base` pinned to whatever ships with that older `dfx`.
 
    When `dfx.json` is absent, `[toolchain].moc` is also pinned to the latest `moc` — since no `dfx` toolchain is going to provide it.
 3. **`src/lib.mo`** — starter module (package only, when `src/` doesn't exist).

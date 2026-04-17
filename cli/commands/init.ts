@@ -230,9 +230,7 @@ async function applyInit({
     }
 
     let dfxVersion = dfxJsonData?.dfx || "";
-    // Skip `dfx --version` fallback without dfx.json — otherwise a stale global
-    // dfx would force legacy `base` defaults on a non-dfx project.
-    if (dfxJsonData && !dfxVersion) {
+    if (!dfxVersion) {
       try {
         let res = execSync("dfx --version").toString();
         let match = res.match(/\d+\.\d+\.\d+/);
