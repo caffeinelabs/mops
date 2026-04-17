@@ -50,8 +50,6 @@ When accepted, adds `.github/workflows/mops-test.yml` that runs `mops test` on p
 
 1. **`dfx.json`** — sets `defaults.build.packtool = "mops sources"` if `dfx.json` is present. Existing indentation is preserved.
 2. **`mops.toml`** — `[package]` metadata for packages. For projects, `[dependencies]` is populated with the default package set keyed on your `dfx` version (from `dfx.json` or `dfx --version` on `PATH`): latest `core` for modern `dfx` (≥ 0.28), empty, or missing; otherwise `base` pinned to whatever ships with that older `dfx`.
-
-   When `dfx.json` is absent, `[toolchain].moc` is also pinned to the latest `moc` — since no `dfx` toolchain is going to provide it.
 3. **`src/lib.mo`** — starter module (package only, when `src/` doesn't exist).
 4. **`test/lib.test.mo`** — starter test (package only, when you opted in and `test/` doesn't exist).
 5. **`LICENSE`** (and `NOTICE` for Apache-2.0) — package only, filled with the current year and copyright owner.

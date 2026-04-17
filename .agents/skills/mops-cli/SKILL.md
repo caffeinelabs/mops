@@ -206,10 +206,10 @@ args = ["-A=M0198"]
 ### New project
 
 ```bash
-mops init -y                         # pins latest moc (when no dfx.json) + adds latest core
+mops init -y
+mops toolchain use moc latest        # pin latest moc (non-interactive)
 mops toolchain use lintoko latest    # pin latest lintoko
-mops toolchain use moc latest        # no-op after init -y without dfx.json; forces latest moc otherwise
-mops add core                        # no-op if already a dep; adds it when init picked base instead
+mops add core
 ```
 
 Then configure `[moc].args`, `[canisters]`, and `[build]` in `mops.toml`.

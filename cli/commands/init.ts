@@ -11,7 +11,6 @@ import { installAll } from "./install/install-all.js";
 import { VesselConfig, readVesselConfig } from "../vessel.js";
 import { Config, Dependencies } from "../types.js";
 import { template } from "./template.js";
-import { toolchain } from "./toolchain/index.js";
 import { kebabCase } from "change-case";
 
 export async function init({ yes = false } = {}) {
@@ -240,9 +239,7 @@ async function applyInit({
       } catch {}
     }
 
-    console.log(
-      `Fetching default packages${dfxVersion ? ` for dfx ${dfxVersion}` : ""}...`,
-    );
+    console.log(`Fetching default packages for dfx ${dfxVersion}...`);
     let actor = await mainActor();
     let defaultPackages = await actor.getDefaultPackages(dfxVersion);
 
@@ -302,12 +299,6 @@ async function applyInit({
   if (Object.keys(config.dependencies || {}).length) {
     console.log("Installing dependencies...");
     await installAll({ verbose: true });
-  }
-
-  // Without dfx.json, nothing else pins moc — do it here. Must run after
-  // installAll because toolchain.use validates installed dep manifests.
-  if (!dfxJsonData) {
-    await toolchain.use("moc", "latest");
   }
 
   console.log(chalk.green("Done!"));

@@ -1,7 +1,6 @@
 # Mops CLI Changelog
 
 ## Next
-- `mops init` without `dfx.json` now pins the latest `moc` in `[toolchain]`, since no dfx toolchain is going to provide it
 
 ## 2.11.0
 - Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced migration chains
