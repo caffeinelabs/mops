@@ -49,7 +49,7 @@ When accepted, adds `.github/workflows/mops-test.yml` that runs `mops test` on p
 ## What it creates
 
 1. **`dfx.json`** — sets `defaults.build.packtool = "mops sources"` if `dfx.json` is present. Existing indentation is preserved.
-2. **`mops.toml`** — `[package]` metadata for packages. For projects, `[dependencies]` is populated with the default package set keyed on your `dfx` version (from `dfx.json` or `dfx --version` on `PATH`): latest `core` for modern `dfx` (≥ 0.28), empty, or missing; otherwise `base` pinned to whatever ships with that older `dfx`.
+2. **`mops.toml`** — `[package]` metadata for packages. For projects, `[dependencies]` is populated with the default package set keyed on your `dfx` version (from `dfx.json` or `dfx --version` on `PATH`). Older `dfx` versions `0.9.0`–`0.27.0` resolve to the `base` release bundled with that `dfx`. For any other version, or when `dfx` cannot be detected, the latest `core` is used.
 3. **`src/lib.mo`** — starter module (package only, when `src/` doesn't exist).
 4. **`test/lib.test.mo`** — starter test (package only, when you opted in and `test/` doesn't exist).
 5. **`LICENSE`** (and `NOTICE` for Apache-2.0) — package only, filled with the current year and copyright owner.
@@ -63,7 +63,7 @@ For projects, `mops install` runs at the end to fetch the default packages.
 
 ### Migrating from Vessel
 
-If `vessel.dhall` exists, `mops init` reads it and copies the listed dependencies into the new `mops.toml`. Skipped when `--yes` is used.
+If `vessel.dhall` exists, `mops init` reads it and copies the listed dependencies into the new `mops.toml`. Dev-dependencies are not migrated. Skipped when `--yes` is used.
 
 ## Options
 

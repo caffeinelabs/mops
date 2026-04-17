@@ -24,7 +24,7 @@ mops user get <prop>
 - `github` - github username
 - `twitter` - twitter username
 
-### Examples
+## Examples
 
 ```bash
 mops user set name zen
