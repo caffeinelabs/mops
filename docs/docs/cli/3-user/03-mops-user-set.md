@@ -19,17 +19,21 @@ mops user get <prop>
 ## Available properties
 
 - `name` - username on mops.one
+- `site` - personal website URL
+- `email` - email address
 - `github` - github username
 - `twitter` - twitter username
 
-## Example
+## Examples
 
 ```bash
 mops user set name zen
+mops user set site https://example.com
+mops user set email zen@example.com
 mops user set github ZenVoich
 mops user set twitter mops_one
 ```
 
-Here is how the user info looks like on mops.one:
+How this appears on mops.one:
 
 ![user info on mops.one](user-info.png)
