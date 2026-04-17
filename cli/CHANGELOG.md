@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.11.0
 - Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced migration chains
 - Add `[canisters.<name>.migrations]` config section with `chain`, `next`, `check-limit`, and `build-limit` fields
 - `mops check`, `mops build`, and `mops check-stable` now auto-inject `--enhanced-migration` when `[migrations]` is configured
