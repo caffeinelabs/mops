@@ -222,16 +222,10 @@ async function applyInit({
     }
   }
 
-  // get default packages
-  //
-  // Branching on dfx.json presence:
-  // - With dfx.json: query the backend by the detected dfx version. The backend
-  //   returns `base` pinned to whatever ships with that dfx (for older dfx
-  //   versions whose bundled moc can't use `core`), or latest `core` for newer
-  //   dfx versions (>= 0.28) via its fallthrough case.
-  // - Without dfx.json: this is a standalone Motoko project. We pin the latest
-  //   moc in [toolchain] ourselves and ask the backend with an empty version
-  //   string, which falls through to the latest `core`.
+  // Standalone Motoko project (no dfx.json): add latest core and pin latest moc.
+  // With dfx.json: ask the backend for defaults keyed on the dfx version.
+  let standalone = type === "project" && !dfxJsonData;
+
   if (type === "project") {
     let compatible = await checkApiCompatibility();
     if (!compatible) {
@@ -272,9 +266,8 @@ async function applyInit({
   writeConfig(config, configFile);
   console.log(chalk.green("Created"), "mops.toml");
 
-  // standalone Motoko project: pin latest moc. toolchain.use reads mops.toml,
-  // so it must run after writeConfig above.
-  if (type === "project" && !dfxJsonData) {
+  // toolchain.use reads mops.toml, so it must run after writeConfig above.
+  if (standalone) {
     await toolchain.use("moc", "latest");
   }
 
