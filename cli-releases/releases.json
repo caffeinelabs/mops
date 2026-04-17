@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.10.0"
+    "latest": "2.11.0"
   },
   "versions": {
     "0.41.0": {
@@ -384,6 +384,14 @@
       "commitHash": "f02c9b3f00432493e8c4daedf4778ddedc07ef4e",
       "url": "https://cli.mops.one/versions/2.10.0.tgz",
       "hash": "85b587774d4258e41baeaa8150ad62230849c40cc5f832fee8298217f56081d2"
+    },
+    "2.11.0": {
+      "time": 1776415185993,
+      "size": 2410057,
+      "relseaseNotes": "* Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced migration chains\n* Add `[canisters.<name>.migrations]` config section with `chain`, `next`, `check-limit`, and `build-limit` fields\n* `mops check`, `mops build`, and `mops check-stable` now auto-inject `--enhanced-migration` when `[migrations]` is configured\n* `mops check` and `mops check-stable` emit a hint to create a migration when a stable compatibility check fails and `[migrations]` is configured\n* Migration chain trimming: only the last N migrations are passed to `moc` based on `check-limit`/`build-limit` settings\n",
+      "commitHash": "c72c56f5d3ad0d0ceb22b006486fd9877679ef74",
+      "url": "https://cli.mops.one/versions/2.11.0.tgz",
+      "hash": "bdb31e73c8319fdcba59d1a2387de35bcb192052aa5d3de0e08fa5235aa40e93"
     }
   }
 }
