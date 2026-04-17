@@ -50,7 +50,7 @@ When accepted, adds `.github/workflows/mops-test.yml` that runs `mops test` on p
 
 1. **`dfx.json`** — sets `defaults.build.packtool = "mops sources"` if `dfx.json` is present. Existing indentation is preserved.
 2. **`mops.toml`** — with `[package]` metadata for packages. For projects:
-   - **With `dfx.json`** — populated with the default package set for your detected `dfx` version: `base` pinned to the version shipped with that dfx, or latest `core` for dfx versions whose bundled `moc` supports it.
+   - **With `dfx.json`** — populated with the default package set for your detected `dfx` version: latest `core` when the bundled `moc` supports it, otherwise `base` pinned to the version shipped with that dfx.
    - **Without `dfx.json`** — standalone Motoko project. Adds latest `core` to `[dependencies]` and pins the latest `moc` in `[toolchain]`.
 3. **`src/lib.mo`** — starter module (package only, when `src/` doesn't exist).
 4. **`test/lib.test.mo`** — starter test (package only, when you opted in and `test/` doesn't exist).
