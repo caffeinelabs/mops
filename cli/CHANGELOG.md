@@ -1,6 +1,11 @@
 # Mops CLI Changelog
 
 ## Next
+- Add version range support for dependencies: caret (`^1.2.3`) and tilde (`~1.2.3`) operators
+- `mops add` now defaults to caret range (e.g. `mops add core` writes `core = "^1.2.3"`)
+- `mops add core@1.2.3` still pins an exact version
+- `mops update` preserves range type when bumping versions
+- Resolver validates that all range constraints are satisfied and reports errors on conflicts
 
 ## 2.11.0
 - Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced migration chains

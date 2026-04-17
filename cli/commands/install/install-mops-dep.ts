@@ -7,7 +7,7 @@ import chalk from "chalk";
 import { deleteSync } from "del";
 import { checkConfigFile, progressBar, readConfig } from "../../mops.js";
 import { getHighestVersion } from "../../api/getHighestVersion.js";
-import { storageActor } from "../../api/actors.js";
+import { mainActor, storageActor } from "../../api/actors.js";
 import { parallel } from "../../parallel.js";
 import {
   getDepCacheDir,
@@ -20,6 +20,7 @@ import {
 } from "../../api/downloadPackageFiles.js";
 import { installDeps } from "./install-deps.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
+import { isRange, stripRangePrefix, rangeToSemverPart } from "../../semver.js";
 
 type InstallMopsDepOptions = {
   verbose?: boolean;
@@ -67,6 +68,29 @@ export async function installMopsDep(
       return false;
     }
     version = versionRes.ok;
+  } else if (isRange(version)) {
+    let part = rangeToSemverPart(version);
+    if (part) {
+      let actor = await mainActor();
+      let res = await actor.getHighestSemverBatch([
+        [depName, stripRangePrefix(version), part],
+      ]);
+      if ("err" in res) {
+        console.log(chalk.red("Error: ") + res.err);
+        return false;
+      }
+      let resolved = res.ok[0]?.[1];
+      if (!resolved) {
+        console.log(
+          chalk.red("Error: ") +
+            `No version of "${depName}" satisfies ${version}`,
+        );
+        return false;
+      }
+      version = resolved;
+    } else {
+      version = stripRangePrefix(version);
+    }
   }
 
   let cacheName = getMopsDepCacheName(depName, version);

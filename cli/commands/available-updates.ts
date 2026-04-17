@@ -4,6 +4,8 @@ import { mainActor } from "../api/actors.js";
 import { Config } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
+import { isRange, stripRangePrefix, rangeToSemverPart } from "../semver.js";
+import { checkLockFileLight, readLockFile } from "../integrity.js";
 
 // [pkg, oldVersion, newVersion]
 export async function getAvailableUpdates(
@@ -22,6 +24,10 @@ export async function getAvailableUpdates(
       getDepPinnedVersion(dep.name).split(".").length !== 3,
   );
 
+  if (depsToUpdate.length === 0) {
+    return [];
+  }
+
   let getCurrentVersion = (pkg: string, updateVersion: string) => {
     for (let dep of allDeps) {
       if (getDepName(dep.name) === pkg && dep.version) {
@@ -35,28 +41,59 @@ export async function getAvailableUpdates(
     return "";
   };
 
-  let actor = await mainActor();
-  let res = await actor.getHighestSemverBatch(
-    depsToUpdate.map((dep) => {
-      let semverPart: SemverPart = { major: null };
-      let name = getDepName(dep.name);
-      let pinnedVersion = getDepPinnedVersion(dep.name);
-      if (pinnedVersion) {
-        semverPart =
-          pinnedVersion.split(".").length === 1
-            ? { minor: null }
-            : { patch: null };
+  let lockedDeps: Record<string, string> = {};
+  if (checkLockFileLight()) {
+    let lockFileJson = readLockFile();
+    if (lockFileJson && lockFileJson.version === 3) {
+      lockedDeps = lockFileJson.deps;
+    }
+  }
+
+  let batchItems: Array<[string, string, SemverPart]> = [];
+  for (let dep of depsToUpdate) {
+    let name = getDepName(dep.name);
+    let version = dep.version || "";
+
+    if (isRange(version)) {
+      let part = rangeToSemverPart(version);
+      if (part) {
+        batchItems.push([name, stripRangePrefix(version), part]);
       }
-      return [name, dep.version || "", semverPart];
-    }),
-  );
+      continue;
+    }
+
+    let semverPart: SemverPart = { major: null };
+    let pinnedVersion = getDepPinnedVersion(dep.name);
+    if (pinnedVersion) {
+      semverPart =
+        pinnedVersion.split(".").length === 1
+          ? { minor: null }
+          : { patch: null };
+    }
+    batchItems.push([name, version, semverPart]);
+  }
+
+  if (batchItems.length === 0) {
+    return [];
+  }
+
+  let actor = await mainActor();
+  let res = await actor.getHighestSemverBatch(batchItems);
 
   if ("err" in res) {
     console.log(chalk.red("Error:"), res.err);
     process.exit(1);
   }
 
-  return res.ok
-    .filter((dep) => dep[1] !== getCurrentVersion(dep[0], dep[1]))
-    .map((dep) => [dep[0], getCurrentVersion(dep[0], dep[1]), dep[1]]);
+  let updates: Array<[string, string, string]> = [];
+  for (let [name, highestVersion] of res.ok) {
+    let currentConfigVer = getCurrentVersion(name, highestVersion);
+    let currentResolved = isRange(currentConfigVer)
+      ? lockedDeps[name] || stripRangePrefix(currentConfigVer)
+      : currentConfigVer;
+    if (currentResolved !== highestVersion) {
+      updates.push([name, currentConfigVer, highestVersion]);
+    }
+  }
+  return updates;
 }

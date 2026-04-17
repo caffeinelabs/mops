@@ -77,6 +77,25 @@ export let copyCache = (cacheName: string, dest: string) => {
   });
 };
 
+let cachedDirEntries: string[] | null = null;
+
+export function resetCachedDirEntries() {
+  cachedDirEntries = null;
+}
+
+export function findCachedVersions(name: string): string[] {
+  if (!cachedDirEntries) {
+    let packagesDir = path.join(getGlobalCacheDir(), "packages");
+    cachedDirEntries = fs.existsSync(packagesDir)
+      ? fs.readdirSync(packagesDir)
+      : [];
+  }
+  let prefix = name + "@";
+  return cachedDirEntries
+    .filter((entry) => entry.startsWith(prefix))
+    .map((entry) => entry.slice(prefix.length));
+}
+
 export let cacheSize = async () => {
   let dir = path.join(getGlobalCacheDir());
   fs.mkdirSync(dir, { recursive: true });

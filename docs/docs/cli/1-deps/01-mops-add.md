@@ -12,14 +12,22 @@ mops add <package_name>
 
 ### Examples
 
-Install latest `base` package from `mops` registry
+Install latest version of a package with a caret range (default)
 ```
-mops add base
+mops add core
 ```
+This writes `core = "^x.y.z"` to `mops.toml`, allowing compatible updates.
 
-Install specific version of `base` package from `mops` registry
+Install a specific exact version
 ```
-mops add base@0.10.0
+mops add core@1.2.0
+```
+This writes `core = "1.2.0"` to `mops.toml` (exact pin).
+
+Install with a specific range
+```
+mops add core@^1.2.0
+mops add core@~1.2.0
 ```
 
 Add package from GitHub

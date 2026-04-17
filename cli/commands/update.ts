@@ -9,6 +9,7 @@ import { add } from "./add.js";
 import { getAvailableUpdates } from "./available-updates.js";
 import { checkIntegrity } from "../integrity.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
+import { isRange, stripRangePrefix } from "../semver.js";
 
 type UpdateOptions = {
   verbose?: boolean;
@@ -68,32 +69,23 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
       console.log(chalk.green("All dependencies are up to date!"));
     }
   } else {
+    let devDepKeys = Object.keys(config["dev-dependencies"] || {});
+    let allDepKeys = [...Object.keys(config.dependencies || {}), ...devDepKeys];
+
     for (let dep of available) {
-      let devDeps = Object.keys(config["dev-dependencies"] || {});
-      let allDeps = [...Object.keys(config.dependencies || {}), ...devDeps];
-
-      let dev = false;
-      for (let d of devDeps) {
+      let bareOld = stripRangePrefix(dep[1]);
+      let matchesName = (d: string) => {
         let pinnedVersion = getDepPinnedVersion(d);
-        if (
+        return (
           getDepName(d) === dep[0] &&
-          (!pinnedVersion || dep[1].startsWith(pinnedVersion))
-        ) {
-          dev = true;
-          break;
-        }
-      }
+          (!pinnedVersion || bareOld.startsWith(pinnedVersion))
+        );
+      };
 
-      let asName =
-        allDeps.find((d) => {
-          let pinnedVersion = getDepPinnedVersion(d);
-          return (
-            getDepName(d) === dep[0] &&
-            (!pinnedVersion || dep[1].startsWith(pinnedVersion))
-          );
-        }) || dep[0];
-
-      await add(`${dep[0]}@${dep[2]}`, { dev, lock }, asName);
+      let dev = devDepKeys.some(matchesName);
+      let asName = allDepKeys.find(matchesName) || dep[0];
+      let rangePrefix = isRange(dep[1]) ? dep[1][0] : "";
+      await add(`${dep[0]}@${rangePrefix}${dep[2]}`, { dev, lock }, asName);
     }
   }
 

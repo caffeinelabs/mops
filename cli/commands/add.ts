@@ -17,6 +17,7 @@ import { checkRequirements } from "../check-requirements.js";
 import { syncLocalCache } from "./install/sync-local-cache.js";
 import { notifyInstalls } from "../notify-installs.js";
 import { resolvePackages } from "../resolve-packages.js";
+import { stripRangePrefix } from "../semver.js";
 
 type AddOptions = {
   verbose?: boolean;
@@ -90,7 +91,7 @@ export async function add(
         console.log(chalk.red("Error: ") + versionRes.err);
         return;
       }
-      ver = versionRes.ok;
+      ver = "^" + versionRes.ok;
     }
 
     pkgDetails = {
@@ -108,9 +109,11 @@ export async function add(
       process.exit(1);
     }
   } else if (!pkgDetails.path) {
-    let res = await installMopsDep(pkgDetails.name, pkgDetails.version, {
-      verbose: verbose,
-    });
+    let res = await installMopsDep(
+      pkgDetails.name,
+      stripRangePrefix(pkgDetails.version),
+      { verbose },
+    );
     if (res === false) {
       return;
     }
@@ -145,6 +148,5 @@ export async function add(
       `${pkgDetails.name} = "${pkgDetails.repo || pkgDetails.path || pkgDetails.version}"`,
   );
 
-  // check conflicts
   await resolvePackages({ conflicts: "warning" });
 }
