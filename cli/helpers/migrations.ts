@@ -1,12 +1,14 @@
 import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { rm } from "node:fs/promises";
 import chalk from "chalk";
 import { cliError } from "../error.js";
 import { resolveConfigPath } from "../mops.js";
 import { MigrationsConfig } from "../types.js";
 
-const MIGRATIONS_TEMP_DIR = ".mops/.migrations";
+function stagedMigrationsDir(chainDir: string, canisterName: string): string {
+  return join(dirname(chainDir), `.migrations-${canisterName}`);
+}
 
 export interface MigrationArgsResult {
   migrationArgs: string[];
@@ -70,6 +72,20 @@ export function validateMigrationsConfig(
       );
     }
   }
+  if (migrations.next) {
+    const chainParent = resolve(dirname(resolveConfigPath(migrations.chain)));
+    const nextParent = resolve(dirname(resolveConfigPath(migrations.next)));
+    if (chainParent !== nextParent) {
+      cliError(
+        `[canisters.${canisterName}.migrations] "chain" and "next" must live in the same parent directory.\n` +
+          `  chain = "${migrations.chain}" (parent: ${chainParent})\n` +
+          `  next  = "${migrations.next}" (parent: ${nextParent})\n` +
+          "Move them under a shared parent, e.g.:\n" +
+          '  chain = "migrations/chain"\n' +
+          '  next  = "migrations/next"',
+      );
+    }
+  }
 }
 
 export async function prepareMigrationArgs(
@@ -130,7 +146,7 @@ export async function prepareMigrationArgs(
     };
   }
 
-  const tempDir = join(MIGRATIONS_TEMP_DIR, canisterName);
+  const tempDir = stagedMigrationsDir(chainDir, canisterName);
   await rm(tempDir, { recursive: true, force: true });
   mkdirSync(tempDir, { recursive: true });
 

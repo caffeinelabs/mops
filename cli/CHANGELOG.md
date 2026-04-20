@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+- Migration staging directory moved from `.mops/.migrations/<canister>/` to `<parent-of-chain>/.migrations-<canister>/`, so migration files can import shared modules from sibling folders (e.g. a `types/` folder next to `migrations/`) — relative imports now resolve to the same target whether moc reads the original chain dir or the staged one
+- `[canisters.<name>.migrations]` now requires `chain` and `next` to share the same parent directory; mops surfaces a clear error otherwise. If you previously used `chain = "migrations/backend"` + `next = "next-migration/backend"`, restructure to e.g. `chain = "migrations/backend/chain"` + `next = "migrations/backend/next"`
 
 ## 2.11.0
 - Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced migration chains

@@ -207,6 +207,24 @@ describe("migrate", () => {
     });
   });
 
+  describe("sibling validation", () => {
+    test("errors when chain and next have different parent directories", async () => {
+      const cwd = await makeTempFixture("with-next");
+      const tomlPath = path.join(cwd, "mops.toml");
+      const toml = readFileSync(tomlPath, "utf-8");
+      await writeFile(
+        tomlPath,
+        toml.replace(
+          'next = "next-migration"',
+          'next = "other/next-migration"',
+        ),
+      );
+      const result = await cli(["check"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/same parent directory/i);
+    });
+  });
+
   describe("conflict detection", () => {
     test("errors when both [migrations] and --enhanced-migration in args", async () => {
       const cwd = await makeTempFixture("basic");
