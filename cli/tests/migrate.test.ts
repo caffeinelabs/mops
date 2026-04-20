@@ -207,6 +207,33 @@ describe("migrate", () => {
     });
   });
 
+  describe("sibling validation", () => {
+    async function patchNextDir(cwd: string, nextValue: string): Promise<void> {
+      const tomlPath = path.join(cwd, "mops.toml");
+      const toml = readFileSync(tomlPath, "utf-8");
+      await writeFile(
+        tomlPath,
+        toml.replace('next = "next-migration"', `next = "${nextValue}"`),
+      );
+    }
+
+    test("errors from `mops check` when chain and next have different parents", async () => {
+      const cwd = await makeTempFixture("with-next");
+      await patchNextDir(cwd, "other/next-migration");
+      const result = await cli(["check"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/same parent directory/i);
+    });
+
+    test("errors from `mops migrate new` too — validation runs in every entry point", async () => {
+      const cwd = await makeTempFixture("basic");
+      await patchNextDir(cwd, "other/next-migration");
+      const result = await cli(["migrate", "new", "Test"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/same parent directory/i);
+    });
+  });
+
   describe("conflict detection", () => {
     test("errors when both [migrations] and --enhanced-migration in args", async () => {
       const cwd = await makeTempFixture("basic");

@@ -116,8 +116,8 @@ Multi-canister example with per-canister flags:
 main = "src/backend/main.mo"
 
 [canisters.backend.migrations]
-chain = "migrations/backend"
-next = "next-migration/backend"
+chain = "migrations/backend/chain"
+next = "migrations/backend/next"
 
 [canisters.frontend]
 main = "src/frontend/main.mo"
@@ -146,7 +146,7 @@ Configure managed enhanced migration chains for a canister. When set, `mops chec
 | Field       | Description                                                     |
 | ----------- | --------------------------------------------------------------- |
 | chain       | Path to the directory containing frozen migration files (required) |
-| next        | Path to the directory for the next pending migration (optional). Required for `mops migrate new/freeze`. Must contain 0 or 1 `.mo` files |
+| next        | Path to the directory for the next pending migration (optional). Required for `mops migrate new/freeze`. Must contain 0 or 1 `.mo` files. Must share the same parent directory as `chain` |
 | check-limit | Max number of migrations to pass to `moc` during `mops check` and `mops check-stable` (optional). Counts the full chain including any pending next migration |
 | build-limit | Max number of migrations to pass to `moc` during `mops build` (optional). Counts the full chain including any pending next migration |
 
@@ -163,6 +163,10 @@ Migration files must be named so they sort lexicographically in the correct orde
 
 :::note
 When `[migrations]` is configured, do not add `--enhanced-migration` to `[canisters.<name>].args` — mops manages this flag automatically.
+:::
+
+:::note
+When a `next` migration exists or chain trimming is active, mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/` for compilation. This keeps the staged files at the same depth as the originals so relative imports (e.g. a shared `types/` folder next to `chain` and `next`) resolve identically. The staged dir self-stamps a `.gitignore`, and `mops init` adds `.migrations-*/` to the project `.gitignore`.
 :::
 
 Shorthand — when only the entrypoint is needed:

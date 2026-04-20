@@ -33,12 +33,12 @@ actor  {
 
 exports[`migrate build build-limit counts next migration as part of the chain 1`] = `
 "// Version: 4.0.0
+type V2__933402648 = {a : Nat; name : Text};
+type V3__40989327 = {a : Nat; email : Text; name : Text};
+type V4__364034734 = {email : Text; id : Nat; name : Text};
 {
-  "20250301_000000_AddEmail" :
-    (old : {a : Nat; name : Text}) -> {a : Nat; email : Text; name : Text};
-  "20250401_000000_RenameId" :
-    (old : {a : Nat; email : Text; name : Text}) ->
-      {email : Text; id : Nat; name : Text}
+  "20250301_000000_AddEmail" : (old : V2__933402648) -> V3__40989327;
+  "20250401_000000_RenameId" : (old : V3__40989327) -> V4__364034734
 }
 actor  {
   stable email : Text;
@@ -75,10 +75,10 @@ exports[`migrate check check with trimming shows reduced chain 1`] = `
   "stdout": "check Using --all-libs for richer diagnostics
 migrations Prepared 2 migration(s) for backend (trimmed from 3)
 check Checking canister backend:
-<CACHE>moc-wrapper ["src/main.mo","--check","--all-libs","--default-persistent-actors","--enhanced-migration=.mops/.migrations/backend","-A=M0254"]
+<CACHE>moc-wrapper ["src/main.mo","--check","--all-libs","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
 ✓ backend
 check-stable Generating stable types for src/main.mo
-<CACHE>moc-wrapper ["--stable-types","-o",".mops/.check-stable/new.wasm","src/main.mo","--default-persistent-actors","--enhanced-migration=.mops/.migrations/backend","-A=M0254"]
+<CACHE>moc-wrapper ["--stable-types","-o",".mops/.check-stable/new.wasm","src/main.mo","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
 check-stable Comparing deployed.most ↔ .mops/.check-stable/new.most
 <CACHE>moc-wrapper ["--stable-compatible","deployed.most",".mops/.check-stable/new.most"]
 ✓ Stable compatibility check passed for canister 'backend'",

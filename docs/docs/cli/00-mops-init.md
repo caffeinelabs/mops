@@ -55,7 +55,7 @@ When accepted, adds `.github/workflows/mops-test.yml` that runs `mops test` on p
 5. **`LICENSE`** (and `NOTICE` for Apache-2.0) — package only, filled with the current year and copyright owner.
 6. **`README.md`** — package only, with placeholders replaced by the package name.
 7. **`.github/workflows/mops-test.yml`** — when the workflow prompt was accepted.
-8. **`.mops`** appended to `.gitignore` (created if missing).
+8. **`.mops`** and **`.migrations-*/`** appended to `.gitignore` (created if missing).
 
 Existing `LICENSE`, `README.md`, and workflow files are not overwritten.
 

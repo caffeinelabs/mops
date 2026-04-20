@@ -144,6 +144,8 @@ mops migrate freeze backend       # specify canister explicitly
 
 When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, and `mops check-stable` automatically inject `--enhanced-migration`. Do not add `--enhanced-migration` to `[canisters.<name>].args` when using managed migrations — mops will error.
 
+`chain` and `next` must live in the same parent directory. Migration files can import from sibling folders via relative paths (e.g. shared types in `src/backend/types/`); mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/`, preserving depth so relative imports resolve identically. The staged dir self-stamps a `.gitignore`; `mops init` also adds `.migrations-*/` to the project `.gitignore`.
+
 Typical workflow: make a breaking change → `mops check` fails with a hint → `mops migrate new Name` → edit migration → `mops check` passes → `mops build` → deploy → `mops migrate freeze`.
 
 ### `mops remove <package>`

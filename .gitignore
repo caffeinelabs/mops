@@ -3,6 +3,7 @@ target/
 dist/
 .dfx/
 .mops/
+.migrations-*/
 mops.lock
 
 .DS_Store
