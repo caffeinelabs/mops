@@ -166,7 +166,7 @@ When `[migrations]` is configured, do not add `--enhanced-migration` to `[canist
 :::
 
 :::note
-When a `next` migration exists or chain trimming is active, mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/` for compilation. This keeps the staged files at the same depth as the originals so relative imports (e.g. a shared `types/` folder next to `chain` and `next`) resolve identically. Add `.migrations-*` to `.gitignore`.
+When a `next` migration exists or chain trimming is active, mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/` for compilation. This keeps the staged files at the same depth as the originals so relative imports (e.g. a shared `types/` folder next to `chain` and `next`) resolve identically. The staged dir self-stamps a `.gitignore`, and `mops init` adds `.migrations-*/` to the project `.gitignore`.
 :::
 
 Shorthand — when only the entrypoint is needed:

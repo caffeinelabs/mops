@@ -282,16 +282,29 @@ async function applyInit({
     await template("github-workflow:mops-test");
   }
 
-  // add .mops to .gitignore
+  // add mops-managed paths to .gitignore
   {
     let gitignore = path.join(process.cwd(), ".gitignore");
     let gitignoreData = existsSync(gitignore)
       ? readFileSync(gitignore).toString()
       : "";
-    let lf = gitignoreData.endsWith("\n") ? "\n" : "";
+    const additions: string[] = [];
     if (!gitignoreData.includes(".mops")) {
-      writeFileSync(gitignore, `${gitignoreData}\n.mops${lf}`.trimStart());
-      console.log(chalk.green("Added"), ".mops to .gitignore");
+      additions.push(".mops");
+    }
+    if (!gitignoreData.includes(".migrations-")) {
+      additions.push(".migrations-*/");
+    }
+    if (additions.length > 0) {
+      let lf = gitignoreData.endsWith("\n") ? "\n" : "";
+      writeFileSync(
+        gitignore,
+        `${gitignoreData}\n${additions.join("\n")}${lf}`.trimStart(),
+      );
+      console.log(
+        chalk.green("Added"),
+        `${additions.join(", ")} to .gitignore`,
+      );
     }
   }
 
