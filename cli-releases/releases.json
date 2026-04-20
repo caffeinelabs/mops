@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.11.0"
+    "latest": "2.12.0"
   },
   "versions": {
     "0.41.0": {
@@ -392,6 +392,14 @@
       "commitHash": "c72c56f5d3ad0d0ceb22b006486fd9877679ef74",
       "url": "https://cli.mops.one/versions/2.11.0.tgz",
       "hash": "bdb31e73c8319fdcba59d1a2387de35bcb192052aa5d3de0e08fa5235aa40e93"
+    },
+    "2.12.0": {
+      "time": 1776693148315,
+      "size": 2410327,
+      "relseaseNotes": "* Migration staging directory moved from `.mops/.migrations/<canister>/` to `<parent-of-chain>/.migrations-<canister>/`, so migration files can import shared modules from sibling folders (e.g. a `types/` folder next to `migrations/`) — relative imports now resolve to the same target whether moc reads the original chain dir or the staged one. The staged dir self-stamps a `.gitignore` so it doesn't pollute `git status`; `mops init` now also adds `.migrations-*/` to the project `.gitignore`\n* `[canisters.<name>.migrations]` now requires `chain` and `next` to share the same parent directory (any layout where the parents differed is rejected with a clear error). The default layout `chain = \"migrations\"` + `next = \"next-migration\"` already satisfies this. For per-canister setups, use sibling subdirectories, e.g. `chain = \"src/backend/migrations\"` + `next = \"src/backend/next-migration\"`\n",
+      "commitHash": "3148a033924c0deb87b03142a0e22906e98c538d",
+      "url": "https://cli.mops.one/versions/2.12.0.tgz",
+      "hash": "82359579eda0ed010399a76bcc608b98422cdf9c89aa56721e679b8920acd0d4"
     }
   }
 }
