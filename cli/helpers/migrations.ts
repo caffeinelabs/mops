@@ -1,9 +1,15 @@
-import { existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { rm } from "node:fs/promises";
 import chalk from "chalk";
 import { cliError } from "../error.js";
-import { resolveConfigPath } from "../mops.js";
+import { getRootDir, resolveConfigPath } from "../mops.js";
 import { MigrationsConfig } from "../types.js";
 
 function stagedMigrationsDir(chainDir: string, canisterName: string): string {
@@ -73,16 +79,17 @@ export function validateMigrationsConfig(
     }
   }
   if (migrations.next) {
-    const chainParent = resolve(dirname(resolveConfigPath(migrations.chain)));
-    const nextParent = resolve(dirname(resolveConfigPath(migrations.next)));
+    const parentOf = (p: string) => dirname(resolve(getRootDir(), p));
+    const chainParent = parentOf(migrations.chain);
+    const nextParent = parentOf(migrations.next);
     if (chainParent !== nextParent) {
       cliError(
         `[canisters.${canisterName}.migrations] "chain" and "next" must live in the same parent directory.\n` +
           `  chain = "${migrations.chain}" (parent: ${chainParent})\n` +
           `  next  = "${migrations.next}" (parent: ${nextParent})\n` +
-          "Move them under a shared parent, e.g.:\n" +
-          '  chain = "migrations/chain"\n' +
-          '  next  = "migrations/next"',
+          "Place them in the same parent directory, e.g.:\n" +
+          '  chain = "migrations"\n' +
+          '  next  = "next-migration"',
       );
     }
   }
@@ -149,6 +156,7 @@ export async function prepareMigrationArgs(
   const tempDir = stagedMigrationsDir(chainDir, canisterName);
   await rm(tempDir, { recursive: true, force: true });
   mkdirSync(tempDir, { recursive: true });
+  writeFileSync(join(tempDir, ".gitignore"), "*\n");
 
   const filesToInclude = isTrimming
     ? allMigrations.slice(-limit)
