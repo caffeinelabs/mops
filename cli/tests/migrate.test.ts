@@ -154,6 +154,20 @@ describe("migrate", () => {
       await patchMigrations(cwd, "check-limit = 2");
       await cliSnapshot(["check", "--verbose"], { cwd }, 0);
     });
+
+    test("error inside a chain migration reports its file location", async () => {
+      const cwd = await makeTempFixture("with-next");
+      await writeFile(
+        path.join(cwd, "migrations", "20250301_000000_AddEmail.mo"),
+        'import State "../types/State";\n' +
+          "module {\n" +
+          "  public func migration(old : State.V2) : State.V3 {\n" +
+          "    { old with email = 42 };\n" +
+          "  };\n" +
+          "};\n",
+      );
+      await cliSnapshot(["check"], { cwd }, 1);
+    });
   });
 
   describe("build", () => {
