@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.12.0"
+    "latest": "2.12.1"
   },
   "versions": {
     "0.41.0": {
@@ -400,6 +400,14 @@
       "commitHash": "3148a033924c0deb87b03142a0e22906e98c538d",
       "url": "https://cli.mops.one/versions/2.12.0.tgz",
       "hash": "82359579eda0ed010399a76bcc608b98422cdf9c89aa56721e679b8920acd0d4"
+    },
+    "2.12.1": {
+      "time": 1776782592686,
+      "size": 2410303,
+      "relseaseNotes": "* `mops check`/`build`/`check-stable` skip migration staging when only the pending `next` migration is needed, so `moc` diagnostics reference the real `next-migration/<file>` path.\n",
+      "commitHash": "871616a9bfd12a7541cf1052f3dc42fd12fe84c5",
+      "url": "https://cli.mops.one/versions/2.12.1.tgz",
+      "hash": "028437e21a8dca97acd115bae49c9091f2e870ad70ee0ec04b204619922cbc63"
     }
   }
 }
