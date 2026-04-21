@@ -61,9 +61,7 @@ build-limit = 100
 
 `chain` and `next` must live in the same parent directory. Migration files can import from sibling folders (e.g. a shared `types/` folder) using relative paths — mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/` for compilation, preserving the depth of the originals so relative imports resolve identically. The staged dir self-stamps a `.gitignore`, and `mops init` adds `.migrations-*/` to the project `.gitignore`.
 
-When staging is active, `moc` reports diagnostics for chain files against the staged path — e.g. `.migrations-backend/20250301_000000_AddEmail.mo:4.24-4.26: type error [M0050] ...`, not `migrations/20250301_000000_AddEmail.mo`. The staged directory is deleted when the command finishes, so the printed path will not resolve in your editor — open the matching file under `chain` (or `next`, if it is the pending migration) instead.
-
-The common dev-loop case bypasses staging: when moc only needs to see the pending `next` migration — typically `check-limit = 1` with a pending `next`, or no frozen chain yet — mops points moc at `next-migration/` directly, so errors in the migration you are actively editing reference the real path.
+`moc` diagnostics may point to a staged path under `.migrations-<canister>/`, which mops removes when the command finishes.
 
 See [`mops.toml` reference](/mops.toml#canistersnamemigrations) for all fields.
 
