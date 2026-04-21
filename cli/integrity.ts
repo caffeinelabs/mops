@@ -267,11 +267,16 @@ export async function checkLockFile(force = false) {
     }
   }
 
-  // check number of packages
-  if (Object.keys(lockFileJson.hashes).length !== packageIds.length) {
+  // check number of packages — packageIds can contain duplicates when
+  // multiple aliases (e.g. `base`, `base@0`, `base@0.16`) resolve to the
+  // same package@version, while lockFileJson.hashes is keyed by packageId
+  // and naturally deduplicated. Compare unique counts to avoid a spurious
+  // mismatch.
+  let uniquePackageIdCount = new Set(packageIds).size;
+  if (Object.keys(lockFileJson.hashes).length !== uniquePackageIdCount) {
     console.error("Integrity check failed");
     console.error(
-      `Mismatched number of resolved packages: ${JSON.stringify(Object.keys(lockFileJson.hashes).length)} vs ${JSON.stringify(packageIds.length)}`,
+      `Mismatched number of resolved packages: ${JSON.stringify(Object.keys(lockFileJson.hashes).length)} vs ${JSON.stringify(uniquePackageIdCount)}`,
     );
     process.exit(1);
   }
