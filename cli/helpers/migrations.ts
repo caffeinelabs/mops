@@ -101,8 +101,13 @@ export async function prepareMigrationArgs(
   mode: "check" | "build",
   verbose?: boolean,
 ): Promise<MigrationArgsResult> {
+  const noOp: MigrationArgsResult = {
+    migrationArgs: [],
+    cleanup: async () => {},
+  };
+
   if (!migrations) {
-    return { migrationArgs: [], cleanup: async () => {} };
+    return noOp;
   }
 
   validateMigrationsConfig(migrations, canisterName);
@@ -121,44 +126,55 @@ export async function prepareMigrationArgs(
   }
 
   const chainFiles = getMigrationFiles(chainDir);
+
   if (nextFile) {
     validateNextMigrationOrder(chainFiles, nextFile);
   }
 
-  // Virtual merged list: chain files (in chainDir) followed by the pending next file (in nextDir)
-  const all = [
-    ...chainFiles.map((file) => ({ file, dir: chainDir })),
-    ...(nextFile && nextDir ? [{ file: nextFile, dir: nextDir }] : []),
-  ];
+  // Treat chain + next as one virtual merged list
+  type MigrationEntry = { file: string; dir: string };
+  const allMigrations: MigrationEntry[] = chainFiles.map((f) => ({
+    file: f,
+    dir: chainDir,
+  }));
+  if (nextFile && nextDir) {
+    allMigrations.push({ file: nextFile, dir: nextDir });
+  }
 
   const limit =
     mode === "check" ? migrations["check-limit"] : migrations["build-limit"];
-  const isTrimming = limit !== undefined && limit < all.length;
-  const selected = isTrimming ? all.slice(-limit) : all;
-  const trimFlag = isTrimming ? ["-A=M0254"] : [];
+  const isTrimming = limit !== undefined && limit < allMigrations.length;
+  const needsTempDir = nextFile !== null || isTrimming;
 
-  // Skip staging when the selection is exactly the contents of one real
-  // directory: the whole chain (no trimming, no next), or the single pending
-  // next migration. moc then reports diagnostics against the real path the
-  // user is editing instead of a staged copy that gets cleaned up.
-  const realDir =
-    !isTrimming && !nextFile
-      ? chainDir
-      : selected.length === 1 && selected[0]!.dir === nextDir
-        ? nextDir
-        : null;
-  if (realDir) {
+  if (!needsTempDir) {
     return {
-      migrationArgs: [`--enhanced-migration=${realDir}`, ...trimFlag],
+      migrationArgs: [`--enhanced-migration=${chainDir}`],
       cleanup: async () => {},
     };
+  }
+
+  // Skip staging when moc only needs the pending next migration: point it at
+  // next-migration/ directly so diagnostics use the real path the user is
+  // editing instead of a staged copy that gets cleaned up before the error
+  // is read. Applies when the chain is empty or trimmed to 1.
+  if (nextFile && nextDir && (chainFiles.length === 0 || limit === 1)) {
+    const migrationArgs = [`--enhanced-migration=${nextDir}`];
+    if (isTrimming) {
+      migrationArgs.push("-A=M0254");
+    }
+    return { migrationArgs, cleanup: async () => {} };
   }
 
   const tempDir = stagedMigrationsDir(chainDir, canisterName);
   await rm(tempDir, { recursive: true, force: true });
   mkdirSync(tempDir, { recursive: true });
   writeFileSync(join(tempDir, ".gitignore"), "*\n");
-  for (const { file, dir } of selected) {
+
+  const filesToInclude = isTrimming
+    ? allMigrations.slice(-limit)
+    : allMigrations;
+
+  for (const { file, dir } of filesToInclude) {
     symlinkSync(resolve(dir, file), join(tempDir, file));
   }
 
@@ -166,14 +182,19 @@ export async function prepareMigrationArgs(
     console.log(
       chalk.blue("migrations"),
       chalk.gray(
-        `Prepared ${selected.length} migration(s) for ${canisterName}` +
-          (isTrimming ? ` (trimmed from ${all.length})` : ""),
+        `Prepared ${filesToInclude.length} migration(s) for ${canisterName}` +
+          (isTrimming ? ` (trimmed from ${allMigrations.length})` : ""),
       ),
     );
   }
 
+  const migrationArgs = [`--enhanced-migration=${tempDir}`];
+  if (isTrimming) {
+    migrationArgs.push("-A=M0254");
+  }
+
   return {
-    migrationArgs: [`--enhanced-migration=${tempDir}`, ...trimFlag],
+    migrationArgs,
     cleanup: async () => {
       await rm(tempDir, { recursive: true, force: true });
     },

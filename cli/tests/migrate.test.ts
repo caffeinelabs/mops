@@ -169,9 +169,7 @@ describe("migrate", () => {
       await cliSnapshot(["check"], { cwd }, 1);
     });
 
-    test("check-limit=1 with pending next reports real next-migration path on error", async () => {
-      const cwd = await makeTempFixture("with-next");
-      await patchMigrations(cwd, "check-limit = 1");
+    async function corruptNextMigration(cwd: string): Promise<void> {
       const nextDir = path.join(cwd, "next-migration");
       const nextFile = readdirSync(nextDir).find((f) => f.endsWith(".mo"))!;
       await writeFile(
@@ -183,6 +181,22 @@ describe("migrate", () => {
           "  };\n" +
           "};\n",
       );
+    }
+
+    test("check-limit=1 with pending next reports real next-migration path on error", async () => {
+      const cwd = await makeTempFixture("with-next");
+      await patchMigrations(cwd, "check-limit = 1");
+      await corruptNextMigration(cwd);
+      await cliSnapshot(["check"], { cwd }, 1);
+    });
+
+    test("empty chain with pending next reports real next-migration path on error", async () => {
+      const cwd = await makeTempFixture("with-next");
+      const chainDir = path.join(cwd, "migrations");
+      for (const f of readdirSync(chainDir).filter((f) => f.endsWith(".mo"))) {
+        await rm(path.join(chainDir, f));
+      }
+      await corruptNextMigration(cwd);
       await cliSnapshot(["check"], { cwd }, 1);
     });
   });

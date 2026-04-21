@@ -170,7 +170,7 @@ When a `next` migration exists or chain trimming is active, mops stages the acti
 
 When this staging is active, `moc` diagnostics for chain files reference the staged path (e.g. `.migrations-backend/20250301_000000_AddEmail.mo`) rather than the original `migrations/...` path. The staged directory is removed when the command finishes, so editor "jump to error" on the printed path will not find the file — the actual source is at the corresponding `<chain>/<file>.mo` (or `<next>/<file>.mo` for the pending one).
 
-As a special case, `check-limit = 1` with a pending `next` migration skips staging entirely: moc is pointed at the `next` directory directly, and errors in that migration reference the real path.
+As a special case, mops skips staging entirely when moc only needs to see the pending `next` migration — typically `check-limit = 1` with a pending `next`, or no frozen chain yet. moc is pointed at the `next` directory directly, and errors in that migration reference the real path.
 :::
 
 Shorthand — when only the entrypoint is needed:
