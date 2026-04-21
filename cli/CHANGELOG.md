@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.12.1
 - `mops check`/`build`/`check-stable` skip migration staging when only the pending `next` migration is needed, so `moc` diagnostics reference the real `next-migration/<file>` path.
 
 ## 2.12.0
