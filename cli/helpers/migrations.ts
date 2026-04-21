@@ -153,10 +153,8 @@ export async function prepareMigrationArgs(
     };
   }
 
-  // Skip staging when moc only needs the pending next migration: point it at
-  // next-migration/ directly so diagnostics use the real path the user is
-  // editing instead of a staged copy that gets cleaned up before the error
-  // is read. Applies when the chain is empty or trimmed to 1.
+  // Shortcut: when only the pending next migration is needed (empty chain or
+  // trimmed to 1), point moc at next-migration/ so diagnostics use the real path.
   if (nextFile && nextDir && (chainFiles.length === 0 || limit === 1)) {
     const migrationArgs = [`--enhanced-migration=${nextDir}`];
     if (isTrimming) {
