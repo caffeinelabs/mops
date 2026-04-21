@@ -61,6 +61,8 @@ build-limit = 100
 
 `chain` and `next` must live in the same parent directory. Migration files can import from sibling folders (e.g. a shared `types/` folder) using relative paths — mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/` for compilation, preserving the depth of the originals so relative imports resolve identically. The staged dir self-stamps a `.gitignore`, and `mops init` adds `.migrations-*/` to the project `.gitignore`.
 
+`moc` diagnostics may point to a staged path under `.migrations-<canister>/`, which mops removes when the command finishes.
+
 See [`mops.toml` reference](/mops.toml#canistersnamemigrations) for all fields.
 
 ## Typical workflow

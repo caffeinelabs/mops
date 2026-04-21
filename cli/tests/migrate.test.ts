@@ -154,6 +154,51 @@ describe("migrate", () => {
       await patchMigrations(cwd, "check-limit = 2");
       await cliSnapshot(["check", "--verbose"], { cwd }, 0);
     });
+
+    test("error inside a chain migration reports its file location", async () => {
+      const cwd = await makeTempFixture("with-next");
+      await writeFile(
+        path.join(cwd, "migrations", "20250301_000000_AddEmail.mo"),
+        'import State "../types/State";\n' +
+          "module {\n" +
+          "  public func migration(old : State.V2) : State.V3 {\n" +
+          "    { old with email = 42 };\n" +
+          "  };\n" +
+          "};\n",
+      );
+      await cliSnapshot(["check"], { cwd }, 1);
+    });
+
+    async function corruptNextMigration(cwd: string): Promise<void> {
+      const nextDir = path.join(cwd, "next-migration");
+      const nextFile = readdirSync(nextDir).find((f) => f.endsWith(".mo"))!;
+      await writeFile(
+        path.join(nextDir, nextFile),
+        'import State "../types/State";\n' +
+          "module {\n" +
+          "  public func migration(old : State.V3) : State.V4 {\n" +
+          '    { id = "wrong"; name = old.name; email = old.email };\n' +
+          "  };\n" +
+          "};\n",
+      );
+    }
+
+    test("check-limit=1 with pending next reports real next-migration path on error", async () => {
+      const cwd = await makeTempFixture("with-next");
+      await patchMigrations(cwd, "check-limit = 1");
+      await corruptNextMigration(cwd);
+      await cliSnapshot(["check"], { cwd }, 1);
+    });
+
+    test("empty chain with pending next reports real next-migration path on error", async () => {
+      const cwd = await makeTempFixture("with-next");
+      const chainDir = path.join(cwd, "migrations");
+      for (const f of readdirSync(chainDir).filter((f) => f.endsWith(".mo"))) {
+        await rm(path.join(chainDir, f));
+      }
+      await corruptNextMigration(cwd);
+      await cliSnapshot(["check"], { cwd }, 1);
+    });
   });
 
   describe("build", () => {

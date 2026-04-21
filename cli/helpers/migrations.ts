@@ -153,6 +153,16 @@ export async function prepareMigrationArgs(
     };
   }
 
+  // Shortcut: when only the pending next migration is needed (empty chain or
+  // trimmed to 1), point moc at next-migration/ so diagnostics use the real path.
+  if (nextFile && nextDir && (chainFiles.length === 0 || limit === 1)) {
+    const migrationArgs = [`--enhanced-migration=${nextDir}`];
+    if (isTrimming) {
+      migrationArgs.push("-A=M0254");
+    }
+    return { migrationArgs, cleanup: async () => {} };
+  }
+
   const tempDir = stagedMigrationsDir(chainDir, canisterName);
   await rm(tempDir, { recursive: true, force: true });
   mkdirSync(tempDir, { recursive: true });
