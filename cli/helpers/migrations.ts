@@ -101,13 +101,8 @@ export async function prepareMigrationArgs(
   mode: "check" | "build",
   verbose?: boolean,
 ): Promise<MigrationArgsResult> {
-  const noOp: MigrationArgsResult = {
-    migrationArgs: [],
-    cleanup: async () => {},
-  };
-
   if (!migrations) {
-    return noOp;
+    return { migrationArgs: [], cleanup: async () => {} };
   }
 
   validateMigrationsConfig(migrations, canisterName);
@@ -126,29 +121,35 @@ export async function prepareMigrationArgs(
   }
 
   const chainFiles = getMigrationFiles(chainDir);
-
   if (nextFile) {
     validateNextMigrationOrder(chainFiles, nextFile);
   }
 
-  // Treat chain + next as one virtual merged list
-  type MigrationEntry = { file: string; dir: string };
-  const allMigrations: MigrationEntry[] = chainFiles.map((f) => ({
-    file: f,
-    dir: chainDir,
-  }));
-  if (nextFile && nextDir) {
-    allMigrations.push({ file: nextFile, dir: nextDir });
-  }
+  // Virtual merged list: chain files (in chainDir) followed by the pending next file (in nextDir)
+  const all = [
+    ...chainFiles.map((file) => ({ file, dir: chainDir })),
+    ...(nextFile && nextDir ? [{ file: nextFile, dir: nextDir }] : []),
+  ];
 
   const limit =
     mode === "check" ? migrations["check-limit"] : migrations["build-limit"];
-  const isTrimming = limit !== undefined && limit < allMigrations.length;
-  const needsTempDir = nextFile !== null || isTrimming;
+  const isTrimming = limit !== undefined && limit < all.length;
+  const selected = isTrimming ? all.slice(-limit) : all;
+  const trimFlag = isTrimming ? ["-A=M0254"] : [];
 
-  if (!needsTempDir) {
+  // Skip staging when the selection is exactly the contents of one real
+  // directory: the whole chain (no trimming, no next), or the single pending
+  // next migration. moc then reports diagnostics against the real path the
+  // user is editing instead of a staged copy that gets cleaned up.
+  const realDir =
+    !isTrimming && !nextFile
+      ? chainDir
+      : selected.length === 1 && selected[0]!.dir === nextDir
+        ? nextDir
+        : null;
+  if (realDir) {
     return {
-      migrationArgs: [`--enhanced-migration=${chainDir}`],
+      migrationArgs: [`--enhanced-migration=${realDir}`, ...trimFlag],
       cleanup: async () => {},
     };
   }
@@ -157,12 +158,7 @@ export async function prepareMigrationArgs(
   await rm(tempDir, { recursive: true, force: true });
   mkdirSync(tempDir, { recursive: true });
   writeFileSync(join(tempDir, ".gitignore"), "*\n");
-
-  const filesToInclude = isTrimming
-    ? allMigrations.slice(-limit)
-    : allMigrations;
-
-  for (const { file, dir } of filesToInclude) {
+  for (const { file, dir } of selected) {
     symlinkSync(resolve(dir, file), join(tempDir, file));
   }
 
@@ -170,19 +166,14 @@ export async function prepareMigrationArgs(
     console.log(
       chalk.blue("migrations"),
       chalk.gray(
-        `Prepared ${filesToInclude.length} migration(s) for ${canisterName}` +
-          (isTrimming ? ` (trimmed from ${allMigrations.length})` : ""),
+        `Prepared ${selected.length} migration(s) for ${canisterName}` +
+          (isTrimming ? ` (trimmed from ${all.length})` : ""),
       ),
     );
   }
 
-  const migrationArgs = [`--enhanced-migration=${tempDir}`];
-  if (isTrimming) {
-    migrationArgs.push("-A=M0254");
-  }
-
   return {
-    migrationArgs,
+    migrationArgs: [`--enhanced-migration=${tempDir}`, ...trimFlag],
     cleanup: async () => {
       await rm(tempDir, { recursive: true, force: true });
     },

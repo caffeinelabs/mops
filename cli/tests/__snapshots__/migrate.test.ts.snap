@@ -85,6 +85,18 @@ check-stable Comparing deployed.most ↔ .mops/.check-stable/new.most
 }
 `;
 
+exports[`migrate check check-limit=1 with pending next reports real next-migration path on error 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "next-migration/20250401_000000_RenameId.mo:4.12-4.19: type error [M0050], literal of type
+  Text
+does not have expected type
+  Nat
+✗ Check failed for canister backend (exit code: 1)",
+  "stdout": "",
+}
+`;
+
 exports[`migrate check error inside a chain migration reports its file location 1`] = `
 {
   "exitCode": 1,

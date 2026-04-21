@@ -168,6 +168,23 @@ describe("migrate", () => {
       );
       await cliSnapshot(["check"], { cwd }, 1);
     });
+
+    test("check-limit=1 with pending next reports real next-migration path on error", async () => {
+      const cwd = await makeTempFixture("with-next");
+      await patchMigrations(cwd, "check-limit = 1");
+      const nextDir = path.join(cwd, "next-migration");
+      const nextFile = readdirSync(nextDir).find((f) => f.endsWith(".mo"))!;
+      await writeFile(
+        path.join(nextDir, nextFile),
+        'import State "../types/State";\n' +
+          "module {\n" +
+          "  public func migration(old : State.V3) : State.V4 {\n" +
+          '    { id = "wrong"; name = old.name; email = old.email };\n' +
+          "  };\n" +
+          "};\n",
+      );
+      await cliSnapshot(["check"], { cwd }, 1);
+    });
   });
 
   describe("build", () => {

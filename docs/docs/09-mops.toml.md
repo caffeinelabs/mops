@@ -169,6 +169,8 @@ When `[migrations]` is configured, do not add `--enhanced-migration` to `[canist
 When a `next` migration exists or chain trimming is active, mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/` for compilation. This keeps the staged files at the same depth as the originals so relative imports (e.g. a shared `types/` folder next to `chain` and `next`) resolve identically. The staged dir self-stamps a `.gitignore`, and `mops init` adds `.migrations-*/` to the project `.gitignore`.
 
 When this staging is active, `moc` diagnostics for chain files reference the staged path (e.g. `.migrations-backend/20250301_000000_AddEmail.mo`) rather than the original `migrations/...` path. The staged directory is removed when the command finishes, so editor "jump to error" on the printed path will not find the file — the actual source is at the corresponding `<chain>/<file>.mo` (or `<next>/<file>.mo` for the pending one).
+
+As a special case, `check-limit = 1` with a pending `next` migration skips staging entirely: moc is pointed at the `next` directory directly, and errors in that migration reference the real path.
 :::
 
 Shorthand — when only the entrypoint is needed:

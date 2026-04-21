@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops check`/`build`/`check-stable` skip migration staging when the active window is exactly the pending `next` migration (typically `check-limit = 1` with a pending next, or no frozen chain yet). moc is pointed at `next-migration/` directly, so diagnostics reference the real file path you are editing instead of a staged copy that gets cleaned up before you read the error.
 
 ## 2.12.0
 - Migration staging directory moved from `.mops/.migrations/<canister>/` to `<parent-of-chain>/.migrations-<canister>/`, so migration files can import shared modules from sibling folders (e.g. a `types/` folder next to `migrations/`) — relative imports now resolve to the same target whether moc reads the original chain dir or the staged one. The staged dir self-stamps a `.gitignore` so it doesn't pollute `git status`; `mops init` now also adds `.migrations-*/` to the project `.gitignore`
