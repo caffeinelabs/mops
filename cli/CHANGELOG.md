@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Fix `mops install --lock update` silently no-op'ing on a corrupt lockfile (#515)
 
 ## 2.12.2
 - Fix `mops install` (and any `--lock check` flow) failing with "Mismatched number of resolved packages" when a project's resolved dependencies include multiple aliases (e.g. `base`, `base@0`, `base@0.16`) that pin to the same `name@version`
