@@ -63,7 +63,12 @@ async function getResolvedMopsPackageIds(): Promise<string[]> {
   let packageIds = Object.entries(resolvedPackages)
     .filter(([_, version]) => getDependencyType(version) === "mops")
     .map(([name, version]) => getPackageId(name, version));
-  return packageIds;
+  // resolvedPackages is keyed by raw mops.toml dependency keys, so aliases
+  // like `base`, `base@0`, `base@0.16` survive as separate entries. Once
+  // collapsed into packageId via getDepName, they can produce duplicates
+  // when multiple aliases pin to the same name@version. Dedupe so callers
+  // (registry queries, lockfile checks) see one entry per packageId.
+  return [...new Set(packageIds)];
 }
 
 // get hash of local file from '.mops' dir by fileId

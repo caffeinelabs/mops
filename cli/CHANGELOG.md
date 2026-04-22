@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Fix `mops install` (and any `--lock check` flow) failing with "Mismatched number of resolved packages" when a project's resolved dependencies include multiple aliases (e.g. `base`, `base@0`, `base@0.16`) that pin to the same `name@version`
 
 ## 2.12.1
 - `mops check`/`build`/`check-stable` skip migration staging when only the pending `next` migration is needed, so `moc` diagnostics reference the real `next-migration/<file>` path.

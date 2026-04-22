@@ -71,4 +71,25 @@ describe("install", () => {
 
   // mops add/remove/update/sync are not separately tested here because they
   // all route through the same checkIntegrity code path tested above.
+
+  // Regression: aliases pinning the same package@version (e.g. `core` and
+  // `core@1` both at "1.0.0") inflated the resolved-packageIds count and
+  // tripped the lockfile integrity check with a spurious
+  // "Mismatched number of resolved packages" error. See issue #506.
+  test("integrity check passes when aliases resolve to the same package@version", async () => {
+    const cwd = path.join(import.meta.dirname, "install/aliases");
+    const lockFile = path.join(cwd, "mops.lock");
+    rmSync(lockFile, { force: true });
+    try {
+      const result = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(result.stderr).not.toMatch(
+        /Mismatched number of resolved packages/,
+      );
+      expect(result.exitCode).toBe(0);
+      expect(existsSync(lockFile)).toBe(true);
+    } finally {
+      rmSync(lockFile, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
 });
