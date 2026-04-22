@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.12.1"
+    "latest": "2.12.2"
   },
   "versions": {
     "0.41.0": {
@@ -408,6 +408,14 @@
       "commitHash": "871616a9bfd12a7541cf1052f3dc42fd12fe84c5",
       "url": "https://cli.mops.one/versions/2.12.1.tgz",
       "hash": "028437e21a8dca97acd115bae49c9091f2e870ad70ee0ec04b204619922cbc63"
+    },
+    "2.12.2": {
+      "time": 1776847601052,
+      "size": 2410340,
+      "relseaseNotes": "* Fix `mops install` (and any `--lock check` flow) failing with \"Mismatched number of resolved packages\" when a project's resolved dependencies include multiple aliases (e.g. `base`, `base@0`, `base@0.16`) that pin to the same `name@version`\n",
+      "commitHash": "29a222beeed0402730fe9475aa6c30bb24330e00",
+      "url": "https://cli.mops.one/versions/2.12.2.tgz",
+      "hash": "1a7b5985d5d055696a24f5347735561c63c30aeb27db91d385d3738f4ae09125"
     }
   }
 }
