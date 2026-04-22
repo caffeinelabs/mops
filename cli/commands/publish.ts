@@ -56,6 +56,10 @@ export async function publish(
         "dev-dependencies",
         "toolchain",
         "requirements",
+        "moc",
+        "canisters",
+        "build",
+        "lint",
       ].includes(key)
     ) {
       console.log(chalk.red("Error: ") + `Unknown config section [${key}]`);
