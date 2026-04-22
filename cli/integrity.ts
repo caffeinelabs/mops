@@ -63,7 +63,8 @@ async function getResolvedMopsPackageIds(): Promise<string[]> {
   let packageIds = Object.entries(resolvedPackages)
     .filter(([_, version]) => getDependencyType(version) === "mops")
     .map(([name, version]) => getPackageId(name, version));
-  return packageIds;
+  // dedupe: aliases like `base@0`, `base@0.16` collapse to the same packageId
+  return [...new Set(packageIds)];
 }
 
 // get hash of local file from '.mops' dir by fileId
