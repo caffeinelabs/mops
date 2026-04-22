@@ -1,7 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
-- Fix `mops publish` rejecting `[moc]`, `[canisters]`, `[build]`, and `[lint]` sections in `mops.toml` (#512)
+- `mops publish` no longer rejects unknown `mops.toml` sections, `package.*` keys, or `requirements.*` entries — these typo guards were the only place in the CLI that complained about unknown keys, drifted from the docs/types, and blocked publish on harmless local-only config like `[moc]`, `[canisters]`, `[build]`, and `[lint]` (#512)
 
 ## 2.12.2
 - Fix `mops install` (and any `--lock check` flow) failing with "Mismatched number of resolved packages" when a project's resolved dependencies include multiple aliases (e.g. `base`, `base@0`, `base@0.16`) that pin to the same `name@version`
