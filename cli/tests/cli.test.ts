@@ -107,7 +107,8 @@ describe("install", () => {
       expect(first.exitCode).toBe(0);
       expect(existsSync(lockFile)).toBe(true);
 
-      const bad = "BAD0000000000000000000000000000000000000000000000000000000000BAD";
+      const bad =
+        "BAD0000000000000000000000000000000000000000000000000000000000BAD";
       const original = readFileSync(lockFile, "utf8");
       const corrupted = original.replace(
         /"core@1\.0\.0\/mops\.toml":\s*"[0-9a-f]{64}"/,

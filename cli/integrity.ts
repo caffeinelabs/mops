@@ -159,7 +159,9 @@ export function checkLockFileLight(): boolean {
   return false;
 }
 
-export async function updateLockFile({ force = false }: { force?: boolean } = {}) {
+export async function updateLockFile({
+  force = false,
+}: { force?: boolean } = {}) {
   // if lock file exists and mops.toml hasn't changed, don't update it
   // (unless forced: `--lock update` must unconditionally regenerate so users
   // can recover from a corrupt lockfile without `rm mops.lock`)
