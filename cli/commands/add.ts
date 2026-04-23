@@ -90,7 +90,7 @@ export async function add(
         console.log(chalk.red("Error: ") + versionRes.err);
         return;
       }
-      ver = versionRes.ok;
+      ver = "^" + versionRes.ok;
     }
 
     pkgDetails = {

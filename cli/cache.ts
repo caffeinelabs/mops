@@ -77,6 +77,11 @@ export let copyCache = (cacheName: string, dest: string) => {
   });
 };
 
+export function listCachedPackages(): string[] {
+  let packagesDir = path.join(getGlobalCacheDir(), "packages");
+  return fs.existsSync(packagesDir) ? fs.readdirSync(packagesDir) : [];
+}
+
 export let cacheSize = async () => {
   let dir = path.join(getGlobalCacheDir());
   fs.mkdirSync(dir, { recursive: true });

@@ -24,6 +24,7 @@ import {
   Requirement,
 } from "../declarations/main/main.did.js";
 import { Dependency } from "../types.js";
+import { isRange } from "../semver.js";
 import { testWithReporter } from "./test/test.js";
 import { SilentReporter } from "./test/reporters/silent-reporter.js";
 import { findChangelogEntry } from "../helpers/find-changelog-entry.js";
@@ -160,6 +161,20 @@ export async function publish(
         process.exit(1);
       }
       delete dep.path;
+    }
+  }
+
+  let rangeDeps = [
+    ...Object.values(config.dependencies || {}),
+    ...Object.values(config["dev-dependencies"] || {}),
+  ].filter((dep) => isRange(dep.version || ""));
+  if (rangeDeps.length > 0) {
+    console.log(
+      chalk.yellow("Warning: ") +
+        "version ranges in published dependencies are only understood by recent mops CLI versions. Older clients will fail to install this package.",
+    );
+    for (let dep of rangeDeps) {
+      console.log(`  ${dep.name} = "${dep.version}"`);
     }
   }
 
