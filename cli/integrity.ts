@@ -317,6 +317,11 @@ export async function checkLockFile(force = false) {
         console.error(`Mismatched hash for ${fileId}`);
         console.error(`Locked hash: ${lockedHash}`);
         console.error(`Actual hash: ${localHash}`);
+        console.error("");
+        console.error(
+          "If you have not modified files under .mops/, your lockfile may be stale or corrupt.",
+        );
+        console.error("Run `mops install --lock update` to regenerate it.");
         process.exit(1);
       }
     }
