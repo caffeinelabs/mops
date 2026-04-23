@@ -7,6 +7,27 @@
 - `mops update` preserves range type when bumping versions
 - Resolver validates that all range constraints are satisfied and reports errors on conflicts
 
+## 2.12.3
+- Fix `mops install --lock update` silently no-op'ing on a corrupt lockfile (#515)
+- `mops publish` no longer rejects unknown `mops.toml` sections, `package.*` keys, or `requirements.*` entries — these typo guards were the only place in the CLI that complained about unknown keys, drifted from the docs/types, and blocked publish on harmless local-only config like `[moc]`, `[canisters]`, `[build]`, and `[lint]` (#512)
+
+## 2.12.2
+- Fix `mops install` (and any `--lock check` flow) failing with "Mismatched number of resolved packages" when a project's resolved dependencies include multiple aliases (e.g. `base`, `base@0`, `base@0.16`) that pin to the same `name@version`
+
+## 2.12.1
+- `mops check`/`build`/`check-stable` skip migration staging when only the pending `next` migration is needed, so `moc` diagnostics reference the real `next-migration/<file>` path.
+
+## 2.12.0
+- Migration staging directory moved from `.mops/.migrations/<canister>/` to `<parent-of-chain>/.migrations-<canister>/`, so migration files can import shared modules from sibling folders (e.g. a `types/` folder next to `migrations/`) — relative imports now resolve to the same target whether moc reads the original chain dir or the staged one. The staged dir self-stamps a `.gitignore` so it doesn't pollute `git status`; `mops init` now also adds `.migrations-*/` to the project `.gitignore`
+- `[canisters.<name>.migrations]` now requires `chain` and `next` to share the same parent directory (any layout where the parents differed is rejected with a clear error). The default layout `chain = "migrations"` + `next = "next-migration"` already satisfies this. For per-canister setups, use sibling subdirectories, e.g. `chain = "src/backend/migrations"` + `next = "src/backend/next-migration"`
+
+## 2.11.0
+- Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced migration chains
+- Add `[canisters.<name>.migrations]` config section with `chain`, `next`, `check-limit`, and `build-limit` fields
+- `mops check`, `mops build`, and `mops check-stable` now auto-inject `--enhanced-migration` when `[migrations]` is configured
+- `mops check` and `mops check-stable` emit a hint to create a migration when a stable compatibility check fails and `[migrations]` is configured
+- Migration chain trimming: only the last N migrations are passed to `moc` based on `check-limit`/`build-limit` settings
+
 ## 2.10.0
 - `mops check` and `mops check-stable` now apply per-canister `[canisters.<name>].args` (previously only `mops build` applied them)
 - `mops check` now accepts canister names as arguments (e.g. `mops check backend`) to check a specific canister

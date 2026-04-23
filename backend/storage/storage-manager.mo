@@ -11,6 +11,7 @@ import { ic } "mo:ic";
 
 import Types "./types";
 import Storage "./storage-canister";
+import MemoryStats "../main/MemoryStats";
 
 module {
   public type StorageId = Principal;
@@ -170,6 +171,16 @@ module {
           storageId;
         },
       );
+    };
+
+    public func getMemoryStats() : {
+      storages : MemoryStats.StructureStats;
+      storageByFileId : MemoryStats.StructureStats;
+    } {
+      {
+        storages = MemoryStats.statsForMap(storages, func(k : StorageId, v : StorageStats) : Blob = to_candid ((k, v)));
+        storageByFileId = MemoryStats.statsForMap(storageByFileId, func(k : FileId, v : StorageId) : Blob = to_candid ((k, v)));
+      };
     };
 
     public func toStable() : Stable {

@@ -26,7 +26,7 @@ See [mops.lock](/mops.lock) for details on lockfile contents and when to commit 
 What to do with the [lockfile](/mops.lock).
 
 Possible values:
-- `update` — keep the lockfile in sync with current dependencies and verify file integrity (default)
+- `update` — keep the lockfile in sync with current dependencies and verify file integrity (default). Pass explicitly to force regeneration if the lockfile is stale or corrupt.
 - `check` — verify file integrity against an existing lockfile; fail if the lockfile is missing or out of date
 - `ignore` — skip the lockfile entirely
 

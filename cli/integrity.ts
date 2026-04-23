@@ -41,7 +41,7 @@ export async function checkIntegrity(lock?: "check" | "update" | "ignore") {
   }
 
   if (lock === "update") {
-    await updateLockFile();
+    await updateLockFile({ force });
     await checkLockFile(force);
   } else if (lock === "check") {
     await checkLockFile(force);
@@ -63,7 +63,8 @@ async function getResolvedMopsPackageIds(): Promise<string[]> {
   let packageIds = Object.entries(resolvedPackages)
     .filter(([_, version]) => getDependencyType(version) === "mops")
     .map(([name, version]) => getPackageId(name, version));
-  return packageIds;
+  // dedupe: aliases like `base@0`, `base@0.16` collapse to the same packageId
+  return [...new Set(packageIds)];
 }
 
 // get hash of local file from '.mops' dir by fileId
@@ -158,9 +159,13 @@ export function checkLockFileLight(): boolean {
   return false;
 }
 
-export async function updateLockFile() {
+export async function updateLockFile({
+  force = false,
+}: { force?: boolean } = {}) {
   // if lock file exists and mops.toml hasn't changed, don't update it
-  if (checkLockFileLight()) {
+  // (unless forced: `--lock update` must unconditionally regenerate so users
+  // can recover from a corrupt lockfile without `rm mops.lock`)
+  if (!force && checkLockFileLight()) {
     return;
   }
 
@@ -312,6 +317,11 @@ export async function checkLockFile(force = false) {
         console.error(`Mismatched hash for ${fileId}`);
         console.error(`Locked hash: ${lockedHash}`);
         console.error(`Actual hash: ${localHash}`);
+        console.error("");
+        console.error(
+          "If you have not modified files under .mops/, your lockfile may be stale or corrupt.",
+        );
+        console.error("Run `mops install --lock update` to regenerate it.");
         process.exit(1);
       }
     }

@@ -48,22 +48,6 @@ export async function publish(
 
   console.log(`Publishing ${config.package?.name}@${config.package?.version}`);
 
-  // validate
-  for (let key of Object.keys(config)) {
-    if (
-      ![
-        "package",
-        "dependencies",
-        "dev-dependencies",
-        "toolchain",
-        "requirements",
-      ].includes(key)
-    ) {
-      console.log(chalk.red("Error: ") + `Unknown config section [${key}]`);
-      process.exit(1);
-    }
-  }
-
   // required fields
   if (!config.package) {
     console.log(
@@ -95,29 +79,6 @@ export async function publish(
       if (!res.ok) {
         return;
       }
-    }
-  }
-
-  let packageKeys = [
-    "name",
-    "version",
-    "keywords",
-    "description",
-    "repository",
-    "documentation",
-    "homepage",
-    "baseDir",
-    "readme",
-    "license",
-    "files",
-    "dfx",
-    "moc",
-    "donation",
-  ];
-  for (let key of Object.keys(config.package)) {
-    if (!packageKeys.includes(key)) {
-      console.log(chalk.red("Error: ") + `Unknown config key 'package.${key}'`);
-      process.exit(1);
     }
   }
 
@@ -221,15 +182,6 @@ export async function publish(
         return;
       }
     }
-  }
-
-  if (config.requirements) {
-    Object.keys(config.requirements).forEach((name) => {
-      if (name !== "moc") {
-        console.log(chalk.red("Error: ") + `Unknown requirement "${name}"`);
-        return;
-      }
-    });
   }
 
   let toBackendDep = (dep: Dependency): DependencyV2 => {
