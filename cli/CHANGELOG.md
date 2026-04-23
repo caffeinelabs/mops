@@ -5,7 +5,8 @@
 - `mops add` now defaults to caret range (e.g. `mops add core` writes `core = "^1.2.3"`)
 - `mops add core@1.2.3` still pins an exact version
 - `mops update` preserves range type when bumping versions
-- Resolver validates that all range constraints are satisfied and reports errors on conflicts
+- Resolver verifies that the resolved version satisfies all transitive range constraints, and reports a warning/error otherwise
+- `mops publish` warns when publishing a package with version ranges in dependencies (older mops CLI versions cannot install such packages)
 
 ## 2.12.3
 - Fix `mops install --lock update` silently no-op'ing on a corrupt lockfile (#515)

@@ -8,10 +8,7 @@ export function isRange(spec: string): boolean {
 }
 
 export function stripRangePrefix(spec: string): string {
-  if (spec.startsWith("^") || spec.startsWith("~")) {
-    return spec.slice(1);
-  }
-  return spec;
+  return isRange(spec) ? spec.slice(1) : spec;
 }
 
 /**
@@ -25,20 +22,18 @@ export function stripRangePrefix(spec: string): string {
  * Mapping:
  *   ^1.2.3 (major>0) → #minor  (same major)
  *   ^0.2.3 (minor>0) → #patch  (same major.minor)
- *   ^0.0.3            → null    (exact pin, caller must handle)
+ *   ^0.0.3            → null   (exact pin, caller must handle)
  *   ~X.Y.Z            → #patch  (same major.minor)
+ *   invalid/unparseable → null (caller must handle)
  */
 export function rangeToSemverPart(spec: string): SemverPart | null {
-  let bare = stripRangePrefix(spec);
-  let parsed = semver.parse(bare);
+  let parsed = semver.parse(stripRangePrefix(spec));
   if (!parsed) {
-    return { minor: null };
+    return null;
   }
-
   if (spec.startsWith("~")) {
     return { patch: null };
   }
-
   if (parsed.major !== 0) {
     return { minor: null };
   }

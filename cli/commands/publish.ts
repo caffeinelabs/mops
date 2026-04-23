@@ -24,7 +24,7 @@ import {
   Requirement,
 } from "../declarations/main/main.did.js";
 import { Dependency } from "../types.js";
-import { stripRangePrefix } from "../semver.js";
+import { isRange } from "../semver.js";
 import { testWithReporter } from "./test/test.js";
 import { SilentReporter } from "./test/reporters/silent-reporter.js";
 import { findChangelogEntry } from "../helpers/find-changelog-entry.js";
@@ -164,6 +164,20 @@ export async function publish(
     }
   }
 
+  let rangeDeps = [
+    ...Object.values(config.dependencies || {}),
+    ...Object.values(config["dev-dependencies"] || {}),
+  ].filter((dep) => isRange(dep.version || ""));
+  if (rangeDeps.length > 0) {
+    console.log(
+      chalk.yellow("Warning: ") +
+        "version ranges in published dependencies are only understood by recent mops CLI versions. Older clients will fail to install this package.",
+    );
+    for (let dep of rangeDeps) {
+      console.log(`  ${dep.name} = "${dep.version}"`);
+    }
+  }
+
   if (config.package.keywords) {
     for (let keyword of config.package.keywords) {
       if (keyword.length > 20) {
@@ -187,7 +201,7 @@ export async function publish(
   let toBackendDep = (dep: Dependency): DependencyV2 => {
     return {
       ...dep,
-      version: stripRangePrefix(dep.version || ""),
+      version: dep.version || "",
       repo: dep.repo || "",
     };
   };

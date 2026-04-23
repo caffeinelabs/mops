@@ -72,20 +72,20 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
     let devDepKeys = Object.keys(config["dev-dependencies"] || {});
     let allDepKeys = [...Object.keys(config.dependencies || {}), ...devDepKeys];
 
-    for (let dep of available) {
-      let bareOld = stripRangePrefix(dep[1]);
+    for (let [name, oldVersion, newVersion] of available) {
+      let bareOld = stripRangePrefix(oldVersion);
       let matchesName = (d: string) => {
         let pinnedVersion = getDepPinnedVersion(d);
         return (
-          getDepName(d) === dep[0] &&
+          getDepName(d) === name &&
           (!pinnedVersion || bareOld.startsWith(pinnedVersion))
         );
       };
 
       let dev = devDepKeys.some(matchesName);
-      let asName = allDepKeys.find(matchesName) || dep[0];
-      let rangePrefix = isRange(dep[1]) ? dep[1][0] : "";
-      await add(`${dep[0]}@${rangePrefix}${dep[2]}`, { dev, lock }, asName);
+      let asName = allDepKeys.find(matchesName) || name;
+      let rangePrefix = isRange(oldVersion) ? oldVersion[0] : "";
+      await add(`${name}@${rangePrefix}${newVersion}`, { dev, lock }, asName);
     }
   }
 

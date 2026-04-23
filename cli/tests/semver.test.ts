@@ -71,7 +71,7 @@ describe("rangeToSemverPart", () => {
     expect(rangeToSemverPart("~0.0.3")).toEqual({ patch: null });
   });
 
-  test("invalid version falls back to #minor", () => {
-    expect(rangeToSemverPart("^not-a-version")).toEqual({ minor: null });
+  test("invalid version returns null", () => {
+    expect(rangeToSemverPart("^not-a-version")).toBeNull();
   });
 });

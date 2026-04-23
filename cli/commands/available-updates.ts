@@ -24,10 +24,6 @@ export async function getAvailableUpdates(
       getDepPinnedVersion(dep.name).split(".").length !== 3,
   );
 
-  if (depsToUpdate.length === 0) {
-    return [];
-  }
-
   let getCurrentVersion = (pkg: string, updateVersion: string) => {
     for (let dep of allDeps) {
       if (getDepName(dep.name) === pkg && dep.version) {
