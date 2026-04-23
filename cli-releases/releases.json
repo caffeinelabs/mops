@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.12.2"
+    "latest": "2.12.3"
   },
   "versions": {
     "0.41.0": {
@@ -416,6 +416,14 @@
       "commitHash": "29a222beeed0402730fe9475aa6c30bb24330e00",
       "url": "https://cli.mops.one/versions/2.12.2.tgz",
       "hash": "1a7b5985d5d055696a24f5347735561c63c30aeb27db91d385d3738f4ae09125"
+    },
+    "2.12.3": {
+      "time": 1776932441082,
+      "size": 2410287,
+      "relseaseNotes": "* Fix `mops install --lock update` silently no-op'ing on a corrupt lockfile (#515)\n* `mops publish` no longer rejects unknown `mops.toml` sections, `package.*` keys, or `requirements.*` entries — these typo guards were the only place in the CLI that complained about unknown keys, drifted from the docs/types, and blocked publish on harmless local-only config like `[moc]`, `[canisters]`, `[build]`, and `[lint]` (#512)\n",
+      "commitHash": "79dab9d9a2e9afdce2aef3fed6a74fa741d57331",
+      "url": "https://cli.mops.one/versions/2.12.3.tgz",
+      "hash": "e9c2286c8d096639c6cc03576848f97f5d10dd10b4a92a8ebeb136908f349189"
     }
   }
 }
