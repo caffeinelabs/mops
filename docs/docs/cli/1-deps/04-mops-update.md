@@ -26,9 +26,9 @@ mops update core
 
 ### `--major`
 
-Allow updates that cross major versions (or pre-1.0 minor versions). For example, with `core = "2.0.0"` in `mops.toml`:
+Allow updates that cross the caret bound — major versions, or for `0.x.y` packages, minor versions. For example, with `core = "2.0.0"` in `mops.toml`:
 - `mops update core` → bumps within `2.x.y` (e.g. `2.5.0`)
-- `mops update core --major` → may bump to `3.0.0` or later
+- `mops update core --major` → also allows `3.0.0` or later, once published
 
 ### `--lock`
 

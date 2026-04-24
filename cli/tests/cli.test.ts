@@ -1,7 +1,7 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "path";
-import { cli } from "./helpers";
+import { cli, normalizePaths } from "./helpers";
 
 describe("cli", () => {
   test("--version", async () => {
@@ -193,17 +193,22 @@ describe("update / outdated bounds", () => {
     cleanup();
     try {
       await cli(["install"], { cwd, env: { CI: undefined } });
-      const caret = await cli(["outdated"], { cwd, env: { CI: undefined } });
-      const major = await cli(["outdated", "--major"], {
-        cwd,
-        env: { CI: undefined },
-      });
-      // caret-bound: only base shows up (within 0.14.x); core stays put
-      expect(caret.stdout).toMatch(/base 0\.14\.5 -> 0\.14\./);
-      expect(caret.stdout).not.toMatch(/core /);
+      const caret = normalizePaths(
+        (await cli(["outdated"], { cwd, env: { CI: undefined } })).stdout,
+      );
+      const major = normalizePaths(
+        (await cli(["outdated", "--major"], { cwd, env: { CI: undefined } }))
+          .stdout,
+      );
+      // caret-bound: base bumps within 0.14.x; core (if reported) stays in 1.x
+      expect(caret).toMatch(/base 0\.14\.5 -> 0\.14\./);
+      const caretCore = caret.match(/core 1\.0\.0 -> (\d+)\./)?.[1];
+      if (caretCore) {
+        expect(parseInt(caretCore)).toBe(1);
+      }
       // --major: both bump across their major bounds
-      expect(major.stdout).toMatch(/base 0\.14\.5 -> 0\.(1[5-9]|[2-9]\d)/);
-      expect(major.stdout).toMatch(/core 1\.0\.0 -> [2-9]/);
+      expect(major).toMatch(/base 0\.14\.5 -> 0\.(1[5-9]|[2-9]\d)/);
+      expect(major).toMatch(/core 1\.0\.0 -> [2-9]/);
     } finally {
       cleanup();
     }

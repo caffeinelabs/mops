@@ -627,9 +627,11 @@ program
 program
   .command("outdated")
   .description("Print outdated dependencies specified in mops.toml")
-  .option(
-    "--major",
-    "Allow updates that cross major versions (or pre-1.0 minor versions)",
+  .addOption(
+    new Option(
+      "--major",
+      "Allow updates that cross the caret bound (major versions, or for 0.x.y packages, minor versions)",
+    ),
   )
   .action(async (options) => {
     await outdated(options);
@@ -639,9 +641,11 @@ program
 program
   .command("update [pkg]")
   .description("Update dependencies specified in mops.toml")
-  .option(
-    "--major",
-    "Allow updates that cross major versions (or pre-1.0 minor versions)",
+  .addOption(
+    new Option(
+      "--major",
+      "Allow updates that cross the caret bound (major versions, or for 0.x.y packages, minor versions)",
+    ),
   )
   .addOption(
     new Option("--lock <action>", "Lockfile action").choices([

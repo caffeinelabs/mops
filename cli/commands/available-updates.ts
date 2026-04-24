@@ -51,10 +51,11 @@ export async function getAvailableUpdates(
             ? { minor: null }
             : { patch: null };
       } else if (bound === "caret") {
-        let major = semver.major(dep.version || "0.0.0");
+        // Caret (cargo-style): ^0.x.y -> 0.x.* (patch only); ^1+ -> same major (minor+patch)
+        let major = semver.major(dep.version!);
         semverPart = major === 0 ? { patch: null } : { minor: null };
       }
-      return [name, dep.version || "", semverPart];
+      return [name, dep.version!, semverPart];
     }),
   );
 
