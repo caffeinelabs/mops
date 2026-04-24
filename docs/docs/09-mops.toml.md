@@ -244,6 +244,39 @@ Use only if your package will not work with older versions of the `moc`.
 | -------------------- | ------------------------------------------------ |
 | moc                  | Motoko compiler version  (e.g. `0.11.0` which means `>=0.11.0`)  |
 
+## [experimental]
+
+Opt into in-progress CLI features. Behavior behind any flag listed here may change or be removed without notice — do not rely on it for production projects.
+
+| Field | Description |
+| ----- | ----------- |
+| flags | Array of experimental flag names to enable |
+
+Example:
+```toml
+[experimental]
+flags = ["compatible-resolution"]
+```
+
+Unknown flags are silently ignored, so adding a flag your CLI version doesn't recognize is harmless.
+
+### Available flags
+
+#### `compatible-resolution`
+
+Treat bare versions in the root project's `[dependencies]` and `[dev-dependencies]` as caret ranges (Cargo-style):
+
+- `core = "1.2.3"` resolves to the highest published `1.x.y` where `x >= 2` (`>=1.2.3, <2.0.0`)
+- `core = "0.2.3"` resolves to the highest published `0.2.x` where `x >= 3` (`>=0.2.3, <0.3.0`) — pre-1.0 caret semantics
+
+The `mops.toml` syntax does not change; only resolution behavior does. The resolved version is pinned in `mops.lock`. Subsequent runs use the lockfile.
+
+Caveats:
+- Transitive dependencies (deps of your deps) keep today's resolution behavior.
+- Aliased dependencies (e.g. `core@1 = "1.2.3"`) are not affected.
+- Older mops CLIs reading a lockfile produced with this flag will fail with a package-version mismatch error and ask you to re-resolve.
+
+
 ## Advanced Configuration
 
 For additional configuration options including registry endpoint overrides, see [Environment Variables](/cli/environment-variables).

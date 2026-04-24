@@ -27,6 +27,11 @@ type LockFileV2 = {
 type LockFileV3 = {
   version: 3;
   mopsTomlDepsHash: string;
+  // hash of [experimental] flags. Only present when the user has opted into
+  // any experimental flag. Kept separate from mopsTomlDepsHash so the
+  // existing "deps unchanged" fast path stays untouched for projects that
+  // don't use experiments.
+  experimentalHash?: string;
   hashes: Record<string, Record<string, string>>;
   deps: Record<string, string>;
 };
@@ -107,6 +112,16 @@ function getMopsTomlDepsHash(): string {
   return bytesToHex(sha256(JSON.stringify(sortedDeps)));
 }
 
+// Returns "" when no [experimental] flags are set, so we can skip writing
+// the field to the lockfile (and avoid touching projects that don't opt in).
+function getExperimentalHash(): string {
+  let flags = readConfig().experimental?.flags ?? [];
+  if (flags.length === 0) {
+    return "";
+  }
+  return bytesToHex(sha256(JSON.stringify([...flags].sort())));
+}
+
 // compare hashes of local files with hashes from the registry
 export async function checkRemote() {
   let fileHashesFromRegistry = await getFileHashesFromRegistry();
@@ -144,17 +159,15 @@ export function readLockFile(): LockFile | null {
   return null;
 }
 
-// check if lock file exists and integrity of mopsTomlDepsHash
+// check if lock file exists and integrity of mopsTomlDepsHash + experimentalHash
 export function checkLockFileLight(): boolean {
   let existingLockFileJson = readLockFile();
-  if (existingLockFileJson) {
-    let mopsTomlDepsHash = getMopsTomlDepsHash();
-    if (
-      existingLockFileJson.version === 3 &&
-      mopsTomlDepsHash === existingLockFileJson.mopsTomlDepsHash
-    ) {
-      return true;
-    }
+  if (existingLockFileJson && existingLockFileJson.version === 3) {
+    let depsMatch =
+      getMopsTomlDepsHash() === existingLockFileJson.mopsTomlDepsHash;
+    let experimentalMatch =
+      getExperimentalHash() === (existingLockFileJson.experimentalHash ?? "");
+    return depsMatch && experimentalMatch;
   }
   return false;
 }
@@ -173,9 +186,11 @@ export async function updateLockFile({
 
   let fileHashes = await getFileHashesFromRegistry();
 
+  let experimentalHash = getExperimentalHash();
   let lockFileJson: LockFileV3 = {
     version: 3,
     mopsTomlDepsHash: getMopsTomlDepsHash(),
+    ...(experimentalHash && { experimentalHash }),
     deps: resolvedDeps,
     hashes: fileHashes.reduce(
       (acc, [packageId, fileHashes]) => {
@@ -252,6 +267,18 @@ export async function checkLockFile(force = false) {
       console.error("Mismatched mops.toml dependencies hash");
       console.error(`Locked hash: ${lockFileJson.mopsTomlDepsHash}`);
       console.error(`Actual hash: ${getMopsTomlDepsHash()}`);
+      process.exit(1);
+    }
+  }
+
+  // V3: check [experimental] hash
+  if (lockFileJson.version === 3) {
+    let lockedExperimentalHash = lockFileJson.experimentalHash ?? "";
+    if (lockedExperimentalHash !== getExperimentalHash()) {
+      console.error("Integrity check failed");
+      console.error("Mismatched [experimental] flags hash");
+      console.error(`Locked hash: ${lockedExperimentalHash || "(none)"}`);
+      console.error(`Actual hash: ${getExperimentalHash() || "(none)"}`);
       process.exit(1);
     }
   }

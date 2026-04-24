@@ -10,9 +10,19 @@ import {
 } from "./mops.js";
 import { VesselConfig, readVesselConfig } from "./vessel.js";
 import { Config, Dependency } from "./types.js";
-import { getDepCacheDir, getDepCacheName } from "./cache.js";
+import {
+  getDepCacheDir,
+  getDepCacheName,
+  getMopsDepCacheName,
+  isDepCached,
+} from "./cache.js";
 import { getPackageId } from "./helpers/get-package-id.js";
+import { getDepName } from "./helpers/get-dep-name.js";
 import { checkLockFileLight, readLockFile } from "./integrity.js";
+import { isExperimentEnabled } from "./experimental.js";
+import { mainActor } from "./api/actors.js";
+import { SemverPart } from "./declarations/main/main.did.js";
+import { installMopsDep } from "./commands/install/install-mops-dep.js";
 
 export async function resolvePackages({
   conflicts = "ignore" as "warning" | "error" | "ignore",
@@ -178,6 +188,11 @@ export async function resolvePackages({
   };
 
   let config = readConfig();
+
+  if (isExperimentEnabled(config, "compatible-resolution")) {
+    await applyCompatibleResolution(config);
+  }
+
   await collectDeps(config, rootDir, true);
 
   // show conflicts
@@ -230,4 +245,71 @@ export async function resolvePackages({
       })
       .filter(([, version]) => version !== ""),
   );
+}
+
+// Experiment: "compatible-resolution".
+// Treat bare versions in the root project's [dependencies] / [dev-dependencies]
+// as caret ranges (Cargo-style). For each eligible mops dep, query the registry
+// for the highest compatible version and rewrite the in-memory config so the
+// rest of the resolver uses it.
+//
+// Caret semantics map to backend SemverPart:
+//   - bare "1.2.3"  -> #minor (highest within major 1)
+//   - bare "0.2.3"  -> #patch (highest within 0.2.x; pre-1.0 caret)
+//
+// Aliased deps (e.g. `core@1.2.3 = "1.2.3"`) and non-mops deps (github / local)
+// are passed through unchanged. Aliases can be added in a follow-up.
+async function applyCompatibleResolution(config: Config): Promise<void> {
+  let rootDeps: Dependency[] = [
+    ...Object.values(config.dependencies || {}),
+    ...Object.values(config["dev-dependencies"] || {}),
+  ];
+  let candidates = rootDeps.filter(
+    (dep) =>
+      dep.version &&
+      !dep.repo &&
+      !dep.path &&
+      getDepName(dep.name) === dep.name,
+  );
+  if (candidates.length === 0) {
+    return;
+  }
+
+  let actor = await mainActor();
+  let res = await actor.getHighestSemverBatch(
+    candidates.map((dep) => {
+      let major = parseInt(dep.version!.split(".")[0] || "0");
+      let part: SemverPart = major === 0 ? { patch: null } : { minor: null };
+      return [dep.name, dep.version!, part];
+    }),
+  );
+  if ("err" in res) {
+    console.error(
+      chalk.red("Error:"),
+      `compatible-resolution failed: ${res.err}`,
+    );
+    process.exit(1);
+  }
+  let resolved = new Map(res.ok);
+  for (let dep of candidates) {
+    let upgraded = resolved.get(dep.name);
+    if (!upgraded || upgraded === dep.version) {
+      continue;
+    }
+    // Download the upgraded version (and its transitives) before mutating
+    // the in-memory dep, so the subsequent collectDeps walk can read its
+    // mops.toml from the cache. resolvePackages is a read-mostly function,
+    // but the experiment unavoidably needs the upgraded package on disk.
+    if (!isDepCached(getMopsDepCacheName(dep.name, upgraded))) {
+      let ok = await installMopsDep(dep.name, upgraded, { silent: true });
+      if (!ok) {
+        console.error(
+          chalk.red("Error:"),
+          `compatible-resolution failed to install ${dep.name}@${upgraded}`,
+        );
+        process.exit(1);
+      }
+    }
+    dep.version = upgraded;
+  }
 }

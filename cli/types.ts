@@ -33,6 +33,9 @@ export type Config = {
     extends?: string[] | true;
     extra?: Record<string, string[]>;
   };
+  experimental?: {
+    flags?: string[];
+  };
 };
 
 export type MigrationsConfig = {

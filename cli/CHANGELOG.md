@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+- Recognize `[experimental]` section in `mops.toml` for opt-in unstable behavior. The section accepts a `flags = [...]` array; flags listed there enable in-progress features whose behavior may change without notice. Older mops CLIs silently ignore the section.
+- Add `compatible-resolution` experimental flag. When enabled, bare versions in the root project's `[dependencies]` and `[dev-dependencies]` are interpreted as caret ranges (Cargo-style): `core = "1.2.3"` resolves to the highest published `1.x.y` (or highest `0.2.x` for pre-1.0). No syntax change to `mops.toml`, no impact on published package configs, no canister changes. Lockfile interaction: the resolved (potentially upgraded) version is pinned, and an `experimentalHash` field in `mops.lock` invalidates the lockfile when flags change. Older CLIs reading a lockfile produced under this flag fail loudly with the existing per-package mismatch check.
 
 ## 2.12.3
 - Fix `mops install --lock update` silently no-op'ing on a corrupt lockfile (#515)
