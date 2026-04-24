@@ -2,6 +2,7 @@ import process from "node:process";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import chalk from "chalk";
+import semver from "semver";
 import {
   checkConfigFile,
   getRootDir,
@@ -189,8 +190,8 @@ export async function resolvePackages({
 
   let config = readConfig();
 
-  if (isExperimentEnabled(config, "compatible-resolution")) {
-    await applyCompatibleResolution(config);
+  if (isExperimentEnabled(config, "caret-versions")) {
+    await applyCaretVersions(config);
   }
 
   await collectDeps(config, rootDir, true);
@@ -247,19 +248,11 @@ export async function resolvePackages({
   );
 }
 
-// Experiment: "compatible-resolution".
-// Treat bare versions in the root project's [dependencies] / [dev-dependencies]
-// as caret ranges (Cargo-style). For each eligible mops dep, query the registry
-// for the highest compatible version and rewrite the in-memory config so the
-// rest of the resolver uses it.
-//
-// Caret semantics map to backend SemverPart:
-//   - bare "1.2.3"  -> #minor (highest within major 1)
-//   - bare "0.2.3"  -> #patch (highest within 0.2.x; pre-1.0 caret)
-//
-// Aliased deps (e.g. `core@1.2.3 = "1.2.3"`) and non-mops deps (github / local)
-// are passed through unchanged. Aliases can be added in a follow-up.
-async function applyCompatibleResolution(config: Config): Promise<void> {
+// Experiment "caret-versions": treat bare versions in the root project's
+// [dependencies] / [dev-dependencies] as Cargo-style caret ranges.
+// 1.x.y -> highest within major 1; 0.x.y -> highest within 0.x. Aliased
+// deps and non-mops deps (github / local) are passed through unchanged.
+async function applyCaretVersions(config: Config): Promise<void> {
   let rootDeps: Dependency[] = [
     ...Object.values(config.dependencies || {}),
     ...Object.values(config["dev-dependencies"] || {}),
@@ -278,16 +271,13 @@ async function applyCompatibleResolution(config: Config): Promise<void> {
   let actor = await mainActor();
   let res = await actor.getHighestSemverBatch(
     candidates.map((dep) => {
-      let major = parseInt(dep.version!.split(".")[0] || "0");
-      let part: SemverPart = major === 0 ? { patch: null } : { minor: null };
+      let part: SemverPart =
+        semver.major(dep.version!) === 0 ? { patch: null } : { minor: null };
       return [dep.name, dep.version!, part];
     }),
   );
   if ("err" in res) {
-    console.error(
-      chalk.red("Error:"),
-      `compatible-resolution failed: ${res.err}`,
-    );
+    console.error(chalk.red("Error:"), `caret-versions failed: ${res.err}`);
     process.exit(1);
   }
   let resolved = new Map(res.ok);
@@ -296,17 +286,10 @@ async function applyCompatibleResolution(config: Config): Promise<void> {
     if (!upgraded || upgraded === dep.version) {
       continue;
     }
-    // Download the upgraded version (and its transitives) before mutating
-    // the in-memory dep, so the subsequent collectDeps walk can read its
-    // mops.toml from the cache. resolvePackages is a read-mostly function,
-    // but the experiment unavoidably needs the upgraded package on disk.
+    // collectDeps reads transitive mops.toml from the cache, so prefetch
     if (!isDepCached(getMopsDepCacheName(dep.name, upgraded))) {
-      let ok = await installMopsDep(dep.name, upgraded, { silent: true });
+      let ok = await installMopsDep(dep.name, upgraded);
       if (!ok) {
-        console.error(
-          chalk.red("Error:"),
-          `compatible-resolution failed to install ${dep.name}@${upgraded}`,
-        );
         process.exit(1);
       }
     }

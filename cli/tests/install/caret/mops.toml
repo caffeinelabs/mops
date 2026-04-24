@@ -1,0 +1,5 @@
+[experimental]
+flags = ["caret-versions"]
+
+[dependencies]
+core = "1.0.0"

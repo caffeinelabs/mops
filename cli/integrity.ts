@@ -1,7 +1,7 @@
 import process from "node:process";
 import fs from "node:fs";
 import path from "node:path";
-import { sha256 } from "@noble/hashes/sha256";
+import { sha256 } from "@noble/hashes/sha2";
 import { bytesToHex } from "@noble/hashes/utils";
 import { getDependencyType, getRootDir, readConfig } from "./mops.js";
 import { mainActor } from "./api/actors.js";
@@ -27,10 +27,7 @@ type LockFileV2 = {
 type LockFileV3 = {
   version: 3;
   mopsTomlDepsHash: string;
-  // hash of [experimental] flags. Only present when the user has opted into
-  // any experimental flag. Kept separate from mopsTomlDepsHash so the
-  // existing "deps unchanged" fast path stays untouched for projects that
-  // don't use experiments.
+  // separate from mopsTomlDepsHash so non-experimental projects stay untouched
   experimentalHash?: string;
   hashes: Record<string, Record<string, string>>;
   deps: Record<string, string>;
@@ -112,8 +109,7 @@ function getMopsTomlDepsHash(): string {
   return bytesToHex(sha256(JSON.stringify(sortedDeps)));
 }
 
-// Returns "" when no [experimental] flags are set, so we can skip writing
-// the field to the lockfile (and avoid touching projects that don't opt in).
+// "" when no flags are set, so the field is omitted from the lockfile
 function getExperimentalHash(): string {
   let flags = readConfig().experimental?.flags ?? [];
   if (flags.length === 0) {

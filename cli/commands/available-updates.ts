@@ -1,9 +1,11 @@
 import process from "node:process";
 import chalk from "chalk";
+import semver from "semver";
 import { mainActor } from "../api/actors.js";
 import { Config } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
+import { isExperimentEnabled } from "../experimental.js";
 
 // [pkg, oldVersion, newVersion]
 export async function getAvailableUpdates(
@@ -35,6 +37,7 @@ export async function getAvailableUpdates(
     return "";
   };
 
+  let caretMode = isExperimentEnabled(config, "caret-versions");
   let actor = await mainActor();
   let res = await actor.getHighestSemverBatch(
     depsToUpdate.map((dep) => {
@@ -46,6 +49,9 @@ export async function getAvailableUpdates(
           pinnedVersion.split(".").length === 1
             ? { minor: null }
             : { patch: null };
+      } else if (caretMode) {
+        let major = semver.major(dep.version || "0.0.0");
+        semverPart = major === 0 ? { patch: null } : { minor: null };
       }
       return [name, dep.version || "", semverPart];
     }),

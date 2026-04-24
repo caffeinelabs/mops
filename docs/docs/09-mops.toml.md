@@ -246,7 +246,7 @@ Use only if your package will not work with older versions of the `moc`.
 
 ## [experimental]
 
-Opt into in-progress CLI features. Behavior behind any flag listed here may change or be removed without notice — do not rely on it for production projects.
+Opt into in-progress CLI features. Behavior behind any flag listed here may change or be removed without notice.
 
 | Field | Description |
 | ----- | ----------- |
@@ -255,26 +255,31 @@ Opt into in-progress CLI features. Behavior behind any flag listed here may chan
 Example:
 ```toml
 [experimental]
-flags = ["compatible-resolution"]
+flags = ["caret-versions"]
 ```
 
 Unknown flags are silently ignored, so adding a flag your CLI version doesn't recognize is harmless.
 
 ### Available flags
 
-#### `compatible-resolution`
+#### `caret-versions`
 
 Treat bare versions in the root project's `[dependencies]` and `[dev-dependencies]` as caret ranges (Cargo-style):
 
-- `core = "1.2.3"` resolves to the highest published `1.x.y` where `x >= 2` (`>=1.2.3, <2.0.0`)
-- `core = "0.2.3"` resolves to the highest published `0.2.x` where `x >= 3` (`>=0.2.3, <0.3.0`) — pre-1.0 caret semantics
+- `core = "1.2.3"` resolves to the highest published `1.x.y` where `x.y >= 2.3` (`>=1.2.3, <2.0.0`)
+- `core = "0.2.3"` resolves to the highest published `0.2.x` where `x >= 3` (`>=0.2.3, <0.3.0`)
 
-The `mops.toml` syntax does not change; only resolution behavior does. The resolved version is pinned in `mops.lock`. Subsequent runs use the lockfile.
+The `mops.toml` syntax does not change — explicit `^x.y.z` is **not** accepted. Bare versions just resolve differently. The resolved version is pinned in `mops.lock`; subsequent runs use the lockfile.
+
+Workflow:
+- `mops install` is reproducible: it never bumps a dep on its own — newly published compatible versions are not pulled in.
+- `mops install --lock update` re-resolves and writes the highest caret-compatible versions into `mops.lock` (`mops.toml` unchanged).
+- `mops update [pkg]` rewrites `mops.toml` (and the lock) up to the highest caret-compatible version. Without the flag, `mops update` ignores the caret bound and can cross majors. `mops outdated` follows the same caret bound.
 
 Caveats:
 - Transitive dependencies (deps of your deps) keep today's resolution behavior.
 - Aliased dependencies (e.g. `core@1 = "1.2.3"`) are not affected.
-- Older mops CLIs reading a lockfile produced with this flag will fail with a package-version mismatch error and ask you to re-resolve.
+- Older mops CLIs that don't recognize this flag still read the lockfile and use the resolved (upgraded) versions transparently — they just won't re-resolve when the flag toggles.
 
 
 ## Advanced Configuration
