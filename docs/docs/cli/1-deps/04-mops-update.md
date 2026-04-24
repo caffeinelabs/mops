@@ -5,7 +5,7 @@ sidebar_label: mops update
 
 # `mops update`
 
-Update all dependencies
+Update all dependencies to the highest semver-compatible version (caret-bound by default — does not cross major versions, or pre-1.0 minor versions).
 ```
 mops update
 ```
@@ -17,12 +17,18 @@ mops update [pkg]
 
 ### Example
 
-Update the `base` package to the latest version:
+Update the `core` package to the highest compatible version:
 ```
-mops update base
+mops update core
 ```
 
 ## Options
+
+### `--major`
+
+Allow updates that cross major versions (or pre-1.0 minor versions). For example, with `core = "2.0.0"` in `mops.toml`:
+- `mops update core` → bumps within `2.x.y` (e.g. `2.5.0`)
+- `mops update core --major` → may bump to `3.0.0` or later
 
 ### `--lock`
 

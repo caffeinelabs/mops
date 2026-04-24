@@ -129,3 +129,83 @@ describe("install", () => {
     }
   });
 });
+
+// `mops update` and `mops outdated` default to caret-bound resolution: stay
+// within `0.x.y` (or `1.x.y`) and never cross majors. Fixture pins:
+//   base = "0.14.5"  -> caret bumps within 0.14.x; --major jumps past it
+//   core = "1.0.0"   -> caret stays put (no 1.x.y > 1.0.0); --major jumps to 2.x
+describe("update / outdated bounds", () => {
+  jest.setTimeout(120_000);
+
+  const cwd = path.join(import.meta.dirname, "install/update-bound");
+  const tomlFile = path.join(cwd, "mops.toml");
+  const original = readFileSync(tomlFile, "utf8");
+
+  const cleanup = () => {
+    rmSync(path.join(cwd, "mops.lock"), { force: true });
+    rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    writeFileSync(tomlFile, original);
+  };
+
+  const baseVersion = (toml: string) =>
+    toml.match(/base = "(0\.\d+\.\d+)"/)?.[1];
+  const coreMajor = (toml: string) =>
+    parseInt(toml.match(/core = "(\d+)\./)?.[1] ?? "0");
+
+  test("mops update stays within the caret bound by default", async () => {
+    cleanup();
+    try {
+      await cli(["install"], { cwd, env: { CI: undefined } });
+      const result = await cli(["update"], { cwd, env: { CI: undefined } });
+      expect(result.exitCode).toBe(0);
+      const after = readFileSync(tomlFile, "utf8");
+      // base (pre-1.0): bumped within 0.14.x (patch bumps allowed)
+      expect(baseVersion(after)).toMatch(/^0\.14\./);
+      expect(baseVersion(after)).not.toBe("0.14.5");
+      // core (1.x): no 1.x.y > 1.0.0 published, so no bump across majors
+      expect(coreMajor(after)).toBe(1);
+    } finally {
+      cleanup();
+    }
+  });
+
+  test("mops update --major crosses the caret bound", async () => {
+    cleanup();
+    try {
+      await cli(["install"], { cwd, env: { CI: undefined } });
+      const result = await cli(["update", "--major"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(result.exitCode).toBe(0);
+      const after = readFileSync(tomlFile, "utf8");
+      // base: jumps past 0.14.x (next minor or major)
+      const baseMinor = parseInt(after.match(/base = "0\.(\d+)\./)?.[1] ?? "0");
+      expect(baseMinor).toBeGreaterThanOrEqual(15);
+      // core: jumps to 2.x or later
+      expect(coreMajor(after)).toBeGreaterThanOrEqual(2);
+    } finally {
+      cleanup();
+    }
+  });
+
+  test("mops outdated honors --major flag", async () => {
+    cleanup();
+    try {
+      await cli(["install"], { cwd, env: { CI: undefined } });
+      const caret = await cli(["outdated"], { cwd, env: { CI: undefined } });
+      const major = await cli(["outdated", "--major"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      // caret-bound: only base shows up (within 0.14.x); core stays put
+      expect(caret.stdout).toMatch(/base 0\.14\.5 -> 0\.14\./);
+      expect(caret.stdout).not.toMatch(/core /);
+      // --major: both bump across their major bounds
+      expect(major.stdout).toMatch(/base 0\.14\.5 -> 0\.(1[5-9]|[2-9]\d)/);
+      expect(major.stdout).toMatch(/core 1\.0\.0 -> [2-9]/);
+    } finally {
+      cleanup();
+    }
+  });
+});

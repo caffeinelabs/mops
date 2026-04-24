@@ -1,14 +1,18 @@
 import process from "node:process";
 import chalk from "chalk";
+import semver from "semver";
 import { mainActor } from "../api/actors.js";
 import { Config } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
 
+export type UpdateBound = "caret" | "major";
+
 // [pkg, oldVersion, newVersion]
 export async function getAvailableUpdates(
   config: Config,
   pkg?: string,
+  bound: UpdateBound = "caret",
 ): Promise<Array<[string, string, string]>> {
   let deps = Object.values(config.dependencies || {});
   let devDeps = Object.values(config["dev-dependencies"] || {});
@@ -46,6 +50,9 @@ export async function getAvailableUpdates(
           pinnedVersion.split(".").length === 1
             ? { minor: null }
             : { patch: null };
+      } else if (bound === "caret") {
+        let major = semver.major(dep.version || "0.0.0");
+        semverPart = major === 0 ? { patch: null } : { minor: null };
       }
       return [name, dep.version || "", semverPart];
     }),

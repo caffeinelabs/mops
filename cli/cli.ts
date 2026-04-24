@@ -627,14 +627,22 @@ program
 program
   .command("outdated")
   .description("Print outdated dependencies specified in mops.toml")
-  .action(async () => {
-    await outdated();
+  .option(
+    "--major",
+    "Allow updates that cross major versions (or pre-1.0 minor versions)",
+  )
+  .action(async (options) => {
+    await outdated(options);
   });
 
 // update
 program
   .command("update [pkg]")
   .description("Update dependencies specified in mops.toml")
+  .option(
+    "--major",
+    "Allow updates that cross major versions (or pre-1.0 minor versions)",
+  )
   .addOption(
     new Option("--lock <action>", "Lockfile action").choices([
       "update",

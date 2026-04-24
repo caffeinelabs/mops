@@ -14,9 +14,13 @@ type UpdateOptions = {
   verbose?: boolean;
   dev?: boolean;
   lock?: "update" | "ignore";
+  major?: boolean;
 };
 
-export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
+export async function update(
+  pkg?: string,
+  { lock, major }: UpdateOptions = {},
+) {
   if (!checkConfigFile()) {
     return;
   }
@@ -59,7 +63,11 @@ export async function update(pkg?: string, { lock }: UpdateOptions = {}) {
   }
 
   // update mops packages
-  let available = await getAvailableUpdates(config, pkg);
+  let available = await getAvailableUpdates(
+    config,
+    pkg,
+    major ? "major" : "caret",
+  );
 
   if (available.length === 0) {
     if (pkg) {
