@@ -159,9 +159,10 @@ mops remove base
 ### Dependency Management
 
 ```bash
-mops outdated             # list outdated dependencies
-mops update               # update all to latest compatible
-mops update core          # update specific package
+mops outdated             # list outdated dependencies (caret-bound)
+mops update               # update all within caret bound (no major-version crossing)
+mops update core          # update specific package within caret bound
+mops update --major       # allow updates that cross major versions
 mops sync                 # add missing / remove unused packages
 ```
 

@@ -627,14 +627,26 @@ program
 program
   .command("outdated")
   .description("Print outdated dependencies specified in mops.toml")
-  .action(async () => {
-    await outdated();
+  .addOption(
+    new Option(
+      "--major",
+      "Allow updates that cross the caret bound (major versions, or for 0.x.y packages, minor versions)",
+    ),
+  )
+  .action(async (options) => {
+    await outdated(options);
   });
 
 // update
 program
   .command("update [pkg]")
   .description("Update dependencies specified in mops.toml")
+  .addOption(
+    new Option(
+      "--major",
+      "Allow updates that cross the caret bound (major versions, or for 0.x.y packages, minor versions)",
+    ),
+  )
   .addOption(
     new Option("--lock <action>", "Lockfile action").choices([
       "update",

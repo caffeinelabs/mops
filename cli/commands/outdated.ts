@@ -3,13 +3,17 @@ import { checkConfigFile, readConfig } from "../mops.js";
 import { getAvailableUpdates } from "./available-updates.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 
-export async function outdated() {
+export async function outdated({ major }: { major?: boolean } = {}) {
   if (!checkConfigFile()) {
     return;
   }
   let config = readConfig();
 
-  let available = await getAvailableUpdates(config);
+  let available = await getAvailableUpdates(
+    config,
+    undefined,
+    major ? "major" : "caret",
+  );
 
   if (available.length === 0) {
     console.log(chalk.green("All dependencies are up to date!"));
