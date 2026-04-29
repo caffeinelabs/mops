@@ -10,7 +10,8 @@ import { rm } from "node:fs/promises";
 import chalk from "chalk";
 import { cliError } from "../error.js";
 import { getRootDir, resolveConfigPath } from "../mops.js";
-import { MigrationsConfig } from "../types.js";
+import { resolveCanisterConfigs } from "./resolve-canisters.js";
+import { Config, MigrationsConfig } from "../types.js";
 
 function stagedMigrationsDir(chainDir: string, canisterName: string): string {
   return join(dirname(chainDir), `.migrations-${canisterName}`);
@@ -197,4 +198,39 @@ export async function prepareMigrationArgs(
       await rm(tempDir, { recursive: true, force: true });
     },
   };
+}
+
+/**
+ * Absolute paths of chain migration files that `mops lint` should skip,
+ * mirroring the `check-limit` trimming applied to `moc` during `mops check`.
+ * Validates the migrations config along the way, so misconfig surfaces here
+ * just as it does in `mops check` (consistent failure across commands).
+ */
+export function getTrimmedMigrationFiles(config: Config): Set<string> {
+  const excluded = new Set<string>();
+  for (const [name, canister] of Object.entries(
+    resolveCanisterConfigs(config),
+  )) {
+    const migrations = canister.migrations;
+    if (!migrations) {
+      continue;
+    }
+    validateMigrationsConfig(migrations, name);
+    const limit = migrations["check-limit"];
+    if (limit === undefined) {
+      continue;
+    }
+    const chainDir = resolveConfigPath(migrations.chain);
+    const chainFiles = getMigrationFiles(chainDir);
+    // The pending `next` migration sorts last and is always live, so it
+    // consumes one slot of the limit and trimming only drops chain entries.
+    const hasNext = migrations.next
+      ? !!getNextMigrationFile(resolveConfigPath(migrations.next))
+      : false;
+    const drop = Math.max(0, chainFiles.length - limit + (hasNext ? 1 : 0));
+    for (const f of chainFiles.slice(0, drop)) {
+      excluded.add(resolve(chainDir, f));
+    }
+  }
+  return excluded;
 }

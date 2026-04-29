@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops lint` now honors `[canisters.<name>.migrations].check-limit`, skipping trimmed chain migrations so projects with large migration histories lint as fast as they type-check. Pass an explicit filter (`mops lint <name>`) to opt back in for a one-off lint of a trimmed file.
 
 ## 2.13.0
 - Fix `mops update` and `mops outdated` jumping across major versions (or pre-1.0 minor versions) — they are now caret-bound by default, matching `cargo update`. For example, `core = "2.0.0"` now updates within `2.x.y` instead of jumping to a future `3.0.0`. Use `--major` to opt into cross-major updates.

@@ -147,7 +147,7 @@ Configure managed enhanced migration chains for a canister. When set, `mops chec
 | ----------- | --------------------------------------------------------------- |
 | chain       | Path to the directory containing frozen migration files (required) |
 | next        | Path to the directory for the next pending migration (optional). Required for `mops migrate new/freeze`. Must contain 0 or 1 `.mo` files. Must share the same parent directory as `chain` |
-| check-limit | Max number of migrations to pass to `moc` during `mops check` and `mops check-stable` (optional). Counts the full chain including any pending next migration |
+| check-limit | Max number of migrations to pass to `moc` during `mops check` and `mops check-stable`, and to `lintoko` during `mops lint` (optional). Counts the full chain including any pending next migration |
 | build-limit | Max number of migrations to pass to `moc` during `mops build` (optional). Counts the full chain including any pending next migration |
 
 Example:
