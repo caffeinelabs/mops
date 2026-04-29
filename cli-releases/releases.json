@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.12.3"
+    "latest": "2.13.0"
   },
   "versions": {
     "0.41.0": {
@@ -424,6 +424,14 @@
       "commitHash": "79dab9d9a2e9afdce2aef3fed6a74fa741d57331",
       "url": "https://cli.mops.one/versions/2.12.3.tgz",
       "hash": "e9c2286c8d096639c6cc03576848f97f5d10dd10b4a92a8ebeb136908f349189"
+    },
+    "2.13.0": {
+      "time": 1777448773556,
+      "size": 2410463,
+      "relseaseNotes": "* Fix `mops update` and `mops outdated` jumping across major versions (or pre-1.0 minor versions) — they are now caret-bound by default, matching `cargo update`. For example, `core = \"2.0.0\"` now updates within `2.x.y` instead of jumping to a future `3.0.0`. Use `--major` to opt into cross-major updates.\n",
+      "commitHash": "997e811b752cc3d920165136f9597222b9b112d4",
+      "url": "https://cli.mops.one/versions/2.13.0.tgz",
+      "hash": "5725b73044a54e47c055bd0cf28fda2f4a8a4fa0cf70a5b5aa891c93f35f04c0"
     }
   }
 }
