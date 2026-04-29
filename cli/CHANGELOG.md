@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.13.0
 - Fix `mops update` and `mops outdated` jumping across major versions (or pre-1.0 minor versions) — they are now caret-bound by default, matching `cargo update`. For example, `core = "2.0.0"` now updates within `2.x.y` instead of jumping to a future `3.0.0`. Use `--major` to opt into cross-major updates.
 
 ## 2.12.3
