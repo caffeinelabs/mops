@@ -80,7 +80,7 @@ See [`mops.toml` reference](/mops.toml#canistersnamemigrations) for all fields.
 
 Large migration chains increase WASM size and compilation time. Use `check-limit` and `build-limit` to trim the chain:
 
-- **`check-limit`** — only the last N migrations are included during `mops check` and `mops check-stable`. Set to `1` for fastest type-checking.
+- **`check-limit`** — only the last N migrations are included during `mops check`, `mops check-stable`, and `mops lint`. Set to `1` for fastest type-checking and linting. Pass an explicit filter (`mops lint <name>`) or file path to lint a trimmed migration on demand.
 - **`build-limit`** — only the last N migrations are included during `mops build`. Set higher (e.g. `100`) so the deployed WASM can apply multiple pending migrations.
 
 The limits count the full virtual chain (frozen + pending next migration). This means `mops build` produces identical results whether a migration is still pending or already frozen.

@@ -187,7 +187,10 @@ Runs lintoko (also runs automatically as part of `mops check` when lintoko is in
 ```bash
 mops lint                 # lint all .mo files
 mops lint --fix           # autofix lint issues
+mops lint <name>          # filter to .mo files matching <name>
 ```
+
+When `[canisters.<name>.migrations].check-limit` is set, `mops lint` skips the trimmed chain migrations to match what `moc` sees during `mops check`. To lint a trimmed migration on demand, pass an explicit filter (e.g. `mops lint OldMigrationName`).
 
 ### `mops format`
 

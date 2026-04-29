@@ -15,6 +15,7 @@ import { toolchain } from "./toolchain/index.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { existsSync } from "node:fs";
 import { Config } from "../types.js";
+import { getTrimmedMigrationFiles } from "../helpers/migrations.js";
 
 async function resolveDepRules(
   config: Config,
@@ -128,6 +129,17 @@ function buildCommonArgs(
   return args;
 }
 
+function dropTrimmedMigrations(
+  files: string[],
+  rootDir: string,
+  excluded: Set<string>,
+): string[] {
+  if (excluded.size === 0) {
+    return files;
+  }
+  return files.filter((f) => !excluded.has(path.resolve(rootDir, f)));
+}
+
 async function runLintoko(
   lintokoBinPath: string,
   rootDir: string,
@@ -169,6 +181,11 @@ export async function lint(
     ? await toolchain.bin("lintoko")
     : "lintoko";
 
+  const isExplicit = !!filter || !!(options.files && options.files.length > 0);
+  const trimmedMigrations = isExplicit
+    ? new Set<string>()
+    : getTrimmedMigrationFiles(config);
+
   let filesToLint: string[];
   if (options.files && options.files.length > 0) {
     filesToLint = options.files;
@@ -185,6 +202,20 @@ export async function lint(
           : "No .mo files found in the project",
       );
     }
+    const before = filesToLint.length;
+    filesToLint = dropTrimmedMigrations(
+      filesToLint,
+      rootDir,
+      trimmedMigrations,
+    );
+    if (options.verbose && before !== filesToLint.length) {
+      console.log(
+        chalk.blue("lint"),
+        chalk.gray(
+          `Trimmed ${before - filesToLint.length} migration file(s) (check-limit)`,
+        ),
+      );
+    }
   }
 
   const commonArgs = buildCommonArgs(options, config);
@@ -198,13 +229,9 @@ export async function lint(
   rules.forEach((rule) => baseArgs.push("--rules", rule));
   baseArgs.push(...filesToLint);
 
-  let failed = !(await runLintoko(
-    lintokoBinPath,
-    rootDir,
-    baseArgs,
-    options,
-    "base",
-  ));
+  let failed =
+    filesToLint.length > 0 &&
+    !(await runLintoko(lintokoBinPath, rootDir, baseArgs, options, "base"));
 
   // --- extra runs ---
   const extraEntries = config.lint?.extra;
@@ -242,6 +269,12 @@ export async function lint(
           baseFileSet.has(path.resolve(rootDir, f)),
         );
       }
+
+      matchedFiles = dropTrimmedMigrations(
+        matchedFiles,
+        rootDir,
+        trimmedMigrations,
+      );
 
       if (matchedFiles.length === 0) {
         console.warn(
