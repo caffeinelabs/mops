@@ -96,21 +96,29 @@ export function validateMigrationsConfig(
   }
 }
 
-export async function prepareMigrationArgs(
-  migrations: MigrationsConfig | undefined,
+interface MigrationChain {
+  chainDir: string;
+  nextDir?: string;
+  /** Entries to pass to moc, in order, after `*-limit` trimming. */
+  included: { file: string; dir: string }[];
+  /** Absolute paths of chain files dropped by trimming (next is never dropped). */
+  excludedChainFiles: string[];
+  /** True when `*-limit` excluded any entries. */
+  isTrimming: boolean;
+}
+
+/**
+ * Resolve the active migration chain for a canister: validate config, discover
+ * files, and apply `check-limit` / `build-limit`. Single source of truth for
+ * the trim semantics shared by `prepareMigrationArgs` (which stages `included`
+ * for moc) and `getTrimmedMigrationFiles` (which feeds `excludedChainFiles`
+ * to lint).
+ */
+function resolveMigrationChain(
+  migrations: MigrationsConfig,
   canisterName: string,
   mode: "check" | "build",
-  verbose?: boolean,
-): Promise<MigrationArgsResult> {
-  const noOp: MigrationArgsResult = {
-    migrationArgs: [],
-    cleanup: async () => {},
-  };
-
-  if (!migrations) {
-    return noOp;
-  }
-
+): MigrationChain {
   validateMigrationsConfig(migrations, canisterName);
 
   const chainDir = resolveConfigPath(migrations.chain);
@@ -127,25 +135,46 @@ export async function prepareMigrationArgs(
   }
 
   const chainFiles = getMigrationFiles(chainDir);
-
   if (nextFile) {
     validateNextMigrationOrder(chainFiles, nextFile);
   }
 
-  // Treat chain + next as one virtual merged list
-  type MigrationEntry = { file: string; dir: string };
-  const allMigrations: MigrationEntry[] = chainFiles.map((f) => ({
+  // Treat chain + next as one virtual merged list; `next` is always last.
+  const all: { file: string; dir: string }[] = chainFiles.map((f) => ({
     file: f,
     dir: chainDir,
   }));
   if (nextFile && nextDir) {
-    allMigrations.push({ file: nextFile, dir: nextDir });
+    all.push({ file: nextFile, dir: nextDir });
   }
 
   const limit =
     mode === "check" ? migrations["check-limit"] : migrations["build-limit"];
-  const isTrimming = limit !== undefined && limit < allMigrations.length;
-  const needsTempDir = nextFile !== null || isTrimming;
+  const isTrimming = limit !== undefined && limit < all.length;
+  const included = isTrimming ? all.slice(-limit!) : all;
+  // Dropped entries are always a chain-only prefix (next sorts last).
+  const excludedChainFiles = all
+    .slice(0, all.length - included.length)
+    .map((e) => resolve(e.dir, e.file));
+
+  return { chainDir, nextDir, included, excludedChainFiles, isTrimming };
+}
+
+export async function prepareMigrationArgs(
+  migrations: MigrationsConfig | undefined,
+  canisterName: string,
+  mode: "check" | "build",
+  verbose?: boolean,
+): Promise<MigrationArgsResult> {
+  if (!migrations) {
+    return { migrationArgs: [], cleanup: async () => {} };
+  }
+
+  const { chainDir, nextDir, included, excludedChainFiles, isTrimming } =
+    resolveMigrationChain(migrations, canisterName, mode);
+
+  const hasNext = included.some((e) => e.dir === nextDir);
+  const needsTempDir = hasNext || isTrimming;
 
   if (!needsTempDir) {
     return {
@@ -154,9 +183,9 @@ export async function prepareMigrationArgs(
     };
   }
 
-  // Shortcut: when only the pending next migration is needed (empty chain or
-  // trimmed to 1), point moc at next-migration/ so diagnostics use the real path.
-  if (nextFile && nextDir && (chainFiles.length === 0 || limit === 1)) {
+  // Shortcut: only the pending next migration is included → point moc at
+  // next-migration/ so diagnostics use the real path instead of the temp dir.
+  if (nextDir && included.length === 1 && included[0]!.dir === nextDir) {
     const migrationArgs = [`--enhanced-migration=${nextDir}`];
     if (isTrimming) {
       migrationArgs.push("-A=M0254");
@@ -169,20 +198,17 @@ export async function prepareMigrationArgs(
   mkdirSync(tempDir, { recursive: true });
   writeFileSync(join(tempDir, ".gitignore"), "*\n");
 
-  const filesToInclude = isTrimming
-    ? allMigrations.slice(-limit)
-    : allMigrations;
-
-  for (const { file, dir } of filesToInclude) {
+  for (const { file, dir } of included) {
     symlinkSync(resolve(dir, file), join(tempDir, file));
   }
 
   if (verbose) {
+    const totalCount = included.length + excludedChainFiles.length;
     console.log(
       chalk.blue("migrations"),
       chalk.gray(
-        `Prepared ${filesToInclude.length} migration(s) for ${canisterName}` +
-          (isTrimming ? ` (trimmed from ${allMigrations.length})` : ""),
+        `Prepared ${included.length} migration(s) for ${canisterName}` +
+          (isTrimming ? ` (trimmed from ${totalCount})` : ""),
       ),
     );
   }
@@ -211,25 +237,16 @@ export function getTrimmedMigrationFiles(config: Config): Set<string> {
   for (const [name, canister] of Object.entries(
     resolveCanisterConfigs(config),
   )) {
-    const migrations = canister.migrations;
-    if (!migrations) {
+    if (!canister.migrations) {
       continue;
     }
-    validateMigrationsConfig(migrations, name);
-    const limit = migrations["check-limit"];
-    if (limit === undefined) {
-      continue;
-    }
-    const chainDir = resolveConfigPath(migrations.chain);
-    const chainFiles = getMigrationFiles(chainDir);
-    // The pending `next` migration sorts last and is always live, so it
-    // consumes one slot of the limit and trimming only drops chain entries.
-    const hasNext = migrations.next
-      ? !!getNextMigrationFile(resolveConfigPath(migrations.next))
-      : false;
-    const drop = Math.max(0, chainFiles.length - limit + (hasNext ? 1 : 0));
-    for (const f of chainFiles.slice(0, drop)) {
-      excluded.add(resolve(chainDir, f));
+    const { excludedChainFiles } = resolveMigrationChain(
+      canister.migrations,
+      name,
+      "check",
+    );
+    for (const f of excludedChainFiles) {
+      excluded.add(f);
     }
   }
   return excluded;
