@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.13.0"
+    "latest": "2.13.1"
   },
   "versions": {
     "0.41.0": {
@@ -432,6 +432,14 @@
       "commitHash": "997e811b752cc3d920165136f9597222b9b112d4",
       "url": "https://cli.mops.one/versions/2.13.0.tgz",
       "hash": "5725b73044a54e47c055bd0cf28fda2f4a8a4fa0cf70a5b5aa891c93f35f04c0"
+    },
+    "2.13.1": {
+      "time": 1777469107609,
+      "size": 2410359,
+      "relseaseNotes": "* `mops lint` now honors `[canisters.<name>.migrations].check-limit`, skipping trimmed chain migrations so projects with large migration histories lint as fast as they type-check. Pass an explicit filter (`mops lint <name>`) to opt back in for a one-off lint of a trimmed file.\n",
+      "commitHash": "c947a79fc68d2d4d5b0d3bad10e23370b8134364",
+      "url": "https://cli.mops.one/versions/2.13.1.tgz",
+      "hash": "138b3e78f8db118483d442acb1b5536d6f0360a962a6563ad24f120309f42445"
     }
   }
 }
