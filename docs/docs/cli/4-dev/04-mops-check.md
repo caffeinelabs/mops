@@ -103,12 +103,11 @@ main = "src/main.mo"
 path = ".old/src/main.most"
 ```
 
-If the file at `path` doesn't exist, the check fails with an error. To silently skip the stable check when the file is missing (useful for initial deployments where no previous version exists), set `skipIfMissing = true`:
+If the file at `path` doesn't exist, the check fails with an error. For initial deployments with no prior version, commit a `.most` file at `path` with an empty actor so the check runs against an empty baseline:
 
-```toml
-[canisters.backend.check-stable]
-path = ".old/src/main.most"
-skipIfMissing = true
+```most
+// Version: 1.0.0
+actor { };
 ```
 
 For more details, see [`mops check-stable`](/cli/mops-check-stable).

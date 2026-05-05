@@ -39,15 +39,25 @@ export function resolveStablePath(
     return null;
   }
   const stablePath = resolveConfigPath(stableConfig.path);
+  if (stableConfig.skipIfMissing) {
+    console.warn(
+      chalk.yellow(
+        `WARN: \`skipIfMissing\` in [canisters.${canisterName}.check-stable] is deprecated. ` +
+          `Instead, create ${stableConfig.path} with an empty actor:\n` +
+          "  // Version: 1.0.0\n" +
+          "  actor { };",
+      ),
+    );
+  }
   if (!existsSync(stablePath)) {
     if (stableConfig.skipIfMissing) {
       return null;
     }
     cliError(
       `Deployed file not found: ${stablePath} (canister '${canisterName}')\n` +
-        "Set skipIfMissing = true in [canisters." +
-        canisterName +
-        ".check-stable] to skip this check when the file is missing.",
+        `Create ${stableConfig.path} with an empty actor to enable the check:\n` +
+        "  // Version: 1.0.0\n" +
+        "  actor { };",
     );
   }
   return stablePath;

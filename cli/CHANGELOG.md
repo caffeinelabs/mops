@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Deprecate `skipIfMissing` in `[canisters.<name>.check-stable]`. Behavior is unchanged for now, but `mops check`/`check-stable` print a warning when it is set. For initial deployments, commit a `.most` file at the configured `path` containing an empty actor (`// Version: 1.0.0\nactor { };`) instead — the stable check then runs against an empty baseline.
 
 ## 2.13.1
 - `mops lint` now honors `[canisters.<name>.migrations].check-limit`, skipping trimmed chain migrations so projects with large migration histories lint as fast as they type-check. Pass an explicit filter (`mops lint <name>`) to opt back in for a one-off lint of a trimmed file.

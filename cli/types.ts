@@ -49,6 +49,7 @@ export type CanisterConfig = {
   initArg?: string;
   "check-stable"?: {
     path: string;
+    /** @deprecated Create the file with an empty actor instead. */
     skipIfMissing?: boolean;
   };
   migrations?: MigrationsConfig;
