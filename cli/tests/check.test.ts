@@ -113,19 +113,20 @@ describe("check", () => {
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
-  test("deployed: silently skips when file missing and skipIfMissing", async () => {
+  test("deployed: skips when file missing and skipIfMissing, with deprecation warning", async () => {
     const cwd = path.join(import.meta.dirname, "check/deployed-missing-skip");
     const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).not.toMatch(/stable/i);
+    expect(result.stderr).toMatch(/skipIfMissing.*deprecated/);
   });
 
-  test("deployed: errors when file missing without deployedSkipIfFileMissing", async () => {
+  test("deployed: errors when file missing", async () => {
     const cwd = path.join(import.meta.dirname, "check/deployed-missing-error");
     const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/Deployed file not found/);
-    expect(result.stderr).toMatch(/skipIfMissing/);
+    expect(result.stderr).toMatch(/empty actor/);
   });
 
   test("--fix runs stable check after fixing", async () => {
