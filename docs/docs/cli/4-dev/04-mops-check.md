@@ -114,7 +114,7 @@ For more details, see [`mops check-stable`](/cli/mops-check-stable).
 
 ## Enhanced migration support
 
-When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops check` automatically injects the `--enhanced-migration` flag pointing at the configured `chain` directory.
+When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops check` automatically injects the `--enhanced-migration` flag for the canister.
 
 If a stable compatibility check fails and `[migrations]` is configured, a hint is shown suggesting to create a new migration.
 
