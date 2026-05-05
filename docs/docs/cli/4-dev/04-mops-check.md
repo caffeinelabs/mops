@@ -114,11 +114,9 @@ For more details, see [`mops check-stable`](/cli/mops-check-stable).
 
 ## Enhanced migration support
 
-When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops check` automatically injects the `--enhanced-migration` flag. The frozen migration chain and any pending next migration are assembled into a temporary directory and passed to `moc`.
+When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops check` automatically injects the `--enhanced-migration` flag for the canister.
 
-If a stable compatibility check fails and `[migrations]` is configured, a hint is shown suggesting to create a new migration with `mops migrate new <Name>`.
-
-See [`mops migrate`](/cli/mops-migrate) for the full migration workflow.
+If a stable compatibility check fails and `[migrations]` is configured, a hint is shown suggesting to create a new migration.
 
 ## Lint integration
 

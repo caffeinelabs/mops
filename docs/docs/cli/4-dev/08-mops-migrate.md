@@ -5,6 +5,10 @@ sidebar_label: mops migrate
 
 # `mops migrate`
 
+:::warning Experimental
+`mops migrate` is **experimental** and not recommended for general use yet — its commands and configuration may change. The recommended workflow is to create migration files directly in your `chain` directory; see [`[canisters.<name>.migrations]`](/mops.toml#canistersnamemigrations).
+:::
+
 Manage enhanced migration chains.
 
 Migration files define how canister state transforms from one version to the next. They let you batch multiple incompatible stable state changes and deploy them together in a single upgrade. Each migration is a Motoko module with a `migration` function that takes the old state shape and returns the new one.
@@ -81,7 +85,7 @@ See [`mops.toml` reference](/mops.toml#canistersnamemigrations) for all fields.
 Large migration chains increase WASM size and compilation time. Use `check-limit` and `build-limit` to trim the chain:
 
 - **`check-limit`** — only the last N migrations are included during `mops check`, `mops check-stable`, and `mops lint`. Set to `1` for fastest type-checking and linting. Pass an explicit filter (`mops lint <name>`) or file path to lint a trimmed migration on demand.
-- **`build-limit`** — only the last N migrations are included during `mops build`. Set higher (e.g. `100`) so the deployed WASM can apply multiple pending migrations.
+- **`build-limit`** (**experimental**) — only the last N migrations are included during `mops build`. Set higher (e.g. `100`) so the deployed WASM can apply multiple pending migrations.
 
 The limits count the full virtual chain (frozen + pending next migration). This means `mops build` produces identical results whether a migration is still pending or already frozen.
 

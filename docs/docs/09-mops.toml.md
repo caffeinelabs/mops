@@ -116,8 +116,7 @@ Multi-canister example with per-canister flags:
 main = "src/backend/main.mo"
 
 [canisters.backend.migrations]
-chain = "migrations/backend/chain"
-next = "migrations/backend/next"
+chain = "src/backend/migrations"
 
 [canisters.frontend]
 main = "src/frontend/main.mo"
@@ -146,22 +145,20 @@ actor { };
 
 ### `[canisters.<name>.migrations]`
 
-Configure managed enhanced migration chains for a canister. When set, `mops check`, `mops build`, and `mops check-stable` auto-inject `--enhanced-migration` and you can use [`mops migrate`](/cli/mops-migrate) commands to manage the migration chain.
+Configure managed enhanced migration chains for a canister. When set, `mops check`, `mops build`, and `mops check-stable` auto-inject `--enhanced-migration` for the canister. Create migration files directly in the `chain` directory.
 
 | Field       | Description                                                     |
 | ----------- | --------------------------------------------------------------- |
-| chain       | Path to the directory containing frozen migration files (required) |
-| next        | Path to the directory for the next pending migration (optional). Required for `mops migrate new/freeze`. Must contain 0 or 1 `.mo` files. Must share the same parent directory as `chain` |
-| check-limit | Max number of migrations to pass to `moc` during `mops check` and `mops check-stable`, and to `lintoko` during `mops lint` (optional). Counts the full chain including any pending next migration |
-| build-limit | Max number of migrations to pass to `moc` during `mops build` (optional). Counts the full chain including any pending next migration |
+| chain       | Path to the directory containing migration files (required) |
+| check-limit | Max number of recent migrations to pass to `moc` during `mops check` and `mops check-stable`, and to `lintoko` during `mops lint` (optional). Useful when the chain grows long and re-checking every old migration slows feedback down |
+| next        | Path to the directory for a pending migration (optional, **experimental**). Required for the experimental [`mops migrate`](/cli/mops-migrate) workflow. Must contain 0 or 1 `.mo` files. Must share the same parent directory as `chain` |
+| build-limit | Max number of recent migrations to pass to `moc` during `mops build` (optional, **experimental**) |
 
 Example:
 ```toml
 [canisters.backend.migrations]
 chain = "migrations"
-next = "next-migration"
-check-limit = 1
-build-limit = 100
+check-limit = 10
 ```
 
 Migration files must be named so they sort lexicographically in the correct order. The recommended naming convention is `YYYYMMDD_HHMMSS_Name.mo` (e.g. `20250415_120000_AddEmail.mo`).
@@ -171,7 +168,7 @@ When `[migrations]` is configured, do not add `--enhanced-migration` to `[canist
 :::
 
 :::note
-When a `next` migration exists or chain trimming is active, mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/` for compilation. This keeps the staged files at the same depth as the originals so relative imports (e.g. a shared `types/` folder next to `chain` and `next`) resolve identically. The staged dir self-stamps a `.gitignore`, and `mops init` adds `.migrations-*/` to the project `.gitignore`.
+When chain trimming is active (or a `next` migration is configured), mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/` for compilation. This keeps the staged files at the same depth as the originals so relative imports (e.g. a shared `types/` folder next to the chain) resolve identically. The staged dir self-stamps a `.gitignore`, and `mops init` adds `.migrations-*/` to the project `.gitignore`.
 
 `moc` diagnostics may point to a staged path under `.migrations-<canister>/`, which mops removes when the command finishes.
 :::
