@@ -20,11 +20,11 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 
 ```toml
 [toolchain]
-moc = "1.5.1"
-lintoko = "0.9.0"
+moc = "1.7.0"
+lintoko = "0.10.0"
 
 [dependencies]
-core = "2.2.0"
+core = "2.5.0"
 
 [moc]
 args = ["--default-persistent-actors", "-W=M0223,M0236,M0237"]
@@ -34,9 +34,7 @@ main = "src/backend/main.mo"
 
 [canisters.backend.migrations]
 chain = "src/backend/migrations"
-next = "src/backend/next-migration"   # optional — needed for `mops migrate new/freeze`
-check-limit = 1
-build-limit = 100
+check-limit = 10   # optional — speeds up `mops check` when the chain gets long
 
 [canisters.backend.check-stable]
 path = ".old/src/backend/dist/backend.most"
@@ -85,7 +83,7 @@ Run after cloning or after manual `mops.toml` edits. Updates `mops.lock`. In CI,
 
 ```bash
 mops add core             # latest version
-mops add core@2.2.0       # specific version
+mops add core@2.5.0       # specific version
 mops add --dev test       # dev dependency
 ```
 
@@ -121,9 +119,9 @@ Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mo
 ### `mops toolchain`
 
 ```bash
-mops toolchain use moc 1.5.1         # pin specific version
+mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest version (non-interactive)
-mops toolchain use lintoko 0.9.0     # pin specific version
+mops toolchain use lintoko 0.10.0    # pin specific version
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
 mops toolchain bin moc               # print path to binary
@@ -131,24 +129,13 @@ mops toolchain bin moc               # print path to binary
 
 **Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry.
 
-### `mops migrate`
+### Enhanced migrations
 
-Manage enhanced migration chains:
+When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, and `mops check-stable` automatically inject `--enhanced-migration`. Do not add `--enhanced-migration` to `[canisters.<name>].args` — mops will error.
 
-```bash
-mops migrate new AddEmail         # create a new migration file in next-migration/
-mops migrate new AddEmail backend # specify canister explicitly
-mops migrate freeze               # move next-migration to the permanent chain
-mops migrate freeze backend       # specify canister explicitly
-```
+Create migration files directly in the `chain` directory.
 
-When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, and `mops check-stable` automatically inject `--enhanced-migration`. Do not add `--enhanced-migration` to `[canisters.<name>].args` when using managed migrations — mops will error.
-
-`chain` and `next` must live in the same parent directory. Migration files can import from sibling folders via relative paths (e.g. shared types in `src/backend/types/`); mops stages the active chain into `<parent-of-chain>/.migrations-<canister>/`, preserving depth so relative imports resolve identically. The staged dir self-stamps a `.gitignore`; `mops init` also adds `.migrations-*/` to the project `.gitignore`.
-
-`moc` diagnostics may print paths under `.migrations-<canister>/` — a staging dir that mops removes when the command finishes. The real file has the same name under `chain/` or `next/`.
-
-Typical workflow: make a breaking change → `mops check` fails with a hint → `mops migrate new Name` → edit migration → `mops check` passes → `mops build` → deploy → `mops migrate freeze`.
+`check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` always uses the full chain. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 
 ### `mops remove <package>`
 

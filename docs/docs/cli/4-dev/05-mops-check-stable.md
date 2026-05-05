@@ -89,8 +89,6 @@ Show detailed output including the `moc` commands being run and the intermediate
 
 When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops check-stable` automatically injects the `--enhanced-migration` flag when generating stable type signatures. If the stable check fails and `[migrations]` is configured, a hint is shown suggesting to create a new migration.
 
-See [`mops migrate`](/cli/mops-migrate) for the full migration workflow.
-
 ## Passing flags to the Motoko compiler
 
 Any arguments after `--` are forwarded to `moc` when generating stable type signatures.
