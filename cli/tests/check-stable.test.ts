@@ -86,4 +86,24 @@ describe("check-stable", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/File not found/);
   });
+
+  // Regression: two concurrent `mops check-stable` runs on the same project used to clobber
+  // each other's `.mops/.check-stable/new.most` and the staged migration symlinks, surfacing
+  // as a misleading `new.most: No such file or directory` or an `EEXIST: symlink` crash.
+  test("concurrent runs do not clobber each other's scratch state", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/migrations-chain");
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () => cli(["check-stable"], { cwd })),
+    );
+    for (const result of results) {
+      expect({
+        exitCode: result.exitCode,
+        stderr: result.stderr,
+      }).toEqual({
+        exitCode: 0,
+        stderr: "",
+      });
+      expect(result.stdout).toMatch(/Stable compatibility check passed/);
+    }
+  }, 60_000);
 });

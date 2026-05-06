@@ -1,0 +1,14 @@
+// Version: 4.0.0
+{
+  "20250101_000000_Init" : {} -> {a : Nat; b : Text};
+  "20250201_000000_AddField" : (old : {a : Nat; b : Text}) -> {a : Nat; b : Text; c : Bool};
+  "20250301_000000_AddD" : (old : {a : Nat; b : Text; c : Bool}) -> {a : Nat; b : Text; c : Bool; d : Int};
+  "20250401_000000_AddE" : (old : {a : Nat; b : Text; c : Bool; d : Int}) -> {a : Nat; b : Text; c : Bool; d : Int; e : Text}
+}
+actor  {
+  stable a : Nat;
+  stable b : Text;
+  stable c : Bool;
+  stable d : Int;
+  stable e : Text
+};

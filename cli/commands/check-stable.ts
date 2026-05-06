@@ -1,5 +1,5 @@
-import { basename, join } from "node:path";
-import { existsSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import chalk from "chalk";
 import { execa } from "execa";
@@ -17,7 +17,10 @@ import {
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
-const CHECK_STABLE_DIR = ".mops/.check-stable";
+// Per-invocation scratch dir lives under `.mops/`; `mkdtempSync` makes it unique so
+// concurrent `mops` processes don't clobber each other's `old.most`/`new.most`.
+const CHECK_STABLE_PARENT = ".mops";
+const CHECK_STABLE_PREFIX = ".check-stable-";
 
 export interface CheckStableOptions {
   verbose: boolean;
@@ -189,15 +192,17 @@ export async function runStableCheck(
     cliError(`File not found: ${oldFile}`);
   }
 
-  await rm(CHECK_STABLE_DIR, { recursive: true, force: true });
-  mkdirSync(CHECK_STABLE_DIR, { recursive: true });
+  mkdirSync(CHECK_STABLE_PARENT, { recursive: true });
+  const scratchDir = mkdtempSync(
+    join(CHECK_STABLE_PARENT, CHECK_STABLE_PREFIX),
+  );
   try {
     const oldMostPath = isOldMostFile
       ? oldFile
       : await generateStableTypes(
           mocPath,
           oldFile,
-          join(CHECK_STABLE_DIR, "old.most"),
+          join(scratchDir, "old.most"),
           sources,
           globalMocArgs,
           canisterArgs,
@@ -207,7 +212,7 @@ export async function runStableCheck(
     const newMostPath = await generateStableTypes(
       mocPath,
       canisterMain,
-      join(CHECK_STABLE_DIR, "new.most"),
+      join(scratchDir, "new.most"),
       sources,
       globalMocArgs,
       canisterArgs,
@@ -246,7 +251,7 @@ export async function runStableCheck(
       ),
     );
   } finally {
-    await rm(CHECK_STABLE_DIR, { recursive: true, force: true });
+    await rm(scratchDir, { recursive: true, force: true });
   }
 }
 
@@ -259,8 +264,7 @@ async function generateStableTypes(
   canisterArgs: string[],
   options: Partial<CheckStableOptions>,
 ): Promise<string> {
-  const base = basename(outputPath, ".most");
-  const wasmPath = join(CHECK_STABLE_DIR, base + ".wasm");
+  const wasmPath = outputPath.replace(/\.most$/, ".wasm");
   const args = [
     "--stable-types",
     "-o",
