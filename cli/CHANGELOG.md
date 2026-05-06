@@ -2,6 +2,8 @@
 
 ## Next
 - Deprecate `skipIfMissing` in `[canisters.<name>.check-stable]`. Behavior is unchanged for now, but `mops check`/`check-stable` print a warning when it is set. For initial deployments, commit a `.most` file at the configured `path` containing an empty actor (`// Version: 1.0.0\nactor { };`) instead — the stable check then runs against an empty baseline.
+- Drop the "you may need a migration" hint after a failed stable compatibility check in `mops check`/`check-stable`. The hint guessed at whether the user needed a new migration or a fix to an existing one, and `moc`'s underlying compatibility error already links to the migration docs.
+- The missing-chain-directory error from `mops check`/`build`/`check-stable` now points at adding a `.mo` file to the `chain` directory instead of running the experimental `mops migrate new <Name>` command.
 
 ## 2.13.1
 - `mops lint` now honors `[canisters.<name>.migrations].check-limit`, skipping trimmed chain migrations so projects with large migration histories lint as fast as they type-check. Pass an explicit filter (`mops lint <name>`) to opt back in for a one-off lint of a trimmed file.

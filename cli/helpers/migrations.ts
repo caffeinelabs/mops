@@ -130,7 +130,7 @@ function resolveMigrationChain(
   if (!existsSync(chainDir) && !nextFile) {
     cliError(
       `Migration chain directory not found: ${chainDir}\n` +
-        "Run `mops migrate new <Name>` to initialize the migration chain.",
+        "Create the directory and add a `.mo` migration file to initialize the chain.",
     );
   }
 
