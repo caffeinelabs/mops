@@ -1,6 +1,7 @@
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readdirSync,
   symlinkSync,
   writeFileSync,
@@ -193,9 +194,11 @@ export async function prepareMigrationArgs(
     return { migrationArgs, cleanup: async () => {} };
   }
 
-  const tempDir = stagedMigrationsDir(chainDir, canisterName);
-  await rm(tempDir, { recursive: true, force: true });
-  mkdirSync(tempDir, { recursive: true });
+  // Per-invocation staging dir; `mkdtempSync` makes it unique so concurrent `mops`
+  // processes don't clobber each other's symlinks. Cleaned up below in `cleanup()`.
+  const baseDir = stagedMigrationsDir(chainDir, canisterName);
+  mkdirSync(dirname(baseDir), { recursive: true });
+  const tempDir = mkdtempSync(`${baseDir}-`);
   writeFileSync(join(tempDir, ".gitignore"), "*\n");
 
   for (const { file, dir } of included) {
