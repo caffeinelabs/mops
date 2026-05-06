@@ -143,12 +143,11 @@ exports[`migrate migrate new creates a migration file with timestamp and templat
 }
 `;
 
-exports[`migrate stable check hint stable check fails with hint when deployed.most is incompatible 1`] = `
+exports[`migrate stable check stable check fails when deployed.most is incompatible 1`] = `
 {
   "exitCode": 1,
   "stderr": "(unknown location): Compatibility error [M0169], the stable variable \`a\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
 (unknown location): Compatibility error [M0169], the stable variable \`name\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
-Hint: You may need a migration. Run \`mops migrate new <Name>\` to create one.
 ✗ Stable compatibility check failed for canister 'backend'",
   "stdout": "✓ backend",
 }

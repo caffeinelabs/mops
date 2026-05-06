@@ -241,8 +241,8 @@ describe("migrate", () => {
     });
   });
 
-  describe("stable check hint", () => {
-    test("stable check fails with hint when deployed.most is incompatible", async () => {
+  describe("stable check", () => {
+    test("stable check fails when deployed.most is incompatible", async () => {
       const cwd = await makeTempFixture("basic");
       await writeFile(
         path.join(cwd, "deployed.most"),
