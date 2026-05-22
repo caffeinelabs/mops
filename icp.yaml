@@ -20,6 +20,7 @@ canisters:
     recipe:
       type: "@dfinity/asset-canister@v2.1.0"
       configuration:
+        version: "0.29.1"
         dir: frontend/dist
         build:
           - npm run build-frontend
@@ -27,6 +28,7 @@ canisters:
     recipe:
       type: "@dfinity/asset-canister@v2.1.0"
       configuration:
+        version: "0.29.1"
         dir: docs/build
         build:
           - npm run build-docs
@@ -34,6 +36,7 @@ canisters:
     recipe:
       type: "@dfinity/asset-canister@v2.1.0"
       configuration:
+        version: "0.29.1"
         dir: blog/build
         build:
           - npm run build-blog

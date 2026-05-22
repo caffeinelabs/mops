@@ -237,7 +237,7 @@ used or when only `dfx.json` is present. Removal target: next major.
   `@icp-sdk/bindgen`, with output-shape caveat.
 - ~~`getDefaultPackages("")` behavior?~~ Falls through to latest `core`.
 - ~~`icp.yaml` schema works for our canisters?~~ Yes — `icp project show`
-  parses the file with all six canisters (Phase 2a).
+  parses the file with all seven canisters (Phase 2a).
 
 ## References
 
