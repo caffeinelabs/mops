@@ -1,4 +1,4 @@
-import { Actor, HttpAgent } from "@dfinity/agent";
+import { Actor, HttpAgent } from "@icp-sdk/core/agent";
 
 // Imports and re-exports candid interface
 import { idlFactory } from './storage.did.js';
@@ -6,9 +6,9 @@ export { idlFactory } from './storage.did.js';
 
 /**
  *
- * @param {string | import("@dfinity/principal").Principal} canisterId Canister ID of Agent
- * @param {{agentOptions?: import("@dfinity/agent").HttpAgentOptions; actorOptions?: import("@dfinity/agent").ActorConfig}} [options]
- * @return {import("@dfinity/agent").ActorSubclass<import("./storage.did.js")._SERVICE>}
+ * @param {string | import("@icp-sdk/core/principal").Principal} canisterId Canister ID of Agent
+ * @param {{agentOptions?: import("@icp-sdk/core/agent").HttpAgentOptions; actorOptions?: import("@icp-sdk/core/agent").ActorConfig}} [options]
+ * @return {import("@icp-sdk/core/agent").ActorSubclass<import("./storage.did.js")._SERVICE>}
  */
  export const createActor = (canisterId, options) => {
   const agent = new HttpAgent({ ...options?.agentOptions });
