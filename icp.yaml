@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/dfinity/icp-cli/main/docs/schemas/icp-yaml-schema.json
+#
+# Mirrors dfx.json. Currently a foundation file: developer scripts, CI, and
+# Vite still target dfx. Tracking in cli/specs/dfx-to-icp.md (LANG-1311).
+
+canisters:
+  - name: main
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: backend/main/main-canister.mo
+        compress: true
+        shrink: true
+  - name: bench
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: cli/commands/bench/bench-canister.mo
+  - name: assets
+    recipe:
+      type: "@dfinity/asset-canister@v2.1.0"
+      configuration:
+        dir: frontend/dist
+        build:
+          - npm run build-frontend
+  - name: docs
+    recipe:
+      type: "@dfinity/asset-canister@v2.1.0"
+      configuration:
+        dir: docs/build
+        build:
+          - npm run build-docs
+  - name: blog
+    recipe:
+      type: "@dfinity/asset-canister@v2.1.0"
+      configuration:
+        dir: blog/build
+        build:
+          - npm run build-blog
+  - name: cli
+    recipe:
+      type: "@dfinity/asset-canister@v2.1.0"
+      configuration:
+        dir: cli-releases/frontend/dist
+        build:
+          - npm run build-cli-releases
+
+# Override the default local network to bind on dfx's port so vite's
+# /api proxy keeps working while both pipelines coexist.
+networks:
+  - name: local
+    mode: managed
+    gateway:
+      bind: 127.0.0.1
+      port: 4943
