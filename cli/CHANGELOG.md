@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Fix `mops install` race conditions when multiple processes install into the same project (e.g. an editor watcher, fixture installers like vscode-motoko's, or CI matrix jobs sharing a global cache). Concurrent runs could observe a half-populated global cache or local `.mops/<pkg>` directory and copy zero-byte / truncated files, surfacing later as missing completions, hover data, or type-check errors. Cache writes (mops registry, GitHub installs, and project-local `.mops/`) now stage into a sibling `.staging-*` dir and atomically rename onto the canonical path. Stale staging dirs from interrupted runs are swept on the next install. The shared `.mops/_tmp/` zip download dir used by GitHub installs is also per-invocation now. If you have zero-byte files left over in your cache from a pre-fix crash, run `mops cache clean` once after upgrading.
 
 - Replace `@iarna/toml` with `smol-toml` for parsing and writing `mops.toml` (faster, actively maintained, spec-compliant TOML parser). Config reformat behavior on `add`/`remove`/`bump`/`toolchain` is unchanged — both libraries round-trip through a plain object.
 

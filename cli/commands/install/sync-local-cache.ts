@@ -1,12 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
-import { copyCache, getDepCacheName } from "../../cache.js";
+import {
+  copyCache,
+  getDepCacheName,
+  sweepStaleStagingDirs,
+} from "../../cache.js";
 import { getDependencyType, getRootDir } from "../../mops.js";
 import { resolvePackages } from "../../resolve-packages.js";
 
 export async function syncLocalCache({ verbose = false } = {}): Promise<
   Record<string, string>
 > {
+  sweepStaleStagingDirs();
+
   let resolvedPackages = await resolvePackages();
   let rootDir = getRootDir();
 
