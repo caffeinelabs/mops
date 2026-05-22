@@ -1,12 +1,14 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import {
   existsSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "path";
 import { cli, normalizePaths } from "./helpers";
 
@@ -139,25 +141,28 @@ describe("install", () => {
   // Regression: parallel `mops install` runs against the same project used to
   // race in two places — global cache writes (`.mops/<pkg>` populated mid-write)
   // and local `.mops/<pkg>` copies — leaving zero-byte / partially-written
-  // files. See LANG-1310 and caffeinelabs/vscode-motoko#461.
+  // files. We isolate the global cache via `XDG_CACHE_HOME` so the global-write
+  // path actually executes (cold-cache scenario). See LANG-1310 and
+  // caffeinelabs/vscode-motoko#461.
   test("parallel `mops install` produces a complete .mops tree (no zero-byte / staging dirs)", async () => {
     const cwd = path.join(import.meta.dirname, "install/success");
     const lockFile = path.join(cwd, "mops.lock");
     const localCache = path.join(cwd, ".mops");
+    const xdgCache = mkdtempSync(path.join(tmpdir(), "mops-test-xdg-"));
     rmSync(lockFile, { force: true });
     rmSync(localCache, { recursive: true, force: true });
     try {
       const N = 5;
+      const env = { CI: undefined, XDG_CACHE_HOME: xdgCache };
       const runs = await Promise.all(
-        Array.from({ length: N }, () =>
-          cli(["install"], { cwd, env: { CI: undefined } }),
-        ),
+        Array.from({ length: N }, () => cli(["install"], { cwd, env })),
       );
       for (const r of runs) {
-        expect({ exitCode: r.exitCode, stderr: r.stderr }).toEqual({
-          exitCode: 0,
-          stderr: r.stderr,
-        });
+        if (r.exitCode !== 0) {
+          throw new Error(
+            `mops install exited ${r.exitCode}\nstdout:\n${r.stdout}\nstderr:\n${r.stderr}`,
+          );
+        }
       }
 
       const walk = (dir: string): string[] => {
@@ -180,9 +185,19 @@ describe("install", () => {
         e.startsWith(".staging-"),
       );
       expect(stagingLeftovers).toEqual([]);
+
+      const globalPkg = path.join(
+        xdgCache,
+        "mops",
+        "packages",
+        "core@1.0.0",
+        "mops.toml",
+      );
+      expect(existsSync(globalPkg)).toBe(true);
     } finally {
       rmSync(lockFile, { force: true });
       rmSync(localCache, { recursive: true, force: true });
+      rmSync(xdgCache, { recursive: true, force: true });
     }
   });
 });

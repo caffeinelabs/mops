@@ -139,12 +139,12 @@ export const downloadFromGithub = async (
       // Prevent `onError` being called twice.
       readStream.off("error", reject);
 
-      // Per-invocation download dir; previously a shared `.mops/_tmp/` was
-      // clobbered by concurrent github installs (and its on-error wipe nuked
-      // sibling downloads).
+      // Per-invocation download dir (was a shared `.mops/_tmp/` clobbered
+      // by concurrent github installs). `.staging-` prefix lets the sweeper
+      // pick up leftovers from a crashed download.
       const parentTmp = path.resolve(getRootDir(), ".mops");
       mkdirSync(parentTmp, { recursive: true });
-      const tmpDir = mkdtempSync(path.join(parentTmp, ".github-dl-"));
+      const tmpDir = mkdtempSync(path.join(parentTmp, ".staging-github-dl-"));
       const tmpFile = path.resolve(
         tmpDir,
         `${gitName}@${(commitHash || branch).replaceAll("/", "___")}.zip`,
@@ -214,9 +214,8 @@ export const installFromGithub = async (
 
     progress(0, 1024 * 500);
 
-    // Stage the download in a sibling dir, then atomically commit to
-    // `cacheDir`. Avoids the previous `mkdirSync(cacheDir)` window during
-    // which `isDepCached` reported an empty dir as a cache hit.
+    // Stage download in a sibling dir; previously `mkdirSync(cacheDir)`
+    // before download made empty dirs look cached to peers.
     let stagingDir = createStagingDir(cacheDir);
     try {
       await downloadFromGithub(repo, stagingDir, progress);

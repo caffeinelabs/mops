@@ -104,14 +104,10 @@ export async function installMopsDep(
         progress();
       });
 
-      // Write into a private staging dir, then atomically rename onto
-      // `cacheDir`. Concurrent installs of the same package each stage
-      // independently; the first to rename wins, the rest discard their
-      // staging and observe a populated cache.
       let stagingDir = createStagingDir(cacheDir);
       let onSigInt = () => {
         fs.rmSync(stagingDir, { recursive: true, force: true });
-        process.exit();
+        process.exit(130);
       };
       process.on("SIGINT", onSigInt);
 
