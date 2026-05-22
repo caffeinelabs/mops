@@ -9,14 +9,13 @@
     "vite": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --threshold error --no-tsconfig"
+    "check": "svelte-check --threshold error"
   },
   "author": "Zen Voich <zen.voich@gmail.com>",
   "license": "ISC",
   "dependencies": {
     "@asciidoctor/core": "3.0.4",
-    "@dfinity/agent": "1.0.1",
-    "@dfinity/principal": "1.0.1",
+    "@icp-sdk/core": "4.0.2",
     "@wooorm/starry-night": "3.2.0",
     "chart.js": "4.4.2",
     "chartjs-adapter-date-fns": "^3.0.0",
@@ -31,22 +30,16 @@
     "svelte-spa-history-router": "2.1.1",
     "throttle-debounce": "5.0.2"
   },
-  "overrides": {
-    "@dfinity/agent@1.0.1": {
-      "@dfinity/candid": "1.0.1"
-    }
-  },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "7.0.0",
     "@types/throttle-debounce": "5.0.2",
     "@types/markdown-it": "13.0.7",
     "@types/node": "22.15.3",
     "@types/pako": "2.0.4",
-    "buffer": "^6.0.3",
     "eslint-plugin-svelte": "2.46.1",
     "svelte": "5.55.7",
     "svelte-check": "4.4.6",
-    "typescript": "5.4.3",
+    "typescript": "5.9.2",
     "vite": "8.0.8",
     "vite-plugin-static-copy": "4.0.1"
   }
