@@ -119,16 +119,46 @@ Phase 2 splits into three follow-on PRs, ordered by risk.
 
 ### Phase 2a — foundation (this PR)
 
-1. Add `icp.yaml` mirroring `dfx.json`. Six canisters: `main`, `bench`
-   (Motoko recipe), `assets`, `docs`, `blog`, `cli` (asset-canister recipe).
+1. Add `icp.yaml` describing seven canisters:
+   - `main`, `bench` — `@dfinity/motoko@v4.1.0` recipe.
+   - `assets`, `docs`, `blog` — `@dfinity/asset-canister@v2.1.0` recipe.
+   - `cli` — raw `build`/`sync` (the recipe takes a single `dir`, but
+     `dfx.json` ships two sources: `cli-releases/` for `install.sh` /
+     `releases.json` / `tags/` / `versions/` and `cli-releases/frontend/dist/`
+     for the SPA).
+   - `play-frontend` — raw `build`/`sync` (no build step; just serves
+     `.well-known/ic-domains`).
+
    Local network pinned to `127.0.0.1:4943` so the existing Vite `/api` proxy
    keeps working when devs opt in to `icp network start`.
-2. `.gitignore` adds `.icp/cache/`. (Track `.icp/data/` later when we have
-   mainnet IDs to record there.)
+
+2. `.gitignore` adds `.icp/cache/`.
+
 3. `dfx.json`, npm scripts, CI workflows, and Vite are unchanged — daily dev
    stays on `dfx` until Phase 2b lands.
 
-Validation: `icp project show` parses the file and lists all six canisters.
+Validation: `icp project show` parses the file and lists all seven canisters.
+
+**Known semantic gaps vs. `dfx.json`** (carry into Phase 2b/2c):
+
+- `optimize: "cycles"` (binaryen `wasm-opt -O*` via `ic-wasm optimize`) on
+  `main` becomes `shrink: true` (function reordering / dead-code only) under
+  the recipe. The deployed wasm will be larger. Need to either accept it,
+  switch to raw `build.steps` with a manual `ic-wasm optimize` call, or wait
+  for the recipe to expose `optimize`.
+- `bench.remote.id` ("don't redeploy on `ic`/`staging`, just reuse
+  `2222s-...`") has no recipe equivalent. Pre-populate
+  `.icp/data/mappings/.ids.json` for `bench` before any non-local deploy.
+- `staging` network is not yet defined in `icp.yaml` — only the implicit
+  `ic`. Phase 2c needs to add a `staging` network entry alongside the IDs
+  mapping.
+- Local network mode flips from `ephemeral` (state wiped on `dfx start
+  --clean`) to `managed` (state persists across `icp network stop/start`).
+  Phase 2b should document the equivalent reset workflow when flipping
+  `npm run replica`.
+- `.icp/data/mappings/` is intended to be tracked (mainnet/staging IDs);
+  ephemeral managed-network state goes elsewhere under `.icp/data/<network>/`.
+  Refine `.gitignore` in Phase 2b once we have actual deploys to observe.
 
 ### Phase 2b — flip dev pipeline
 

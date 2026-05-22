@@ -37,13 +37,36 @@ canisters:
         dir: blog/build
         build:
           - npm run build-blog
+  # Raw build/sync (not the recipe) because the asset-canister recipe template
+  # only supports a single `dir`, but dfx.json ships two sources for `cli`:
+  # `cli-releases/` (install.sh, releases.json, tags/, versions/ — served at
+  # cli.mops.one) and `cli-releases/frontend/dist/` (the SPA).
   - name: cli
-    recipe:
-      type: "@dfinity/asset-canister@v2.1.0"
-      configuration:
-        dir: cli-releases/frontend/dist
-        build:
-          - npm run build-cli-releases
+    build:
+      steps:
+        - type: script
+          commands:
+            - npm run build-cli-releases
+        - type: pre-built
+          url: https://github.com/dfinity/sdk/releases/download/0.29.1/assetstorage.wasm.gz
+    sync:
+      steps:
+        - type: assets
+          dirs:
+            - cli-releases
+            - cli-releases/frontend/dist
+  # Static-only canister: no build step, just serves
+  # play-frontend/.well-known/ic-domains. dfx.json keeps it for parity with
+  # the deployed canister rcr7f-viaaa-aaaam-qdx6q-cai.
+  - name: play-frontend
+    build:
+      steps:
+        - type: pre-built
+          url: https://github.com/dfinity/sdk/releases/download/0.29.1/assetstorage.wasm.gz
+    sync:
+      steps:
+        - type: assets
+          dir: play-frontend
 
 # Override the default local network to bind on dfx's port so vite's
 # /api proxy keeps working while both pipelines coexist.
