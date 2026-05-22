@@ -39,7 +39,6 @@
 
 		<h3>3. Initialize</h3>
 		<div>Run this command in the root directory of your project (where is <code class="inline">dfx.json</code> placed)</div>
-		<div>If there are Vessel config files, mops will migrate packages from <code class="inline">vessel.dhall</code> to <code class="inline">mops.toml</code></div>
 		<br>
 		<code>mops init</code>
 
