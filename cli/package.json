@@ -50,7 +50,7 @@
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
   },
   "dependencies": {
-    "@iarna/toml": "2.2.5",
+    "smol-toml": "1.6.1",
     "@icp-sdk/core": "4.0.2",
     "@noble/hashes": "1.8.0",
     "as-table": "1.0.55",

@@ -2,6 +2,8 @@
 
 ## Next
 
+- Replace `@iarna/toml` with `smol-toml` for parsing and writing `mops.toml` (faster, actively maintained, TOML 1.0 compliant). Config reformat behavior on `add`/`remove`/`bump`/`toolchain` is unchanged — both libraries round-trip through a plain object.
+
 ## 2.13.2
 - Fix race conditions when two `mops` processes run on the same project (e.g. an editor watcher and `caffeine check --fix`, or back-to-back invocations). `mops check-stable` used a shared `.mops/.check-stable/` scratch dir and `mops check`/`build`/`check-stable` used a shared `<parent>/.migrations-<canister>/` staging dir; concurrent runs would clobber each other and surface as misleading errors like `.mops/.check-stable/new.most: No such file or directory` or `EEXIST: file already exists, symlink ...`. Both directories are now per-invocation (created via `mkdtemp` and removed when the command finishes).
 - Deprecate `skipIfMissing` in `[canisters.<name>.check-stable]`. Behavior is unchanged for now, but `mops check`/`check-stable` print a warning when it is set. For initial deployments, commit a `.most` file at the configured `path` containing an empty actor (`// Version: 1.0.0\nactor { };`) instead — the stable check then runs against an empty baseline.
