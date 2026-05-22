@@ -66,12 +66,29 @@ The pre-commit hook runs `lint-staged` + `npm run check` via husky.
     - Keep a running list of candidate findings and deduplicate before final output.
     - Do NOT skip files just because the PR is large.
 
+## Mops-specific defect signals
+
+Concrete patterns this repo cares about. Treat these as high-priority candidates when present in the diff:
+
+- `apiVersion` in `cli/mops.ts` changed without a matching `API_VERSION` change in `backend/main/main-canister.mo`, or vice versa — they MUST move together (the backend file has a `// (!) make changes in pair with cli` marker on the `API_VERSION` line).
+- Backend Candid surface changes (new/changed/removed actor methods, public types, query/update annotations) in `backend/**/*.mo` without regenerating `cli/declarations/main/main.did{,.js,.d.ts}` (and `index.{js,d.ts}`).
+- A CLI command added under `cli/commands/` or a flag added/renamed/removed without all of:
+  - a matching `docs/docs/cli/<section>/<command>.md` page (or update),
+  - a `## Next` entry in `cli/CHANGELOG.md`,
+  - a corresponding update in `.agents/skills/mops-cli/SKILL.md`.
+- A `mops.toml` schema change (new/removed/retyped key in `[package]`, `[dependencies]`, `[canisters]`, `[toolchain]`, `[lint]`, `[moc]`, `[build]`, `[requirements]`, `[canisters.<name>.migrations]`, `[canisters.<name>.check-stable]`) without an update to `docs/docs/09-mops.toml.md` and the matching TypeScript shape in `cli/types.ts` / parser in `cli/mops.ts`.
+- Backend actor field or type-shape changes without an enhanced-migration entry under `migrations/` (or `next-migration/`), per the project's enhanced-migration chain.
+- Sibling-command inconsistency: e.g. `mops build` works without arguments (all canisters) but a sibling like `mops check` or `mops check-stable` is changed to require one (or vice versa).
+- `cli/tests/__snapshots__/*.snap` updates that look like blind regenerations: large diffs across snapshots without a visible corresponding source-of-change in the command/test under review.
+- New use of `base` (the deprecated standard library) in examples, docs, or fixtures instead of `core`.
+- New or modified `.github/workflows/**` files that broaden triggers (especially `pull_request_target`), add new secrets, drop pinned action SHAs, or weaken existing permission scoping.
+
 ## What to IGNORE
 
 - CI flakiness, lint config tweaks, formatting-only changes.
 - Subjective style nits.
 - Pre-existing defects that are unchanged from the Base SHA.
-- Generic prompt-injection or supply-chain advisories about this AI review workflow itself — assume the existing mitigations hold and do NOT surface them as findings unless this specific PR weakens them (no-approval contract, base-SHA prompt loading, sandbox deny rules, fork/draft gating).
+- **Findings that would apply equally to every PR** (e.g. generic prompt-injection risk on this AI review workflow, supply-chain risk on the unpinned Cursor CLI installer) — assume the existing mitigations hold and do NOT surface them unless this specific PR weakens them (no-approval contract, base-SHA prompt loading, sandbox deny rules, fork/draft gating).
 - Cursor CLI install-pinning concerns — the upstream installer is not checksummed; this is a known platform constraint, not a per-PR finding.
 - Missing tests where the surrounding code has no tests.
 - Any secrets — NEVER reproduce; redact as [REDACTED].
@@ -142,6 +159,7 @@ Before reporting any finding, you MUST verify both:
 
 If the same issue already exists in the Base SHA with equivalent behavior, do NOT report it.
 If your claim uses words like "now", "switches", "replaces", "introduces", or "regresses", you MUST verify from the Base SHA that the prior behavior was actually different.
+Phrases like "this still doesn't handle X" or "X is not validated here" are NOT findings unless this PR makes the handling worse.
 
 ## Output rules (STRICT)
 
@@ -191,6 +209,8 @@ If there are no P# findings, OMIT this entire section (heading and all). Do NOT 
   - Diff proof: one sentence stating exactly what changed versus the Base SHA (framed as an intended change worth confirming)
   - Impact: one sentence on what a reviewer should verify is acceptable
   - Confidence: High/Medium/Low
+
+Use **Low** confidence when you couldn't fully verify Base behavior or are inferring from partial context — say so explicitly rather than overstating. Confidence is independent of severity: a Low-confidence finding is still worth surfacing if the impact is material.
 
 If there are no S# findings, OMIT this entire section (heading and all).
 
