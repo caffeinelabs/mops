@@ -142,8 +142,7 @@ describe("install", () => {
   // race in two places — global cache writes (`.mops/<pkg>` populated mid-write)
   // and local `.mops/<pkg>` copies — leaving zero-byte / partially-written
   // files. We isolate the global cache via `XDG_CACHE_HOME` so the global-write
-  // path actually executes (cold-cache scenario). See LANG-1310 and
-  // caffeinelabs/vscode-motoko#461.
+  // path actually executes (cold-cache scenario).
   test("parallel `mops install` produces a complete .mops tree (no zero-byte / staging dirs)", async () => {
     const cwd = path.join(import.meta.dirname, "install/success");
     const lockFile = path.join(cwd, "mops.lock");
