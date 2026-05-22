@@ -4,15 +4,17 @@ import path from "node:path";
 import { Buffer } from "node:buffer";
 import { createLogUpdate } from "log-update";
 import chalk from "chalk";
-import { deleteSync } from "del";
 import { checkConfigFile, progressBar, readConfig } from "../../mops.js";
 import { getHighestVersion } from "../../api/getHighestVersion.js";
 import { storageActor } from "../../api/actors.js";
 import { parallel } from "../../parallel.js";
 import {
+  commitStagingDir,
+  createStagingDir,
   getDepCacheDir,
   getMopsDepCacheName,
   isDepCached,
+  sweepStaleStagingDirs,
 } from "../../cache.js";
 import {
   downloadFile,
@@ -69,6 +71,8 @@ export async function installMopsDep(
     version = versionRes.ok;
   }
 
+  sweepStaleStagingDirs();
+
   let cacheName = getMopsDepCacheName(depName, version);
   let cacheDir = getDepCacheDir(cacheName);
 
@@ -100,33 +104,34 @@ export async function installMopsDep(
         progress();
       });
 
+      let stagingDir = createStagingDir(cacheDir);
       let onSigInt = () => {
-        deleteSync([cacheDir], { force: true });
-        process.exit();
+        fs.rmSync(stagingDir, { recursive: true, force: true });
+        process.exit(130);
       };
       process.on("SIGINT", onSigInt);
 
-      // write files to global cache
       try {
         await Promise.all(
           Array.from(filesData.entries()).map(async ([filePath, data]) => {
             await fs.promises.mkdir(
-              path.join(cacheDir, path.dirname(filePath)),
+              path.join(stagingDir, path.dirname(filePath)),
               { recursive: true },
             );
             await fs.promises.writeFile(
-              path.join(cacheDir, filePath),
+              path.join(stagingDir, filePath),
               Buffer.from(data),
             );
           }),
         );
+        commitStagingDir(stagingDir, cacheDir);
       } catch (err) {
         console.error(chalk.red("Error: ") + err);
-        deleteSync([cacheDir], { force: true });
+        fs.rmSync(stagingDir, { recursive: true, force: true });
         return false;
+      } finally {
+        process.off("SIGINT", onSigInt);
       }
-
-      process.off("SIGINT", onSigInt);
     } catch (err) {
       console.error(chalk.red("Error: ") + err);
       return false;

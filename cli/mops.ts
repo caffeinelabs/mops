@@ -2,7 +2,7 @@ import process from "node:process";
 import path from "node:path";
 import fs from "node:fs";
 import { Identity } from "@icp-sdk/core/agent";
-import TOML from "@iarna/toml";
+import TOML from "smol-toml";
 import chalk from "chalk";
 import prompts from "prompts";
 import { decodeFile } from "./pem.js";
