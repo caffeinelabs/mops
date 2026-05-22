@@ -45,7 +45,6 @@ Refs: GH = `caffeinelabs/mops`, LIN = Linear ticket title.
 
 - `MOPS_*` env-var overrides (`MOPS_NETWORK`, `MOPS_REGISTRY_HOST`, `MOPS_REGISTRY_CANISTER_ID`, `MOPS_VERIFY_QUERY_SIGNATURES`, `MOPS_CWD`, `MOPS_ENV`): document, log when active, add proper flag equivalents. Today they silently change registry/network/cwd. (`cli/api/network.ts`, `cli/api/actors.ts`, `cli/cli.ts:72`)
 - `GITHUB_ENV`-triggered concurrency change (`cli/commands/install/install-mops-dep.ts:85`) — replace with explicit `--concurrency` flag.
-- Vessel / dhall: emit one-time warning on `mops init` when `vessel.dhall` is present (`cli/commands/init.ts:39-55`); remove in v3. (GH #296)
 - `dfx`-bundled moc fallback: warn on every fallback today (`cli/commands/toolchain/index.ts:359,387`, `cli/commands/docs.ts:44-54`); drop in v3.
 - WASI `wasmtime` PATH fallback already labelled "legacy" — already warns (`cli/commands/test/test.ts:270-280`); remove in v3.
 - `// compatibility with older versions` re-exports (`cli/mops.ts:324-325`): mark `@deprecated`, document successors.

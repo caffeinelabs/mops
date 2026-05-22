@@ -41,6 +41,12 @@ export async function init({ yes = false } = {}) {
   let vesselConfig: VesselConfig = { dependencies: [], "dev-dependencies": [] };
 
   if (existsSync(vesselFile)) {
+    console.warn(
+      chalk.yellow(
+        "WARN: vessel.dhall auto-migration is deprecated and will be removed in mops v3. " +
+          "Copy your dependencies into mops.toml manually and delete vessel.dhall / package-set.dhall.",
+      ),
+    );
     console.log("Reading vessel.dhall file");
     let res = await readVesselConfig(process.cwd(), { cache: false });
     if (res) {

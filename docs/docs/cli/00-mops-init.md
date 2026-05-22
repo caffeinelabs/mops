@@ -63,7 +63,9 @@ For projects, `mops install` runs at the end to fetch the default packages.
 
 ### Migrating from Vessel
 
-If `vessel.dhall` exists, `mops init` reads it and copies the listed dependencies into the new `mops.toml`. Dev-dependencies are not migrated. Skipped when `--yes` is used.
+> **Deprecated.** Auto-migration is scheduled for removal in mops v3. Copy your dependencies into `mops.toml` manually and delete `vessel.dhall` / `package-set.dhall`.
+
+If `vessel.dhall` exists, `mops init` reads it and copies the listed dependencies into the new `mops.toml`. Dev-dependencies are not migrated. Skipped when `--yes` is used. A deprecation warning is printed.
 
 ## Options
 
