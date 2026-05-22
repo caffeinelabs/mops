@@ -30,7 +30,7 @@ npm run lint            # ESLint
 npm run fix             # Prettier + ESLint fix
 npm run check           # TypeScript check for CLI + Frontend (parallel)
 npm test                # mops test (Motoko) + CLI Jest tests
-npm start               # Start local dfx replica + deploy + all frontends
+npm start               # Start local icp replica + deploy + all frontends
 ```
 
 ### CLI (`cd cli/`)
@@ -70,6 +70,7 @@ Svelte 5 + Vite 8, queries the main canister. Staging canister: `ogp6e-diaaa-aaa
 
 ## Key constraints
 
+- **Local pipeline uses icp-cli**: `npm run replica` and `npm run deploy-local` use `icp` (config in `icp.yaml`). `dfx.json` is still kept around — production deploys (`deploy-staging`, `deploy-ic`, `release.yml`) and `npm run decl:cli` (`dfx generate`) still go through dfx.
 - **dfx version**: pinned in `dfx.json` via `dfxvm`. Do not run `dfxvm update/install/default` to change it.
-- **Declarations must be regenerated** after backend changes: `npm run decl` (requires local dfx running).
+- **Declarations must be regenerated** after backend changes: `npm run decl` (uses `dfx generate`, no replica needed).
 - **API version** in `cli/mops.ts` (`apiVersion`) and `backend/main/main-canister.mo` (`API_VERSION`) must match.

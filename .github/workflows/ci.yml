@@ -33,7 +33,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
+      # dfx is still needed for `dfx generate` (decl:cli) and the
+      # production deploy paths (deploy-staging/deploy-ic, release.yml).
+      # Local network + deploy now go through icp-cli (see deploy-local
+      # and replica scripts in package.json).
       - uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
+      - name: Install icp-cli
+        run: npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
 
       - uses: ./.github/actions/cache-rust-wasm
 
@@ -67,6 +73,9 @@ jobs:
 
       - name: Deploy backend
         run: npm run deploy-local
+
+      - name: Generate declarations
+        run: npm run decl
 
       - name: Build frontend
         run: npm run build-frontend

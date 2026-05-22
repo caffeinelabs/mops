@@ -15,17 +15,33 @@ interface CanisterIds {
 
 let canisterIds: CanisterIds = {};
 try {
-  canisterIds = JSON.parse(
-    fs
-      .readFileSync(
-        network === "local"
-          ? "../.dfx/local/canister_ids.json"
-          : "../canister_ids.json",
-      )
-      .toString(),
-  );
+  if (network === "local") {
+    // icp-cli writes a flat { name: id } map per environment; dfx writes
+    // { name: { network: id } }. Try icp first, fall back to dfx.
+    try {
+      const icpIds = JSON.parse(
+        fs.readFileSync("../.icp/cache/mappings/local.ids.json").toString(),
+      ) as Record<string, string>;
+      canisterIds = Object.fromEntries(
+        Object.entries(icpIds).map(([name, id]) => [
+          name,
+          { local: id } as { [k in Network]: string },
+        ]),
+      );
+    } catch {
+      canisterIds = JSON.parse(
+        fs.readFileSync("../.dfx/local/canister_ids.json").toString(),
+      );
+    }
+  } else {
+    canisterIds = JSON.parse(
+      fs.readFileSync("../canister_ids.json").toString(),
+    );
+  }
 } catch (e) {
-  console.error("\n⚠️  Before starting the dev server run: dfx deploy\n\n");
+  console.error(
+    "\n⚠️  Before starting the dev server run: npm run deploy-local\n\n",
+  );
 }
 
 // Generate canister ids, required by the generated canister code in .dfx/local/declarations/*
