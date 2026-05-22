@@ -2,20 +2,28 @@ import process from "node:process";
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
+  rmSync,
   createWriteStream,
   readFileSync,
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream";
-import { deleteSync } from "del";
 import { execaCommand } from "execa";
 import chalk from "chalk";
 import { createLogUpdate } from "log-update";
 import got from "got";
 import decompress from "decompress";
-import { parseGithubURL, progressBar } from "./mops.js";
-import { getDepCacheDir, getGithubDepCacheName, isDepCached } from "./cache.js";
+import { getRootDir, parseGithubURL, progressBar } from "./mops.js";
+import {
+  commitStagingDir,
+  createStagingDir,
+  getDepCacheDir,
+  getGithubDepCacheName,
+  isDepCached,
+  sweepStaleStagingDirs,
+} from "./cache.js";
 
 const dhallFileToJson = async (filePath: string, silent: boolean) => {
   if (existsSync(filePath)) {
@@ -130,18 +138,23 @@ export const downloadFromGithub = async (
 
       // Prevent `onError` being called twice.
       readStream.off("error", reject);
-      const tmpDir = path.resolve(process.cwd(), ".mops/_tmp/");
+
+      // Per-invocation download dir; previously a shared `.mops/_tmp/` was
+      // clobbered by concurrent github installs (and its on-error wipe nuked
+      // sibling downloads).
+      const parentTmp = path.resolve(getRootDir(), ".mops");
+      mkdirSync(parentTmp, { recursive: true });
+      const tmpDir = mkdtempSync(path.join(parentTmp, ".github-dl-"));
       const tmpFile = path.resolve(
         tmpDir,
         `${gitName}@${(commitHash || branch).replaceAll("/", "___")}.zip`,
       );
+      const cleanup = () => rmSync(tmpDir, { recursive: true, force: true });
 
       try {
-        mkdirSync(tmpDir, { recursive: true });
-
         pipeline(readStream, createWriteStream(tmpFile), (err) => {
           if (err) {
-            deleteSync([tmpDir]);
+            cleanup();
             reject(err);
           } else {
             let options = {
@@ -153,17 +166,17 @@ export const downloadFromGithub = async (
             };
             decompress(tmpFile, dest, options)
               .then((unzippedFiles) => {
-                deleteSync([tmpDir]);
+                cleanup();
                 resolve(unzippedFiles);
               })
               .catch((err) => {
-                deleteSync([tmpDir]);
+                cleanup();
                 reject(err);
               });
           }
         });
       } catch (err) {
-        deleteSync([tmpDir]);
+        cleanup();
         reject(err);
       }
     });
@@ -182,6 +195,8 @@ export const installFromGithub = async (
     ignoreTransitive = false,
   } = {},
 ): Promise<boolean> => {
+  sweepStaleStagingDirs();
+
   let cacheName = getGithubDepCacheName(name, repo);
   let cacheDir = getDepCacheDir(cacheName);
 
@@ -199,12 +214,15 @@ export const installFromGithub = async (
 
     progress(0, 1024 * 500);
 
-    mkdirSync(cacheDir, { recursive: true });
-
+    // Stage the download in a sibling dir, then atomically commit to
+    // `cacheDir`. Avoids the previous `mkdirSync(cacheDir)` window during
+    // which `isDepCached` reported an empty dir as a cache hit.
+    let stagingDir = createStagingDir(cacheDir);
     try {
-      await downloadFromGithub(repo, cacheDir, progress);
+      await downloadFromGithub(repo, stagingDir, progress);
+      commitStagingDir(stagingDir, cacheDir);
     } catch (err) {
-      deleteSync([cacheDir], { force: true });
+      rmSync(stagingDir, { recursive: true, force: true });
       return false;
     }
   }

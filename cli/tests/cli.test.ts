@@ -1,5 +1,12 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import path from "path";
 import { cli, normalizePaths } from "./helpers";
 
@@ -126,6 +133,56 @@ describe("install", () => {
     } finally {
       rmSync(lockFile, { force: true });
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
+  // Regression: parallel `mops install` runs against the same project used to
+  // race in two places — global cache writes (`.mops/<pkg>` populated mid-write)
+  // and local `.mops/<pkg>` copies — leaving zero-byte / partially-written
+  // files. See LANG-1310 and caffeinelabs/vscode-motoko#461.
+  test("parallel `mops install` produces a complete .mops tree (no zero-byte / staging dirs)", async () => {
+    const cwd = path.join(import.meta.dirname, "install/success");
+    const lockFile = path.join(cwd, "mops.lock");
+    const localCache = path.join(cwd, ".mops");
+    rmSync(lockFile, { force: true });
+    rmSync(localCache, { recursive: true, force: true });
+    try {
+      const N = 5;
+      const runs = await Promise.all(
+        Array.from({ length: N }, () =>
+          cli(["install"], { cwd, env: { CI: undefined } }),
+        ),
+      );
+      for (const r of runs) {
+        expect({ exitCode: r.exitCode, stderr: r.stderr }).toEqual({
+          exitCode: 0,
+          stderr: r.stderr,
+        });
+      }
+
+      const walk = (dir: string): string[] => {
+        const out: string[] = [];
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const p = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            out.push(...walk(p));
+          } else if (entry.isFile()) {
+            out.push(p);
+          }
+        }
+        return out;
+      };
+      const files = walk(localCache);
+      const empties = files.filter((f) => statSync(f).size === 0);
+      expect(empties).toEqual([]);
+
+      const stagingLeftovers = readdirSync(localCache).filter((e) =>
+        e.startsWith(".staging-"),
+      );
+      expect(stagingLeftovers).toEqual([]);
+    } finally {
+      rmSync(lockFile, { force: true });
+      rmSync(localCache, { recursive: true, force: true });
     }
   });
 });
