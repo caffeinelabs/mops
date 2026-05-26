@@ -11,14 +11,17 @@ Build Motoko canisters defined in `mops.toml`
 mops build
 ```
 
-Compiles Motoko canisters to WebAssembly (Wasm) modules and generates Candid interface and Motoko stable types files.
+Compiles Motoko canisters to WebAssembly and generates their Candid interface and stable types files.
 
 Canisters must be defined in the `[canisters]` section of your `mops.toml` file.
 
-The build command will automatically:
-- Add Candid metadata to the Wasm modules
-- Generate a Motoko stable types file (`.most`) for each canister
-- Validate Candid compatibility (if a candid file is specified in canister config)
+For each canister, three files are written to the output directory (default `.mops/.build`):
+
+- `<canister>.wasm` — compiled WebAssembly module, with Candid metadata embedded
+- `<canister>.did` — generated Candid interface
+- `<canister>.most` — Motoko stable types signature (used for upgrade safety checking)
+
+If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against it.
 
 ### Examples
 
