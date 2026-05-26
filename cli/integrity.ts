@@ -42,7 +42,7 @@ export async function checkIntegrity(lock?: "check" | "update" | "ignore") {
 
   if (lock === "update") {
     await updateLockFile({ force });
-    await checkLockFile(force);
+    await checkLockFile(force, true);
   } else if (lock === "check") {
     await checkLockFile(force);
   }
@@ -204,7 +204,9 @@ export async function updateLockFile({
 }
 
 // compare hashes of local files with hashes from the lock file
-export async function checkLockFile(force = false) {
+// `regenerated` indicates the lockfile was just rewritten from the registry
+// (via `updateLockFile`), so any remaining hash mismatch must be a local edit.
+export async function checkLockFile(force = false, regenerated = false) {
   let supportedVersions = [1, 2, 3];
   let rootDir = getRootDir();
   let lockFile = path.join(rootDir, "mops.lock");
@@ -318,10 +320,25 @@ export async function checkLockFile(force = false) {
         console.error(`Locked hash: ${lockedHash}`);
         console.error(`Actual hash: ${localHash}`);
         console.error("");
-        console.error(
-          "If you have not modified files under .mops/, your lockfile may be stale or corrupt.",
-        );
-        console.error("Run `mops install --lock update` to regenerate it.");
+        if (regenerated) {
+          // The lock was just rewritten from the registry, so the only way
+          // for a per-file hash to still differ is that .mops/<file> was
+          // edited locally. Point users at the actual fix.
+          let pkgDir = fileId.split("/")[0];
+          console.error(
+            `.mops/${fileId} differs from the registry — your local copy has been modified.`,
+          );
+          console.error("To restore from the global cache, run:");
+          console.error(`  rm -rf .mops/${pkgDir} && mops install`);
+          console.error(
+            "To keep custom changes, use a `repo` or `path` entry in mops.toml instead of editing .mops/ directly.",
+          );
+        } else {
+          console.error(
+            "If you have not modified files under .mops/, your lockfile may be stale or corrupt.",
+          );
+          console.error("Run `mops install --lock update` to regenerate it.");
+        }
         process.exit(1);
       }
     }
