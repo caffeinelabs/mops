@@ -18,3 +18,12 @@ Also report updates that cross the caret bound. Mirrors [`mops update --major`](
 ```
 mops outdated --major
 ```
+
+### `--patch`
+
+Restrict reported updates to patch versions only. Mirrors [`mops update --patch`](/cli/mops-update#--patch).
+```
+mops outdated --patch
+```
+
+Mutually exclusive with [`--major`](#--major).

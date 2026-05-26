@@ -150,6 +150,7 @@ mops outdated             # list outdated dependencies (caret-bound)
 mops update               # update all within caret bound (no major-version crossing)
 mops update core          # update specific package within caret bound
 mops update --major       # allow updates that cross major versions
+mops update --patch       # restrict to patch bumps only (mutually exclusive with --major)
 mops sync                 # add missing / remove unused packages
 ```
 

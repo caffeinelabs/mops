@@ -6,7 +6,7 @@ import { Config } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
 
-export type UpdateBound = "caret" | "major";
+export type UpdateBound = "patch" | "caret" | "major";
 
 // [pkg, oldVersion, newVersion]
 export async function getAvailableUpdates(
@@ -45,7 +45,9 @@ export async function getAvailableUpdates(
       let semverPart: SemverPart = { major: null };
       let name = getDepName(dep.name);
       let pinnedVersion = getDepPinnedVersion(dep.name);
-      if (pinnedVersion) {
+      if (bound === "patch") {
+        semverPart = { patch: null };
+      } else if (pinnedVersion) {
         semverPart =
           pinnedVersion.split(".").length === 1
             ? { minor: null }
