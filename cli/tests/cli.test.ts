@@ -164,12 +164,12 @@ describe("install", () => {
         cwd,
         env: { CI: undefined },
       });
-      expect(result.exitCode).not.toBe(0);
+      expect(result.exitCode).toBe(1);
       expect(result.stderr).toMatch(
         /\.mops\/core@1\.0\.0\/mops\.toml differs from the registry/,
       );
       expect(result.stderr).toMatch(
-        /rm -rf \.mops\/core@1\.0\.0 && mops install/,
+        /delete the `\.mops\/core@1\.0\.0` directory and run `mops install`/,
       );
       expect(result.stderr).not.toMatch(/Run `mops install --lock update`/);
     } finally {
