@@ -138,6 +138,46 @@ describe("install", () => {
     }
   });
 
+  // Regression: when a file under `.mops/` was edited locally (an unsupported
+  // but common AI-agent workflow), `--lock update` would regenerate the
+  // lockfile from registry hashes, then fail the per-file check, and tell the
+  // user to "Run `mops install --lock update` to regenerate it" — the exact
+  // command that just failed. The post-regen message now says the local copy
+  // was modified and points at the actual fix.
+  test("--lock update flags a locally edited .mops/ file with a clear recovery hint", async () => {
+    const cwd = path.join(import.meta.dirname, "install/success");
+    const lockFile = path.join(cwd, "mops.lock");
+    const localDep = path.join(cwd, ".mops", "core@1.0.0", "mops.toml");
+    rmSync(lockFile, { force: true });
+    rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    try {
+      const first = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(first.exitCode).toBe(0);
+      expect(existsSync(localDep)).toBe(true);
+
+      writeFileSync(
+        localDep,
+        readFileSync(localDep, "utf8") + "\n# tampered\n",
+      );
+
+      const result = await cli(["install", "--lock", "update"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        /\.mops\/core@1\.0\.0\/mops\.toml differs from the registry/,
+      );
+      expect(result.stderr).toMatch(
+        /delete the `\.mops\/core@1\.0\.0` directory and run `mops install`/,
+      );
+      expect(result.stderr).not.toMatch(/Run `mops install --lock update`/);
+    } finally {
+      rmSync(lockFile, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
   // Regression: parallel `mops install` runs against the same project used to
   // race in two places — global cache writes (`.mops/<pkg>` populated mid-write)
   // and local `.mops/<pkg>` copies — leaving zero-byte / partially-written
