@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `--patch` to `mops update` and `mops outdated` to restrict updates to patch versions only (e.g. `1.2.3 -> 1.2.4`, never `1.2.3 -> 1.3.0`). Mutually exclusive with `--major`. For pre-1.0 packages this matches the default — caret already restricts `0.x.y` to patch updates. Useful for risk-averse upgrades on packages that have hit 1.0+.
+
 - Improve the per-file integrity-check error after `mops install --lock update`. Previously the message told users to run `mops install --lock update` — the exact command that just failed. After a regenerated lockfile, the only way a per-file hash can still mismatch is a local edit under `.mops/`, so the message now says that and suggests restoring from the global cache (delete the `.mops/<pkg>` directory and run `mops install`) or using a `repo`/`path` entry in `mops.toml` to keep custom changes.
 
 - Deprecate the `vessel.dhall` auto-migration in `mops init`. Behavior is unchanged for now — interactive `mops init` still reads `vessel.dhall` and copies its dependencies into `mops.toml` — but a warning is printed (also under `--yes`, which still skips the migration itself), and the migration will be removed in mops v3. Before then, copy your dependencies into `mops.toml` manually and delete `vessel.dhall` / `package-set.dhall`.

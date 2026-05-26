@@ -15,11 +15,12 @@ type UpdateOptions = {
   dev?: boolean;
   lock?: "update" | "ignore";
   major?: boolean;
+  patch?: boolean;
 };
 
 export async function update(
   pkg?: string,
-  { lock, major }: UpdateOptions = {},
+  { lock, major, patch }: UpdateOptions = {},
 ) {
   if (!checkConfigFile()) {
     return;
@@ -66,7 +67,7 @@ export async function update(
   let available = await getAvailableUpdates(
     config,
     pkg,
-    major ? "major" : "caret",
+    major ? "major" : patch ? "patch" : "caret",
   );
 
   if (available.length === 0) {

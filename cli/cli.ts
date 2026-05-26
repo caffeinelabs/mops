@@ -626,11 +626,19 @@ program
 // outdated
 program
   .command("outdated")
-  .description("Print outdated dependencies specified in mops.toml")
+  .description(
+    "Print outdated dependencies in mops.toml within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
+  )
   .addOption(
     new Option(
       "--major",
       "Allow updates that cross the caret bound (major versions, or for 0.x.y packages, minor versions)",
+    ).conflicts("patch"),
+  )
+  .addOption(
+    new Option(
+      "--patch",
+      "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
   .action(async (options) => {
@@ -640,11 +648,19 @@ program
 // update
 program
   .command("update [pkg]")
-  .description("Update dependencies specified in mops.toml")
+  .description(
+    "Update dependencies in mops.toml to the highest semver-compatible version within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
+  )
   .addOption(
     new Option(
       "--major",
       "Allow updates that cross the caret bound (major versions, or for 0.x.y packages, minor versions)",
+    ).conflicts("patch"),
+  )
+  .addOption(
+    new Option(
+      "--patch",
+      "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
   .addOption(
