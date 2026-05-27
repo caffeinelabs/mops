@@ -674,9 +674,11 @@ program
   });
 
 // toolchain
-const toolchainCommand = new Command("toolchain").description(
-  "Toolchain management",
-);
+const toolchainCommand = new Command("toolchain")
+  .description(
+    `Toolchain management for ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}`,
+  )
+  .showHelpAfterError();
 
 toolchainCommand
   .command("init")
@@ -695,8 +697,13 @@ toolchainCommand
 toolchainCommand
   .command("use")
   .description("Install specified tool version and update mops.toml")
-  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
-  .addArgument(new Argument("[version]"))
+  .addArgument(new Argument("<tool>", "tool to install").choices(TOOLCHAINS))
+  .addArgument(
+    new Argument(
+      "[version]",
+      "version to install (defaults to interactive picker)",
+    ),
+  )
   .action(async (tool, version) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -709,7 +716,12 @@ toolchainCommand
   .description(
     "Update specified tool or all tools to the latest version and update mops.toml",
   )
-  .addArgument(new Argument("[tool]").choices(TOOLCHAINS))
+  .addArgument(
+    new Argument(
+      "[tool]",
+      "tool to update (defaults to all configured tools)",
+    ).choices(TOOLCHAINS),
+  )
   .action(async (tool?: Tool) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -719,10 +731,8 @@ toolchainCommand
 
 toolchainCommand
   .command("bin")
-  .description(
-    `Get path to the tool binary\n<tool> can be one of ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}`,
-  )
-  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
+  .description("Get path to the tool binary")
+  .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
   .addOption(
     new Option(
       "--fallback",
