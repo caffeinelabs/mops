@@ -13,6 +13,25 @@ This file provides guidance to AI coding agents when working with code in this r
 - **Pre-commit hook** runs `lint-staged + npm run check` via husky — fix TypeScript/lint errors before committing.
 - **Snapshot testing strategy**: Use Jest snapshots (`cliSnapshot` / `toMatchSnapshot`) for the main use cases so the full CLI output is committed and reviewable. Corner-case and error-path tests should use targeted assertions (`toMatch`, `toBe`) without snapshots to avoid cluttering the snapshot file.
 
+## Interactive commands (caution for agents)
+
+Some `mops` commands prompt for input and will hang in non-TTY environments (CI, agent loops). When invoking them from a script or agent, always pass the value up front using the non-interactive form on the right:
+
+| Interactive | Non-interactive form |
+|---|---|
+| `mops init` | `mops init --yes` |
+| `mops bump` | `mops bump <major\|minor\|patch>` |
+| `mops template` | `mops template <name>` — `readme`, `lib.mo`, `lib.test.mo`, `license:MIT`, `license:Apache-2.0`, `github-workflow:mops-test`, `github-workflow:mops-publish` |
+| `mops toolchain use <tool>` | `mops toolchain use <tool> <version>` (e.g. `mops toolchain use pocket-ic 12.0.0`) — `latest` also works but resolves to the most recent release, which may be incompatible with the shipped client (currently true for `pocket-ic`) |
+| `mops owner add\|rm <principal>` | `mops owner add\|rm <principal> --yes` |
+| `mops maintainer add\|rm <principal>` | `mops maintainer add\|rm <principal> --yes` |
+| `mops user import <pem>` | `mops user import <pem> --no-encrypt` |
+| `mops publish` (when a recommended field like `description` is missing and `CI` env is unset) | Fill the field in `[package]` first, or run with `CI=1` |
+
+Always-interactive (no flag bypass): if `identity.pem.encrypted` exists in the global config dir, mops prompts for the decryption password on every signing operation (`publish`, `owner`, `maintainer`, etc.). For automation, import with `--no-encrypt` so `identity.pem` lives unencrypted.
+
+When adding a new command or option, prefer making the common path non-interactive (accept the value as an argument or flag). Reserve interactive prompts for purely human-facing flows like `mops init`, and surface a hint at the deprecation/missing-arg site that recommends the non-interactive command verbatim (e.g. ``mops toolchain use pocket-ic 12.0.0``, not ``mops toolchain use pocket-ic``).
+
 ## What this repo is
 
 Mops is a package manager for Motoko (the Internet Computer smart contract language). It has three main components:
