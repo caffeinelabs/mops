@@ -22,6 +22,7 @@ import { parallel } from "../parallel.js";
 import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
+import { warnIfDfxReplica } from "../helpers/deprecate-dfx-replica.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
 import { sources } from "./sources.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
@@ -98,20 +99,7 @@ export async function bench(
     options.replicaVersion = config.toolchain?.["pocket-ic"] || "";
   }
 
-  if (replicaType === "dfx" || replicaType === "dfx-pocket-ic") {
-    let explicitDfx = optionsArg.replica === "dfx";
-    let usedFallback = replicaType === "dfx-pocket-ic";
-    let lead = explicitDfx
-      ? "`--replica dfx` is deprecated and will be removed in a future release."
-      : usedFallback
-        ? "Falling back to dfx-bundled PocketIC because no `pocket-ic` version is set in `[toolchain]`. This fallback is deprecated and will be removed in a future release."
-        : "`mops bench` is using `dfx` because no `pocket-ic` version is set in `[toolchain]`. The `dfx` replica is deprecated and will be removed in a future release.";
-    console.log(
-      chalk.yellow(
-        `${lead}\nAdd a \`pocket-ic\` version to \`[toolchain]\` in mops.toml (e.g. \`pocket-ic = "12.0.0"\`) to silence this warning.`,
-      ),
-    );
-  }
+  warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");
 
   options.verbose && console.log(options);
 

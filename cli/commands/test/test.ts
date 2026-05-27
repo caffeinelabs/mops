@@ -32,6 +32,7 @@ import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
 import { getDfxVersion } from "../../helpers/get-dfx-version.js";
+import { warnIfDfxReplica } from "../../helpers/deprecate-dfx-replica.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
@@ -78,6 +79,8 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       replicaType = "dfx-pocket-ic";
     }
   }
+
+  warnIfDfxReplica(replicaType, options.replica === "dfx");
 
   replica.type = replicaType;
   replica.verbose = !!options.verbose;
