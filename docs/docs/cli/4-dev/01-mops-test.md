@@ -75,7 +75,7 @@ Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` 
 
 Possible values:
 - `pocket-ic` - use [PocketIC](https://github.com/dfinity/pocketic) light replica via [pic.js](https://github.com/dfinity/pic-js). Recommended.
-- `dfx` - **deprecated**. Uses `dfx` local replica. Will be removed in a future release. Run `mops toolchain use pocket-ic` to pin a PocketIC version and `mops test` will use it directly.
+- `dfx` - **deprecated**. Uses `dfx` local replica. Will be removed in a future release. Run `mops toolchain use pocket-ic 12.0.0` to pin a PocketIC version and `mops test` will use it directly.
 
 :::info
 If you run `mops test --replica pocket-ic` AND `pocket-ic` is not specified in `mops.toml` in `[toolchain]` section, Mops will use pocket-ic replica that comes with dfx (`dfx start --pocketic`). This fallback path is also deprecated.

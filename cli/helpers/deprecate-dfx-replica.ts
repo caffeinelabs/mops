@@ -20,7 +20,7 @@ export function warnIfDfxReplica(
         : "Using `dfx` replica because no `pocket-ic` version is set in `[toolchain]`. The `dfx` replica is deprecated and will be removed in a future release.";
   console.log(
     chalk.yellow(
-      `${lead}\nRun \`mops toolchain use pocket-ic\` to pin a PocketIC version and silence this warning.`,
+      `${lead}\nRun \`mops toolchain use pocket-ic 12.0.0\` to pin a PocketIC version and silence this warning.`,
     ),
   );
 }
