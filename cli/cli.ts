@@ -435,7 +435,7 @@ program
   .addOption(
     new Option(
       "--replica <replica>",
-      "Which replica to use to run benchmarks",
+      "Which replica to use to run benchmarks (`dfx` is deprecated; prefer `pocket-ic`)",
     ).choices(["dfx", "pocket-ic"]),
   )
   .addOption(
