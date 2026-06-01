@@ -1,7 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
-- Deprecate the `dfx` replica in `mops bench`, `mops test --mode replica`, and `mops watch`. Behavior is unchanged for now — `--replica dfx` still works, and the implicit fallback to `dfx` (or dfx-bundled PocketIC) when no `pocket-ic` version is set in `[toolchain]` still works — but a warning is printed in those paths. To silence the warning, run `mops toolchain use pocket-ic` to pin a PocketIC version; the replica resolver already prefers it over `dfx` when both are available. The `dfx` replica (and the `dfx-pocket-ic` fallback) will be removed and the default flipped to PocketIC in mops v3. Motivation: `dfx` itself is being deprecated upstream, and PocketIC is the better fit for benchmarks and replica tests anyway — deterministic, in-process, and no separate background daemon to manage.
+- Deprecate the `dfx` replica in `mops bench`, `mops test --mode replica`, and `mops watch`. Behavior is unchanged — `--replica dfx`, the implicit `dfx` fallback when no `[toolchain.pocket-ic]` is set, and the dfx-bundled PocketIC fallback all still work — but each now prints a warning. Run `mops toolchain use pocket-ic <version>` to silence it. The `dfx` paths will be removed and the default flipped to PocketIC in mops v3 — `dfx` is being deprecated upstream and PocketIC is a better fit for benchmarks and replica tests (deterministic, in-process, no background daemon).
 
 - `mops toolchain --help` now lists the tools mops manages (`moc`, `wasmtime`, `pocket-ic`, `lintoko`) in the top-level description instead of only mentioning them under `bin`, and `mops toolchain use` / `update` / `bin` print the available tools (via the auto-generated help) when invoked with a missing or invalid `<tool>` argument.
 
