@@ -30,9 +30,9 @@ post-install `sync` phase.
 
 ## Goals
 
-- Promote the **already-built** `.most` and `.did` into a committed `deployed/`
-  snapshot, reusing the exact artifacts that produced the deployed wasm.
-- Bootstrap the stable reference — file **and** `mops.toml` entry — before the first
+- Promote the **already-built** `.most` and `.did` into a committed snapshot
+  directory, reusing the exact artifacts that produced the deployed wasm.
+- Bootstrap the stable check — file **and** `mops.toml` entry — before the first
   deployment, so users don't configure paths by hand.
 - Be DRY: callers pass only a canister name (mirrors `mops build <name>`).
 - Follow existing canister-selection conventions (`mops build` / `mops check`).
@@ -51,26 +51,42 @@ post-install `sync` phase.
   opposite-in-time concept); see Appendix.
 - **No network/environment dimension** (see Open Questions).
 
-## The `deployed/` snapshot
+## The deployed directory
 
-All committed snapshot files for a canister live together, anchored on the single
-path mops already consumes — `[canisters.<name>.check-stable].path`:
-
-- the `.most` is written to `[check-stable].path` (consumed by `check-stable`),
-- the `.did` is written next to it, as `<name>.did` in the same directory.
-
-`mops deployed init` defaults `[check-stable].path` to `deployed/<name>.most`, so by
-default both files land in a `deployed/` directory at the project root, giving the
-icp side a predictable path (`deployed/<name>.did`) to reference. Users who point
-`[check-stable].path` elsewhere get both files in that directory instead. There is
-exactly one anchor and no new config field.
+`mops deployed` owns a single, configurable output directory. It is the **only**
+thing that determines where the snapshot is written — independent of any other path.
 
 ```toml
-[canisters.backend]
-main = "src/backend/main.mo"
+[deployed]
+dir = "deployed"   # optional; default "deployed" (relative to mops.toml)
+```
 
+For a canister `<name>`, `update` always writes:
+
+- `<dir>/<name>.most`
+- `<dir>/<name>.did`
+
+The directory is overridable per invocation with `--dir <path>`. All canisters share
+the one directory, namespaced by canister name.
+
+### Relationship to `check-stable` (synergy, not coupling)
+
+`mops deployed` does not read `[check-stable].path`. They are wired together by
+`init`, which sets `[check-stable].path` to `<dir>/<name>.most` so that the file
+`update` writes is exactly the file `check-stable` reads:
+
+```toml
 [canisters.backend.check-stable]
-path = "deployed/backend.most"   # ← anchor: most lands here, did lands beside it
+path = "deployed/backend.most"   # set by `mops deployed init` to match the snapshot
+```
+
+A user may point `[check-stable].path` elsewhere. That's allowed, but then
+`check-stable` won't see what `update` writes, so `update` and `init` **warn**:
+
+```
+WARN: [canisters.backend.check-stable].path is "old/backend.most" but
+      `mops deployed` writes "deployed/backend.most". check-stable will not
+      see the snapshot. Set them to the same path (see `mops deployed init`).
 ```
 
 ## Why "deployed update", not "deployed sync"
@@ -87,8 +103,8 @@ path = "deployed/backend.most"   # ← anchor: most lands here, did lands beside
 ## Command surface
 
 ```
-mops deployed update [canisters...]   # promote built .most + .did → deployed snapshot
-mops deployed init   [canisters...]   # configure check-stable + write .most baseline
+mops deployed update [canisters...]   # promote built .most + .did → <dir>
+mops deployed init   [canisters...]   # write .most baseline + point check-stable at it
 mops deployed status [canisters...]   # (extension) report drift, no writes
 ```
 
@@ -98,46 +114,49 @@ mops deployed status [canisters...]   # (extension) report drift, no writes
 
 The main use case. For each selected canister `<name>`:
 
-- copy `<outputDir>/<name>.most` → `[check-stable].path`,
-- copy `<outputDir>/<name>.did`  → `<dir of check-stable.path>/<name>.did`.
+- copy `<outputDir>/<name>.most` → `<dir>/<name>.most`,
+- copy `<outputDir>/<name>.did`  → `<dir>/<name>.did`.
 
 Details:
 
-- **Source dir**: `[build].outputDir ?? .mops/.build`, overridable with
-  `--output <dir>` (mirrors `mops build --output`, so the recipe passes the same
+- **Source dir** (`<outputDir>`): `[build].outputDir ?? .mops/.build`, overridable
+  with `--output <dir>` (mirrors `mops build --output`, so the recipe passes the same
   value it built with).
+- **Destination dir** (`<dir>`): `[deployed].dir ?? deployed`, overridable with
+  `--dir <path>`.
 - **Copy-or-error**: if a source artifact is missing, error
   (`No built <ext> at <path>. Run \`mops build <name>\` first.`). Never regenerate.
-- **Create parent dirs** of destinations (`mkdir -p`).
+- **Create the destination dir** (`mkdir -p`).
 - Always overwrites — advancing the snapshot is the point.
+- **Warns** when `[check-stable].path` is set but differs from `<dir>/<name>.most`
+  (see above).
 
 Flags:
 
-- `--output <dir>` — source directory (default as above).
+- `--output <dir>` — source directory (build output).
+- `--dir <path>` — destination directory (snapshot).
 - `--no-did` — write only the `.most` (for projects that don't want the interface
-  committed). Default is to write both.
+  committed). Default writes both.
 - `--check` — CI gate. No writes; exit non-zero if a destination differs from the
-  built artifact (or is missing). Lets CI enforce "the committed snapshot matches the
-  latest build" (`mops build && mops deployed update --check`).
-
-**When a canister has no `[check-stable]` configured** (no anchor):
-
-- Selected **by name** → error, pointing at `mops deployed init <name>`.
-- Iterating **all** (no argument) → skip it, but report it in the summary, e.g.
-  `Updated 1 canister (backend). Skipped 2 with no deployed snapshot configured: frontend, ledger. Run \`mops deployed init <name>\`.`
+  built artifact (or is missing). Enforce "the committed snapshot matches the latest
+  build" with `mops build && mops deployed update --check`.
 
 ### `mops deployed init [canisters...]`
 
-Prepare a canister for snapshotting so the first `mops check` has a baseline —
+Prepare a canister for stable checking so the first `mops check` has a baseline —
 without hand-editing `mops.toml`. For each selected canister:
 
-1. If `[canisters.<name>.check-stable].path` is **not** set, add it to `mops.toml`
-   as `deployed/<name>.most`. Existing paths are never changed.
-2. If the file at that path does not exist, create it with an empty-actor baseline:
+1. If the baseline file `<dir>/<name>.most` does not exist, create it with an
+   empty-actor signature:
    ```most
    // Version: 1.0.0
    actor { };
    ```
+2. Point `check-stable` at it:
+   - if `[canisters.<name>.check-stable].path` is **unset** → set it to
+     `<dir>/<name>.most`;
+   - if it is **set to a different path** → leave it unchanged and **warn** that it
+     won't coincide with `mops deployed update`.
 
 No `.did` baseline is created — mops doesn't consume the `.did`, so it simply appears
 after the first `mops deployed update` (and `icp build` generates one on demand for
@@ -146,23 +165,25 @@ bindings before then). Idempotent; `--force` recreates the baseline file.
 > **Caveat — TOML rewrite.** mops writes config via `writeConfig` → `TOML.stringify`
 > (`cli/mops.ts:229`), which reserializes the whole file and drops comments / custom
 > formatting. This already happens for `mops add` / `mops remove`, so it's accepted
-> behavior, but `init` must only write when it actually adds a missing path.
+> behavior, but `init` must only write when it actually changes config.
 
 ### `mops deployed status [canisters...]` (extension)
 
 Read-only drift report: per canister, whether the committed snapshot matches the
-latest built artifacts (in sync / stale / missing / not built). Same info as
-`update --check` but human-readable and non-failing.
+latest built artifacts (in sync / stale / missing / not built), and whether
+`check-stable.path` coincides with the snapshot. Same info as `update --check` plus
+the coincidence check, but human-readable and non-failing.
 
 ## Canister selection (single vs multiple)
 
 Identical to `mops build` / `mops check`:
 
-- **No argument** → all canisters with `[check-stable]` configured (for
-  `update`/`status`) or all `[canisters]` entries (for `init`). A single-canister
-  project "just works" with a bare command — no special-casing.
-- **One or more names** → only those; unknown names error (`filterCanisters`), and
-  for `update` a named canister with no anchor errors (strict, like `check-stable`).
+- **No argument** → all `[canisters]` entries. A single-canister project "just works"
+  with a bare command — no special-casing.
+- **One or more names** → only those; unknown names error (`filterCanisters`).
+
+`update` does not require `[check-stable]` to be configured — it always writes the
+snapshot to `<dir>`. The check-stable coincidence is a warning, not a gate.
 
 The icp-cli integration always uses the **named** form. `icp` expands the recipe
 **once per canister**, so the `sync` step runs per canister with its own name —
@@ -181,7 +202,7 @@ sync:
 ## Lifecycle
 
 ```
-# once, before first deploy — configures mops.toml + writes empty .most baseline
+# once, before first deploy — writes empty .most baseline + points check-stable at it
 mops deployed init backend
 
 # every change
@@ -205,14 +226,11 @@ git add deployed/ && git commit     # commit the new deployed snapshot
 
 ## Open questions
 
-1. **Did snapshot without `check-stable`.** v1 anchors the whole snapshot on
-   `[check-stable].path`, so committing a `.did` requires stable tracking to be set
-   up. If icp users want the `.did` committed without caring about stable checks,
-   we'd need a standalone anchor (e.g. a `deployed` dir config independent of
-   `check-stable`).
+1. **Config surface for the directory.** Proposed global `[deployed].dir` (default
+   `deployed`) plus `--dir`. A per-canister override could be added later if needed.
 2. **Network/environment dimension.** `icp` environments can deploy different
-   versions to `staging` vs `ic`, but `mops.toml` has one snapshot per canister
-   (effectively "latest / prod"). A future per-environment path may be needed.
+   versions to `staging` vs `ic`, but the snapshot is single (effectively
+   "latest / prod"). A future per-environment directory may be needed.
 3. **`check-candid` (deferred).** A rolling deployed-interface compatibility check
    would need its own config field and a check wired into `mops check`, distinct from
    the embedded `candid`. Out of scope now.
@@ -232,4 +250,4 @@ The snapshot `.did` is the opposite: a *generated, lags-code* record of what was
 deployed. Writing the snapshot into `candid` would make the next build embed the
 previous version's interface into the new wasm. They are different artifacts in
 opposite directions in time, which is why `mops deployed` ignores `candid` entirely
-and writes the snapshot beside the `.most`.
+and writes the snapshot to its own directory.
