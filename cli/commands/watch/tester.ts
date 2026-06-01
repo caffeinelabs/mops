@@ -3,10 +3,7 @@ import { readConfig } from "../../mops.js";
 import { ErrorChecker } from "./error-checker.js";
 import { testWithReporter } from "../test/test.js";
 import { SilentReporter } from "../test/reporters/silent-reporter.js";
-import {
-  warnIfDfxReplica,
-  type ReplicaName,
-} from "../../helpers/deprecate-dfx-replica.js";
+import { type ReplicaName } from "../../helpers/deprecate-dfx-replica.js";
 
 export class Tester {
   verbose = false;
@@ -17,7 +14,6 @@ export class Tester {
   aborted = false;
   controller = new AbortController();
   currentRun: Promise<any> | undefined;
-  warnedDfx = false;
 
   constructor({
     verbose,
@@ -61,11 +57,6 @@ export class Tester {
     let replicaType: ReplicaName = config.toolchain?.["pocket-ic"]
       ? "pocket-ic"
       : "dfx";
-
-    if (!this.warnedDfx) {
-      warnIfDfxReplica(replicaType, false);
-      this.warnedDfx = true;
-    }
 
     this.currentRun = testWithReporter(
       this.reporter,

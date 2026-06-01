@@ -2,16 +2,22 @@ import chalk from "chalk";
 
 export type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
 
-// Prints a deprecation warning when `mops bench`/`mops test`/`mops watch`
-// resolves to a dfx-backed replica. Removal is tracked in NEXT-MAJOR.md
-// under "Drop dfx coupling".
+let alreadyWarned = false;
+
+// Prints a deprecation warning (once per process) when `mops bench`/`mops test`/
+// `mops watch` is about to use a dfx-backed replica. Removal is tracked in
+// NEXT-MAJOR.md under "Drop dfx coupling".
 export function warnIfDfxReplica(
   replicaType: ReplicaName,
   explicit: boolean,
 ): void {
+  if (alreadyWarned) {
+    return;
+  }
   if (replicaType !== "dfx" && replicaType !== "dfx-pocket-ic") {
     return;
   }
+  alreadyWarned = true;
   let lead =
     explicit && replicaType === "dfx"
       ? "`--replica dfx` is deprecated and will be removed in a future release."
