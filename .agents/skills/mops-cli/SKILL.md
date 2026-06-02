@@ -37,21 +37,14 @@ chain = "src/backend/migrations"
 check-limit = 10   # optional — speeds up `mops check` when the chain gets long
 
 [canisters.backend.check-stable]
-path = ".old/src/backend/dist/backend.most"
+path = "deployed/backend.most"
 
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
 ```
 
-`check-stable` verifies stable variable compatibility against a `.most` file from the deployed version. For a new project with no prior deployment, create a trivial `.most` file representing an empty actor:
-
-```most
-// Version: 1.0.0
-actor {
-  
-};
-```
+`check-stable` verifies stable variable compatibility against a `.most` file from the deployed version. Use `mops deployed init` once to create an empty-actor baseline at the configured path; after every deploy, run `mops deployed` to promote the just-built `.most` into it (see [`mops deployed`](#mops-deployed) below).
 
 Optional canister fields: `candid` (path to .did for compatibility checking), `initArg` (Candid-encoded init args).
 
@@ -115,6 +108,18 @@ mops build -- --ai-errors # pass extra moc flags
 ```
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
+
+### `mops deployed`
+
+Post-deploy hook — keeps the on-disk `.most` baseline used by `check-stable` in sync with what's actually deployed.
+
+```bash
+mops deployed init backend   # one-time bootstrap: empty-actor baseline + sets [check-stable].path
+mops deployed backend        # post-deploy: promotes .mops/.build/backend.most → deployed/backend.most
+mops deployed                # all canisters
+```
+
+Default destination is `deployed/<name>.most`; override with `[deployed].dir` in `mops.toml` or `--dir`. Source is `[build].outputDir` (default `.mops/.build`); override with `--output`. `mops deployed` errors if the source `.most` is missing — it never regenerates. Run it from your deploy pipeline immediately after a successful deploy.
 
 ### `mops toolchain`
 
