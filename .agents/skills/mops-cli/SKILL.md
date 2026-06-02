@@ -116,6 +116,16 @@ mops build -- --ai-errors # pass extra moc flags
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
 
+### `mops generate candid`
+
+```bash
+mops generate candid                # all canisters
+mops generate candid backend        # single canister
+mops generate candid backend -o <path>   # single canister, ad-hoc path
+```
+
+(Re)generates the curated `.did` from current Motoko source. With `[canisters.<name>].candid` set, overwrites that file. Without it, writes `<name>.did` next to `main` (e.g. `main = "src/Backend.mo"` → `src/backend.did`) and sets `[canisters.<name>].candid` in `mops.toml`. Run after every interface change; commit `.did` + `mops.toml` together. Same moc invocation as `mops build`, so the result always passes `mops build`'s subtype check.
+
 ### `mops toolchain`
 
 ```bash

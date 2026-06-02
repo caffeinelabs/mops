@@ -16,6 +16,7 @@ import { checkStable } from "./commands/check-stable.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
+import { generateCandid } from "./commands/generate.js";
 import { info } from "./commands/info.js";
 import { init } from "./commands/init.js";
 import { lint } from "./commands/lint.js";
@@ -768,6 +769,40 @@ migrateCommand
   });
 
 program.addCommand(migrateCommand);
+
+// generate
+const generateCommand = new Command("generate")
+  .description("Generate source-derived artifacts (Candid, ...)")
+  .showHelpAfterError();
+
+generateCommand
+  .command("candid [canisters...]")
+  .description(
+    "(Re)generate the curated `.did` file for one or more canisters from current Motoko source. With no canister names, generates for all canisters in mops.toml. When [canisters.<name>].candid is set, overwrites that file; otherwise writes <name>.did next to `main` and sets the field.",
+  )
+  .addOption(
+    new Option(
+      "--output, -o <output>",
+      "Write the generated .did to <output> (single-canister only; does not touch mops.toml)",
+    ),
+  )
+  .addOption(new Option("--verbose", "Verbose console output"))
+  .allowUnknownOption(true)
+  .action(async (canisters, options) => {
+    checkConfigFile(true);
+    const { extraArgs, args } = parseExtraArgs(canisters);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await generateCandid(args.length ? args : undefined, {
+      ...options,
+      extraArgs,
+    });
+  });
+
+program.addCommand(generateCommand);
 
 // self
 const selfCommand = new Command("self").description("Mops CLI management");

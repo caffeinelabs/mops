@@ -1,0 +1,4 @@
+// Hand-curated; will be overwritten by `mops generate candid bar`.
+service : {
+  greet: (text) -> (text);
+}

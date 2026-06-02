@@ -1,0 +1,39 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`generate candid configured path: overwrites in place and does not touch mops.toml 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "generate candid bar → candid/bar.did
+
+✓ Generated Candid for 1 canister",
+}
+`;
+
+exports[`generate candid default path: writes <main-dir>/<name>.did and sets [canisters.<name>].candid 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "generate candid foo → src/foo.did
+
+✓ Generated Candid for 1 canister",
+}
+`;
+
+exports[`generate candid default path: writes <main-dir>/<name>.did and sets [canisters.<name>].candid: src/foo.did 1`] = `
+"service : {
+  call: () -> (text);
+}
+"
+`;
+
+exports[`generate candid no canister names: processes all canisters 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "generate candid foo → src/foo.did
+generate candid bar → candid/bar.did
+
+✓ Generated Candid for 2 canisters",
+}
+`;
