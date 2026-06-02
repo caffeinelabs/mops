@@ -403,7 +403,7 @@ const deployedCommand = new Command("deployed")
   .addOption(
     new Option(
       "--output, -o <output>",
-      "Source directory (default: [build].outputDir or .mops/.build)",
+      "Built .most source directory (default: [build].outputDir or .mops/.build)",
     ),
   )
   .addOption(
@@ -414,10 +414,7 @@ const deployedCommand = new Command("deployed")
   )
   .action(async (canisters: string[], options) => {
     checkConfigFile(true);
-    await deployed(canisters.length ? canisters : undefined, {
-      ...options,
-      output: options.output,
-    });
+    await deployed(canisters.length ? canisters : undefined, options);
   });
 
 deployedCommand

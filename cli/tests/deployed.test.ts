@@ -1,6 +1,6 @@
 import { describe, expect, test, afterEach } from "@jest/globals";
 import { existsSync, readFileSync } from "node:fs";
-import { cp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "path";
 import { cli, normalizePaths } from "./helpers";
 
@@ -126,6 +126,23 @@ describe("deployed", () => {
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toMatch(/not found in mops\.toml/);
     });
+
+    test("preserves an existing baseline file when wiring [check-stable].path", async () => {
+      const cwd = await makeTempFixture("basic");
+      const baseline = path.join(cwd, "deployed", "backend.most");
+      const customMost =
+        "// Version: 1.0.0\nactor {\n  stable var x : Nat\n};\n";
+      // pre-create the baseline (e.g. real prod snapshot copied in by the user)
+      await mkdir(path.join(cwd, "deployed"), { recursive: true });
+      await writeFile(baseline, customMost);
+
+      const result = await cli(["deployed", "init"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(readFileSync(baseline, "utf-8")).toBe(customMost);
+      expect(readFileSync(path.join(cwd, "mops.toml"), "utf-8")).toMatch(
+        /\[canisters\.backend\.check-stable\][\s\S]*path\s*=\s*"deployed\/backend\.most"/,
+      );
+    });
   });
 
   describe("post-deploy hook", () => {
@@ -170,6 +187,23 @@ describe("deployed", () => {
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toMatch(/check-stable\].path is "elsewhere/);
       expect(result.stderr).toMatch(/won't see this update/);
+    });
+
+    test("respects [deployed].dir from config", async () => {
+      const cwd = await makeTempFixture("basic");
+      const tomlPath = path.join(cwd, "mops.toml");
+      const toml = readFileSync(tomlPath, "utf-8");
+      await writeFile(tomlPath, `${toml}\n[deployed]\ndir = "snapshots"\n`);
+
+      await cli(["build"], { cwd });
+      const result = await cli(["deployed"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(existsSync(path.join(cwd, "snapshots", "backend.most"))).toBe(
+        true,
+      );
+      expect(existsSync(path.join(cwd, "deployed", "backend.most"))).toBe(
+        false,
+      );
     });
 
     test("--output and --dir overrides", async () => {
