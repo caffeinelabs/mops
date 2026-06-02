@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`deployed init creates baseline .most and sets [check-stable].path 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "✓ Created baseline deployed/backend.most
+✓ Set [canisters.backend.check-stable].path = "deployed/backend.most"",
+}
+`;

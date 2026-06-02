@@ -133,15 +133,10 @@ Configure automatic stable variable compatibility checking for a canister. When 
 Example:
 ```toml
 [canisters.backend.check-stable]
-path = ".old/src/main.most"
+path = "deployed/backend.most"
 ```
 
-For a new project with no prior deployment, commit a `.most` file with an empty actor at this path so the check passes against an empty baseline:
-
-```most
-// Version: 1.0.0
-actor { };
-```
+For a new project with no prior deployment, run [`mops deployed init`](/cli/mops-deployed) — it commits an empty-actor `.most` at the configured path so the check passes against an empty baseline. After every successful deploy, run [`mops deployed`](/cli/mops-deployed) to promote the just-built `.most` into this file.
 
 ### `[canisters.<name>.migrations]`
 
@@ -197,6 +192,23 @@ args = ["--release", "--ai-errors"]
 ```
 
 These flags are applied after `[moc].args` and before per-canister `[canisters.<name>].args`.
+
+
+## [deployed]
+
+Settings for [`mops deployed`](/cli/mops-deployed).
+
+| Field | Description                                                                                                                          |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| dir   | Directory where `mops deployed` writes promoted `.most` files (default `deployed`). Path is relative to `mops.toml`. Override per invocation with `--dir`. |
+
+Example:
+```toml
+[deployed]
+dir = "deployed"
+```
+
+All canisters share one directory; per-canister overrides are not supported.
 
 
 ## [lint]
