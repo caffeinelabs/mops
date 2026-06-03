@@ -1,7 +1,10 @@
 # Mops CLI Changelog
 
 ## Next
+
 - Fix `mops check --fix` corrupting source on lines containing multi-byte UTF-8 characters (e.g. `Char.toNat32('京')` dropping its trailing `)`). The autofixer was feeding moc's UTF-8 byte columns into LSP's UTF-16 position API, mis-applying every edit past the first non-ASCII byte on the line. When moc emits `byte_start`/`byte_end` (1.9.0-m0236-fix and newer) the fixer now applies edits byte-accurately; older moc still falls back to the line+column path (unchanged behavior, still ASCII-only).
+
+- Deprecate the `dfx` replica in `mops bench`, `mops test --mode replica`, and `mops watch`. Behavior is unchanged — `--replica dfx`, the implicit `dfx` fallback when no `[toolchain.pocket-ic]` is set, and the dfx-bundled PocketIC fallback all still work — but each now prints a warning. Run `mops toolchain use pocket-ic <version>` to silence it. The `dfx` paths will be removed and the default flipped to PocketIC in mops v3 — `dfx` is being deprecated upstream and PocketIC is a better fit for benchmarks and replica tests (deterministic, in-process, no background daemon).
 
 - `mops toolchain --help` now lists the tools mops manages (`moc`, `wasmtime`, `pocket-ic`, `lintoko`) in the top-level description instead of only mentioning them under `bin`, and `mops toolchain use` / `update` / `bin` print the available tools (via the auto-generated help) when invoked with a missing or invalid `<tool>` argument.
 
