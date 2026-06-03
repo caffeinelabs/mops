@@ -13,8 +13,8 @@ import {
   resolveConfigPath,
   writeConfig,
 } from "../mops.js";
-import { Config } from "../types.js";
-import { DEFAULT_BUILD_OUTPUT_DIR } from "./build.js";
+import { CanisterConfig, Config } from "../types.js";
+import { resolveBuildOutputDir } from "./build.js";
 
 export const DEFAULT_DEPLOYED_DIR = "deployed";
 
@@ -45,44 +45,55 @@ function resolveDeployedDir(
   return { config: configured, resolved: resolveConfigPath(configured) };
 }
 
-function resolveOutputDir(
+function selectCanisters(
+  canisterNames: string[] | undefined,
   config: Config,
-  override: string | undefined,
-): string {
-  if (override) {
-    return override;
+): Record<string, CanisterConfig> {
+  if (canisterNames?.length === 0) {
+    cliError("No canisters specified");
   }
-  return config.build?.outputDir
-    ? resolveConfigPath(config.build.outputDir)
-    : DEFAULT_BUILD_OUTPUT_DIR;
+  const canisters = resolveCanisterConfigs(config);
+  if (!Object.keys(canisters).length) {
+    cliError(`No Motoko canisters found in mops.toml configuration`);
+  }
+  return filterCanisters(canisters, canisterNames);
 }
 
-function pathsEqual(a: string, b: string): boolean {
-  return path.resolve(a) === path.resolve(b);
+function warnIfStablePathDiverges(
+  name: string,
+  stablePath: string,
+  destMostRel: string,
+): void {
+  if (
+    path.resolve(resolveConfigPath(stablePath)) ===
+    path.resolve(resolveConfigPath(destMostRel))
+  ) {
+    return;
+  }
+  console.warn(
+    chalk.yellow(
+      `WARN: [canisters.${name}.check-stable].path = "${stablePath}" ` +
+        `does not match where \`mops deployed\` writes ("${destMostRel}"). ` +
+        `\`mops check-stable\` won't see updates from \`mops deployed\`.`,
+    ),
+  );
 }
 
 export async function deployed(
   canisterNames: string[] | undefined,
   options: DeployedOptions = {},
 ): Promise<void> {
-  if (canisterNames?.length === 0) {
-    cliError("No canisters specified");
-  }
-
   const config = readConfig();
-  const canisters = resolveCanisterConfigs(config);
-  if (!Object.keys(canisters).length) {
-    cliError(`No Motoko canisters found in mops.toml configuration`);
-  }
-  const filtered = filterCanisters(canisters, canisterNames);
+  const filtered = selectCanisters(canisterNames, config);
 
-  const outputDir = resolveOutputDir(config, options.output);
+  const outputDir = resolveBuildOutputDir(config, options.output);
   const deployedDir = resolveDeployedDir(config, options.dir);
 
   mkdirSync(deployedDir.resolved, { recursive: true });
 
   for (const [name, canister] of Object.entries(filtered)) {
     const sourceMost = path.join(outputDir, `${name}.most`);
+    const destMostRel = path.join(deployedDir.config, `${name}.most`);
     const destMost = path.join(deployedDir.resolved, `${name}.most`);
 
     if (!existsSync(sourceMost)) {
@@ -95,14 +106,8 @@ export async function deployed(
     console.log(chalk.green(`✓ ${sourceMost} → ${destMost}`));
 
     const stablePath = canister["check-stable"]?.path;
-    if (stablePath && !pathsEqual(resolveConfigPath(stablePath), destMost)) {
-      console.warn(
-        chalk.yellow(
-          `WARN: [canisters.${name}.check-stable].path is "${stablePath}", ` +
-            `but mops deployed wrote to "${destMost}". ` +
-            `\`mops check-stable\` won't see this update.`,
-        ),
-      );
+    if (stablePath) {
+      warnIfStablePathDiverges(name, stablePath, destMostRel);
     }
   }
 }
@@ -111,16 +116,8 @@ export async function deployedInit(
   canisterNames: string[] | undefined,
   options: DeployedInitOptions = {},
 ): Promise<void> {
-  if (canisterNames?.length === 0) {
-    cliError("No canisters specified");
-  }
-
   const config = readConfig();
-  const canisters = resolveCanisterConfigs(config);
-  if (!Object.keys(canisters).length) {
-    cliError(`No Motoko canisters found in mops.toml configuration`);
-  }
-  const filtered = filterCanisters(canisters, canisterNames);
+  const filtered = selectCanisters(canisterNames, config);
 
   const deployedDir = resolveDeployedDir(config, options.dir);
 
@@ -154,13 +151,8 @@ export async function deployedInit(
           `✓ Set [canisters.${name}.check-stable].path = "${destMostRel}"`,
         ),
       );
-    } else if (!pathsEqual(resolveConfigPath(stablePath), destMost)) {
-      console.warn(
-        chalk.yellow(
-          `WARN: [canisters.${name}.check-stable].path is already set to "${stablePath}" — leaving as-is. ` +
-            `\`mops deployed\` writes to "${destMostRel}", which won't match the configured baseline.`,
-        ),
-      );
+    } else {
+      warnIfStablePathDiverges(name, stablePath, destMostRel);
     }
   }
 

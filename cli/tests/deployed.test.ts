@@ -1,31 +1,13 @@
-import { describe, expect, test, afterEach } from "@jest/globals";
+import { describe, expect, test } from "@jest/globals";
 import { existsSync, readFileSync } from "node:fs";
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
-import path from "path";
-import { cli, normalizePaths } from "./helpers";
-
-const fixturesDir = path.join(import.meta.dirname, "deployed");
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { cli, normalizePaths, useTempFixtures } from "./helpers";
 
 describe("deployed", () => {
-  const tempDirs: string[] = [];
-
-  async function makeTempFixture(fixture: string): Promise<string> {
-    const src = path.join(fixturesDir, fixture);
-    const dest = path.join(
-      fixturesDir,
-      `_tmp_${fixture}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    );
-    await cp(src, dest, { recursive: true });
-    tempDirs.push(dest);
-    return dest;
-  }
-
-  afterEach(async () => {
-    for (const dir of tempDirs) {
-      await rm(dir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
+  const makeTempFixture = useTempFixtures(
+    path.join(import.meta.dirname, "deployed"),
+  );
 
   describe("init", () => {
     test("creates baseline .most and sets [check-stable].path", async () => {
@@ -75,8 +57,9 @@ describe("deployed", () => {
       const result = await cli(["deployed", "init"], { cwd });
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toMatch(
-        /already set to "elsewhere\/backend\.most"/,
+        /check-stable\]\.path = "elsewhere\/backend\.most"/,
       );
+      expect(result.stderr).toMatch(/does not match where `mops deployed`/);
       expect(existsSync(path.join(cwd, "deployed", "backend.most"))).toBe(true);
 
       // mops.toml should not have been rewritten
@@ -185,8 +168,10 @@ describe("deployed", () => {
 
       const result = await cli(["deployed"], { cwd });
       expect(result.exitCode).toBe(0);
-      expect(result.stderr).toMatch(/check-stable\].path is "elsewhere/);
-      expect(result.stderr).toMatch(/won't see this update/);
+      expect(result.stderr).toMatch(
+        /check-stable\]\.path = "elsewhere\/backend\.most"/,
+      );
+      expect(result.stderr).toMatch(/won't see updates from `mops deployed`/);
     });
 
     test("respects [deployed].dir from config", async () => {
