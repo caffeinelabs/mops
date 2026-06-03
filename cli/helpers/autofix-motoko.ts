@@ -1,13 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { execa } from "execa";
-import {
-  TextDocument,
-  type TextEdit,
-} from "vscode-languageserver-textdocument";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
 interface MocSpan {
   file: string;
+  // Optional: older moc versions don't emit byte offsets.
+  byte_start?: number | null;
+  byte_end?: number | null;
   line_start: number;
   column_start: number;
   line_end: number;
@@ -40,9 +40,14 @@ export function parseDiagnostics(stdout: string): MocDiagnostic[] {
     .filter((d) => d !== null);
 }
 
+interface Edit {
+  span: MocSpan;
+  newText: string;
+}
+
 interface DiagnosticFix {
   code: string;
-  edits: TextEdit[];
+  edits: Edit[];
 }
 
 function extractDiagnosticFixes(
@@ -51,30 +56,19 @@ function extractDiagnosticFixes(
   const result = new Map<string, DiagnosticFix[]>();
 
   for (const diag of diagnostics) {
-    const editsByFile = new Map<string, TextEdit[]>();
+    const editsByFile = new Map<string, Edit[]>();
 
     for (const span of diag.spans) {
       if (
-        span.suggestion_applicability === "MachineApplicable" &&
-        span.suggested_replacement !== null
+        span.suggestion_applicability !== "MachineApplicable" ||
+        span.suggested_replacement === null
       ) {
-        const file = resolve(span.file);
-        const edits = editsByFile.get(file) ?? [];
-        edits.push({
-          range: {
-            start: {
-              line: span.line_start - 1,
-              character: span.column_start - 1,
-            },
-            end: {
-              line: span.line_end - 1,
-              character: span.column_end - 1,
-            },
-          },
-          newText: span.suggested_replacement,
-        });
-        editsByFile.set(file, edits);
+        continue;
       }
+      const file = resolve(span.file);
+      const edits = editsByFile.get(file) ?? [];
+      edits.push({ span, newText: span.suggested_replacement });
+      editsByFile.set(file, edits);
     }
 
     for (const [file, edits] of editsByFile) {
@@ -87,19 +81,6 @@ function extractDiagnosticFixes(
   return result;
 }
 
-type Range = TextEdit["range"];
-
-function normalizeRange(range: Range): Range {
-  const { start, end } = range;
-  if (
-    start.line > end.line ||
-    (start.line === end.line && start.character > end.character)
-  ) {
-    return { start: end, end: start };
-  }
-  return range;
-}
-
 interface OffsetEdit {
   start: number;
   end: number;
@@ -107,27 +88,53 @@ interface OffsetEdit {
 }
 
 /**
- * Applies diagnostic fixes to a document, processing each diagnostic as
+ * Applies diagnostic fixes to a file's contents, processing each diagnostic as
  * an atomic unit. If any edit from a diagnostic overlaps with an already-accepted
  * edit, the entire diagnostic is skipped (picked up in subsequent iterations).
  * Based on vscode-languageserver-textdocument's TextDocument.applyEdits.
+ *
+ * Edits prefer `byte_start`/`byte_end` (byte-accurate on any UTF-8 source);
+ * falls back to line+column for older moc, which mis-applies on non-ASCII
+ * lines since moc's `column_*` are bytes but LSP expects UTF-16 code units.
  */
 function applyDiagnosticFixes(
-  doc: TextDocument,
+  content: string,
   fixes: DiagnosticFix[],
 ): { text: string; appliedCodes: string[] } {
+  let buf: Buffer | null = null;
+  const byteToOffset = (byteOffset: number): number => {
+    buf ??= Buffer.from(content, "utf8");
+    return buf.subarray(0, byteOffset).toString("utf8").length;
+  };
+  let doc: TextDocument | null = null;
+
+  const toOffsetEdit = ({ span, newText }: Edit): OffsetEdit => {
+    if (span.byte_start != null && span.byte_end != null) {
+      const [s, e] =
+        span.byte_start <= span.byte_end
+          ? [span.byte_start, span.byte_end]
+          : [span.byte_end, span.byte_start];
+      return { start: byteToOffset(s), end: byteToOffset(e), newText };
+    }
+    doc ??= TextDocument.create("inmemory://autofix", "motoko", 0, content);
+    const start = doc.offsetAt({
+      line: span.line_start - 1,
+      character: span.column_start - 1,
+    });
+    const end = doc.offsetAt({
+      line: span.line_end - 1,
+      character: span.column_end - 1,
+    });
+    return start <= end
+      ? { start, end, newText }
+      : { start: end, end: start, newText };
+  };
+
   const acceptedEdits: OffsetEdit[] = [];
   const appliedCodes: string[] = [];
 
   for (const fix of fixes) {
-    const offsets: OffsetEdit[] = fix.edits.map((e) => {
-      const range = normalizeRange(e.range);
-      return {
-        start: doc.offsetAt(range.start),
-        end: doc.offsetAt(range.end),
-        newText: e.newText,
-      };
-    });
+    const offsets = fix.edits.map(toOffsetEdit);
 
     const overlaps = offsets.some((o) =>
       acceptedEdits.some((a) => o.start < a.end && o.end > a.start),
@@ -142,7 +149,6 @@ function applyDiagnosticFixes(
 
   acceptedEdits.sort((a, b) => a.start - b.start);
 
-  const text = doc.getText();
   const spans: string[] = [];
   let lastOffset = 0;
 
@@ -151,7 +157,7 @@ function applyDiagnosticFixes(
       continue;
     }
     if (edit.start > lastOffset) {
-      spans.push(text.substring(lastOffset, edit.start));
+      spans.push(content.substring(lastOffset, edit.start));
     }
     if (edit.newText.length) {
       spans.push(edit.newText);
@@ -159,7 +165,7 @@ function applyDiagnosticFixes(
     lastOffset = edit.end;
   }
 
-  spans.push(text.substring(lastOffset));
+  spans.push(content.substring(lastOffset));
   return { text: spans.join(""), appliedCodes };
 }
 
@@ -204,8 +210,10 @@ export async function autofixMotoko(
 
     for (const [file, fixes] of fixesByFile) {
       const original = await readFile(file, "utf-8");
-      const doc = TextDocument.create(`file://${file}`, "motoko", 0, original);
-      const { text: result, appliedCodes } = applyDiagnosticFixes(doc, fixes);
+      const { text: result, appliedCodes } = applyDiagnosticFixes(
+        original,
+        fixes,
+      );
 
       if (result === original) {
         continue;
