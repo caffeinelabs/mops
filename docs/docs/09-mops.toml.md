@@ -98,7 +98,7 @@ Each canister entry specifies the entrypoint file and optional compiler settings
 | -------- | --------------------------------------------------------------- |
 | main     | Path to the main Motoko file (required)                         |
 | args     | Array of additional `moc` arguments for this canister (optional). Applied after `[moc].args` in `check`, `check-stable`, and `build`. |
-| candid   | Path to a Candid interface file for compatibility checking (optional) |
+| candid   | Path to a Candid interface file (optional). `mops build` subtype-checks the generated interface against this file and embeds it into the wasm as `candid:service` metadata. `mops generate candid` writes the regenerated `.did` to this path. |
 | initArg  | Candid-encoded initialization arguments (optional)              |
 
 Example:

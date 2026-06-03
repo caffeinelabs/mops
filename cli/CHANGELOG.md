@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops generate candid [canisters...]` to (re)generate the curated `.did` file from current Motoko source. With `[canisters.<name>].candid` set, overwrites that file in place; otherwise writes `<name>.did` next to `main` and sets the field in `mops.toml`. `--output, -o <path>` writes to an arbitrary path (single-canister only) without modifying `mops.toml`. `moc` is invoked with the same packages, `[moc].args`, `[build].args`, per-canister `args`, and migration flags as `mops build`, so the generated interface always satisfies `mops build`'s subtype check.
+
 - Deprecate the `dfx` replica in `mops bench`, `mops test --mode replica`, and `mops watch`. Behavior is unchanged — `--replica dfx`, the implicit `dfx` fallback when no `[toolchain.pocket-ic]` is set, and the dfx-bundled PocketIC fallback all still work — but each now prints a warning. Run `mops toolchain use pocket-ic <version>` to silence it. The `dfx` paths will be removed and the default flipped to PocketIC in mops v3 — `dfx` is being deprecated upstream and PocketIC is a better fit for benchmarks and replica tests (deterministic, in-process, no background daemon).
 
 - `mops toolchain --help` now lists the tools mops manages (`moc`, `wasmtime`, `pocket-ic`, `lintoko`) in the top-level description instead of only mentioning them under `bin`, and `mops toolchain use` / `update` / `bin` print the available tools (via the auto-generated help) when invoked with a missing or invalid `<tool>` argument.
