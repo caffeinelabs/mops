@@ -32,6 +32,7 @@ import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
 import { getDfxVersion } from "../../helpers/get-dfx-version.js";
+import { warnIfDfxReplica } from "../../helpers/deprecate-dfx-replica.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
@@ -79,6 +80,8 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
     }
   }
 
+  let explicitReplica = options.replica === "dfx";
+
   replica.type = replicaType;
   replica.verbose = !!options.verbose;
 
@@ -124,6 +127,7 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
         replicaType,
         true,
         controller.signal,
+        explicitReplica,
       );
       await curRun;
 
@@ -150,6 +154,9 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       filter,
       options.mode,
       replicaType,
+      false,
+      undefined,
+      explicitReplica,
     );
     if (!passed) {
       process.exit(1);
@@ -167,6 +174,7 @@ async function runAll(
   replicaType: ReplicaName,
   watch = false,
   signal?: AbortSignal,
+  explicitReplica = false,
 ): Promise<boolean> {
   let done = await testWithReporter(
     reporterName,
@@ -175,6 +183,7 @@ async function runAll(
     replicaType,
     watch,
     signal,
+    explicitReplica,
   );
   return done;
 }
@@ -186,6 +195,7 @@ export async function testWithReporter(
   replicaType: ReplicaName,
   watch = false,
   signal?: AbortSignal,
+  explicitReplica = false,
 ): Promise<boolean> {
   let rootDir = getRootDir();
   let files: string[] = [];
@@ -260,6 +270,10 @@ export async function testWithReporter(
 
   let hasWasiTests = filesWithMode.some(({ mode }) => mode === "wasi");
   let hasReplicaTests = filesWithMode.some(({ mode }) => mode === "replica");
+
+  if (hasReplicaTests) {
+    warnIfDfxReplica(replicaType, explicitReplica);
+  }
 
   // prepare wasmtime path
   if (hasWasiTests && !wasmtimePath) {

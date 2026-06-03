@@ -336,7 +336,6 @@ export async function publish(
     console.log("Running benchmarks...");
     try {
       benchmarks = await bench("", {
-        replica: config.toolchain?.["pocket-ic"] ? "pocket-ic" : "dfx",
         gc: "copying",
         forceGc: true,
         silent: true,
