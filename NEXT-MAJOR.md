@@ -39,6 +39,7 @@ Close the gap between update path and resolve path.
 
 ### Drop `dfx` coupling
 - Remove `dfx`-bundled `moc` fallback in `toolchain bin --fallback`, `test`, `bench`, `bench-replica`, `docs`. (`cli/helpers/get-dfx-version.ts`, `cli/commands/toolchain/index.ts:359,387`, `cli/commands/docs.ts:44-54`)
+- Remove the `dfx` and `dfx-pocket-ic` replica paths from `mops bench`, `mops test --mode replica`, and `mops watch`. Drop the `dfx` choice from `--replica`; drop the implicit `dfx`/`dfx-pocket-ic` fallback when `[toolchain.pocket-ic]` is unset. Flip the default so an unpinned `pocket-ic` auto-resolves to a mops-controlled `DEFAULT_POCKET_IC_VERSION` (download-on-demand via `toolchain.download("pocket-ic", ...)`), so users never need to know dfx exists. Document the version bump policy. Deprecated with warnings in 2.x via `cli/helpers/deprecate-dfx-replica.ts` (PR #555). **User-visible break**: implicit-dfx benchmark baselines drift on first run because PocketIC and dfx-replica report different instruction/heap counts; call out in release notes and recommend re-recording with `--save`.
 - `mops init` stops fetching "default packages for dfx" — mops manages its own toolchain. (LIN: Doctor overhaul)
 - Drop `mops toolchain init` requirement; env-var setup becomes a hint when `dfx.json` is present. (LIN)
 - Reject `dfx` field in `[package]` (deprecated since 2.7).

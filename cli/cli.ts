@@ -414,7 +414,7 @@ program
   .addOption(
     new Option(
       "--replica <replica>",
-      "Which replica to use to run tests in replica mode",
+      "Which replica to use to run tests in replica mode (`dfx` is deprecated; prefer `pocket-ic`)",
     ).choices(["dfx", "pocket-ic"]),
   )
   .option("-w, --watch", "Enable watch mode")
@@ -436,7 +436,7 @@ program
   .addOption(
     new Option(
       "--replica <replica>",
-      "Which replica to use to run benchmarks",
+      "Which replica to use to run benchmarks (`dfx` is deprecated; prefer `pocket-ic`)",
     ).choices(["dfx", "pocket-ic"]),
   )
   .addOption(

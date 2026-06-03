@@ -32,11 +32,11 @@ Under the hood, Mops will:
 
 Which replica to use.
 
-Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section, otherwise `dfx`.
+Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section, otherwise `dfx` (deprecated, see below).
 
 Possible values:
-- `dfx` - use `dfx` local replica
-- `pocket-ic` - use [PocketIC](https://pypi.org/project/pocket-ic/) light replica via [pic.js](https://www.npmjs.com/package/@hadronous/pic) wrapper
+- `pocket-ic` - use [PocketIC](https://github.com/dfinity/pocketic) light replica via [pic.js](https://github.com/dfinity/pic-js). Recommended.
+- `dfx` - **deprecated**. Uses `dfx` local replica. Will be removed in a future release. Run `mops toolchain use pocket-ic 12.0.0` to pin a PocketIC version and `mops bench` will use it directly.
 
 ### `--gc`
 

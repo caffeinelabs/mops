@@ -13,6 +13,22 @@ This file provides guidance to AI coding agents when working with code in this r
 - **Pre-commit hook** runs `lint-staged + npm run check` via husky — fix TypeScript/lint errors before committing.
 - **Snapshot testing strategy**: Use Jest snapshots (`cliSnapshot` / `toMatchSnapshot`) for the main use cases so the full CLI output is committed and reviewable. Corner-case and error-path tests should use targeted assertions (`toMatch`, `toBe`) without snapshots to avoid cluttering the snapshot file.
 
+## Interactive commands (caution for agents)
+
+Some `mops` commands prompt for input and hang in non-TTY environments (CI, agent loops). Always pass values up front:
+
+| Interactive | Non-interactive form |
+|---|---|
+| `mops init` | `mops init --yes` |
+| `mops bump` | `mops bump <major\|minor\|patch>` |
+| `mops template` | `mops template <name>` (see `mops template --help` for names) |
+| `mops toolchain use <tool>` | `mops toolchain use <tool> <version>` (e.g. `pocket-ic 12.0.0`). `latest` works but may resolve to a version incompatible with the shipped client. |
+| `mops owner add\|rm <principal>` | `mops owner add\|rm <principal> --yes` |
+| `mops maintainer add\|rm <principal>` | `mops maintainer add\|rm <principal> --yes` |
+| `mops publish` (missing recommended `[package]` field, `CI` env unset) | Fill the field in `[package]`, or run with `CI=1` |
+
+When adding a new command or option, prefer non-interactive (accept the value as an argument or flag). Reserve prompts for purely human-facing flows like `mops init`, and at any deprecation/missing-arg site recommend the non-interactive command verbatim (e.g. ``mops toolchain use pocket-ic 12.0.0``, not ``mops toolchain use pocket-ic``).
+
 ## What this repo is
 
 Mops is a package manager for Motoko (the Internet Computer smart contract language). It has three main components:
