@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`check --fix (utf-8 source) multi-byte characters do not corrupt the fix: fix output 1`] = `
+"Fixed run/multibyte.mo (3 fixes: M0236)
+
+✓ 3 fixes applied to 1 file
+✓ <TEST_DIR>/check/fix-utf8/run/multibyte.mo"
+`;
+
+exports[`check --fix (utf-8 source) multi-byte characters do not corrupt the fix: fixed file 1`] = `
+"// Regression fixture: --fix must apply byte-accurately on lines containing
+// multi-byte UTF-8 characters. Each \`Char.toNat32\` triggers M0236; the fixer
+// must preserve the trailing \`)\` after the multi-byte literal.
+import Char "mo:core/Char";
+
+module {
+  public func go() {
+    ignore 'A'.toNat32();
+    ignore '京'.toNat32();
+    ignore '💩'.toNat32();
+  };
+};
+"
+`;
