@@ -156,4 +156,22 @@ describe("check --fix", () => {
     expect(result.stderr).toMatch(/error/i);
     expect(result.stdout).not.toMatch(/✓ run/);
   });
+
+  test("concurrent --fix runs serialize and produce the same output", async () => {
+    const runFilePath = copyFixture("edit-suggestions.mo");
+    await cli(["check", runFilePath, "--fix", "--", warningFlags], {
+      cwd: fixDir,
+    });
+    const expected = readFileSync(runFilePath, "utf-8");
+
+    copyFixture("edit-suggestions.mo");
+    const [a, b] = await Promise.all([
+      cli(["check", runFilePath, "--fix", "--", warningFlags], { cwd: fixDir }),
+      cli(["check", runFilePath, "--fix", "--", warningFlags], { cwd: fixDir }),
+    ]);
+    expect(a.exitCode).toBe(0);
+    expect(b.exitCode).toBe(0);
+    expect(readFileSync(runFilePath, "utf-8")).toBe(expected);
+    expect(a.stdout + b.stdout).toContain("Waiting for another");
+  });
 });
