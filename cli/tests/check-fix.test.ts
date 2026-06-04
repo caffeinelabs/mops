@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, test } from "@jest/globals";
 import { cpSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "path";
+import { lock } from "proper-lockfile";
 import { parseDiagnostics } from "../helpers/autofix-motoko";
 import { cli, normalizePaths } from "./helpers";
 
@@ -163,15 +165,34 @@ describe("check --fix", () => {
       cwd: fixDir,
     });
     const expected = readFileSync(runFilePath, "utf-8");
-
     copyFixture("edit-suggestions.mo");
-    const [a, b] = await Promise.all([
-      cli(["check", runFilePath, "--fix", "--", warningFlags], { cwd: fixDir }),
-      cli(["check", runFilePath, "--fix", "--", warningFlags], { cwd: fixDir }),
-    ]);
+
+    // Hold the lock from the test process itself so both children
+    // deterministically hit ELOCKED, print "Waiting...", and queue.
+    const lockTarget = path.join(fixDir, ".mops", "fix.lock");
+    await mkdir(path.dirname(lockTarget), { recursive: true });
+    await writeFile(lockTarget, "", { flag: "a" });
+    const release = await lock(lockTarget, { stale: 30_000 });
+
+    const childA = cli(["check", runFilePath, "--fix", "--", warningFlags], {
+      cwd: fixDir,
+    });
+    const childB = cli(["check", runFilePath, "--fix", "--", warningFlags], {
+      cwd: fixDir,
+    });
+
+    // Hold long enough for both children to spawn (`npm run mops` → bundler →
+    // CLI startup) and attempt the non-blocking acquire. 5s is conservative —
+    // local runs land well under 2s, the headroom is purely to absorb CI jitter.
+    await new Promise((r) => setTimeout(r, 5000));
+    await release();
+
+    const [a, b] = await Promise.all([childA, childB]);
     expect(a.exitCode).toBe(0);
     expect(b.exitCode).toBe(0);
     expect(readFileSync(runFilePath, "utf-8")).toBe(expected);
+    // At least one child must have hit the held lock and queued; if neither
+    // did, the lock didn't actually serialize anything.
     expect(a.stdout + b.stdout).toContain("Waiting for another");
   });
 });
