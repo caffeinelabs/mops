@@ -9,6 +9,7 @@ import {
   resolveConfigPath,
 } from "../mops.js";
 import { AutofixResult, autofixMotoko } from "../helpers/autofix-motoko.js";
+import { withFixLock } from "../helpers/fix-lock.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import {
   filterCanisters,
@@ -80,6 +81,16 @@ function logAutofixResult(
 }
 
 export async function check(
+  args: string[],
+  options: Partial<CheckOptions> = {},
+): Promise<void> {
+  if (options.fix) {
+    return withFixLock(() => checkImpl(args, options));
+  }
+  return checkImpl(args, options);
+}
+
+async function checkImpl(
   args: string[],
   options: Partial<CheckOptions> = {},
 ): Promise<void> {
