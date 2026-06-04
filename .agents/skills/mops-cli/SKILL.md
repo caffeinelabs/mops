@@ -104,7 +104,7 @@ mops check -- -Werror     # treat warnings as errors
 
 **Always use canister names, not file paths.** Per-canister args from `mops.toml` are applied automatically.
 
-`--fix` applies machine-applicable fixes from both moc and lintoko in one pass.
+`--fix` applies machine-applicable fixes from both moc and lintoko in one pass. Concurrent `--fix` runs (across processes) serialize automatically via an advisory lock at `.mops/fix.lock` — safe to invoke from multiple agents on the same project.
 
 ### `mops build`
 
