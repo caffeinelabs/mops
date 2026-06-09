@@ -14,6 +14,30 @@ function countCodes(stdout: string): Record<string, number> {
   return counts;
 }
 
+describe("parseDiagnostics", () => {
+  test("returns [] for undefined stdout", () => {
+    // execa can resolve with `result.stdout === undefined` (e.g. output not
+    // buffered). The autofix path passes it straight in, so this must not throw.
+    expect(parseDiagnostics(undefined)).toEqual([]);
+  });
+
+  test("returns [] for empty stdout", () => {
+    expect(parseDiagnostics("")).toEqual([]);
+  });
+
+  test("skips non-JSON lines and parses diagnostics", () => {
+    const diag = {
+      message: "m",
+      code: "M0223",
+      level: "warning",
+      spans: [],
+      notes: [],
+    };
+    const stdout = `not json\n${JSON.stringify(diag)}\n`;
+    expect(parseDiagnostics(stdout)).toEqual([diag]);
+  });
+});
+
 describe("check --fix", () => {
   const fixDir = path.join(import.meta.dirname, "check/fix");
   const runDir = path.join(fixDir, "run");
