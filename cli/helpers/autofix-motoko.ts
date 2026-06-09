@@ -26,7 +26,10 @@ export interface MocDiagnostic {
   notes: string[];
 }
 
-export function parseDiagnostics(stdout: string): MocDiagnostic[] {
+export function parseDiagnostics(stdout: string | undefined): MocDiagnostic[] {
+  if (!stdout) {
+    return [];
+  }
   return stdout
     .split("\n")
     .filter((l) => l.trim())
