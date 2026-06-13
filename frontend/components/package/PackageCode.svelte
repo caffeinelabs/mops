@@ -118,7 +118,7 @@
 		if (curSelectedFileName === selectedFileName) {
 			fileContent = content;
 			fileContentHtml = html;
-			requestAnimationFrame(onResize);
+			requestAnimationFrame(onScroll);
 			requestAnimationFrame(scrollToDefiition);
 		}
 	}
@@ -200,20 +200,22 @@
 	let bottomSpace = 0;
 
 	// adjust side panels' height on scroll
-	let onResize = () => {
+	let onScroll = () => {
 		let filesTop = Math.max(0, filesEl.getBoundingClientRect().top);
 		let scrollTopWithFooter = document.body.scrollTop + document.body.clientHeight + footerHeight + margin - padding;
 		let footerSizeFiles = Math.max(bottomSpace, scrollTopWithFooter - document.body.clientHeight);
 
 		filesPanelHeight = `calc(100vh - ${Math.floor(filesTop + footerSizeFiles)}px)`;
-		codeViewEl.style.maxHeight = `calc(${Math.floor(window.innerHeight - codeViewEl.offsetTop - footerHeight - margin)}px)`;
+		// Removed max-height constraint on codeViewEl to allow natural page scrolling
 	};
 
 	onMount(() => {
-		filesEl && onResize();
-		window.addEventListener("resize", onResize);
+		filesEl && onScroll();
+		window.addEventListener("resize", onScroll);
+		window.addEventListener("scroll", onScroll);
 		return () => {
-			window.removeEventListener("resize", onResize);
+			window.removeEventListener("resize", onScroll);
+			window.removeEventListener("scroll", onScroll);
 		};
 	});
 </script>
@@ -353,7 +355,8 @@
 		font-family: monospace;
 		line-height: 1.55;
 		tab-size: 4;
-		overflow: auto;
+		overflow-x: auto;
+		min-height: 600px;
 	}
 
 	.code-view-wrap {
