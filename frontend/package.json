@@ -7,7 +7,7 @@
   "scripts": {
     "start": "DFX_NETWORK=${DFX_NETWORK:-local} vite --port 3000",
     "vite": "vite",
-    "build": "vite build",
+    "build": "vite build && node verify-build.mjs",
     "preview": "vite preview",
     "check": "svelte-check --threshold error"
   },
