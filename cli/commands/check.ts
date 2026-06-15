@@ -262,30 +262,30 @@ async function checkFiles(
     logAutofixResult(fixResult, options.verbose);
   }
 
-  for (const file of files) {
-    try {
-      const args = [file, ...mocArgs];
-      if (options.verbose) {
-        console.log(chalk.blue("check"), chalk.gray("Running moc:"));
-        console.log(chalk.gray(mocPath, JSON.stringify(args)));
-      }
+  // Check all files in a single moc invocation so shared transitive imports
+  // are chased and type-checked once, not re-checked for every file.
+  const args = [...files, ...mocArgs];
+  if (options.verbose) {
+    console.log(chalk.blue("check"), chalk.gray("Running moc:"));
+    console.log(chalk.gray(mocPath, JSON.stringify(args)));
+  }
 
-      const result = await execa(mocPath, args, {
-        stdio: "inherit",
-        reject: false,
-      });
+  try {
+    const result = await execa(mocPath, args, {
+      stdio: "inherit",
+      reject: false,
+    });
 
-      if (result.exitCode !== 0) {
-        cliError(
-          `✗ Check failed for file ${file} (exit code: ${result.exitCode})`,
-        );
-      }
-
-      console.log(chalk.green(`✓ ${file}`));
-    } catch (err: any) {
-      cliError(
-        `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,
-      );
+    if (result.exitCode !== 0) {
+      cliError(`✗ Check failed (exit code: ${result.exitCode})`);
     }
+  } catch (err: any) {
+    cliError(
+      `Error while checking files${err?.message ? `\n${err.message}` : ""}`,
+    );
+  }
+
+  for (const file of files) {
+    console.log(chalk.green(`✓ ${file}`));
   }
 }
