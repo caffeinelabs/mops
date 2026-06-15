@@ -62,6 +62,13 @@ describe("check --fix", () => {
     return runFilePath;
   }
 
+  test("parseDiagnostics tolerates missing moc output", () => {
+    // execa with reject:false yields undefined stdout when moc fails to spawn
+    // or is killed (e.g. OOM); parsing must degrade to no diagnostics, not throw.
+    expect(parseDiagnostics(undefined)).toEqual([]);
+    expect(parseDiagnostics("")).toEqual([]);
+  });
+
   test("M0223", async () => {
     await testCheckFix("M0223.mo", { M0223: 1 });
   });
