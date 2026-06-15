@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.14.0"
+    "latest": "2.14.1"
   },
   "versions": {
     "0.41.0": {
@@ -456,6 +456,14 @@
       "commitHash": "d448cdf90991c3164cafd8b6d1b39f433ad820b1",
       "url": "https://cli.mops.one/versions/2.14.0.tgz",
       "hash": "57ca07b9fe9956fc48307f678c8fb92a2a923cd5ed69563973aadae7143b7e30"
+    },
+    "2.14.1": {
+      "time": 1781536301732,
+      "size": 2407129,
+      "relseaseNotes": "* Speed up `mops check <files...>` (e.g. `mops check src/**/*.mo`) on packages with many files. Previously each file was checked in its own `moc` invocation, so every shared transitive import was re-parsed and re-type-checked once per file. All files are now passed to a single `moc --check` call, which loads and type-checks each import only once — on motoko-core (53 files) this drops a full check from ~27s to ~1.6s. The per-file `✓` confirmations now print only when the whole check passes.\n",
+      "commitHash": "d0269ead2263e014640c816e7a61aafa525691d1",
+      "url": "https://cli.mops.one/versions/2.14.1.tgz",
+      "hash": "9aa443cf11e2d7ddb3a5925483a43a5d220eff2a1cfc315319e9ce0efd162414"
     }
   }
 }
