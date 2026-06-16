@@ -45,7 +45,9 @@ outputDir = "src/backend/dist"
 args = ["--release"]
 ```
 
-`check-stable` verifies stable variable compatibility against a `.most` file from the deployed version. Use `mops deployed init` once to create an empty-actor baseline at the configured path; after every deploy, run `mops deployed` to promote the just-built `.most` into it (see [`mops deployed`](#mops-deployed) below).
+`check-stable` runs ICP's upgrade-time stable-variable compatibility check locally, so incompatible changes fail in `mops check` instead of being rejected when upgrading a live canister. It compares the current code against a `.most` from the deployed version.
+
+Bootstrap that `.most`: new project → `mops deployed init` (empty-actor baseline); already-deployed canister → build from the deployed commit, then `mops deployed`. After every deploy, run `mops deployed` to promote the just-built `.most` (see [`mops deployed`](#mops-deployed) below).
 
 Optional canister fields: `candid` (path to .did for compatibility checking), `initArg` (Candid-encoded init args).
 
