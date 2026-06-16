@@ -26,7 +26,10 @@ export interface MocDiagnostic {
   notes: string[];
 }
 
-export function parseDiagnostics(stdout: string): MocDiagnostic[] {
+export function parseDiagnostics(stdout: string | undefined): MocDiagnostic[] {
+  if (!stdout) {
+    return [];
+  }
   return stdout
     .split("\n")
     .filter((l) => l.trim())
@@ -181,19 +184,18 @@ export async function autofixMotoko(
   for (let iteration = 0; iteration < MAX_FIX_ITERATIONS; iteration++) {
     const fixesByFile = new Map<string, DiagnosticFix[]>();
 
-    for (const file of files) {
-      const result = await execa(
-        mocPath,
-        [file, ...mocArgs, "--error-format=json"],
-        { stdio: "pipe", reject: false },
-      );
+    // Single invocation: moc dedups shared imports across all files.
+    const result = await execa(
+      mocPath,
+      [...files, ...mocArgs, "--error-format=json"],
+      { stdio: "pipe", reject: false },
+    );
 
-      const diagnostics = parseDiagnostics(result.stdout);
-      for (const [targetFile, fixes] of extractDiagnosticFixes(diagnostics)) {
-        const existing = fixesByFile.get(targetFile) ?? [];
-        existing.push(...fixes);
-        fixesByFile.set(targetFile, existing);
-      }
+    const diagnostics = parseDiagnostics(result.stdout);
+    for (const [targetFile, fixes] of extractDiagnosticFixes(diagnostics)) {
+      const existing = fixesByFile.get(targetFile) ?? [];
+      existing.push(...fixes);
+      fixesByFile.set(targetFile, existing);
     }
 
     if (fixesByFile.size === 0) {

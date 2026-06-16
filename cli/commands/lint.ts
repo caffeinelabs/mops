@@ -11,6 +11,7 @@ import {
   readConfig,
 } from "../mops.js";
 import { resolvePackages } from "../resolve-packages.js";
+import { withFixLock } from "../helpers/fix-lock.js";
 import { toolchain } from "./toolchain/index.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { existsSync } from "node:fs";
@@ -172,6 +173,16 @@ async function runLintoko(
 }
 
 export async function lint(
+  filter: string | undefined,
+  options: Partial<LintOptions>,
+): Promise<void> {
+  if (options.fix) {
+    return withFixLock(() => lintImpl(filter, options));
+  }
+  return lintImpl(filter, options);
+}
+
+async function lintImpl(
   filter: string | undefined,
   options: Partial<LintOptions>,
 ): Promise<void> {
