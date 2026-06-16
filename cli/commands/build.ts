@@ -9,13 +9,10 @@ import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import {
   filterCanisters,
   resolveCanisterConfigs,
-  validateCanisterArgs,
 } from "../helpers/resolve-canisters.js";
-import { prepareMigrationArgs } from "../helpers/migrations.js";
-import { CanisterConfig, Config } from "../types.js";
+import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
-import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
-import { sourcesArgs } from "./sources.js";
+import { readConfig, resolveConfigPath } from "../mops.js";
 import { toolchain } from "./toolchain/index.js";
 
 export interface BuildOptions {
@@ -54,11 +51,6 @@ export async function build(
 
   for (let [canisterName, canister] of Object.entries(filteredCanisters)) {
     console.log(chalk.blue("build canister"), chalk.bold(canisterName));
-    let motokoPath = canister.main;
-    if (!motokoPath) {
-      cliError(`No main file is specified for canister ${canisterName}`);
-    }
-    motokoPath = resolveConfigPath(motokoPath);
     const wasmPath = join(outputDir, `${canisterName}.wasm`);
     const mostPath = join(outputDir, `${canisterName}.most`);
 
@@ -88,12 +80,13 @@ export async function build(
     };
     process.on("exit", exitCleanup);
 
-    const migration = await prepareMigrationArgs(
-      canister.migrations,
-      canisterName,
-      "build",
-      options.verbose,
-    );
+    const prepared = await prepareMocArgs(config, canister, canisterName, {
+      mode: "build",
+      managedFlags: BUILD_MANAGED_FLAGS,
+      commandName: "mops build",
+      verbose: options.verbose,
+      extraArgs: options.extraArgs,
+    });
     try {
       let args = [
         "-c",
@@ -101,14 +94,9 @@ export async function build(
         "--stable-types",
         "-o",
         wasmPath,
-        motokoPath,
-        ...(await sourcesArgs()).flat(),
-        ...getGlobalMocArgs(config),
-        ...migration.migrationArgs,
+        prepared.motokoPath,
+        ...prepared.args,
       ];
-      args.push(
-        ...collectExtraArgs(config, canister, canisterName, options.extraArgs),
-      );
 
       const isPublicCandid = true; // always true for now to reduce corner cases
       const candidVisibility = isPublicCandid ? "icp:public" : "icp:private";
@@ -207,7 +195,7 @@ export async function build(
         );
       }
     } finally {
-      await migration.cleanup();
+      await prepared.cleanup();
       process.removeListener("exit", exitCleanup);
       try {
         await release?.();
@@ -220,52 +208,4 @@ export async function build(
       `\n✓ Built ${Object.keys(filteredCanisters).length} canister${Object.keys(filteredCanisters).length === 1 ? "" : "s"} successfully`,
     ),
   );
-}
-
-const managedFlags: Record<string, string> = {
-  "-o": "use [build].outputDir in mops.toml or --output flag instead",
-  "-c": "this flag is always set by mops build",
-  "--idl": "this flag is always set by mops build",
-  "--stable-types": "this flag is always set by mops build",
-  "--public-metadata": "this flag is managed by mops build",
-};
-
-function collectExtraArgs(
-  config: Config,
-  canister: CanisterConfig,
-  canisterName: string,
-  extraArgs?: string[],
-): string[] {
-  const args: string[] = [];
-
-  if (config.build?.args) {
-    if (typeof config.build.args === "string") {
-      cliError(
-        `[build] config 'args' should be an array of strings in mops.toml config file`,
-      );
-    }
-    args.push(...config.build.args);
-  }
-  if (canister.args) {
-    validateCanisterArgs(canister, canisterName, config);
-    args.push(...canister.args);
-  }
-  if (extraArgs) {
-    args.push(...extraArgs);
-  }
-
-  const warned = new Set<string>();
-  for (const arg of args) {
-    const hint = managedFlags[arg];
-    if (hint && !warned.has(arg)) {
-      warned.add(arg);
-      console.warn(
-        chalk.yellow(
-          `Warning: '${arg}' in args for canister ${canisterName} may conflict with mops build — ${hint}`,
-        ),
-      );
-    }
-  }
-
-  return args;
 }

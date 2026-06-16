@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops generate candid [canisters...]` to (re)generate the curated `.did` file from current Motoko source. With `[canisters.<name>].candid` set, overwrites that file in place; otherwise writes `<name>.did` next to `main` and sets the field in `mops.toml`. `--output, -o <path>` writes to an arbitrary path (single-canister only) without modifying `mops.toml`. `moc` is invoked with the same packages, `[moc].args`, `[build].args`, per-canister `args`, and migration flags as `mops build`, so the generated interface always satisfies `mops build`'s subtype check.
 
 ## 2.14.1
 - Speed up `mops check <files...>` (e.g. `mops check src/**/*.mo`) on packages with many files. Previously each file was checked in its own `moc` invocation, so every shared transitive import was re-parsed and re-type-checked once per file. All files are now passed to a single `moc --check` call, which loads and type-checks each import only once — on motoko-core (53 files) this drops a full check from ~27s to ~1.6s. The per-file `✓` confirmations now print only when the whole check passes.
