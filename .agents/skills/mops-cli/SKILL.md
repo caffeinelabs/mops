@@ -38,21 +38,16 @@ chain = "src/backend/migrations"
 check-limit = 10   # optional — speeds up `mops check` when the chain gets long
 
 [canisters.backend.check-stable]
-path = ".old/src/backend/dist/backend.most"
+path = "deployed/backend.most"
 
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
 ```
 
-`check-stable` verifies stable variable compatibility against a `.most` file from the deployed version. For a new project with no prior deployment, create a trivial `.most` file representing an empty actor:
+`check-stable` runs ICP's upgrade-time stable-variable compatibility check locally, so incompatible changes fail in `mops check` instead of being rejected when upgrading a live canister. It compares the current code against a `.most` from the deployed version.
 
-```most
-// Version: 1.0.0
-actor {
-  
-};
-```
+Bootstrap that `.most`: new project → `mops deployed init` (empty-actor baseline); already-deployed canister → build from the deployed commit, then `mops deployed`. After every deploy, run `mops deployed` to promote the just-built `.most` (see [`mops deployed`](#mops-deployed) below).
 
 Optional canister fields: `candid` (path to .did for compatibility checking), `initArg` (Candid-encoded init args).
 
@@ -116,6 +111,18 @@ mops build -- --ai-errors # pass extra moc flags
 ```
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
+
+### `mops deployed`
+
+Post-deploy hook — keeps the on-disk `.most` baseline used by `check-stable` in sync with what's actually deployed.
+
+```bash
+mops deployed init backend   # one-time bootstrap: empty-actor baseline + sets [check-stable].path
+mops deployed backend        # post-deploy: promotes .mops/.build/backend.most → deployed/backend.most
+mops deployed                # all canisters
+```
+
+Default destination is `deployed/<name>.most`; override with `[deployed].dir` in `mops.toml` or `--dir`. It reads built `.most` files from `[build].outputDir` (default `.mops/.build`); override with `--build-dir`. `mops deployed` errors if the source `.most` is missing — it never regenerates. Run it from your deploy pipeline immediately after a successful deploy.
 
 ### `mops generate candid`
 

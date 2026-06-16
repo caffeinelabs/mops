@@ -13,6 +13,7 @@ import { bump } from "./commands/bump.js";
 import { check } from "./commands/check.js";
 import { checkCandid } from "./commands/check-candid.js";
 import { checkStable } from "./commands/check-stable.js";
+import { deployed, deployedInit } from "./commands/deployed.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
@@ -393,6 +394,47 @@ program
       extraArgs,
     });
   });
+
+// deployed
+const deployedCommand = new Command("deployed")
+  .description(
+    "Post-deploy hook: promote .most stable-types files into the deployed directory so `mops check-stable` compares against the just-deployed version. Pass canister names to scope; with no arguments, all canisters in mops.toml are promoted",
+  )
+  .argument("[canisters...]")
+  .addOption(
+    new Option(
+      "--build-dir <dir>",
+      "Directory to read built .most files from (default: [build].outputDir or .mops/.build)",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--dir <dir>",
+      "Destination directory (default: [deployed].dir or deployed)",
+    ),
+  )
+  .action(async (canisters: string[], options) => {
+    checkConfigFile(true);
+    await deployed(canisters.length ? canisters : undefined, options);
+  });
+
+deployedCommand
+  .command("init [canisters...]")
+  .description(
+    "Pre-first-deploy bootstrap: create an empty-actor .most baseline in the deployed directory and wire [canisters.<name>.check-stable].path to it. Idempotent",
+  )
+  .addOption(
+    new Option(
+      "--dir <dir>",
+      "Destination directory (default: [deployed].dir or deployed)",
+    ),
+  )
+  .action(async (canisters: string[], options) => {
+    checkConfigFile(true);
+    await deployedInit(canisters.length ? canisters : undefined, options);
+  });
+
+program.addCommand(deployedCommand);
 
 // test
 program

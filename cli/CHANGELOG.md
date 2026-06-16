@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+- Add `mops deployed` (post-deploy hook) and `mops deployed init` (one-time bootstrap). After a successful deploy, `mops deployed [canisters...]` promotes the built `<build-dir>/<name>.most` into `<deployed-dir>/<name>.most` so `mops check-stable` always compares against the just-deployed version. `mops deployed init` creates an empty-actor `.most` baseline and wires `[canisters.<name>.check-stable].path` to it. Configurable via `[deployed].dir` (default `deployed`) and overridable with `--dir`; the build output dir it reads from defaults to `[build].outputDir` (`.mops/.build`) and is overridable with `--build-dir`.
+
 - Add `mops generate candid [canisters...]` to (re)generate the curated `.did` file from current Motoko source. With `[canisters.<name>].candid` set, overwrites that file in place; otherwise writes `<name>.did` next to `main` and sets the field in `mops.toml`. `--output, -o <path>` writes to an arbitrary path (single-canister only) without modifying `mops.toml`. `moc` is invoked with the same packages, `[moc].args`, `[build].args`, per-canister `args`, and migration flags as `mops build`, so the generated interface always satisfies `mops build`'s subtype check.
 
 ## 2.14.1

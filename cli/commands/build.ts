@@ -13,6 +13,7 @@ import {
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
+import { Config } from "../types.js";
 import { toolchain } from "./toolchain/index.js";
 
 export interface BuildOptions {
@@ -23,6 +24,22 @@ export interface BuildOptions {
 
 export const DEFAULT_BUILD_OUTPUT_DIR = ".mops/.build";
 
+/**
+ * Resolve the build output directory: CLI override → `[build].outputDir`
+ * (project-root-relative, resolved via `resolveConfigPath`) → default.
+ */
+export function resolveBuildOutputDir(
+  config: Config,
+  override?: string,
+): string {
+  if (override) {
+    return override;
+  }
+  return config.build?.outputDir
+    ? resolveConfigPath(config.build.outputDir)
+    : DEFAULT_BUILD_OUTPUT_DIR;
+}
+
 export async function build(
   canisterNames: string[] | undefined,
   options: Partial<BuildOptions>,
@@ -32,11 +49,7 @@ export async function build(
   }
 
   let config = readConfig();
-  let configOutputDir = config.build?.outputDir
-    ? resolveConfigPath(config.build.outputDir)
-    : undefined;
-  let outputDir =
-    options.outputDir ?? configOutputDir ?? DEFAULT_BUILD_OUTPUT_DIR;
+  let outputDir = resolveBuildOutputDir(config, options.outputDir);
   let mocPath = await toolchain.bin("moc", { fallback: true });
   let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {

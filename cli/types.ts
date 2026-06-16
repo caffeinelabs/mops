@@ -27,6 +27,9 @@ export type Config = {
     outputDir?: string;
     args?: string[];
   };
+  deployed?: {
+    dir?: string;
+  };
   lint?: {
     args?: string[];
     rules?: string[];
