@@ -48,6 +48,8 @@ mops lint -- --severity warning
 
 Automatically apply lint fixes.
 
+Concurrent `--fix` runs (`mops lint --fix` or `mops check --fix`) in the same project serialize via an advisory lock at `.mops/fix.lock`; the second invocation prints `Waiting for another mops --fix run to finish...` and resumes once the first releases.
+
 ### `--verbose`
 
 Show the full `lintoko` invocation before running it and pass `--verbose` to `lintoko`.

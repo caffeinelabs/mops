@@ -9,7 +9,7 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 
 ## Key Principles
 
-1. **No dfx** — always pin `moc` in `[toolchain]`. Use the newest `moc` version.
+1. **No dfx** — always pin `moc` in `[toolchain]`. Use the newest `moc` version. Pin `pocket-ic` too if you have replica tests or benchmarks (otherwise `mops test --mode replica`, `mops bench`, and `mops watch` fall back to the deprecated dfx replica and print a warning).
 2. **No `mo:base`** — it is deprecated. Always use `mo:core` (`import Array "mo:core/Array"`).
 3. **All config in `mops.toml`** — canisters, moc flags, toolchain versions, build settings.
 4. **Canister-centric workflow** — define all canisters in `[canisters]`; never pass file paths to `mops check`. Exception: library packages (no `[canisters]`) use file paths directly: `mops check src/**/*.mo`.
@@ -22,6 +22,7 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 [toolchain]
 moc = "1.7.0"
 lintoko = "0.10.0"
+pocket-ic = "12.0.0"  # only if you have replica tests / benchmarks
 
 [dependencies]
 core = "2.5.0"
@@ -96,7 +97,7 @@ mops check -- -Werror     # treat warnings as errors
 
 **Always use canister names, not file paths.** Per-canister args from `mops.toml` are applied automatically.
 
-`--fix` applies machine-applicable fixes from both moc and lintoko in one pass.
+`--fix` applies machine-applicable fixes from both moc and lintoko in one pass. Concurrent `--fix` runs (across processes) serialize automatically via an advisory lock at `.mops/fix.lock` — safe to invoke from multiple agents on the same project.
 
 ### `mops build`
 
@@ -121,12 +122,23 @@ mops deployed                # all canisters
 
 Default destination is `deployed/<name>.most`; override with `[deployed].dir` in `mops.toml` or `--dir`. It reads built `.most` files from `[build].outputDir` (default `.mops/.build`); override with `--build-dir`. `mops deployed` errors if the source `.most` is missing — it never regenerates. Run it from your deploy pipeline immediately after a successful deploy.
 
+### `mops generate candid`
+
+```bash
+mops generate candid                # all canisters
+mops generate candid backend        # single canister
+mops generate candid backend -o <path>   # single canister, ad-hoc path
+```
+
+(Re)generates the curated `.did` from current Motoko source. With `[canisters.<name>].candid` set, overwrites that file. Without it, writes `<name>.did` next to `main` (e.g. `main = "src/Backend.mo"` → `src/backend.did`) and sets `[canisters.<name>].candid` in `mops.toml`. Run after every interface change; commit `.did` + `mops.toml` together. Same moc invocation as `mops build`, so the result always passes `mops build`'s subtype check.
+
 ### `mops toolchain`
 
 ```bash
 mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.10.0    # pin specific version
+mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the bundled pic-js client doesn't support)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
 mops toolchain bin moc               # print path to binary
@@ -172,6 +184,8 @@ mops test --mode wasi             # use wasmtime (for to_candid/from_candid)
 mops test --reporter verbose      # show Debug.print output
 mops test --watch                 # re-run on file changes
 ```
+
+Replica tests (actor files or `// @testmode replica`) use `pocket-ic` from `[toolchain]`. With no pin they fall back to the deprecated `dfx` replica (warning printed) — pin `pocket-ic` in `[toolchain]` to silence it. Same applies to `mops bench` and `mops watch`.
 
 ### `mops lint`
 

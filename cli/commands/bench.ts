@@ -22,6 +22,7 @@ import { parallel } from "../parallel.js";
 import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
+import { warnIfDfxReplica } from "../helpers/deprecate-dfx-replica.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
 import { sources } from "./sources.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
@@ -97,6 +98,8 @@ export async function bench(
   } else if (replicaType == "pocket-ic") {
     options.replicaVersion = config.toolchain?.["pocket-ic"] || "";
   }
+
+  warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");
 
   options.verbose && console.log(options);
 

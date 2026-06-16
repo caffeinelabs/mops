@@ -75,6 +75,8 @@ mops check --fix
 
 After applying fixes, `--fix` re-checks all files and runs stable compatibility checks (if configured). If type-checking fails after fixing, stable checks are skipped.
 
+Concurrent `--fix` runs in the same project (e.g. two agents on the same checkout) serialize via an advisory lock at `.mops/fix.lock`. The second invocation prints `Waiting for another mops --fix run to finish...` and resumes once the first one releases. Plain `mops check` is read-only and never blocks.
+
 ### `--verbose`
 
 Print the full `moc` invocation before running it.
