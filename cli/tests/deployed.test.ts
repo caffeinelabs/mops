@@ -191,7 +191,7 @@ describe("deployed", () => {
       );
     });
 
-    test("--output and --dir overrides", async () => {
+    test("--build-dir and --dir overrides", async () => {
       const cwd = await makeTempFixture("basic");
       const customOut = "custom-build";
       const customDir = "snapshots";
@@ -203,7 +203,7 @@ describe("deployed", () => {
       expect(buildResult.exitCode).toBe(0);
 
       const result = await cli(
-        ["deployed", "--output", customOut, "--dir", customDir],
+        ["deployed", "--build-dir", customOut, "--dir", customDir],
         { cwd },
       );
       expect(result.exitCode).toBe(0);

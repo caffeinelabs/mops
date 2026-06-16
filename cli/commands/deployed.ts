@@ -21,7 +21,7 @@ export const DEFAULT_DEPLOYED_DIR = "deployed";
 const EMPTY_ACTOR_MOST = "// Version: 1.0.0\nactor { };\n";
 
 export interface DeployedOptions {
-  output?: string;
+  buildDir?: string;
   dir?: string;
 }
 
@@ -86,13 +86,13 @@ export async function deployed(
   const config = readConfig();
   const filtered = selectCanisters(canisterNames, config);
 
-  const outputDir = resolveBuildOutputDir(config, options.output);
+  const buildDir = resolveBuildOutputDir(config, options.buildDir);
   const deployedDir = resolveDeployedDir(config, options.dir);
 
   mkdirSync(deployedDir.resolved, { recursive: true });
 
   for (const [name, canister] of Object.entries(filtered)) {
-    const sourceMost = path.join(outputDir, `${name}.most`);
+    const sourceMost = path.join(buildDir, `${name}.most`);
     const destMostRel = path.join(deployedDir.config, `${name}.most`);
     const destMost = path.join(deployedDir.resolved, `${name}.most`);
 

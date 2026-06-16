@@ -402,8 +402,8 @@ const deployedCommand = new Command("deployed")
   .argument("[canisters...]")
   .addOption(
     new Option(
-      "--output, -o <output>",
-      "Built .most source directory (default: [build].outputDir or .mops/.build)",
+      "--build-dir <dir>",
+      "Directory to read built .most files from (default: [build].outputDir or .mops/.build)",
     ),
   )
   .addOption(

@@ -32,9 +32,9 @@ git add deployed/ && git commit
 
 ## `mops deployed [canisters...]`
 
-For each selected canister, copy `<outputDir>/<name>.most` → `<dir>/<name>.most`.
+For each selected canister, copy `<build-dir>/<name>.most` → `<dir>/<name>.most`.
 
-- **Source** (`<outputDir>`): `[build].outputDir` from `mops.toml`, default `.mops/.build`. Override with `--output`.
+- **Source** (`<build-dir>`): `[build].outputDir` from `mops.toml`, default `.mops/.build`. Override with `--build-dir`.
 - **Destination** (`<dir>`): `[deployed].dir` from `mops.toml`, default `deployed`. Override with `--dir`.
 
 A missing source `.most` is an error — never regenerates. Always overwrites the destination. The destination directory is created if missing.
@@ -43,7 +43,7 @@ Warns when `[canisters.<name>.check-stable].path` does not point at `<dir>/<name
 
 ### Options
 
-- `--output, -o <output>` — source directory. Default: `[build].outputDir` or `.mops/.build`.
+- `--build-dir <dir>` — directory to read built `.most` files from. Default: `[build].outputDir` or `.mops/.build`.
 - `--dir <dir>` — destination directory. Default: `[deployed].dir` or `deployed`.
 
 ## `mops deployed init [canisters...]`
