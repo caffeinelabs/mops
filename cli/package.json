@@ -76,7 +76,7 @@
     "markdown-table": "3.0.4",
     "mdast-util-from-markdown": "2.0.2",
     "mdast-util-to-markdown": "2.1.2",
-    "minimatch": "10.2.4",
+    "minimatch": "10.2.5",
     "ncp": "2.0.0",
     "octokit": "3.1.2",
     "pem-file": "1.0.1",
