@@ -332,6 +332,14 @@ program
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops build -- -Werror",
   )
+  .addHelpText(
+    "after",
+    "\nEnhanced migration ([canisters.<name>.migrations]):\n" +
+      "  The canister is built against its full migration chain (every migration is\n" +
+      "  compiled into the wasm). If mops check passes but mops build fails while\n" +
+      "  [migrations].check-limit is set, re-run with mops check --no-check-limit to\n" +
+      "  surface the issue (check trims the chain; build compiles all of it).",
+  )
   .allowUnknownOption(true) // TODO: restrict unknown before "--"
   .action(async (canisters, options) => {
     checkConfigFile(true);
