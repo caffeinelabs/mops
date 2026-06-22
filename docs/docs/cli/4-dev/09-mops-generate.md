@@ -46,6 +46,11 @@ One-off generation to an arbitrary path (does not modify `mops.toml`)
 mops generate candid backend -o build/backend.did
 ```
 
+Pass additional arguments to the Motoko compiler
+```
+mops generate candid -- -Werror
+```
+
 ## Options
 
 ### `--output`, `-o`

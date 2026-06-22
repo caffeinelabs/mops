@@ -35,6 +35,8 @@ export interface CheckOptions {
   verbose: boolean;
   fix: boolean;
   extraArgs: string[];
+  /** Commander `--no-check-limit`: false ignores [migrations].check-limit. */
+  checkLimit: boolean;
 }
 
 function checkAllLibsSupport(verbose?: boolean): boolean {
@@ -135,6 +137,7 @@ async function checkImpl(
       fix: options.fix,
       rules: lintRules,
       files: lintFiles,
+      noCheckLimit: options.checkLimit === false,
     });
   }
 }
@@ -164,6 +167,7 @@ async function checkCanisters(
       canisterName,
       "check",
       options.verbose,
+      options.checkLimit === false,
     );
     try {
       const mocArgs = [

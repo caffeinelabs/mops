@@ -85,6 +85,10 @@ mops check-stable <old-file> [canister]
 
 Show detailed output including the `moc` commands being run and the intermediate file paths.
 
+### `--no-check-limit`
+
+Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming).
+
 ## Enhanced migration support
 
 When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops check-stable` automatically injects the `--enhanced-migration` flag when generating stable type signatures.

@@ -25,6 +25,8 @@ const CHECK_STABLE_PREFIX = ".check-stable-";
 export interface CheckStableOptions {
   verbose: boolean;
   extraArgs: string[];
+  /** Commander `--no-check-limit`: false ignores [migrations].check-limit. */
+  checkLimit: boolean;
 }
 
 export function resolveStablePath(
@@ -91,6 +93,7 @@ export async function checkStable(
       name,
       "check",
       options.verbose,
+      options.checkLimit === false,
     );
     try {
       await runStableCheck({
@@ -132,6 +135,7 @@ export async function checkStable(
       name,
       "check",
       options.verbose,
+      options.checkLimit === false,
     );
     try {
       await runStableCheck({

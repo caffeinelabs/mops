@@ -81,6 +81,14 @@ Concurrent `--fix` runs in the same project (e.g. two agents on the same checkou
 
 Print the full `moc` invocation before running it.
 
+### `--no-check-limit`
+
+Check the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. Useful with `--fix` to autofix issues in older migrations that the limit would normally skip. See [chain trimming](/cli/mops-migrate#chain-trimming).
+
+```
+mops check --fix --no-check-limit
+```
+
 ## Passing flags to the Motoko compiler
 
 Any arguments after `--` are forwarded directly to `moc`. For example, to treat all warnings as errors:

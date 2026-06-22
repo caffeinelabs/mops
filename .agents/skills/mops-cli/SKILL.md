@@ -156,6 +156,8 @@ Create migration files directly in the `chain` directory.
 
 `check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 
+Override `check-limit` for a single run with `--no-check-limit` (`mops check`, `mops check-stable`, `mops lint`) — e.g. `mops check --fix --no-check-limit` to autofix older, normally-trimmed migrations.
+
 ### `mops remove <package>`
 
 ```bash
@@ -199,7 +201,7 @@ mops lint --fix           # autofix lint issues
 mops lint <name>          # filter to .mo files matching <name>
 ```
 
-When `[canisters.<name>.migrations].check-limit` is set, `mops lint` skips the trimmed chain migrations to match what `moc` sees during `mops check`. To lint a trimmed migration on demand, pass an explicit filter (e.g. `mops lint OldMigrationName`).
+When `[canisters.<name>.migrations].check-limit` is set, `mops lint` skips the trimmed chain migrations to match what `moc` sees during `mops check`. To lint a trimmed migration on demand, pass an explicit filter (e.g. `mops lint OldMigrationName`) or `--no-check-limit` to lint the full chain.
 
 ### `mops format`
 

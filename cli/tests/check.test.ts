@@ -182,4 +182,26 @@ describe("check", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/✓ Lint fixes applied/);
   });
+
+  // check-limit=1 with a 3-migration chain: by default only the tail migration
+  // is staged (trimmed dir + M0254 suppression); --no-check-limit must point
+  // moc at the real chain dir and drop the trimming side effects.
+  test("check-limit trims the migration chain by default", async () => {
+    const cwd = path.join(import.meta.dirname, "check/migration-limit");
+    const result = await cli(["check", "--verbose"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/--enhanced-migration=[^"]*\.migrations-/);
+    expect(result.stdout).toMatch(/-A=M0254/);
+  });
+
+  test("--no-check-limit uses the full migration chain", async () => {
+    const cwd = path.join(import.meta.dirname, "check/migration-limit");
+    const result = await cli(["check", "--verbose", "--no-check-limit"], {
+      cwd,
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/--enhanced-migration=/);
+    expect(result.stdout).not.toMatch(/\.migrations-/);
+    expect(result.stdout).not.toMatch(/-A=M0254/);
+  });
 });
