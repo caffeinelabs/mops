@@ -119,6 +119,7 @@ function resolveMigrationChain(
   migrations: MigrationsConfig,
   canisterName: string,
   mode: "check" | "build",
+  ignoreLimit = false,
 ): MigrationChain {
   validateMigrationsConfig(migrations, canisterName);
 
@@ -149,8 +150,11 @@ function resolveMigrationChain(
     all.push({ file: nextFile, dir: nextDir });
   }
 
-  const limit =
-    mode === "check" ? migrations["check-limit"] : migrations["build-limit"];
+  const limit = ignoreLimit
+    ? undefined
+    : mode === "check"
+      ? migrations["check-limit"]
+      : migrations["build-limit"];
   const isTrimming = limit !== undefined && limit < all.length;
   const included = isTrimming ? all.slice(-limit!) : all;
   // Dropped entries are always a chain-only prefix (next sorts last).
@@ -166,13 +170,14 @@ export async function prepareMigrationArgs(
   canisterName: string,
   mode: "check" | "build",
   verbose?: boolean,
+  ignoreLimit = false,
 ): Promise<MigrationArgsResult> {
   if (!migrations) {
     return { migrationArgs: [], cleanup: async () => {} };
   }
 
   const { chainDir, nextDir, included, excludedChainFiles, isTrimming } =
-    resolveMigrationChain(migrations, canisterName, mode);
+    resolveMigrationChain(migrations, canisterName, mode, ignoreLimit);
 
   const hasNext = included.some((e) => e.dir === nextDir);
   const needsTempDir = hasNext || isTrimming;

@@ -103,6 +103,8 @@ export interface LintOptions {
   rules?: string[];
   files?: string[];
   extraArgs: string[];
+  /** Commander `--no-check-limit`: lint the full migration chain. */
+  noCheckLimit?: boolean;
 }
 
 function buildCommonArgs(
@@ -193,9 +195,10 @@ async function lintImpl(
     : "lintoko";
 
   const isExplicit = !!filter || !!(options.files && options.files.length > 0);
-  const trimmedMigrations = isExplicit
-    ? new Set<string>()
-    : getTrimmedMigrationFiles(config);
+  const trimmedMigrations =
+    isExplicit || options.noCheckLimit
+      ? new Set<string>()
+      : getTrimmedMigrationFiles(config);
 
   let filesToLint: string[];
   if (options.files && options.files.length > 0) {

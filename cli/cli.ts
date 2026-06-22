@@ -99,6 +99,19 @@ function parseExtraArgs(variadicArgs?: string[]): {
   return { extraArgs, args };
 }
 
+// Shared `--help` section describing the enhanced migration `check-limit`
+// trimming and its override flag, so the limit behaviour is discoverable
+// from `--help`. `withFix` appends the `--fix` hint for commands that support it.
+function enhancedMigrationHelp(withFix: boolean): string {
+  const example = withFix ? " (e.g. to --fix older migrations)" : "";
+  return (
+    "\nEnhanced migration ([canisters.<name>.migrations]):\n" +
+    "  The canister is checked against its migration chain. [migrations].check-limit\n" +
+    "  trims it to the last N migrations (older ones are skipped). Pass --no-check-limit\n" +
+    `  to use the full chain${example}.`
+  );
+}
+
 program.name("mops");
 
 // --version
@@ -118,7 +131,7 @@ program
   .command("add <pkg>")
   .description("Install the package and save it to mops.toml")
   .option("--dev", "Add to [dev-dependencies] section")
-  .option("--verbose")
+  .option("--verbose", "Show more information")
   .addOption(
     new Option("--lock <action>", "Lockfile action").choices([
       "update",
@@ -159,7 +172,7 @@ program
   .alias("i")
   .description("Install all dependencies specified in mops.toml")
   .option("--no-toolchain", "Do not install toolchain")
-  .option("--verbose")
+  .option("--verbose", "Show more information")
   .addOption(
     new Option("--lock <action>", "Lockfile action").choices([
       "check",
@@ -202,7 +215,7 @@ program
   .option("--no-docs", "Do not generate docs")
   .option("--no-test", "Do not run tests")
   .option("--no-bench", "Do not run benchmarks")
-  .option("--verbose")
+  .option("--verbose", "Show more information")
   .action(async (options) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -315,6 +328,18 @@ program
   .description("Build a canister")
   .addOption(new Option("--verbose", "Verbose console output"))
   .addOption(new Option("--output, -o <output>", "Output directory"))
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops build -- -Werror",
+  )
+  .addHelpText(
+    "after",
+    "\nEnhanced migration ([canisters.<name>.migrations]):\n" +
+      "  The canister is built against its full migration chain (every migration is\n" +
+      "  compiled into the wasm). If mops check passes but mops build fails while\n" +
+      "  [migrations].check-limit is set, re-run with mops check --no-check-limit to\n" +
+      "  surface the issue (check trims the chain; build compiles all of it).",
+  )
   .allowUnknownOption(true) // TODO: restrict unknown before "--"
   .action(async (canisters, options) => {
     checkConfigFile(true);
@@ -344,6 +369,17 @@ program
       "Apply autofixes to all files, including transitively imported ones",
     ),
   )
+  .addOption(
+    new Option(
+      "--no-check-limit",
+      "Check the full migration chain, ignoring [migrations].check-limit",
+    ),
+  )
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check -- -Werror",
+  )
+  .addHelpText("after", enhancedMigrationHelp(true))
   .allowUnknownOption(true)
   .action(async (args, options) => {
     checkConfigFile(true);
@@ -380,6 +416,17 @@ program
     "Check stable variable compatibility. With no arguments, checks all canisters with [check-stable] configured. Arguments can be canister names or an old file path followed by an optional canister name",
   )
   .option("--verbose", "Verbose console output")
+  .addOption(
+    new Option(
+      "--no-check-limit",
+      "Check the full migration chain, ignoring [migrations].check-limit",
+    ),
+  )
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check-stable -- -Werror",
+  )
+  .addHelpText("after", enhancedMigrationHelp(false))
   .allowUnknownOption(true)
   .action(async (args, options) => {
     checkConfigFile(true);
@@ -829,6 +876,10 @@ generateCommand
     ),
   )
   .addOption(new Option("--verbose", "Verbose console output"))
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops generate candid -- -Werror",
+  )
   .allowUnknownOption(true)
   .action(async (canisters, options) => {
     checkConfigFile(true);
@@ -913,6 +964,17 @@ program
       "Directories containing rules (can be used multiple times)",
     ),
   )
+  .addOption(
+    new Option(
+      "--no-check-limit",
+      "Lint the full migration chain, ignoring [migrations].check-limit",
+    ),
+  )
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to lintoko, e.g.:\n  $ mops lint -- --severity warning",
+  )
+  .addHelpText("after", enhancedMigrationHelp(true))
   .allowUnknownOption(true)
   .action(async (filter, options) => {
     checkConfigFile(true);
@@ -920,6 +982,7 @@ program
     await lint(filter, {
       ...options,
       extraArgs,
+      noCheckLimit: options.checkLimit === false,
     });
   });
 

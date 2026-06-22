@@ -99,7 +99,9 @@ The `--output` CLI flag takes precedence over this config value.
 
 ## Enhanced Migration Support
 
-When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops build` automatically injects the `--enhanced-migration` flag. The migration chain is included in the compiled WASM.
+When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops build` automatically injects the `--enhanced-migration` flag. The full migration chain is compiled into the WASM.
+
+If `mops check` passes but `mops build` fails while [`check-limit`](/cli/mops-migrate#chain-trimming) is set, re-run `mops check --no-check-limit` to surface the issue — `check` trims the chain, while `build` compiles all of it.
 
 ## Candid Compatibility
 

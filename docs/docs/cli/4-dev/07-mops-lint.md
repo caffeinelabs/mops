@@ -62,6 +62,10 @@ Specify one or more directories containing lint rules. Can be used multiple time
 mops lint --rules ./rules-a --rules ./rules-b
 ```
 
+### `--no-check-limit`
+
+Lint the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming).
+
 ## Configuration
 
 The `[lint]` section in `mops.toml` controls how rules are collected.
