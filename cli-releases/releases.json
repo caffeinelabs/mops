@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.14.1"
+    "latest": "2.15.0"
   },
   "versions": {
     "0.41.0": {
@@ -464,6 +464,14 @@
       "commitHash": "d0269ead2263e014640c816e7a61aafa525691d1",
       "url": "https://cli.mops.one/versions/2.14.1.tgz",
       "hash": "9aa443cf11e2d7ddb3a5925483a43a5d220eff2a1cfc315319e9ce0efd162414"
+    },
+    "2.15.0": {
+      "time": 1782137218116,
+      "size": 2411203,
+      "relseaseNotes": "* Fix `mops check --fix` corrupting source on lines containing multi-byte UTF-8 characters (e.g. `Char.toNat32('京')` dropping its trailing `)`). The autofixer was feeding moc's UTF-8 byte columns into LSP's UTF-16 position API, mis-applying every edit past the first non-ASCII byte on the line. When moc emits `byte_start`/`byte_end` (1.10.0 and newer) the fixer now applies edits byte-accurately; older moc still falls back to the line+column path (unchanged behavior, still ASCII-only).\n\n* Revert \"Speed up `mops check <files...>`\" (2.14.1). Passing all files to a single `moc --check` invocation accumulates scope across them: checking `A.mo B.mo` makes `A.mo`'s definitions visible while type-checking `B.mo`, so a file that only compiles because a sibling brings something into scope is wrongly reported as passing. `mops check` again checks each file in its own `moc` invocation so every file is validated in isolation.\n\n* Add `--no-check-limit` to `mops check`, `mops check-stable`, and `mops lint` to process the full migration chain for a single run, ignoring the configured `[canisters.<name>.migrations].check-limit`. Handy for `mops check --fix --no-check-limit` to autofix issues in older migrations that the limit normally skips\n\n* `--help` now lists every option and the `-- <tool flags>` passthrough for each command: `mops build`, `mops check`, `mops check-stable`, and `mops generate candid` document `-- <moc flags>` (e.g. `mops check -- -Werror`), `mops lint` documents `-- <lintoko flags>`, and the `--verbose` flag of `mops add`/`mops install`/`mops publish` now has a description instead of showing blank\n\n* Add `mops deployed` (post-deploy hook) and `mops deployed init` (one-time bootstrap). After a successful deploy, `mops deployed [canisters...]` promotes the built `<build-dir>/<name>.most` into `<deployed-dir>/<name>.most` so `mops check-stable` always compares against the just-deployed version. `mops deployed init` creates an empty-actor `.most` baseline and wires `[canisters.<name>.check-stable].path` to it. Configurable via `[deployed].dir` (default `deployed`) and overridable with `--dir`; the build output dir it reads from defaults to `[build].outputDir` (`.mops/.build`) and is overridable with `--build-dir`.\n\n* Add `mops generate candid [canisters...]` to (re)generate the curated `.did` file from current Motoko source. With `[canisters.<name>].candid` set, overwrites that file in place; otherwise writes `<name>.did` next to `main` and sets the field in `mops.toml`. `--output, -o <path>` writes to an arbitrary path (single-canister only) without modifying `mops.toml`. `moc` is invoked with the same packages, `[moc].args`, `[build].args`, per-canister `args`, and migration flags as `mops build`, so the generated interface always satisfies `mops build`'s subtype check.\n",
+      "commitHash": "9ed2996ac3426ae16416e6e882fcab049976d944",
+      "url": "https://cli.mops.one/versions/2.15.0.tgz",
+      "hash": "4431a061b786f9796dfd312631de39c803eeed16305c6c7f2972f70bbae998ca"
     }
   }
 }
