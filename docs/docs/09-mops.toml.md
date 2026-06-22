@@ -98,7 +98,7 @@ Each canister entry specifies the entrypoint file and optional compiler settings
 | -------- | --------------------------------------------------------------- |
 | main     | Path to the main Motoko file (required)                         |
 | args     | Array of additional `moc` arguments for this canister (optional). Applied after `[moc].args` in `check`, `check-stable`, and `build`. |
-| candid   | Path to a Candid interface file for compatibility checking (optional) |
+| candid   | Path to a Candid interface file (optional). `mops build` subtype-checks the generated interface against this file and embeds it into the wasm as `candid:service` metadata. `mops generate candid` writes the regenerated `.did` to this path. |
 | initArg  | Candid-encoded initialization arguments (optional)              |
 
 Example:
@@ -133,15 +133,10 @@ Configure automatic stable variable compatibility checking for a canister. When 
 Example:
 ```toml
 [canisters.backend.check-stable]
-path = ".old/src/main.most"
+path = "deployed/backend.most"
 ```
 
-For a new project with no prior deployment, commit a `.most` file with an empty actor at this path so the check passes against an empty baseline:
-
-```most
-// Version: 1.0.0
-actor { };
-```
+For a new project with no prior deployment, run [`mops deployed init`](/cli/mops-deployed) — it commits an empty-actor `.most` at the configured path so the check passes against an empty baseline. After every successful deploy, run [`mops deployed`](/cli/mops-deployed) to promote the just-built `.most` into this file.
 
 ### `[canisters.<name>.migrations]`
 
@@ -150,7 +145,7 @@ Configure managed enhanced migration chains for a canister. When set, `mops chec
 | Field       | Description                                                     |
 | ----------- | --------------------------------------------------------------- |
 | chain       | Path to the directory containing migration files (required) |
-| check-limit | Max number of recent migrations to pass to `moc` during `mops check` and `mops check-stable`, and to `lintoko` during `mops lint` (optional). Useful when the chain grows long and re-checking every old migration slows feedback down |
+| check-limit | Max number of recent migrations to pass to `moc` during `mops check` and `mops check-stable`, and to `lintoko` during `mops lint` (optional). Useful when the chain grows long and re-checking every old migration slows feedback down. Override per run with `--no-check-limit` |
 | next        | Path to the directory for a pending migration (optional, **experimental**). Required for the experimental [`mops migrate`](/cli/mops-migrate) workflow. Must contain 0 or 1 `.mo` files. Must share the same parent directory as `chain` |
 | build-limit | Max number of recent migrations to pass to `moc` during `mops build` (optional, **experimental**) |
 
@@ -197,6 +192,23 @@ args = ["--release", "--ai-errors"]
 ```
 
 These flags are applied after `[moc].args` and before per-canister `[canisters.<name>].args`.
+
+
+## [deployed]
+
+Settings for [`mops deployed`](/cli/mops-deployed).
+
+| Field | Description                                                                                                                          |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| dir   | Directory where `mops deployed` writes promoted `.most` files (default `deployed`). Path is relative to `mops.toml`. Override per invocation with `--dir`. |
+
+Example:
+```toml
+[deployed]
+dir = "deployed"
+```
+
+All canisters share one directory; per-canister overrides are not supported.
 
 
 ## [lint]

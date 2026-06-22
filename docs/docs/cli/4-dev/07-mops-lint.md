@@ -48,6 +48,8 @@ mops lint -- --severity warning
 
 Automatically apply lint fixes.
 
+Concurrent `--fix` runs (`mops lint --fix` or `mops check --fix`) in the same project serialize via an advisory lock at `.mops/fix.lock`; the second invocation prints `Waiting for another mops --fix run to finish...` and resumes once the first releases.
+
 ### `--verbose`
 
 Show the full `lintoko` invocation before running it and pass `--verbose` to `lintoko`.
@@ -59,6 +61,10 @@ Specify one or more directories containing lint rules. Can be used multiple time
 ```
 mops lint --rules ./rules-a --rules ./rules-b
 ```
+
+### `--no-check-limit`
+
+Lint the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming).
 
 ## Configuration
 

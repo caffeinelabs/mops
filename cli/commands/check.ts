@@ -9,6 +9,7 @@ import {
   resolveConfigPath,
 } from "../mops.js";
 import { AutofixResult, autofixMotoko } from "../helpers/autofix-motoko.js";
+import { withFixLock } from "../helpers/fix-lock.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import {
   filterCanisters,
@@ -34,6 +35,8 @@ export interface CheckOptions {
   verbose: boolean;
   fix: boolean;
   extraArgs: string[];
+  /** Commander `--no-check-limit`: false ignores [migrations].check-limit. */
+  checkLimit: boolean;
 }
 
 function checkAllLibsSupport(verbose?: boolean): boolean {
@@ -83,6 +86,16 @@ export async function check(
   args: string[],
   options: Partial<CheckOptions> = {},
 ): Promise<void> {
+  if (options.fix) {
+    return withFixLock(() => checkImpl(args, options));
+  }
+  return checkImpl(args, options);
+}
+
+async function checkImpl(
+  args: string[],
+  options: Partial<CheckOptions> = {},
+): Promise<void> {
   const config = readConfig();
   const canisters = resolveCanisterConfigs(config);
   const hasCanisters = Object.keys(canisters).length > 0;
@@ -124,6 +137,7 @@ export async function check(
       fix: options.fix,
       rules: lintRules,
       files: lintFiles,
+      noCheckLimit: options.checkLimit === false,
     });
   }
 }
@@ -153,6 +167,7 @@ async function checkCanisters(
       canisterName,
       "check",
       options.verbose,
+      options.checkLimit === false,
     );
     try {
       const mocArgs = [
@@ -251,30 +266,30 @@ async function checkFiles(
     logAutofixResult(fixResult, options.verbose);
   }
 
-  for (const file of files) {
-    try {
-      const args = [file, ...mocArgs];
-      if (options.verbose) {
-        console.log(chalk.blue("check"), chalk.gray("Running moc:"));
-        console.log(chalk.gray(mocPath, JSON.stringify(args)));
-      }
+  // Check all files in a single moc invocation so shared transitive imports
+  // are chased and type-checked once, not re-checked for every file.
+  const args = [...files, ...mocArgs];
+  if (options.verbose) {
+    console.log(chalk.blue("check"), chalk.gray("Running moc:"));
+    console.log(chalk.gray(mocPath, JSON.stringify(args)));
+  }
 
-      const result = await execa(mocPath, args, {
-        stdio: "inherit",
-        reject: false,
-      });
+  try {
+    const result = await execa(mocPath, args, {
+      stdio: "inherit",
+      reject: false,
+    });
 
-      if (result.exitCode !== 0) {
-        cliError(
-          `✗ Check failed for file ${file} (exit code: ${result.exitCode})`,
-        );
-      }
-
-      console.log(chalk.green(`✓ ${file}`));
-    } catch (err: any) {
-      cliError(
-        `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,
-      );
+    if (result.exitCode !== 0) {
+      cliError(`✗ Check failed (exit code: ${result.exitCode})`);
     }
+  } catch (err: any) {
+    cliError(
+      `Error while checking files${err?.message ? `\n${err.message}` : ""}`,
+    );
+  }
+
+  for (const file of files) {
+    console.log(chalk.green(`✓ ${file}`));
   }
 }

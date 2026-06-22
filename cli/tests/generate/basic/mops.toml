@@ -1,0 +1,12 @@
+[toolchain]
+moc = "1.5.0"
+
+[moc]
+args = ["--default-persistent-actors"]
+
+[canisters.foo]
+main = "src/Foo.mo"
+
+[canisters.bar]
+main = "src/Bar.mo"
+candid = "candid/bar.did"

@@ -1,7 +1,8 @@
-import { expect } from "@jest/globals";
+import { afterEach, expect } from "@jest/globals";
 import { execa } from "execa";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
+import { cp, rm } from "node:fs/promises";
+import path, { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface CliOptions {
   cwd?: string;
@@ -69,3 +70,30 @@ export const cliSnapshot = async (
   }).toMatchSnapshot();
   return result;
 };
+
+/**
+ * Set up `afterEach` cleanup and return a `makeTempFixture(name)` function
+ * that copies a fixture subtree into a unique scratch dir under `fixturesDir`.
+ *
+ * Use in tests that mutate fixture files (toml edits, baseline file creation, etc.)
+ * so they don't pollute the source-controlled fixture.
+ */
+export function useTempFixtures(fixturesDir: string) {
+  const tempDirs: string[] = [];
+
+  afterEach(async () => {
+    for (const dir of tempDirs) {
+      await rm(dir, { recursive: true, force: true });
+    }
+    tempDirs.length = 0;
+  });
+
+  return async (fixture: string): Promise<string> => {
+    const src = path.join(fixturesDir, fixture);
+    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const dest = path.join(fixturesDir, `_tmp_${fixture}_${suffix}`);
+    await cp(src, dest, { recursive: true });
+    tempDirs.push(dest);
+    return dest;
+  };
+}

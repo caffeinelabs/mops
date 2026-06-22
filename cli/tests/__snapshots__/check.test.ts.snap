@@ -5,7 +5,7 @@ exports[`check [moc] args are passed to moc 1`] = `
   "exitCode": 1,
   "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier: \`unused\`
 help: if this is intentional, prefix it with an underscore: \`_unused\`
-✗ Check failed for file Warning.mo (exit code: 1)",
+✗ Check failed (exit code: 1)",
   "stdout": "",
 }
 `;
@@ -18,7 +18,7 @@ exports[`check error 1`] = `
 cannot produce expected type
   ()
 Error.mo:7.1-7.21: type error [M0057], unbound variable thisshouldnotcompile
-✗ Check failed for file Error.mo (exit code: 1)",
+✗ Check failed (exit code: 1)",
   "stdout": "",
 }
 `;
@@ -27,8 +27,21 @@ exports[`check error 2`] = `
 {
   "exitCode": 1,
   "stderr": "Ok.mo: No such file or directory
-✗ Check failed for file Ok.mo (exit code: 1)",
+✗ Check failed (exit code: 1)",
   "stdout": "",
+}
+`;
+
+exports[`check multiple files in a single invocation 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier: \`unused\`
+help: if this is intentional, prefix it with an underscore: \`_unused\`",
+  "stdout": "check Using --all-libs for richer diagnostics
+check Running moc:
+<CACHE>moc-wrapper ["Ok.mo","Warning.mo","--check","--all-libs","--default-persistent-actors"]
+✓ Ok.mo
+✓ Warning.mo",
 }
 `;
 
@@ -85,7 +98,7 @@ exports[`check warning with -Werror flag 1`] = `
   "exitCode": 1,
   "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier: \`unused\`
 help: if this is intentional, prefix it with an underscore: \`_unused\`
-✗ Check failed for file Warning.mo (exit code: 1)",
+✗ Check failed (exit code: 1)",
   "stdout": "",
 }
 `;

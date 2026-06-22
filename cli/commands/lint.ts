@@ -11,6 +11,7 @@ import {
   readConfig,
 } from "../mops.js";
 import { resolvePackages } from "../resolve-packages.js";
+import { withFixLock } from "../helpers/fix-lock.js";
 import { toolchain } from "./toolchain/index.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { existsSync } from "node:fs";
@@ -102,6 +103,8 @@ export interface LintOptions {
   rules?: string[];
   files?: string[];
   extraArgs: string[];
+  /** Commander `--no-check-limit`: lint the full migration chain. */
+  noCheckLimit?: boolean;
 }
 
 function buildCommonArgs(
@@ -175,6 +178,16 @@ export async function lint(
   filter: string | undefined,
   options: Partial<LintOptions>,
 ): Promise<void> {
+  if (options.fix) {
+    return withFixLock(() => lintImpl(filter, options));
+  }
+  return lintImpl(filter, options);
+}
+
+async function lintImpl(
+  filter: string | undefined,
+  options: Partial<LintOptions>,
+): Promise<void> {
   let config = readConfig();
   let rootDir = getRootDir();
   let lintokoBinPath = config.toolchain?.lintoko
@@ -182,9 +195,10 @@ export async function lint(
     : "lintoko";
 
   const isExplicit = !!filter || !!(options.files && options.files.length > 0);
-  const trimmedMigrations = isExplicit
-    ? new Set<string>()
-    : getTrimmedMigrationFiles(config);
+  const trimmedMigrations =
+    isExplicit || options.noCheckLimit
+      ? new Set<string>()
+      : getTrimmedMigrationFiles(config);
 
   let filesToLint: string[];
   if (options.files && options.files.length > 0) {
