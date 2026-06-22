@@ -2,7 +2,7 @@
 
 ## Next
 
-- Fix `mops check --fix` corrupting source on lines containing multi-byte UTF-8 characters (e.g. `Char.toNat32('京')` dropping its trailing `)`). The autofixer was feeding moc's UTF-8 byte columns into LSP's UTF-16 position API, mis-applying every edit past the first non-ASCII byte on the line. When moc emits `byte_start`/`byte_end` (1.9.0-m0236-fix and newer) the fixer now applies edits byte-accurately; older moc still falls back to the line+column path (unchanged behavior, still ASCII-only).
+- Fix `mops check --fix` corrupting source on lines containing multi-byte UTF-8 characters (e.g. `Char.toNat32('京')` dropping its trailing `)`). The autofixer was feeding moc's UTF-8 byte columns into LSP's UTF-16 position API, mis-applying every edit past the first non-ASCII byte on the line. When moc emits `byte_start`/`byte_end` (1.10.0 and newer) the fixer now applies edits byte-accurately; older moc still falls back to the line+column path (unchanged behavior, still ASCII-only).
 
 - Add `--no-check-limit` to `mops check`, `mops check-stable`, and `mops lint` to process the full migration chain for a single run, ignoring the configured `[canisters.<name>.migrations].check-limit`. Handy for `mops check --fix --no-check-limit` to autofix issues in older migrations that the limit normally skips
 
@@ -19,7 +19,6 @@
 - Fix `mops check --fix` crashing with `TypeError: Cannot read properties of undefined (reading 'split')` when `moc` produces no output (e.g. it fails to spawn or is killed by the OOM killer in a memory-constrained container). The autofix pass now treats missing `moc` output as "no fixes to apply" and lets the regular check report the real failure, instead of aborting the whole command with an unhandled exception.
 
 - Fix `mops check --fix` and `mops lint --fix` corrupting source files when two `mops` processes run concurrently in the same project (e.g. two coding agents on the same checkout). Concurrent runs could apply stale `moc` byte offsets to a sibling's already-mutated file, leaving source like `let nat = identity` (with the type-arg and call dropped) or `list.sortInPlace(` with an unclosed paren. `--fix` invocations now acquire a project-root advisory lock at `.mops/fix.lock` and serialize, cargo-style ("Waiting for another `mops --fix` run to finish..."). Read-only `mops check` and `mops lint` are unchanged.
->>>>>>> origin/main
 
 - Deprecate the `dfx` replica in `mops bench`, `mops test --mode replica`, and `mops watch`. Behavior is unchanged — `--replica dfx`, the implicit `dfx` fallback when no `[toolchain.pocket-ic]` is set, and the dfx-bundled PocketIC fallback all still work — but each now prints a warning. Run `mops toolchain use pocket-ic <version>` to silence it. The `dfx` paths will be removed and the default flipped to PocketIC in mops v3 — `dfx` is being deprecated upstream and PocketIC is a better fit for benchmarks and replica tests (deterministic, in-process, no background daemon).
 
