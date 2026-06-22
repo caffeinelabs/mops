@@ -184,18 +184,19 @@ export async function autofixMotoko(
   for (let iteration = 0; iteration < MAX_FIX_ITERATIONS; iteration++) {
     const fixesByFile = new Map<string, DiagnosticFix[]>();
 
-    // Single invocation: moc dedups shared imports across all files.
-    const result = await execa(
-      mocPath,
-      [...files, ...mocArgs, "--error-format=json"],
-      { stdio: "pipe", reject: false },
-    );
+    for (const file of files) {
+      const result = await execa(
+        mocPath,
+        [file, ...mocArgs, "--error-format=json"],
+        { stdio: "pipe", reject: false },
+      );
 
-    const diagnostics = parseDiagnostics(result.stdout);
-    for (const [targetFile, fixes] of extractDiagnosticFixes(diagnostics)) {
-      const existing = fixesByFile.get(targetFile) ?? [];
-      existing.push(...fixes);
-      fixesByFile.set(targetFile, existing);
+      const diagnostics = parseDiagnostics(result.stdout);
+      for (const [targetFile, fixes] of extractDiagnosticFixes(diagnostics)) {
+        const existing = fixesByFile.get(targetFile) ?? [];
+        existing.push(...fixes);
+        fixesByFile.set(targetFile, existing);
+      }
     }
 
     if (fixesByFile.size === 0) {

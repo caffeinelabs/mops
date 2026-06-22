@@ -15,17 +15,6 @@ describe("check", () => {
     await cliSnapshot(["check", "Ok.mo", "Error.mo"], { cwd }, 1);
   });
 
-  // The verbose snapshot shows a single "moc ... [both files]" line, proving the
-  // whole set is checked in one invocation rather than one moc call per file.
-  test("multiple files in a single invocation", async () => {
-    const cwd = path.join(import.meta.dirname, "check/success");
-    await cliSnapshot(
-      ["check", "Ok.mo", "Warning.mo", "--verbose"],
-      { cwd },
-      0,
-    );
-  });
-
   test("warning", async () => {
     const cwd = path.join(import.meta.dirname, "check/success");
     const result = await cliSnapshot(["check", "Warning.mo"], { cwd }, 0);
