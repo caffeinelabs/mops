@@ -74,7 +74,7 @@ The CLI and frontend both communicate with the **main canister** (`backend/main/
 ### Backend (`backend/`)
 - `backend/main/main-canister.mo` — Motoko actor; manages the package registry using TrieMap-based state. Key sub-modules: `PackagePublisher.mo`, `DownloadLog.mo`, `Users.mo`, `registry/`.
 - `backend/storage/` — Separate storage canisters for file chunks.
-- Canister IDs are in `dfx.json`. Production main canister: `2d2zu-vaaaa-aaaak-qb6pq-cai`.
+- Canister IDs are in `dfx.json`. Production main canister: `oknww-riaaa-aaaam-qaf6a-cai`.
 
 ### CLI (`cli/`)
 - Entry: `cli/environments/nodejs/cli.ts` (Node adapter, sets up WASM bindings) re-exports `cli/cli.ts` (Commander.js setup)
