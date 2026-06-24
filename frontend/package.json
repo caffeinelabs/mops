@@ -42,5 +42,8 @@
     "typescript": "5.9.2",
     "vite": "8.0.16",
     "vite-plugin-static-copy": "4.0.1"
+  },
+  "overrides": {
+    "tar": "7.5.16"
   }
 }

@@ -15,8 +15,8 @@
     "@sveltejs/vite-plugin-svelte": "7.0.0",
     "@types/eslint": "8.56.6",
     "@types/markdown-it": "13.0.7",
-    "@typescript-eslint/eslint-plugin": "7.4.0",
-    "@typescript-eslint/parser": "7.4.0",
+    "@typescript-eslint/eslint-plugin": "7.18.0",
+    "@typescript-eslint/parser": "7.18.0",
     "eslint": "8.57.0",
     "eslint-plugin-svelte": "2.46.1",
     "svelte": "5.55.7",
@@ -28,5 +28,8 @@
   "dependencies": {
     "filesize": "10.1.1",
     "markdown-it": "14.2.0"
+  },
+  "overrides": {
+    "cookie": "^0.7.0"
   }
 }
