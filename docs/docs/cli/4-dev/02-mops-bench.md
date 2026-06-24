@@ -26,6 +26,19 @@ Under the hood, Mops will:
 - Run each cell of the benchmark file as an update call
 - For each call measure usage of wasm instructions(`performance_counter`) and heap size(`rts_heap_size`)
 
+:::caution Instruction counts depend on the replica
+
+The number you get is for the exact wasm the chosen replica runs, and the two replicas install it differently:
+
+- **`pocket-ic`** runs the raw `moc` output — **no optimization**.
+- **`dfx`** post-optimizes the module before installing it (`optimize: "cycles"`, via `ic-wasm`), so its instruction counts can be meaningfully lower.
+
+The same benchmark can therefore report different numbers across replicas. Always compare runs made with the **same replica**.
+
+Also note that `dfx`'s optimization is best-effort: if it fails (for example, on wasm modules using features the bundled `ic-wasm` can't process, such as multi-value), `dfx` prints `WARNING: Failed to optimize the Wasm module` and falls back to the **unoptimized** module. Run with [`--verbose`](#--verbose) to see this warning.
+
+:::
+
 ## Options
 
 ### `--replica`
@@ -58,4 +71,4 @@ Compare benchmark results with the results from `.bench/<filename>.json` file.
 
 ### `--verbose`
 
-Verbose output.
+Print the benchmark pipeline up front — compiler version, replica + version, GC, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and `dfx` output (including any deploy/optimization warnings) instead of hiding it.

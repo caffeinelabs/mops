@@ -2,6 +2,8 @@
 
 ## Next
 
+- `mops bench --verbose` is now actually verbose. It prints the benchmark pipeline up front — compiler version, replica + version, GC, profile, and whether the wasm is optimized (`dfx` post-optimizes with `optimize: "cycles"` via ic-wasm on deploy; `pocket-ic` runs the raw `moc` output) — logs the full `moc` build command, and streams the compiler and `dfx` output instead of capturing and discarding it. Notably this surfaces dfx's `WARNING: Failed to optimize the Wasm module`, which dfx prints (and then silently deploys the unoptimized module) when `optimize: "cycles"` fails — e.g. on multi-value modules that the bundled ic-wasm can't process. Previously all of this was hidden even with `--verbose`.
+
 ## 2.15.0
 
 - Fix `mops check --fix` corrupting source on lines containing multi-byte UTF-8 characters (e.g. `Char.toNat32('京')` dropping its trailing `)`). The autofixer was feeding moc's UTF-8 byte columns into LSP's UTF-16 position API, mis-applying every edit past the first non-ASCII byte on the line. When moc emits `byte_start`/`byte_end` (1.10.0 and newer) the fixer now applies edits byte-accurately; older moc still falls back to the line+column path (unchanged behavior, still ASCII-only).

@@ -101,7 +101,28 @@ export async function bench(
 
   warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");
 
-  options.verbose && console.log(options);
+  if (options.verbose) {
+    // `dfx` post-optimizes the wasm on deploy (`optimize: "cycles"`, via ic-wasm);
+    // `pocket-ic` runs the raw moc output. This changes instruction counts, so surface it.
+    let optimize =
+      replicaType === "dfx" || replicaType === "dfx-pocket-ic"
+        ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
+        : "none (raw moc output)";
+    console.log(chalk.gray("Benchmark pipeline:"));
+    console.log(chalk.gray(`  compiler:  moc ${options.compilerVersion}`));
+    console.log(
+      chalk.gray(
+        `  replica:   ${replicaType}${options.replicaVersion ? ` ${options.replicaVersion}` : ""}`,
+      ),
+    );
+    console.log(
+      chalk.gray(
+        `  gc:        ${options.gc}${options.forceGc ? " (forced)" : ""}`,
+      ),
+    );
+    console.log(chalk.gray(`  profile:   ${options.profile}`));
+    console.log(chalk.gray(`  optimize:  ${optimize}`));
+  }
 
   let replica = new BenchReplica(replicaType, options.verbose);
 
@@ -303,14 +324,16 @@ async function deployBenchFile(
   // build canister
   let mocPath = getMocPath();
   let mocArgs = getMocArgs(options);
-  options.verbose && console.time(`build ${canisterName}`);
-  await execaCommand(
-    `${mocPath} -c --idl canister.mo ${globalMocArgs.join(" ")} ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`,
-    {
-      cwd: tempDir,
-      stdio: options.verbose ? "pipe" : ["pipe", "ignore", "pipe"],
-    },
-  );
+  let buildCmd = `${mocPath} -c --idl canister.mo ${globalMocArgs.join(" ")} ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`;
+  if (options.verbose) {
+    console.log(chalk.gray(`[${canisterName}] ${buildCmd}`));
+    console.time(`build ${canisterName}`);
+  }
+  await execaCommand(buildCmd, {
+    cwd: tempDir,
+    // `inherit` so the compiler output (warnings/errors) is streamed under --verbose
+    stdio: options.verbose ? "inherit" : ["pipe", "ignore", "pipe"],
+  });
   options.verbose && console.timeEnd(`build ${canisterName}`);
 
   // deploy canister
