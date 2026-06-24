@@ -4,6 +4,8 @@
 
 - `mops check --fix` no longer aborts when a fixable file is read-only (e.g. a frozen migration chain file deliberately `chmod`'d to remove write access). The autofixer now skips such files with a warning and continues fixing the rest, instead of crashing the whole run on `EACCES`/`EPERM`.
 
+- Load the PocketIC client lazily, only when a command actually starts a replica. Commands like `mops check`, `mops build`, and `mops install` no longer pay to load it (and its `@icp-sdk/core` dependency) at startup. This also unblocks running the CLI via `tsx` in local dev, where `pic-js-mops` (shipped as ESM without `"type": "module"`) fails to resolve as a static import.
+
 - `mops bench --verbose` is now actually verbose. It prints the benchmark pipeline up front — compiler version, replica + version, GC, profile, and whether the wasm is optimized (`dfx` post-optimizes with `optimize: "cycles"` via ic-wasm on deploy; `pocket-ic` runs the raw `moc` output) — logs the full `moc` build command, and streams the compiler and `dfx` output instead of capturing and discarding it. Notably this surfaces dfx's `WARNING: Failed to optimize the Wasm module`, which dfx prints (and then silently deploys the unoptimized module) when `optimize: "cycles"` fails — e.g. on multi-value modules that the bundled ic-wasm can't process. Previously all of this was hidden even with `--verbose`.
 
 ## 2.15.0
