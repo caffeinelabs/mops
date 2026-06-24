@@ -2,6 +2,8 @@
 
 ## Next
 
+## 2.15.1
+
 - `mops check --fix` no longer aborts when a fixable file is read-only (e.g. a frozen migration chain file deliberately `chmod`'d to remove write access). The autofixer now skips such files with a warning and continues fixing the rest, instead of crashing the whole run on `EACCES`/`EPERM`.
 
 - Load the PocketIC client lazily, only when a command actually starts a replica. Commands like `mops check`, `mops build`, and `mops install` no longer pay to load it (and its `@icp-sdk/core` dependency) at startup. This also unblocks running the CLI via `tsx` in local dev, where `pic-js-mops` (shipped as ESM without `"type": "module"`) fails to resolve as a static import.
