@@ -543,7 +543,12 @@ program
     ),
   )
   // .addOption(new Option('--force-gc', 'Force GC'))
-  .addOption(new Option("--verbose", "Show more information"))
+  .addOption(
+    new Option(
+      "--verbose",
+      "Print the benchmark pipeline (compiler, replica, GC, optimization) and stream compiler/replica output, including dfx optimization warnings",
+    ),
+  )
   .action(async (filter, options) => {
     checkConfigFile(true);
     await installAll({

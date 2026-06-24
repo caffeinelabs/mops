@@ -74,7 +74,8 @@ export class BenchReplica {
     if (this.type === "dfx" || this.type === "dfx-pocket-ic") {
       await execaCommand(
         `dfx deploy ${name} --mode reinstall --yes --identity anonymous`,
-        { cwd, stdio: this.verbose ? "pipe" : ["pipe", "ignore", "pipe"] },
+        // `inherit` so dfx output is streamed under --verbose (incl. its `Failed to optimize` warning)
+        { cwd, stdio: this.verbose ? "inherit" : ["pipe", "ignore", "pipe"] },
       );
       let canisterId = execSync(`dfx canister id ${name}`, { cwd })
         .toString()
