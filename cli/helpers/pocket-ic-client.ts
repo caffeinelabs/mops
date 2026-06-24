@@ -1,9 +1,9 @@
 import semver from "semver";
-import { PocketIc, PocketIcServer } from "pic-ic";
-import {
+import type { PocketIc, PocketIcServer } from "pic-ic";
+import type {
   PocketIc as PocketIcModern,
   PocketIcServer as PocketIcServerModern,
-  type StartServerOptions,
+  StartServerOptions,
 } from "pic-js-mops";
 import { readConfig } from "../mops.js";
 
@@ -20,13 +20,19 @@ function isLegacy(): boolean {
 export async function startPocketIc(
   options: StartServerOptions,
 ): Promise<{ server: AnyPocketIcServer; client: AnyPocketIc }> {
+  // Imported lazily so commands that never start a replica don't load the
+  // PocketIC client. `pic-js-mops` ships ESM without `type: module`, which a
+  // static import fails to resolve under tsx (local dev); a dynamic import
+  // resolves it on every platform.
   if (isLegacy()) {
+    const { PocketIc, PocketIcServer } = await import("pic-ic");
     let server = await PocketIcServer.start(options);
     let client = await PocketIc.create(server.getUrl());
     return { server, client };
   }
 
-  let server = await PocketIcServerModern.start(options);
-  let client = await PocketIcModern.create(server.getUrl());
+  const { PocketIc, PocketIcServer } = await import("pic-js-mops");
+  let server = await PocketIcServer.start(options);
+  let client = await PocketIc.create(server.getUrl());
   return { server, client };
 }
