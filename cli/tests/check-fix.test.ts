@@ -1,5 +1,11 @@
 import { beforeAll, describe, expect, test } from "@jest/globals";
-import { cpSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  readdirSync,
+  readFileSync,
+  unlinkSync,
+} from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "path";
 import { lock } from "proper-lockfile";
@@ -22,7 +28,9 @@ describe("check --fix", () => {
 
   beforeAll(() => {
     for (const file of readdirSync(runDir).filter((f) => f.endsWith(".mo"))) {
-      unlinkSync(path.join(runDir, file));
+      const p = path.join(runDir, file);
+      chmodSync(p, 0o644);
+      unlinkSync(p);
     }
   });
 
@@ -130,6 +138,22 @@ describe("check --fix", () => {
 
     expect(fixResult.stdout).toContain("1 fix applied");
     expect(readFileSync(runFilePath, "utf-8")).not.toContain("<Nat>");
+  });
+
+  test("read-only file is skipped, not crashed", async () => {
+    const runFilePath = copyFixture("M0223.mo");
+    const before = readFileSync(runFilePath, "utf-8");
+    chmodSync(runFilePath, 0o444);
+
+    const result = await cli(
+      ["check", runFilePath, "--fix", "--", warningFlags],
+      { cwd: fixDir },
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toMatch(/Skipped read-only file/);
+    // File left untouched since the fix couldn't be written.
+    expect(readFileSync(runFilePath, "utf-8")).toBe(before);
   });
 
   test("verbose", async () => {

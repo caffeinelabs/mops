@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
+import chalk from "chalk";
 import { execa } from "execa";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -186,6 +187,9 @@ export async function autofixMotoko(
   mocArgs: string[],
 ): Promise<AutofixResult | null> {
   const fixedFilesCodes = new Map<string, string[]>();
+  // Frozen migration files are often chmod'd read-only; warn once and skip
+  // them rather than aborting the whole run on EACCES/EPERM.
+  const readOnlySkipped = new Set<string>();
 
   for (let iteration = 0; iteration < MAX_FIX_ITERATIONS; iteration++) {
     const fixesByFile = new Map<string, DiagnosticFix[]>();
@@ -212,6 +216,10 @@ export async function autofixMotoko(
     let progress = false;
 
     for (const [file, fixes] of fixesByFile) {
+      if (readOnlySkipped.has(file)) {
+        continue;
+      }
+
       const original = await readFile(file, "utf-8");
       const { text: result, appliedCodes } = applyDiagnosticFixes(
         original,
@@ -222,7 +230,20 @@ export async function autofixMotoko(
         continue;
       }
 
-      await writeFile(file, result, "utf-8");
+      try {
+        await writeFile(file, result, "utf-8");
+      } catch (err: any) {
+        if (err?.code === "EACCES" || err?.code === "EPERM") {
+          readOnlySkipped.add(file);
+          console.warn(
+            chalk.yellow(
+              `Skipped read-only file ${relative(process.cwd(), file)} (${appliedCodes.length} fix(es) not applied)`,
+            ),
+          );
+          continue;
+        }
+        throw err;
+      }
       progress = true;
 
       const existing = fixedFilesCodes.get(file) ?? [];
