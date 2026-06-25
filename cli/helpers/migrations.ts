@@ -311,8 +311,7 @@ export function warnIfCheckLimitTooLow(
   console.warn(
     chalk.yellow(
       `WARN: Canister '${canisterName}' has ${pending.length} pending migration(s) but check-limit=${checkLimit} — ` +
-        `mops check and mops check-stable only validate the last ${checkLimit} migration(s). ` +
-        `Trimming can hide upgrade issues until deploy. ` +
+        `mops check will likely fail even though deploy would succeed. ` +
         `Raise check-limit to at least ${pending.length}, or run with --no-check-limit to validate the full chain.`,
     ),
   );
