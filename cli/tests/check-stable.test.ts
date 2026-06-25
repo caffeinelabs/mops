@@ -113,9 +113,11 @@ describe("check-stable", () => {
       "check-stable/check-limit-warning",
     );
     const result = await cli(["check-stable"], { cwd });
+    expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/pending migration\(s\) but check-limit=1/);
     expect(result.stderr).toMatch(/20250201_000000_AddField\.mo/);
     expect(result.stderr).toMatch(/20250301_000000_AddD\.mo/);
+    expect(result.stderr).toMatch(/Stable compatibility check failed/);
   });
 
   test("does not warn when deployed baseline matches the chain", async () => {

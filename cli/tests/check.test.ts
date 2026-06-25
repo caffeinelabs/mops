@@ -195,4 +195,13 @@ describe("check", () => {
     expect(result.stdout).not.toMatch(/\.migrations-/);
     expect(result.stdout).not.toMatch(/-A=M0254/);
   });
+
+  test("--no-check-limit suppresses pending migration warning in check", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "check-stable/check-limit-warning",
+    );
+    const result = await cli(["check", "--no-check-limit"], { cwd });
+    expect(result.stderr).not.toMatch(/pending migration\(s\) but check-limit/);
+  });
 });

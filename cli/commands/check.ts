@@ -231,7 +231,11 @@ async function checkCanisters(
           canisterArgs: [...migration.migrationArgs, ...(canister.args ?? [])],
           sources,
           migrations: canister.migrations,
-          options: { verbose: options.verbose, extraArgs: options.extraArgs },
+          options: {
+            verbose: options.verbose,
+            extraArgs: options.extraArgs,
+            checkLimit: options.checkLimit,
+          },
         });
       }
     } finally {

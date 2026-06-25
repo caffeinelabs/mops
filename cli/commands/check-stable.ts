@@ -251,6 +251,7 @@ export async function runStableCheck(
       canisterName,
       oldMostPath,
       options.checkLimit === false,
+      isOldMostFile,
     );
 
     if (result.exitCode !== 0) {

@@ -275,8 +275,9 @@ export function warnIfCheckLimitTooLow(
   canisterName: string,
   oldMostPath: string,
   ignoreCheckLimit: boolean,
+  baselineIsMostFile: boolean,
 ): void {
-  if (!migrations || ignoreCheckLimit) {
+  if (!migrations || ignoreCheckLimit || !baselineIsMostFile) {
     return;
   }
   const checkLimit = migrations["check-limit"];
