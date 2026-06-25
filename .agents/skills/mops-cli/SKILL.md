@@ -158,7 +158,7 @@ Create migration files directly in the `chain` directory.
 
 Override `check-limit` for a single run with `--no-check-limit` (`mops check`, `mops check-stable`, `mops lint`) — e.g. `mops check --fix --no-check-limit` to autofix older, normally-trimmed migrations. On `mops check` and `mops check-stable`, `--no-check-limit` also suppresses the pending-migration warning.
 
-When `check-limit` is set, `mops check-stable` (and the stable check inside `mops check`) warns if more migrations are pending (relative to the deployed `.most` baseline) than the limit allows — splitting initialization across multiple chain files with `check-limit = 1` can hide upgrade issues until deploy.
+When `check-limit` is set, `mops check-stable` (and the stable check inside `mops check`) warns if more migrations are pending (relative to the deployed `.most` baseline) than the limit allows — if more migrations are pending than the limit allows, `mops check` will likely fail even though deploy would succeed.
 
 ### `mops remove <package>`
 
