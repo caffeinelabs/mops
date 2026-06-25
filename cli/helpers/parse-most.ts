@@ -9,6 +9,7 @@ export function parseMostAppliedMigrationNames(
   if (version !== "4.0.0") {
     return [];
   }
+  // Safe: actor types in type aliases are always indented (col ≥ 2); the main actor is at col 0.
   const actorIdx = content.search(/\nactor\b/);
   if (actorIdx < 0) {
     return null;
