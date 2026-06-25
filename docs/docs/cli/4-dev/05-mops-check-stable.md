@@ -91,7 +91,7 @@ Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limi
 
 ## Pending migration warning
 
-When `[canisters.<name>.migrations].check-limit` is set, `mops check-stable` compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, a warning lists the pending files and suggests raising `check-limit` or running with `--no-check-limit`. The warning runs even when the compat check fails — often the first hint that more migrations are pending than the limit allows.
+When `[canisters.<name>.migrations].check-limit` is set, `mops check-stable` compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, a warning lists the pending files and suggests folding all changes into the latest pending migration. The warning runs even when the compat check fails — often the first hint that more migrations are pending than the limit allows.
 
 The warning only applies when the baseline is a committed `.most` file (via `[check-stable].path` or passed as a `.most` argument). Baselines compiled from a `.mo` source on the command line are skipped — the scratch `.most` would not reflect what is actually deployed.
 
