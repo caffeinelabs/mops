@@ -16,7 +16,7 @@ export function parseMostAppliedMigrationNames(
   }
   const chainBlock = content.slice(0, actorIdx);
   const names: string[] = [];
-  for (const match of chainBlock.matchAll(/"([^"]+)"\s*:/g)) {
+  for (const match of chainBlock.matchAll(/[{;]\s*"([^"]+)"\s*:/gs)) {
     names.push(match[1]!);
   }
   return names;
