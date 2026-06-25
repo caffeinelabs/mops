@@ -87,7 +87,7 @@ Show detailed output including the `moc` commands being run and the intermediate
 
 ### `--no-check-limit`
 
-Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming).
+Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming). Also suppresses the pending-migration warning that runs when `check-limit` is set.
 
 ## Enhanced migration support
 

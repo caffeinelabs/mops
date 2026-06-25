@@ -92,3 +92,5 @@ To override `check-limit` for a single run, pass `--no-check-limit` to `mops che
 The limits count the full virtual chain (frozen + pending next migration). This means `mops build` produces identical results whether a migration is still pending or already frozen.
 
 Already-applied migrations are skipped at runtime by the Motoko RTS, so trimming is safe. When trimming is active, M0254 warnings are automatically suppressed.
+
+When `check-limit` is set, `mops check-stable` (and the stable check inside `mops check`) compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, a warning explains that trimming may hide upgrade issues until deploy and suggests raising `check-limit` or running with `--no-check-limit`. The warning only runs when `check-limit` is configured.

@@ -2,6 +2,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   symlinkSync,
   writeFileSync,
@@ -13,6 +14,11 @@ import { cliError } from "../error.js";
 import { getRootDir, resolveConfigPath } from "../mops.js";
 import { resolveCanisterConfigs } from "./resolve-canisters.js";
 import { Config, MigrationsConfig } from "../types.js";
+import {
+  latestAppliedMigrationName,
+  migrationBasename,
+  parseMostAppliedMigrationNames,
+} from "./parse-most.js";
 
 function stagedMigrationsDir(chainDir: string, canisterName: string): string {
   return join(dirname(chainDir), `.migrations-${canisterName}`);
@@ -232,6 +238,89 @@ export async function prepareMigrationArgs(
       await rm(tempDir, { recursive: true, force: true });
     },
   };
+}
+
+/**
+ * Local chain (+ next) files not yet recorded in the deployed `.most` baseline.
+ */
+export function getPendingMigrationFiles(
+  migrations: MigrationsConfig,
+  canisterName: string,
+  appliedNames: string[],
+): string[] {
+  validateMigrationsConfig(migrations, canisterName);
+
+  const chainDir = resolveConfigPath(migrations.chain);
+  const nextDir = migrations.next
+    ? resolveConfigPath(migrations.next)
+    : undefined;
+  const nextFile = nextDir ? getNextMigrationFile(nextDir) : null;
+
+  const all = getMigrationFiles(chainDir);
+  if (nextFile) {
+    all.push(nextFile);
+  }
+
+  const highWaterMark =
+    appliedNames.length > 0 ? latestAppliedMigrationName(appliedNames) : "";
+  return all.filter((file) => migrationBasename(file) > highWaterMark);
+}
+
+/**
+ * After `mops check-stable`, warn when `check-limit` is lower than the number
+ * of migrations still pending relative to the deployed `.most` baseline.
+ */
+export function warnIfCheckLimitTooLow(
+  migrations: MigrationsConfig | undefined,
+  canisterName: string,
+  oldMostPath: string,
+  ignoreCheckLimit: boolean,
+): void {
+  if (!migrations || ignoreCheckLimit) {
+    return;
+  }
+  const checkLimit = migrations["check-limit"];
+  if (checkLimit === undefined) {
+    return;
+  }
+
+  let appliedNames: string[] | null;
+  try {
+    appliedNames = parseMostAppliedMigrationNames(
+      readFileSync(oldMostPath, "utf8"),
+    );
+  } catch {
+    return;
+  }
+  if (appliedNames === null) {
+    return;
+  }
+
+  const pending = getPendingMigrationFiles(
+    migrations,
+    canisterName,
+    appliedNames,
+  );
+  if (pending.length <= checkLimit) {
+    return;
+  }
+
+  const applied =
+    appliedNames.length > 0 ? latestAppliedMigrationName(appliedNames) : null;
+  console.warn(
+    chalk.yellow(
+      `WARN: Canister '${canisterName}' has ${pending.length} pending migration(s) but check-limit=${checkLimit} — ` +
+        `mops check and mops check-stable only validate the last ${checkLimit} migration(s). ` +
+        `Trimming can hide upgrade issues until deploy. ` +
+        `Raise check-limit to at least ${pending.length}, or run with --no-check-limit to validate the full chain.`,
+    ),
+  );
+  console.warn(chalk.yellow(`  Pending: ${pending.join(", ")}`));
+  if (applied) {
+    console.warn(
+      chalk.yellow(`  Applied (from deployed baseline): ${applied}`),
+    );
+  }
 }
 
 /**

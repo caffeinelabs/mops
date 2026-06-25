@@ -2,6 +2,8 @@
 
 ## Next
 
+- `mops check-stable` (and the stable check inside `mops check`) warns when `[canisters.<name>.migrations].check-limit` is set but more migrations are pending than the limit allows. The warning compares the deployed `.most` baseline against the local chain and only runs when `check-limit` is configured; use `--no-check-limit` to suppress it.
+
 ## 2.15.1
 
 - `mops check --fix` no longer aborts when a fixable file is read-only (e.g. a frozen migration chain file deliberately `chmod`'d to remove write access). The autofixer now skips such files with a warning and continues fixing the rest, instead of crashing the whole run on `EACCES`/`EPERM`.
