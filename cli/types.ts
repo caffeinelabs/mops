@@ -78,6 +78,7 @@ export type Tool = "moc" | "wasmtime" | "pocket-ic" | "lintoko";
 
 export type Requirements = {
   moc?: string;
+  lintoko?: string;
 };
 
 // export type Format = {

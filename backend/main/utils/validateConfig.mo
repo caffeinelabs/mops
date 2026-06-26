@@ -219,11 +219,8 @@ module {
         return depValid;
       };
     };
-    if (config.requirements.size() > 1) {
-      return #err("invalid config: max requirements is 1");
-    };
     for (req in config.requirements.vals()) {
-      if (req.name != "moc") {
+      if (req.name != "moc" and req.name != "lintoko") {
         return #err("invalid config: unknown requirement '" # req.name # "'");
       };
       let versionValid = Semver.validate(req.value);
