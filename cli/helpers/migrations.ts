@@ -324,8 +324,7 @@ export function getCheckLimitPendingIssue(
 function formatCheckLimitPendingLines(issue: CheckLimitPendingIssue): string[] {
   const { canisterName, pending, checkLimit } = issue;
   return [
-    `Canister '${canisterName}' has ${pending.length} pending migration(s) but check-limit=${checkLimit} — ` +
-      `mops check will likely fail, but deploy may still succeed. ` +
+    `Canister '${canisterName}' has ${pending.length} pending migration(s) but check-limit=${checkLimit}. ` +
       `Fold all changes into the latest pending migration: ${pending[pending.length - 1]}`,
     `  Pending: ${pending.join(", ")}`,
     ...(issue.latestApplied
