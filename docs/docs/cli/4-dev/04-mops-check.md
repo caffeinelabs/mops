@@ -124,7 +124,7 @@ actor { };
 
 For more details, see [`mops check-stable`](/cli/mops-check-stable).
 
-When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, a warning lists the pending files and suggests folding all changes into the latest pending migration. The warning only applies when the baseline is a committed `.most` file configured via `[check-stable].path` (not a `.mo` source passed on the command line). See [chain trimming](/cli/mops-migrate#chain-trimming).
+When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. Only applies when the baseline is a committed `.most` file configured via `[check-stable].path` (not a `.mo` source passed on the command line). See [chain trimming](/cli/mops-migrate#chain-trimming).
 
 ## Enhanced migration support
 

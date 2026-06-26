@@ -107,7 +107,7 @@ describe("check-stable", () => {
     }
   }, 60_000);
 
-  test("warns when pending migrations exceed check-limit", async () => {
+  test("fails with check-limit diagnostic when pending migrations exceed check-limit", async () => {
     const cwd = path.join(
       import.meta.dirname,
       "check-stable/check-limit-warning",

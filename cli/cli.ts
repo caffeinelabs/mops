@@ -117,8 +117,9 @@ function enhancedMigrationHelp(
     `  to use the full chain${example}.`;
   if (options.withPendingWarning) {
     text +=
-      "\n  When check-limit is set, the stable check warns if more migrations are pending\n" +
-      "  (relative to the deployed .most baseline) than the limit allows.";
+      "\n  When check-limit is set, the stable check reports if more migrations are pending\n" +
+      "  (relative to the deployed .most baseline) than the limit allows — as an error if\n" +
+      "  compat failed, otherwise a warning.";
   }
   return text;
 }

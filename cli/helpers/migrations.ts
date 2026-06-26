@@ -267,22 +267,28 @@ export function getPendingMigrationFiles(
 }
 
 /**
- * After `mops check-stable`, warn when `check-limit` is lower than the number
- * of migrations still pending relative to the deployed `.most` baseline.
+ * Pending migrations exceed `check-limit` relative to the deployed `.most` baseline.
  */
-export function warnIfCheckLimitTooLow(
+export interface CheckLimitPendingIssue {
+  canisterName: string;
+  pending: string[];
+  checkLimit: number;
+  latestApplied: string | null;
+}
+
+export function getCheckLimitPendingIssue(
   migrations: MigrationsConfig | undefined,
   canisterName: string,
   oldMostPath: string,
   ignoreCheckLimit: boolean,
   baselineIsMostFile: boolean,
-): void {
+): CheckLimitPendingIssue | null {
   if (!migrations || ignoreCheckLimit || !baselineIsMostFile) {
-    return;
+    return null;
   }
   const checkLimit = migrations["check-limit"];
   if (checkLimit === undefined) {
-    return;
+    return null;
   }
 
   let appliedNames: string[] | null;
@@ -291,10 +297,10 @@ export function warnIfCheckLimitTooLow(
       readFileSync(oldMostPath, "utf8"),
     );
   } catch {
-    return;
+    return null;
   }
   if (appliedNames === null) {
-    return;
+    return null;
   }
 
   const pending = getPendingMigrationFiles(
@@ -303,23 +309,46 @@ export function warnIfCheckLimitTooLow(
     appliedNames,
   );
   if (pending.length <= checkLimit) {
-    return;
+    return null;
   }
 
-  const applied =
-    appliedNames.length > 0 ? latestAppliedMigrationName(appliedNames) : null;
-  console.warn(
-    chalk.yellow(
-      `WARN: Canister '${canisterName}' has ${pending.length} pending migration(s) but check-limit=${checkLimit} — ` +
-        `mops check will likely fail, but deploy may still succeed. ` +
-        `Fold all changes into the latest pending migration: ${pending[pending.length - 1]}`,
-    ),
-  );
-  console.warn(chalk.yellow(`  Pending: ${pending.join(", ")}`));
-  if (applied) {
-    console.warn(
-      chalk.yellow(`  Latest already applied migration: ${applied}`),
+  return {
+    canisterName,
+    pending,
+    checkLimit,
+    latestApplied:
+      appliedNames.length > 0 ? latestAppliedMigrationName(appliedNames) : null,
+  };
+}
+
+function formatCheckLimitPendingLines(issue: CheckLimitPendingIssue): string[] {
+  const { canisterName, pending, checkLimit } = issue;
+  return [
+    `Canister '${canisterName}' has ${pending.length} pending migration(s) but check-limit=${checkLimit} — ` +
+      `mops check will likely fail, but deploy may still succeed. ` +
+      `Fold all changes into the latest pending migration: ${pending[pending.length - 1]}`,
+    `  Pending: ${pending.join(", ")}`,
+    ...(issue.latestApplied
+      ? [`  Latest already applied migration: ${issue.latestApplied}`]
+      : []),
+  ];
+}
+
+/** Warn on accidental compat pass; fail with this diagnostic when compat already failed. */
+export function reportCheckLimitPendingIssue(
+  issue: CheckLimitPendingIssue,
+  compatFailed: boolean,
+): void {
+  const lines = formatCheckLimitPendingLines(issue);
+  if (compatFailed) {
+    cliError(
+      `✗ Stable compatibility check failed for canister '${issue.canisterName}': too many pending migrations for check-limit=${issue.checkLimit}\n` +
+        lines.join("\n"),
     );
+  }
+  console.warn(chalk.yellow(`WARN: ${lines[0]}`));
+  for (const line of lines.slice(1)) {
+    console.warn(chalk.yellow(line));
   }
 }
 

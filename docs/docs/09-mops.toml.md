@@ -145,7 +145,7 @@ Configure managed enhanced migration chains for a canister. When set, `mops chec
 | Field       | Description                                                     |
 | ----------- | --------------------------------------------------------------- |
 | chain       | Path to the directory containing migration files (required) |
-| check-limit | Max number of recent migrations to pass to `moc` during `mops check` and `mops check-stable`, and to `lintoko` during `mops lint` (optional). Useful when the chain grows long and re-checking every old migration slows feedback down. When set, the stable check warns if more migrations are pending (relative to the deployed `.most` baseline) than the limit allows. Override per run with `--no-check-limit` |
+| check-limit | Max number of recent migrations to pass to `moc` during `mops check` and `mops check-stable`, and to `lintoko` during `mops lint` (optional). Useful when the chain grows long and re-checking every old migration slows feedback down. When set, the stable check reports if more migrations are pending (relative to the deployed `.most` baseline) than the limit allows — as an error if compat failed, otherwise a warning. Override per run with `--no-check-limit` |
 | next        | Path to the directory for a pending migration (optional, **experimental**). Required for the experimental [`mops migrate`](/cli/mops-migrate) workflow. Must contain 0 or 1 `.mo` files. Must share the same parent directory as `chain` |
 | build-limit | Max number of recent migrations to pass to `moc` during `mops build` (optional, **experimental**) |
 

@@ -5,8 +5,9 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
 import {
+  getCheckLimitPendingIssue,
   prepareMigrationArgs,
-  warnIfCheckLimitTooLow,
+  reportCheckLimitPendingIssue,
 } from "../helpers/migrations.js";
 import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
 import { CanisterConfig, MigrationsConfig } from "../types.js";
@@ -246,7 +247,7 @@ export async function runStableCheck(
       reject: false,
     });
 
-    warnIfCheckLimitTooLow(
+    const issue = getCheckLimitPendingIssue(
       params.migrations,
       canisterName,
       oldMostPath,
@@ -254,7 +255,9 @@ export async function runStableCheck(
       isOldMostFile,
     );
 
-    if (result.exitCode !== 0) {
+    if (issue) {
+      reportCheckLimitPendingIssue(issue, result.exitCode !== 0);
+    } else if (result.exitCode !== 0) {
       if (result.stderr) {
         console.error(result.stderr);
       }
