@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.15.1"
+    "latest": "2.15.2"
   },
   "versions": {
     "0.41.0": {
@@ -480,6 +480,14 @@
       "commitHash": "b4d77b5cb919c2a32f2cd2c8cd535999cfc7c64a",
       "url": "https://cli.mops.one/versions/2.15.1.tgz",
       "hash": "510688812e2f01b7d9abf69d6d08bbfd025609d9a2d537a749ca2284a4479da8"
+    },
+    "2.15.2": {
+      "time": 1782461706680,
+      "size": 2413094,
+      "relseaseNotes": "* `mops check-stable` (and the stable check inside `mops check`) reports when `[canisters.<name>.migrations].check-limit` is set but more migrations are pending than the limit allows. If the compatibility check failed, the check-limit diagnostic replaces the misleading `moc` error; if it passed anyway, a warning is shown. Compares the deployed `.most` baseline against the local chain; use `--no-check-limit` to suppress.\n",
+      "commitHash": "564a380c945022ef6e47aa85c40197c037e49b83",
+      "url": "https://cli.mops.one/versions/2.15.2.tgz",
+      "hash": "5b19f697efb055576f3cd97557ee9568d8e01ba09c709924d94ebba6905d07f6"
     }
   }
 }
