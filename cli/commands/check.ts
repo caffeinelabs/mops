@@ -230,7 +230,12 @@ async function checkCanisters(
           globalMocArgs,
           canisterArgs: [...migration.migrationArgs, ...(canister.args ?? [])],
           sources,
-          options: { verbose: options.verbose, extraArgs: options.extraArgs },
+          migrations: canister.migrations,
+          options: {
+            verbose: options.verbose,
+            extraArgs: options.extraArgs,
+            checkLimit: options.checkLimit,
+          },
         });
       }
     } finally {

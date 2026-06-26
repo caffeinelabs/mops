@@ -102,14 +102,26 @@ function parseExtraArgs(variadicArgs?: string[]): {
 // Shared `--help` section describing the enhanced migration `check-limit`
 // trimming and its override flag, so the limit behaviour is discoverable
 // from `--help`. `withFix` appends the `--fix` hint for commands that support it.
-function enhancedMigrationHelp(withFix: boolean): string {
-  const example = withFix ? " (e.g. to --fix older migrations)" : "";
-  return (
+// `withPendingWarning` adds the stable-check pending-migration warning (check / check-stable only).
+function enhancedMigrationHelp(
+  options: {
+    withFix?: boolean;
+    withPendingWarning?: boolean;
+  } = {},
+): string {
+  const example = options.withFix ? " (e.g. to --fix older migrations)" : "";
+  let text =
     "\nEnhanced migration ([canisters.<name>.migrations]):\n" +
     "  The canister is checked against its migration chain. [migrations].check-limit\n" +
     "  trims it to the last N migrations (older ones are skipped). Pass --no-check-limit\n" +
-    `  to use the full chain${example}.`
-  );
+    `  to use the full chain${example}.`;
+  if (options.withPendingWarning) {
+    text +=
+      "\n  When check-limit is set, the stable check reports if more migrations are pending\n" +
+      "  (relative to the deployed .most baseline) than the limit allows — as an error if\n" +
+      "  compat failed, otherwise a warning.";
+  }
+  return text;
 }
 
 program.name("mops");
@@ -372,14 +384,17 @@ program
   .addOption(
     new Option(
       "--no-check-limit",
-      "Check the full migration chain, ignoring [migrations].check-limit",
+      "Use the full migration chain, ignoring [migrations].check-limit; also suppresses the pending-migration warning",
     ),
   )
   .addHelpText(
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check -- -Werror",
   )
-  .addHelpText("after", enhancedMigrationHelp(true))
+  .addHelpText(
+    "after",
+    enhancedMigrationHelp({ withFix: true, withPendingWarning: true }),
+  )
   .allowUnknownOption(true)
   .action(async (args, options) => {
     checkConfigFile(true);
@@ -419,14 +434,14 @@ program
   .addOption(
     new Option(
       "--no-check-limit",
-      "Check the full migration chain, ignoring [migrations].check-limit",
+      "Use the full migration chain, ignoring [migrations].check-limit; also suppresses the pending-migration warning",
     ),
   )
   .addHelpText(
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check-stable -- -Werror",
   )
-  .addHelpText("after", enhancedMigrationHelp(false))
+  .addHelpText("after", enhancedMigrationHelp({ withPendingWarning: true }))
   .allowUnknownOption(true)
   .action(async (args, options) => {
     checkConfigFile(true);
@@ -979,7 +994,7 @@ program
     "after",
     "\nArguments after -- are forwarded directly to lintoko, e.g.:\n  $ mops lint -- --severity warning",
   )
-  .addHelpText("after", enhancedMigrationHelp(true))
+  .addHelpText("after", enhancedMigrationHelp({ withFix: true }))
   .allowUnknownOption(true)
   .action(async (filter, options) => {
     checkConfigFile(true);
