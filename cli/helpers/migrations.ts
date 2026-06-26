@@ -311,14 +311,14 @@ export function warnIfCheckLimitTooLow(
   console.warn(
     chalk.yellow(
       `WARN: Canister '${canisterName}' has ${pending.length} pending migration(s) but check-limit=${checkLimit} — ` +
-        `mops check will likely fail even though deploy would succeed. ` +
+        `mops check will likely fail, but deploy may still succeed. ` +
         `Fold all changes into the latest pending migration: ${pending[pending.length - 1]}`,
     ),
   );
   console.warn(chalk.yellow(`  Pending: ${pending.join(", ")}`));
   if (applied) {
     console.warn(
-      chalk.yellow(`  Applied (from deployed baseline): ${applied}`),
+      chalk.yellow(`  Latest already applied migration: ${applied}`),
     );
   }
 }

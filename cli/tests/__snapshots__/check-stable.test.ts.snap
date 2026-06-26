@@ -31,9 +31,9 @@ exports[`check-stable incompatible upgrade from .mo file 1`] = `
 exports[`check-stable warns when pending migrations exceed check-limit 1`] = `
 {
   "exitCode": 1,
-  "stderr": "WARN: Canister 'backend' has 2 pending migration(s) but check-limit=1 — mops check will likely fail even though deploy would succeed. Fold all changes into the latest pending migration: 20250301_000000_AddD.mo
+  "stderr": "WARN: Canister 'backend' has 2 pending migration(s) but check-limit=1 — mops check will likely fail, but deploy may still succeed. Fold all changes into the latest pending migration: 20250301_000000_AddD.mo
   Pending: 20250201_000000_AddField.mo, 20250301_000000_AddD.mo
-  Applied (from deployed baseline): 20250101_000000_Init
+  Latest already applied migration: 20250101_000000_Init
 (unknown location): Compatibility error [M0169], the previous version does not contain the stable variable \`c\`. The migration function cannot require this variable as input, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function.
 ✗ Stable compatibility check failed for canister 'backend'",
   "stdout": "",
