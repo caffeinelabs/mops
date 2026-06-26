@@ -118,7 +118,7 @@ Apply additional lint rules to specific files or directories. Each key is a glob
 [lint.extra]
 "src/main.mo" = ["lint/no-types"]
 "src/Types.mo" = ["lint/types-only"]
-"migrations/*.mo" = ["lint/migration-only", "lint/no-types"]
+"migrations/**" = ["lint/migration-only", "lint/migration-self-contained"]
 ```
 
 Each entry triggers a separate `lintoko` invocation on the matched files. All runs (base and extra) execute even when earlier runs find errors, so you see every lint failure in a single pass. If any invocation fails, `mops lint` fails. Globs that match no files are skipped with a warning.
