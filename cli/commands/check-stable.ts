@@ -4,9 +4,13 @@ import { rm } from "node:fs/promises";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError } from "../error.js";
-import { prepareMigrationArgs } from "../helpers/migrations.js";
+import {
+  getCheckLimitPendingIssue,
+  prepareMigrationArgs,
+  reportCheckLimitPendingIssue,
+} from "../helpers/migrations.js";
 import { getGlobalMocArgs, readConfig, resolveConfigPath } from "../mops.js";
-import { CanisterConfig } from "../types.js";
+import { CanisterConfig, MigrationsConfig } from "../types.js";
 import {
   filterCanisters,
   looksLikeFile,
@@ -103,6 +107,7 @@ export async function checkStable(
         mocPath,
         globalMocArgs,
         canisterArgs: [...migration.migrationArgs, ...(canister.args ?? [])],
+        migrations: canister.migrations,
         options,
       });
     } finally {
@@ -146,6 +151,7 @@ export async function checkStable(
         globalMocArgs,
         canisterArgs: [...migration.migrationArgs, ...(canister.args ?? [])],
         sources,
+        migrations: canister.migrations,
         options,
       });
     } finally {
@@ -173,6 +179,7 @@ export interface RunStableCheckParams {
   globalMocArgs: string[];
   canisterArgs: string[];
   sources?: string[];
+  migrations?: MigrationsConfig;
   options?: Partial<CheckStableOptions>;
 }
 
@@ -240,7 +247,17 @@ export async function runStableCheck(
       reject: false,
     });
 
-    if (result.exitCode !== 0) {
+    const issue = getCheckLimitPendingIssue(
+      params.migrations,
+      canisterName,
+      oldMostPath,
+      options.checkLimit === false,
+      isOldMostFile,
+    );
+
+    if (issue) {
+      reportCheckLimitPendingIssue(issue, result.exitCode !== 0);
+    } else if (result.exitCode !== 0) {
       if (result.stderr) {
         console.error(result.stderr);
       }

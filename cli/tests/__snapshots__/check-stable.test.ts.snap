@@ -8,6 +8,17 @@ exports[`check-stable compatible upgrade from .mo file 1`] = `
 }
 `;
 
+exports[`check-stable fails with check-limit diagnostic when pending migrations exceed check-limit 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "✗ Stable compatibility check failed for canister 'backend': too many pending migrations for check-limit=1
+Canister 'backend' has 2 pending migration(s) but check-limit=1. Fold all changes into the latest pending migration: 20250301_000000_AddD.mo
+  Pending: 20250201_000000_AddField.mo, 20250301_000000_AddD.mo
+  Latest already applied migration: 20250101_000000_Init",
+  "stdout": "",
+}
+`;
+
 exports[`check-stable incompatible upgrade from .mo file 1`] = `
 {
   "exitCode": 1,

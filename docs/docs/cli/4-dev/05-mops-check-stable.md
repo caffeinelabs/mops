@@ -87,7 +87,13 @@ Show detailed output including the `moc` commands being run and the intermediate
 
 ### `--no-check-limit`
 
-Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming).
+Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming). Also suppresses the pending-migration warning that runs when `check-limit` is set.
+
+## Pending migration diagnostic
+
+When `[canisters.<name>.migrations].check-limit` is set, `mops check-stable` compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error (trimming started from the wrong state). If compat passed anyway, it is shown as a warning.
+
+The warning only applies when the baseline is a committed `.most` file (via `[check-stable].path` or passed as a `.most` argument). Baselines compiled from a `.mo` source on the command line are skipped — the scratch `.most` would not reflect what is actually deployed.
 
 ## Enhanced migration support
 

@@ -2,6 +2,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   symlinkSync,
   writeFileSync,
@@ -13,6 +14,11 @@ import { cliError } from "../error.js";
 import { getRootDir, resolveConfigPath } from "../mops.js";
 import { resolveCanisterConfigs } from "./resolve-canisters.js";
 import { Config, MigrationsConfig } from "../types.js";
+import {
+  latestAppliedMigrationName,
+  migrationBasename,
+  parseMostAppliedMigrationNames,
+} from "./parse-most.js";
 
 function stagedMigrationsDir(chainDir: string, canisterName: string): string {
   return join(dirname(chainDir), `.migrations-${canisterName}`);
@@ -232,6 +238,117 @@ export async function prepareMigrationArgs(
       await rm(tempDir, { recursive: true, force: true });
     },
   };
+}
+
+/**
+ * Local chain (+ next) files not yet recorded in the deployed `.most` baseline.
+ */
+export function getPendingMigrationFiles(
+  migrations: MigrationsConfig,
+  canisterName: string,
+  appliedNames: string[],
+): string[] {
+  validateMigrationsConfig(migrations, canisterName);
+
+  const chainDir = resolveConfigPath(migrations.chain);
+  const nextDir = migrations.next
+    ? resolveConfigPath(migrations.next)
+    : undefined;
+  const nextFile = nextDir ? getNextMigrationFile(nextDir) : null;
+
+  const all = getMigrationFiles(chainDir);
+  if (nextFile) {
+    all.push(nextFile);
+  }
+
+  const highWaterMark =
+    appliedNames.length > 0 ? latestAppliedMigrationName(appliedNames) : "";
+  return all.filter((file) => migrationBasename(file) > highWaterMark);
+}
+
+/**
+ * Pending migrations exceed `check-limit` relative to the deployed `.most` baseline.
+ */
+export interface CheckLimitPendingIssue {
+  canisterName: string;
+  pending: string[];
+  checkLimit: number;
+  latestApplied: string | null;
+}
+
+export function getCheckLimitPendingIssue(
+  migrations: MigrationsConfig | undefined,
+  canisterName: string,
+  oldMostPath: string,
+  ignoreCheckLimit: boolean,
+  baselineIsMostFile: boolean,
+): CheckLimitPendingIssue | null {
+  if (!migrations || ignoreCheckLimit || !baselineIsMostFile) {
+    return null;
+  }
+  const checkLimit = migrations["check-limit"];
+  if (checkLimit === undefined) {
+    return null;
+  }
+
+  let appliedNames: string[] | null;
+  try {
+    appliedNames = parseMostAppliedMigrationNames(
+      readFileSync(oldMostPath, "utf8"),
+    );
+  } catch {
+    return null;
+  }
+  if (appliedNames === null) {
+    return null;
+  }
+
+  const pending = getPendingMigrationFiles(
+    migrations,
+    canisterName,
+    appliedNames,
+  );
+  if (pending.length <= checkLimit) {
+    return null;
+  }
+
+  return {
+    canisterName,
+    pending,
+    checkLimit,
+    latestApplied:
+      appliedNames.length > 0 ? latestAppliedMigrationName(appliedNames) : null,
+  };
+}
+
+function formatCheckLimitPendingLines(issue: CheckLimitPendingIssue): string[] {
+  const { canisterName, pending, checkLimit } = issue;
+  return [
+    `Canister '${canisterName}' has ${pending.length} pending migration(s) but check-limit=${checkLimit}. ` +
+      `Fold all changes into the latest pending migration: ${pending[pending.length - 1]}`,
+    `  Pending: ${pending.join(", ")}`,
+    ...(issue.latestApplied
+      ? [`  Latest already applied migration: ${issue.latestApplied}`]
+      : []),
+  ];
+}
+
+/** Warn on accidental compat pass; fail with this diagnostic when compat already failed. */
+export function reportCheckLimitPendingIssue(
+  issue: CheckLimitPendingIssue,
+  compatFailed: boolean,
+): void {
+  const lines = formatCheckLimitPendingLines(issue);
+  if (compatFailed) {
+    cliError(
+      `✗ Stable compatibility check failed for canister '${issue.canisterName}': too many pending migrations for check-limit=${issue.checkLimit}\n` +
+        lines.join("\n"),
+    );
+  }
+  console.warn(chalk.yellow(`WARN: ${lines[0]}`));
+  for (const line of lines.slice(1)) {
+    console.warn(chalk.yellow(line));
+  }
 }
 
 /**
