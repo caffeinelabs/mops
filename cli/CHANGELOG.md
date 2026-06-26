@@ -2,6 +2,8 @@
 
 ## Next
 
+## 2.15.2
+
 - `mops check-stable` (and the stable check inside `mops check`) reports when `[canisters.<name>.migrations].check-limit` is set but more migrations are pending than the limit allows. If the compatibility check failed, the check-limit diagnostic replaces the misleading `moc` error; if it passed anyway, a warning is shown. Compares the deployed `.most` baseline against the local chain; use `--no-check-limit` to suppress.
 
 ## 2.15.1
