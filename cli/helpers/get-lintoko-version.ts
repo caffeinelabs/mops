@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { type SemVer, parse } from "semver";
+import { FILE_PATH_REGEX } from "../constants.js";
 import { readConfig } from "../mops.js";
 
 export function getLintokoSemVer(): SemVer | null {
@@ -8,12 +9,15 @@ export function getLintokoSemVer(): SemVer | null {
 
 export function getLintokoVersion(throwOnError = false): string {
   let configVersion = readConfig().toolchain?.lintoko;
-  if (configVersion) {
+  if (!configVersion) {
+    return "";
+  }
+  if (!configVersion.match(FILE_PATH_REGEX)) {
     return configVersion;
   }
 
   try {
-    let match = execFileSync("lintoko", ["--version"])
+    let match = execFileSync(configVersion, ["--version"])
       .toString()
       .trim()
       .match(/lintoko ([^\s]+)/);
