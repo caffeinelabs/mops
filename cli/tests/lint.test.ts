@@ -83,7 +83,7 @@ describe("lint", () => {
       );
     });
 
-    test("example rules: no-types, types-only, migration-only", async () => {
+    test("example rules: no-types, types-only, migration-only, migration-self-contained", async () => {
       const cwd = path.join(import.meta.dirname, "lint-extra-example-rules");
       await cliSnapshot(["lint"], { cwd }, 1);
     });

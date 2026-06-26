@@ -1,0 +1,7 @@
+name = "migration-self-contained"
+description = "Migration files must not import local modules (relative paths). Got: @path"
+includes = ["**/migrations/**"]
+query = '''
+(import (text_literal) @path @error
+  (#match? @path "^\"[^:]*\"$"))
+'''
