@@ -40,6 +40,7 @@ type BenchOptions = {
   compilerVersion: string;
   gc: "copying" | "compacting" | "generational" | "incremental";
   forceGc: boolean;
+  query: boolean;
   save: boolean;
   compare: boolean;
   verbose: boolean;
@@ -61,6 +62,7 @@ export async function bench(
     compilerVersion: getMocVersion(true),
     gc: "copying",
     forceGc: true,
+    query: false,
     save: false,
     compare: false,
     verbose: false,
@@ -120,6 +122,10 @@ export async function bench(
         `  gc:        ${options.gc}${options.forceGc ? " (forced)" : ""}`,
       ),
     );
+    console.log(
+      chalk.gray(`  context:   ${options.query ? "query" : "update"}`),
+    );
+    console.log(chalk.gray(`  persistence: enhanced`));
     console.log(chalk.gray(`  profile:   ${options.profile}`));
     console.log(chalk.gray(`  optimize:  ${optimize}`));
   }
@@ -270,12 +276,9 @@ function computeDiffAll(
 function getMocArgs(options: BenchOptions): string {
   let args = "";
 
-  if (
-    options.compilerVersion &&
-    new SemVer(options.compilerVersion).compare("0.15.0") >= 0
-  ) {
-    args += " --legacy-persistence";
-  }
+  // Benchmarks compile under enhanced orthogonal persistence (moc's default
+  // since 0.15) — the mode real canisters run. We intentionally do NOT pass
+  // `--legacy-persistence`.
 
   if (options.forceGc) {
     args += " --force-gc";
@@ -533,13 +536,14 @@ async function runBenchFile(
     log();
   }
 
-  // run all cells
+  // run all cells. `--query` measures in query context (how `query` methods
+  // actually run on the IC: no GC), at the cost of not supporting benches whose
+  // runner performs async calls. Otherwise use the update path.
   for (let [rowIndex, row] of schema.rows.entries()) {
     for (let [colIndex, col] of schema.cols.entries()) {
-      let res = await actor.runCellUpdateAwait(
-        BigInt(rowIndex),
-        BigInt(colIndex),
-      );
+      let res = options.query
+        ? await actor.runCellQuery(BigInt(rowIndex), BigInt(colIndex))
+        : await actor.runCellUpdateAwait(BigInt(rowIndex), BigInt(colIndex));
       results.set(`${row}:${col}`, res);
 
       // @ts-ignore

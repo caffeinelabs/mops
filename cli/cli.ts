@@ -560,6 +560,12 @@ program
   // .addOption(new Option('--force-gc', 'Force GC'))
   .addOption(
     new Option(
+      "--query",
+      "Measure each cell in a query call (how `query` methods run on the IC: no GC). Only for benchmarks whose runner is synchronous (no inter-canister calls)",
+    ),
+  )
+  .addOption(
+    new Option(
       "--verbose",
       "Print the benchmark pipeline (compiler, replica, GC, optimization) and stream compiler/replica output, including dfx optimization warnings",
     ),
