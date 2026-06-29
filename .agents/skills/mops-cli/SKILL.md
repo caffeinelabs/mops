@@ -154,6 +154,8 @@ When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, 
 
 Create migration files directly in the `chain` directory.
 
+After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run `mops build` to produce the wasm artifact.
+
 `check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 
 Override `check-limit` for a single run with `--no-check-limit` (`mops check`, `mops check-stable`, `mops lint`) — e.g. `mops check --fix --no-check-limit` to autofix older, normally-trimmed migrations. On `mops check` and `mops check-stable`, `--no-check-limit` also suppresses the pending-migration warning.

@@ -142,6 +142,8 @@ For a new project with no prior deployment, run [`mops deployed init`](/cli/mops
 
 Configure managed enhanced migration chains for a canister. When set, `mops check`, `mops build`, and `mops check-stable` auto-inject `--enhanced-migration` for the canister. Create migration files directly in the `chain` directory.
 
+After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run [`mops build`](/cli/mops-build) to produce the wasm artifact.
+
 | Field       | Description                                                     |
 | ----------- | --------------------------------------------------------------- |
 | chain       | Path to the directory containing migration files (required) |
