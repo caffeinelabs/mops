@@ -205,9 +205,9 @@ export function readConfig(configFile = getClosestConfigFile()): Config {
   let config: Config = { ...toml };
 
   Object.entries(config.requirements || {}).forEach(([name, value]) => {
-    if (name === "moc") {
+    if (name === "moc" || name === "lintoko") {
       config.requirements = config.requirements || {};
-      config.requirements.moc = value;
+      config.requirements[name] = value;
     }
   });
 

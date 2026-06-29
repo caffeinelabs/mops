@@ -252,11 +252,12 @@ Globs that match no files are skipped with a warning. All runs (base and extra) 
 
 When a user installs your package(as a transitive dependency too), Mops will check if the requirements are met and display a warning if they are not.
 
-Use only if your package will not work with older versions of the `moc`.
+Use when your package will not work with older versions of the `moc` compiler or `lintoko` linter (e.g. rules that depend on lintoko features from a specific release).
 
 | Field                | Description                                      |
 | -------------------- | ------------------------------------------------ |
 | moc                  | Motoko compiler version  (e.g. `0.11.0` which means `>=0.11.0`)  |
+| lintoko              | Lintoko linter version (e.g. `0.10.0` which means `>=0.10.0`) |
 
 ## Advanced Configuration
 
