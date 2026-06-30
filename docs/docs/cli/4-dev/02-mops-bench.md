@@ -56,10 +56,12 @@ Possible values:
 Select garbage collector.
 
 Possible values:
-- `copying` (default)
+- `incremental` (default)
+- `copying`
 - `compacting`
 - `generational`
-- `incremental`
+
+Under enhanced orthogonal persistence (the default persistence mode), moc fixes the GC to `incremental` and the collector cannot be chosen — the other collectors only exist under legacy persistence. Selecting `copying`, `compacting`, or `generational` therefore implies [`--legacy-persistence`](#--legacy-persistence); pass `--gc incremental` (or omit `--gc`) to keep measuring under enhanced orthogonal persistence.
 
 ### `--save`
 

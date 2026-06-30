@@ -30,6 +30,7 @@ import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
 import { BenchReplica } from "./bench-replica.js";
+import { getMocArgs, isLegacyGc } from "./bench-gc-args.js";
 
 type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
 
@@ -61,7 +62,7 @@ export async function bench(
     replicaVersion: "",
     compiler: "moc",
     compilerVersion: getMocVersion(true),
-    gc: "copying",
+    gc: "incremental",
     forceGc: true,
     query: false,
     legacyPersistence: false,
@@ -112,6 +113,8 @@ export async function bench(
       replicaType === "dfx" || replicaType === "dfx-pocket-ic"
         ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
         : "none (raw moc output)";
+    let legacyGc = isLegacyGc(options.gc);
+    let effectiveLegacyPersistence = options.legacyPersistence || legacyGc;
     console.log(chalk.gray("Benchmark pipeline:"));
     console.log(chalk.gray(`  compiler:  moc ${options.compilerVersion}`));
     console.log(
@@ -129,9 +132,16 @@ export async function bench(
     );
     console.log(
       chalk.gray(
-        `  persistence: ${options.legacyPersistence ? "legacy" : "enhanced"}`,
+        `  persistence: ${effectiveLegacyPersistence ? "legacy" : "enhanced"}`,
       ),
     );
+    if (legacyGc && !options.legacyPersistence) {
+      console.log(
+        chalk.gray(
+          `  (gc '${options.gc}' only exists under legacy persistence; enabling --legacy-persistence)`,
+        ),
+      );
+    }
     console.log(chalk.gray(`  profile:   ${options.profile}`));
     console.log(chalk.gray(`  optimize:  ${optimize}`));
   }
@@ -277,38 +287,6 @@ function computeDiffAll(
   }
 
   return diff;
-}
-
-function getMocArgs(options: BenchOptions): string {
-  let args = "";
-
-  // Benchmarks compile under enhanced orthogonal persistence (moc's default
-  // since 0.15) — the mode real canisters run. Pass `--legacy-persistence`
-  // only when the user opts in, and only where moc supports the flag (>= 0.15;
-  // legacy is already the default below it).
-  if (
-    options.legacyPersistence &&
-    options.compilerVersion &&
-    new SemVer(options.compilerVersion).compare("0.15.0") >= 0
-  ) {
-    args += " --legacy-persistence";
-  }
-
-  if (options.forceGc) {
-    args += " --force-gc";
-  }
-
-  if (options.gc) {
-    args += ` --${options.gc}-gc`;
-  }
-
-  if (options.profile === "Debug") {
-    args += " --debug";
-  } else if (options.profile === "Release") {
-    args += " --release";
-  }
-
-  return args;
 }
 
 async function deployBenchFile(

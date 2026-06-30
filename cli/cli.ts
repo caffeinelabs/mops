@@ -546,7 +546,7 @@ program
   .addOption(
     new Option("--gc <gc>", "Garbage collector")
       .choices(["copying", "compacting", "generational", "incremental"])
-      .default("copying"),
+      .default("incremental"),
   )
   .addOption(
     new Option("--save", "Save benchmark results to .bench/<filename>.json"),

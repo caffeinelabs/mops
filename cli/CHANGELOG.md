@@ -2,6 +2,8 @@
 
 ## Next
 
+- Fix `mops bench` crashing on moc 0.15+ with the default `--gc copying`: `--copying-gc` is rejected under enhanced orthogonal persistence, which became the default persistence mode in 2.16.0. The default GC is now `incremental` (moc's default and the only collector available under EOP). Selecting a legacy collector (`copying`, `compacting`, `generational`) now implies `--legacy-persistence`, since moc only accepts them there.
+
 ## 2.16.0
 
 - `mops bench` now compiles benchmark canisters under **enhanced orthogonal persistence** (moc's default) instead of forcing `--legacy-persistence` — measuring the persistence mode real canisters run. Pass `--legacy-persistence` to opt back into legacy persistence.
