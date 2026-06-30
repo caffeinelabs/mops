@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.15.2"
+    "latest": "2.16.0"
   },
   "versions": {
     "0.41.0": {
@@ -488,6 +488,14 @@
       "commitHash": "564a380c945022ef6e47aa85c40197c037e49b83",
       "url": "https://cli.mops.one/versions/2.15.2.tgz",
       "hash": "5b19f697efb055576f3cd97557ee9568d8e01ba09c709924d94ebba6905d07f6"
+    },
+    "2.16.0": {
+      "time": 1782811157957,
+      "size": 2413271,
+      "relseaseNotes": "* `mops bench` now compiles benchmark canisters under **enhanced orthogonal persistence** (moc's default) instead of forcing `--legacy-persistence` — measuring the persistence mode real canisters run. Pass `--legacy-persistence` to opt back into legacy persistence.\n* `mops bench --query` measures each cell in a **query** call instead of an update call. Queries run no GC on the IC, so the instruction counts exclude GC work an update would incur — for benchmarking `query`/read-only workloads realistically. Only for synchronous benchmark runners (no inter-canister `await`).\n* `[requirements].lintoko` declares a minimum lintoko version for package consumers. `mops install` (and `mops add`, `mops toolchain use`) warn when the project's lintoko is below a dependency's requirement, same as `moc` (#597).\n",
+      "commitHash": "466636a99803946e996609153917ce7f0d52e953",
+      "url": "https://cli.mops.one/versions/2.16.0.tgz",
+      "hash": "79fee9e8f0deb4350989a54a9a7c0575466198380697a45d2ce88b09e76fc27f"
     }
   }
 }
