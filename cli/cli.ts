@@ -544,9 +544,12 @@ program
     ).choices(["dfx", "pocket-ic"]),
   )
   .addOption(
-    new Option("--gc <gc>", "Garbage collector")
+    new Option(
+      "--gc <gc>",
+      "Garbage collector. Under enhanced orthogonal persistence (the default) the GC is fixed to `incremental`; selecting `copying`, `compacting`, or `generational` implies `--legacy-persistence`",
+    )
       .choices(["copying", "compacting", "generational", "incremental"])
-      .default("copying"),
+      .default("incremental"),
   )
   .addOption(
     new Option("--save", "Save benchmark results to .bench/<filename>.json"),
@@ -573,7 +576,7 @@ program
   .addOption(
     new Option(
       "--verbose",
-      "Print the benchmark pipeline (compiler, replica, GC, optimization) and stream compiler/replica output, including dfx optimization warnings",
+      "Print the benchmark pipeline (compiler, replica, GC, context, persistence, profile, optimization) and stream compiler/replica output, including dfx optimization warnings",
     ),
   )
   .action(async (filter, options) => {

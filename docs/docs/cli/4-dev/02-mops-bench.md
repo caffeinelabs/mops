@@ -56,10 +56,12 @@ Possible values:
 Select garbage collector.
 
 Possible values:
-- `copying` (default)
+- `incremental` (default)
+- `copying`
 - `compacting`
 - `generational`
-- `incremental`
+
+Under enhanced orthogonal persistence (the default persistence mode), moc fixes the GC to `incremental` and the collector cannot be chosen — the other collectors only exist under legacy persistence. Selecting `copying`, `compacting`, or `generational` therefore implies [`--legacy-persistence`](#--legacy-persistence).
 
 ### `--save`
 
@@ -85,4 +87,4 @@ Use it to measure a canister that still uses legacy persistence. Has no effect w
 
 ### `--verbose`
 
-Print the benchmark pipeline up front — compiler version, replica + version, GC, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and `dfx` output (including any deploy/optimization warnings) instead of hiding it.
+Print the benchmark pipeline up front — compiler version, replica + version, GC, context (query/update), persistence, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and `dfx` output (including any deploy/optimization warnings) instead of hiding it.

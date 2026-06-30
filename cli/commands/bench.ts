@@ -61,7 +61,7 @@ export async function bench(
     replicaVersion: "",
     compiler: "moc",
     compilerVersion: getMocVersion(true),
-    gc: "copying",
+    gc: "incremental",
     forceGc: true,
     query: false,
     legacyPersistence: false,
@@ -112,6 +112,8 @@ export async function bench(
       replicaType === "dfx" || replicaType === "dfx-pocket-ic"
         ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
         : "none (raw moc output)";
+    let legacyGc = isLegacyGc(options.gc);
+    let effectiveLegacyPersistence = options.legacyPersistence || legacyGc;
     console.log(chalk.gray("Benchmark pipeline:"));
     console.log(chalk.gray(`  compiler:  moc ${options.compilerVersion}`));
     console.log(
@@ -129,9 +131,16 @@ export async function bench(
     );
     console.log(
       chalk.gray(
-        `  persistence: ${options.legacyPersistence ? "legacy" : "enhanced"}`,
+        `  persistence: ${effectiveLegacyPersistence ? "legacy" : "enhanced"}`,
       ),
     );
+    if (legacyGc && !options.legacyPersistence) {
+      console.log(
+        chalk.gray(
+          `  (gc '${options.gc}' only exists under legacy persistence; enabling --legacy-persistence)`,
+        ),
+      );
+    }
     console.log(chalk.gray(`  profile:   ${options.profile}`));
     console.log(chalk.gray(`  optimize:  ${optimize}`));
   }
@@ -279,18 +288,25 @@ function computeDiffAll(
   return diff;
 }
 
+// Collectors that only exist under legacy persistence. moc 0.15+ fixes the GC to
+// incremental under enhanced orthogonal persistence and rejects these there.
+function isLegacyGc(gc: BenchOptions["gc"]): boolean {
+  return gc === "copying" || gc === "compacting" || gc === "generational";
+}
+
 function getMocArgs(options: BenchOptions): string {
   let args = "";
 
-  // Benchmarks compile under enhanced orthogonal persistence (moc's default
-  // since 0.15) — the mode real canisters run. Pass `--legacy-persistence`
-  // only when the user opts in, and only where moc supports the flag (>= 0.15;
-  // legacy is already the default below it).
-  if (
-    options.legacyPersistence &&
-    options.compilerVersion &&
-    new SemVer(options.compilerVersion).compare("0.15.0") >= 0
-  ) {
+  let mocAtLeast015 =
+    !!options.compilerVersion &&
+    new SemVer(options.compilerVersion).compare("0.15.0") >= 0;
+
+  // Legacy collectors require legacy persistence; moc < 0.15 is already legacy
+  // and has no --legacy-persistence flag.
+  let useLegacyPersistence =
+    options.legacyPersistence || isLegacyGc(options.gc);
+
+  if (useLegacyPersistence && mocAtLeast015) {
     args += " --legacy-persistence";
   }
 
@@ -298,7 +314,8 @@ function getMocArgs(options: BenchOptions): string {
     args += " --force-gc";
   }
 
-  if (options.gc) {
+  // Under EOP the GC is fixed; only pass a collector flag where it's selectable.
+  if (options.gc && (useLegacyPersistence || !mocAtLeast015)) {
     args += ` --${options.gc}-gc`;
   }
 
