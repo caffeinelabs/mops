@@ -544,7 +544,10 @@ program
     ).choices(["dfx", "pocket-ic"]),
   )
   .addOption(
-    new Option("--gc <gc>", "Garbage collector")
+    new Option(
+      "--gc <gc>",
+      "Garbage collector. Under enhanced orthogonal persistence (the default) the GC is fixed to `incremental`; selecting `copying`, `compacting`, or `generational` implies `--legacy-persistence`",
+    )
       .choices(["copying", "compacting", "generational", "incremental"])
       .default("incremental"),
   )
