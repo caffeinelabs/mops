@@ -576,7 +576,7 @@ program
   .addOption(
     new Option(
       "--verbose",
-      "Print the benchmark pipeline (compiler, replica, GC, optimization) and stream compiler/replica output, including dfx optimization warnings",
+      "Print the benchmark pipeline (compiler, replica, GC, context, persistence, profile, optimization) and stream compiler/replica output, including dfx optimization warnings",
     ),
   )
   .action(async (filter, options) => {

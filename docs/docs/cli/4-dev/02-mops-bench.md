@@ -87,4 +87,4 @@ Use it to measure a canister that still uses legacy persistence. Has no effect w
 
 ### `--verbose`
 
-Print the benchmark pipeline up front — compiler version, replica + version, GC, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and `dfx` output (including any deploy/optimization warnings) instead of hiding it.
+Print the benchmark pipeline up front — compiler version, replica + version, GC, context (query/update), persistence, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and `dfx` output (including any deploy/optimization warnings) instead of hiding it.
