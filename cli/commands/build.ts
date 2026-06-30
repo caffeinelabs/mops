@@ -4,7 +4,7 @@ import { exists } from "fs-extra";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { lock, unlockSync } from "proper-lockfile";
-import { cliError } from "../error.js";
+import { cliError, cliExit } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import {
   filterCanisters,
@@ -136,7 +136,8 @@ export async function build(
               console.error(result.stdout);
             }
           }
-          cliError(
+          cliExit(
+            result.exitCode ?? 1,
             `Build failed for canister ${canisterName} (exit code: ${result.exitCode})`,
           );
         }
