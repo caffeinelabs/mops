@@ -1,4 +1,5 @@
 import markdownIt from "markdown-it";
+import DOMPurify from "dompurify";
 import { toHtml } from "hast-util-to-html";
 
 import { getStarryNight } from "./get-starry-night";
@@ -19,7 +20,7 @@ export let markdownToHtml = async (
 
   let div = document.createElement("div");
   let mdit = markdownIt({
-    html: false, // Enable HTML tags in source
+    html: true, // Allow raw HTML tags in source (e.g. <details>); output is sanitized with DOMPurify below
     breaks: false, // Convert '\n' in paragraphs into <br>
     linkify: true, // Autoconvert URL-like text to links
 
@@ -45,9 +46,7 @@ export let markdownToHtml = async (
     },
   });
 
-  mdit.render(markdown);
-
-  div.innerHTML = mdit.render(markdown);
+  div.innerHTML = DOMPurify.sanitize(mdit.render(markdown));
 
   // replace relative url to github absolute url
   if (repositoryUrl) {
