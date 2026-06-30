@@ -1,8 +1,5 @@
-// Minimal benchmark exercising the `mops bench` pipeline under enhanced
-// orthogonal persistence. The bench canister template only requires a module
-// exposing init() -> { getVersion; getSchema; runCell }, so no `mo:bench`
-// dependency is needed.
-
+// Exercises the bench pipeline under EOP; the template only needs
+// init() -> { getVersion; getSchema; runCell }, so no mo:bench dep.
 module {
   type Schema = {
     name : Text;

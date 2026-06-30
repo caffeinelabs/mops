@@ -3,11 +3,8 @@ import { rmSync } from "node:fs";
 import path from "path";
 import { cli } from "./helpers";
 
-// E2E: `mops bench` must run end-to-end under enhanced orthogonal persistence
-// (moc >= 0.15) with the default gc. Regression: the default `--gc copying` was
-// rejected under EOP and crashed every default bench run (discovered on a
-// motoko-core release, not here, because this repo's own mops.toml pinned moc
-// 0.14.14). This fixture pins moc 1.3.0 so the EOP path is actually exercised.
+// Pin moc 1.3.0 (≥ 0.15) to exercise the EOP path — this repo's own mops.toml
+// uses moc 0.14.14, so the default bench run is never EOP-tested here.
 describe("bench", () => {
   jest.setTimeout(180_000);
 

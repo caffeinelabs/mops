@@ -301,9 +301,8 @@ function getMocArgs(options: BenchOptions): string {
     !!options.compilerVersion &&
     new SemVer(options.compilerVersion).compare("0.15.0") >= 0;
 
-  // Selecting a legacy collector implies legacy persistence — it's the only mode
-  // where moc accepts it. Below moc 0.15, legacy persistence is already the default
-  // (and the flag doesn't exist), so we only emit --legacy-persistence on >= 0.15.
+  // Legacy collectors require legacy persistence; moc < 0.15 is already legacy
+  // and has no --legacy-persistence flag.
   let useLegacyPersistence = options.legacyPersistence || isLegacyGc(options.gc);
 
   if (useLegacyPersistence && mocAtLeast015) {
@@ -314,8 +313,7 @@ function getMocArgs(options: BenchOptions): string {
     args += " --force-gc";
   }
 
-  // Under EOP the GC is fixed (not choosable); only pass a collector flag where
-  // it's selectable — legacy persistence (explicit or implied) or moc < 0.15.
+  // Under EOP the GC is fixed; only pass a collector flag where it's selectable.
   if (options.gc && (useLegacyPersistence || !mocAtLeast015)) {
     args += ` --${options.gc}-gc`;
   }
