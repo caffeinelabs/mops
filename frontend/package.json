@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "7.0.0",
+    "@types/dompurify": "3.0.5",
     "@types/markdown-it": "13.0.7",
     "@types/node": "22.15.3",
     "@types/pako": "2.0.4",
