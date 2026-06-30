@@ -566,6 +566,12 @@ program
   )
   .addOption(
     new Option(
+      "--legacy-persistence",
+      "Compile benchmark canisters under legacy persistence instead of enhanced orthogonal persistence (the default)",
+    ),
+  )
+  .addOption(
+    new Option(
       "--verbose",
       "Print the benchmark pipeline (compiler, replica, GC, optimization) and stream compiler/replica output, including dfx optimization warnings",
     ),

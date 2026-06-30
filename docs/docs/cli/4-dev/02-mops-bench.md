@@ -77,6 +77,12 @@ This reflects how `query` methods actually execute on the IC: queries run no gar
 
 Only works for benchmarks whose runner is **synchronous** — a runner that performs inter-canister (`await`) calls needs the update path and must be run without `--query`.
 
+### `--legacy-persistence`
+
+Compile benchmark canisters under legacy persistence instead of enhanced orthogonal persistence (the default).
+
+Use it to measure a canister that still uses legacy persistence. Has no effect with `moc < 0.15`, where legacy persistence is already the default.
+
 ### `--verbose`
 
 Print the benchmark pipeline up front — compiler version, replica + version, GC, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and `dfx` output (including any deploy/optimization warnings) instead of hiding it.

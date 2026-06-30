@@ -41,6 +41,7 @@ type BenchOptions = {
   gc: "copying" | "compacting" | "generational" | "incremental";
   forceGc: boolean;
   query: boolean;
+  legacyPersistence: boolean;
   save: boolean;
   compare: boolean;
   verbose: boolean;
@@ -63,6 +64,7 @@ export async function bench(
     gc: "copying",
     forceGc: true,
     query: false,
+    legacyPersistence: false,
     save: false,
     compare: false,
     verbose: false,
@@ -125,7 +127,11 @@ export async function bench(
     console.log(
       chalk.gray(`  context:   ${options.query ? "query" : "update"}`),
     );
-    console.log(chalk.gray(`  persistence: enhanced`));
+    console.log(
+      chalk.gray(
+        `  persistence: ${options.legacyPersistence ? "legacy" : "enhanced"}`,
+      ),
+    );
     console.log(chalk.gray(`  profile:   ${options.profile}`));
     console.log(chalk.gray(`  optimize:  ${optimize}`));
   }
@@ -277,8 +283,16 @@ function getMocArgs(options: BenchOptions): string {
   let args = "";
 
   // Benchmarks compile under enhanced orthogonal persistence (moc's default
-  // since 0.15) — the mode real canisters run. We intentionally do NOT pass
-  // `--legacy-persistence`.
+  // since 0.15) — the mode real canisters run. Pass `--legacy-persistence`
+  // only when the user opts in, and only where moc supports the flag (>= 0.15;
+  // legacy is already the default below it).
+  if (
+    options.legacyPersistence &&
+    options.compilerVersion &&
+    new SemVer(options.compilerVersion).compare("0.15.0") >= 0
+  ) {
+    args += " --legacy-persistence";
+  }
 
   if (options.forceGc) {
     args += " --force-gc";
