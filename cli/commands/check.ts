@@ -1,7 +1,7 @@
 import path from "node:path";
 import chalk from "chalk";
 import { execa } from "execa";
-import { cliError } from "../error.js";
+import { cliError, cliExit } from "../error.js";
 import {
   getGlobalMocArgs,
   getRootDir,
@@ -208,7 +208,8 @@ async function checkCanisters(
         });
 
         if (result.exitCode !== 0) {
-          cliError(
+          cliExit(
+            result.exitCode ?? 1,
             `✗ Check failed for canister ${canisterName} (exit code: ${result.exitCode})`,
           );
         }
@@ -285,7 +286,8 @@ async function checkFiles(
       });
 
       if (result.exitCode !== 0) {
-        cliError(
+        cliExit(
+          result.exitCode ?? 1,
           `✗ Check failed for file ${file} (exit code: ${result.exitCode})`,
         );
       }

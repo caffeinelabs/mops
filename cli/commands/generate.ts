@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { cliError } from "../error.js";
+import { cliError, cliExit } from "../error.js";
 import {
   filterCanisters,
   resolveCanisterConfigs,
@@ -104,7 +104,8 @@ export async function generateCandid(
             console.error(result.stdout);
           }
         }
-        cliError(
+        cliExit(
+          result.exitCode ?? 1,
           `Failed to generate Candid for canister ${canisterName} (exit code: ${result.exitCode})`,
         );
       }

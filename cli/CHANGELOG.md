@@ -2,6 +2,8 @@
 
 ## Next
 
+- `mops build`, `mops check`, `mops generate`, and `mops check-stable` now tunnel `moc`'s exit code instead of always exiting `1`. moc exits `2` on a compiler crash (uncaught internal error) versus `1` for normal user errors (type/compile errors, stable-compat mismatch, bad args), so CI and scripts can now distinguish "file a Motoko bug" from "fix your code" via `$?`. `mops test` likewise exits `2` when a `moc` process crashes during a test run, instead of reporting it as an ordinary test failure.
+
 ## 2.16.0
 
 - `mops bench` now compiles benchmark canisters under **enhanced orthogonal persistence** (moc's default) instead of forcing `--legacy-persistence` — measuring the persistence mode real canisters run. Pass `--legacy-persistence` to opt back into legacy persistence.

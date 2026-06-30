@@ -159,13 +159,20 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       explicitReplica,
     );
     if (!passed) {
-      process.exit(1);
+      process.exit(maxMocExit >= 2 ? 2 : 1);
     }
   }
 }
 
 let mocPath = "";
 let wasmtimePath = "";
+
+let maxMocExit = 0;
+const trackMocExit = (code: number | null) => {
+  if (code && code >= 2) {
+    maxMocExit = Math.max(maxMocExit, code);
+  }
+};
 
 async function runAll(
   reporterName: ReporterName | undefined,
@@ -197,6 +204,7 @@ export async function testWithReporter(
   signal?: AbortSignal,
   explicitReplica = false,
 ): Promise<boolean> {
+  maxMocExit = 0;
   let rootDir = getRootDir();
   let files: string[] = [];
   let libFiles = globSync("**/test?(s)/lib.mo", MOTOKO_GLOB_CONFIG);
@@ -328,7 +336,7 @@ export async function testWithReporter(
           }
           throw error;
         });
-        pipeMMF(proc, mmf).then(resolve);
+        pipeMMF(proc, mmf, trackMocExit).then(resolve);
       }
       // build and run wasm
       else if (mode === "wasi") {
@@ -346,7 +354,7 @@ export async function testWithReporter(
           }
           throw error;
         });
-        pipeMMF(buildProc, mmf)
+        pipeMMF(buildProc, mmf, trackMocExit)
           .then(async () => {
             if (mmf.failed > 0) {
               return;
@@ -413,7 +421,7 @@ export async function testWithReporter(
           throw error;
         });
 
-        pipeMMF(buildProc, mmf)
+        pipeMMF(buildProc, mmf, trackMocExit)
           .then(async () => {
             if (mmf.failed > 0) {
               return;
