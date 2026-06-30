@@ -22,8 +22,8 @@ The output format is a markdown table, so you can copy-paste it into your `READM
 Under the hood, Mops will:
 - Start a local replica on port `4944`
 - Wrap each `*.bench.mo` file in a canister
-- Compile canisters with `--force-gc` flag and deploy them
-- Run each cell of the benchmark file as an update call
+- Compile canisters under enhanced orthogonal persistence (moc's default) with the `--force-gc` flag and deploy them
+- Run each cell of the benchmark file as an update call (or a query call with [`--query`](#--query))
 - For each call measure usage of wasm instructions(`performance_counter`) and heap size(`rts_heap_size`)
 
 :::caution Instruction counts depend on the replica
@@ -68,6 +68,20 @@ Save benchmark results to `.bench/<filename>.json` file.
 ### `--compare`
 
 Compare benchmark results with the results from `.bench/<filename>.json` file.
+
+### `--query`
+
+Measure each cell in a **query** call instead of an update call.
+
+This reflects how `query` methods actually execute on the IC: queries run no garbage collection, so the instruction counts exclude GC work that an update would incur. Use it to benchmark read-only/`query` workloads realistically.
+
+Only works for benchmarks whose runner is **synchronous** — a runner that performs inter-canister (`await`) calls needs the update path and must be run without `--query`.
+
+### `--legacy-persistence`
+
+Compile benchmark canisters under legacy persistence instead of enhanced orthogonal persistence (the default).
+
+Use it to measure a canister that still uses legacy persistence. Has no effect with `moc < 0.15`, where legacy persistence is already the default.
 
 ### `--verbose`
 
