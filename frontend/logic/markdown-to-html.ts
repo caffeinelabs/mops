@@ -46,7 +46,54 @@ export let markdownToHtml = async (
     },
   });
 
-  div.innerHTML = DOMPurify.sanitize(mdit.render(markdown));
+  div.innerHTML = DOMPurify.sanitize(mdit.render(markdown), {
+    ALLOWED_TAGS: [
+      "details",
+      "summary",
+      "p",
+      "br",
+      "strong",
+      "b",
+      "em",
+      "i",
+      "s",
+      "del",
+      "code",
+      "pre",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "ul",
+      "ol",
+      "li",
+      "blockquote",
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "th",
+      "td",
+      "img",
+      "a",
+      "hr",
+      "div",
+      "span",
+    ],
+    ALLOWED_ATTR: [
+      "href",
+      "src",
+      "alt",
+      "class",
+      "id",
+      "name",
+      "target",
+      "rel",
+      "title",
+    ],
+  });
 
   // replace relative url to github absolute url
   if (repositoryUrl) {
