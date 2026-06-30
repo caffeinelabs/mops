@@ -30,7 +30,6 @@ import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
 import { BenchReplica } from "./bench-replica.js";
-import { getMocArgs, isLegacyGc } from "./bench-gc-args.js";
 
 type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
 
@@ -287,6 +286,47 @@ function computeDiffAll(
   }
 
   return diff;
+}
+
+// Collectors that only exist under legacy persistence. moc 0.15+ fixes the GC to
+// incremental under enhanced orthogonal persistence and rejects these there.
+function isLegacyGc(gc: BenchOptions["gc"]): boolean {
+  return gc === "copying" || gc === "compacting" || gc === "generational";
+}
+
+function getMocArgs(options: BenchOptions): string {
+  let args = "";
+
+  let mocAtLeast015 =
+    !!options.compilerVersion &&
+    new SemVer(options.compilerVersion).compare("0.15.0") >= 0;
+
+  // Selecting a legacy collector implies legacy persistence — it's the only mode
+  // where moc accepts it. Below moc 0.15, legacy persistence is already the default
+  // (and the flag doesn't exist), so we only emit --legacy-persistence on >= 0.15.
+  let useLegacyPersistence = options.legacyPersistence || isLegacyGc(options.gc);
+
+  if (useLegacyPersistence && mocAtLeast015) {
+    args += " --legacy-persistence";
+  }
+
+  if (options.forceGc) {
+    args += " --force-gc";
+  }
+
+  // Under EOP the GC is fixed (not choosable); only pass a collector flag where
+  // it's selectable — legacy persistence (explicit or implied) or moc < 0.15.
+  if (options.gc && (useLegacyPersistence || !mocAtLeast015)) {
+    args += ` --${options.gc}-gc`;
+  }
+
+  if (options.profile === "Debug") {
+    args += " --debug";
+  } else if (options.profile === "Release") {
+    args += " --release";
+  }
+
+  return args;
 }
 
 async function deployBenchFile(
