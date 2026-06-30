@@ -303,7 +303,8 @@ function getMocArgs(options: BenchOptions): string {
 
   // Legacy collectors require legacy persistence; moc < 0.15 is already legacy
   // and has no --legacy-persistence flag.
-  let useLegacyPersistence = options.legacyPersistence || isLegacyGc(options.gc);
+  let useLegacyPersistence =
+    options.legacyPersistence || isLegacyGc(options.gc);
 
   if (useLegacyPersistence && mocAtLeast015) {
     args += " --legacy-persistence";

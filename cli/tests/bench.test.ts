@@ -13,9 +13,7 @@ describe("bench", () => {
     try {
       const result = await cli(["bench"], { cwd });
       expect(result.stderr).not.toContain("--copying-gc is not supported");
-      expect(result.stderr).not.toContain(
-        "Invalid compiler flag combination",
-      );
+      expect(result.stderr).not.toContain("Invalid compiler flag combination");
       expect(result.exitCode).toBe(0);
     } finally {
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
