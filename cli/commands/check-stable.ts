@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import chalk from "chalk";
 import { execa } from "execa";
-import { cliError } from "../error.js";
+import { cliError, cliExit } from "../error.js";
 import {
   getCheckLimitPendingIssue,
   prepareMigrationArgs,
@@ -261,7 +261,8 @@ export async function runStableCheck(
       if (result.stderr) {
         console.error(result.stderr);
       }
-      cliError(
+      cliExit(
+        result.exitCode ?? 1,
         `✗ Stable compatibility check failed for canister '${canisterName}'`,
       );
     }
@@ -314,7 +315,8 @@ async function generateStableTypes(
     if (result.stderr) {
       console.error(result.stderr);
     }
-    cliError(
+    cliExit(
+      result.exitCode ?? 1,
       `Failed to generate stable types for ${moFile} (exit code: ${result.exitCode})`,
     );
   }
