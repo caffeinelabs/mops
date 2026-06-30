@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`check --fix (utf-8 source) multi-byte characters do not corrupt the fix: fix output 1`] = `
+"Fixed run/multibyte.mo (3 fixes: M0236)
+
+✓ 3 fixes applied to 1 file
+✓ <TEST_DIR>/check/fix-utf8/run/multibyte.mo"
+`;
+
+exports[`check --fix (utf-8 source) multi-byte characters do not corrupt the fix: fixed file 1`] = `
+"// Regression fixture: --fix must apply byte-accurately when a multi-byte UTF-8
+// literal sits before the dot-notation span on the SAME line — that's where
+// moc's byte columns and LSP's UTF-16 positions diverge. Each body is a single
+// expression so prettier keeps it on one line (it splits \`;\`-separated
+// statements). \`Char.toNat32(c)\` triggers M0236; a column-based edit over-deletes
+// past the multi-byte prefix and drops the trailing \`)\`. Literal receivers are
+// avoided on purpose — moc no longer suggests dot-rewrites for them
+// (caffeinelabs/motoko#6173).
+import Char "mo:core/Char";
+
+module {
+  public func a(c : Char) : Text = "A" # debug_show (c.toNat32());
+  public func b(c : Char) : Text = "京" # debug_show (c.toNat32());
+  public func d(c : Char) : Text = "💩" # debug_show (c.toNat32());
+};
+"
+`;

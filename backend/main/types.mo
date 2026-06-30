@@ -81,11 +81,11 @@ module {
 
   // legacy for backward compatibility
   public type PackageConfigV3_Publishing = PackageConfigV2 and {
-    requirements : ?[Requirement]; // max 1 item
+    requirements : ?[Requirement]; // moc, lintoko
   };
 
   public type PackageConfigV3 = PackageConfigV2 and {
-    requirements : [Requirement]; // max 1 item
+    requirements : [Requirement]; // moc, lintoko
   };
 
   public type PackageSummary = {

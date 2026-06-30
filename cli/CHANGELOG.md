@@ -1,6 +1,55 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.16.0
+
+- `mops bench` now compiles benchmark canisters under **enhanced orthogonal persistence** (moc's default) instead of forcing `--legacy-persistence` — measuring the persistence mode real canisters run. Pass `--legacy-persistence` to opt back into legacy persistence.
+- `mops bench --query` measures each cell in a **query** call instead of an update call. Queries run no GC on the IC, so the instruction counts exclude GC work an update would incur — for benchmarking `query`/read-only workloads realistically. Only for synchronous benchmark runners (no inter-canister `await`).
+- `[requirements].lintoko` declares a minimum lintoko version for package consumers. `mops install` (and `mops add`, `mops toolchain use`) warn when the project's lintoko is below a dependency's requirement, same as `moc` (#597).
+
+## 2.15.2
+
+- `mops check-stable` (and the stable check inside `mops check`) reports when `[canisters.<name>.migrations].check-limit` is set but more migrations are pending than the limit allows. If the compatibility check failed, the check-limit diagnostic replaces the misleading `moc` error; if it passed anyway, a warning is shown. Compares the deployed `.most` baseline against the local chain; use `--no-check-limit` to suppress.
+
+## 2.15.1
+
+- `mops check --fix` no longer aborts when a fixable file is read-only (e.g. a frozen migration chain file deliberately `chmod`'d to remove write access). The autofixer now skips such files with a warning and continues fixing the rest, instead of crashing the whole run on `EACCES`/`EPERM`.
+
+- Load the PocketIC client lazily, only when a command actually starts a replica. Commands like `mops check`, `mops build`, and `mops install` no longer pay to load it (and its `@icp-sdk/core` dependency) at startup. This also unblocks running the CLI via `tsx` in local dev, where `pic-js-mops` (shipped as ESM without `"type": "module"`) fails to resolve as a static import.
+
+- `mops bench --verbose` is now actually verbose. It prints the benchmark pipeline up front — compiler version, replica + version, GC, profile, and whether the wasm is optimized (`dfx` post-optimizes with `optimize: "cycles"` via ic-wasm on deploy; `pocket-ic` runs the raw `moc` output) — logs the full `moc` build command, and streams the compiler and `dfx` output instead of capturing and discarding it. Notably this surfaces dfx's `WARNING: Failed to optimize the Wasm module`, which dfx prints (and then silently deploys the unoptimized module) when `optimize: "cycles"` fails — e.g. on multi-value modules that the bundled ic-wasm can't process. Previously all of this was hidden even with `--verbose`.
+
+## 2.15.0
+
+- Fix `mops check --fix` corrupting source on lines containing multi-byte UTF-8 characters (e.g. `Char.toNat32('京')` dropping its trailing `)`). The autofixer was feeding moc's UTF-8 byte columns into LSP's UTF-16 position API, mis-applying every edit past the first non-ASCII byte on the line. When moc emits `byte_start`/`byte_end` (1.10.0 and newer) the fixer now applies edits byte-accurately; older moc still falls back to the line+column path (unchanged behavior, still ASCII-only).
+
+- Revert "Speed up `mops check <files...>`" (2.14.1). Passing all files to a single `moc --check` invocation accumulates scope across them: checking `A.mo B.mo` makes `A.mo`'s definitions visible while type-checking `B.mo`, so a file that only compiles because a sibling brings something into scope is wrongly reported as passing. `mops check` again checks each file in its own `moc` invocation so every file is validated in isolation.
+
+- Add `--no-check-limit` to `mops check`, `mops check-stable`, and `mops lint` to process the full migration chain for a single run, ignoring the configured `[canisters.<name>.migrations].check-limit`. Handy for `mops check --fix --no-check-limit` to autofix issues in older migrations that the limit normally skips
+
+- `--help` now lists every option and the `-- <tool flags>` passthrough for each command: `mops build`, `mops check`, `mops check-stable`, and `mops generate candid` document `-- <moc flags>` (e.g. `mops check -- -Werror`), `mops lint` documents `-- <lintoko flags>`, and the `--verbose` flag of `mops add`/`mops install`/`mops publish` now has a description instead of showing blank
+
+- Add `mops deployed` (post-deploy hook) and `mops deployed init` (one-time bootstrap). After a successful deploy, `mops deployed [canisters...]` promotes the built `<build-dir>/<name>.most` into `<deployed-dir>/<name>.most` so `mops check-stable` always compares against the just-deployed version. `mops deployed init` creates an empty-actor `.most` baseline and wires `[canisters.<name>.check-stable].path` to it. Configurable via `[deployed].dir` (default `deployed`) and overridable with `--dir`; the build output dir it reads from defaults to `[build].outputDir` (`.mops/.build`) and is overridable with `--build-dir`.
+
+- Add `mops generate candid [canisters...]` to (re)generate the curated `.did` file from current Motoko source. With `[canisters.<name>].candid` set, overwrites that file in place; otherwise writes `<name>.did` next to `main` and sets the field in `mops.toml`. `--output, -o <path>` writes to an arbitrary path (single-canister only) without modifying `mops.toml`. `moc` is invoked with the same packages, `[moc].args`, `[build].args`, per-canister `args`, and migration flags as `mops build`, so the generated interface always satisfies `mops build`'s subtype check.
+
+## 2.14.1
+- Speed up `mops check <files...>` (e.g. `mops check src/**/*.mo`) on packages with many files. Previously each file was checked in its own `moc` invocation, so every shared transitive import was re-parsed and re-type-checked once per file. All files are now passed to a single `moc --check` call, which loads and type-checks each import only once — on motoko-core (53 files) this drops a full check from ~27s to ~1.6s. The per-file `✓` confirmations now print only when the whole check passes.
+
+## 2.14.0
+- Fix `mops check --fix` crashing with `TypeError: Cannot read properties of undefined (reading 'split')` when `moc` produces no output (e.g. it fails to spawn or is killed by the OOM killer in a memory-constrained container). The autofix pass now treats missing `moc` output as "no fixes to apply" and lets the regular check report the real failure, instead of aborting the whole command with an unhandled exception.
+
+- Fix `mops check --fix` and `mops lint --fix` corrupting source files when two `mops` processes run concurrently in the same project (e.g. two coding agents on the same checkout). Concurrent runs could apply stale `moc` byte offsets to a sibling's already-mutated file, leaving source like `let nat = identity` (with the type-arg and call dropped) or `list.sortInPlace(` with an unclosed paren. `--fix` invocations now acquire a project-root advisory lock at `.mops/fix.lock` and serialize, cargo-style ("Waiting for another `mops --fix` run to finish..."). Read-only `mops check` and `mops lint` are unchanged.
+
+- Deprecate the `dfx` replica in `mops bench`, `mops test --mode replica`, and `mops watch`. Behavior is unchanged — `--replica dfx`, the implicit `dfx` fallback when no `[toolchain.pocket-ic]` is set, and the dfx-bundled PocketIC fallback all still work — but each now prints a warning. Run `mops toolchain use pocket-ic <version>` to silence it. The `dfx` paths will be removed and the default flipped to PocketIC in mops v3 — `dfx` is being deprecated upstream and PocketIC is a better fit for benchmarks and replica tests (deterministic, in-process, no background daemon).
+
+- `mops toolchain --help` now lists the tools mops manages (`moc`, `wasmtime`, `pocket-ic`, `lintoko`) in the top-level description instead of only mentioning them under `bin`, and `mops toolchain use` / `update` / `bin` print the available tools (via the auto-generated help) when invoked with a missing or invalid `<tool>` argument.
+
+- Add `--patch` to `mops update` and `mops outdated` to restrict updates to patch versions only (e.g. `1.2.3 -> 1.2.4`, never `1.2.3 -> 1.3.0`). Mutually exclusive with `--major`. For pre-1.0 packages this matches the default — caret already restricts `0.x.y` to patch updates. Useful for risk-averse upgrades on packages that have hit 1.0+.
+
+- Improve the per-file integrity-check error after `mops install --lock update`. Previously the message told users to run `mops install --lock update` — the exact command that just failed. After a regenerated lockfile, the only way a per-file hash can still mismatch is a local edit under `.mops/`, so the message now says that and suggests restoring from the global cache (delete the `.mops/<pkg>` directory and run `mops install`) or using a `repo`/`path` entry in `mops.toml` to keep custom changes.
+
 - Deprecate the `vessel.dhall` auto-migration in `mops init`. Behavior is unchanged for now — interactive `mops init` still reads `vessel.dhall` and copies its dependencies into `mops.toml` — but a warning is printed (also under `--yes`, which still skips the migration itself), and the migration will be removed in mops v3. Before then, copy your dependencies into `mops.toml` manually and delete `vessel.dhall` / `package-set.dhall`.
 
 - Fix `mops install` race conditions when multiple processes install into the same project (e.g. an editor watcher, fixture installers like vscode-motoko's, or CI matrix jobs sharing a global cache). Concurrent runs could observe a half-populated global cache or local `.mops/<pkg>` directory and copy zero-byte / truncated files, surfacing later as missing completions, hover data, or type-check errors. Cache writes (mops registry, GitHub installs, and project-local `.mops/`) now stage into a sibling `.staging-*` dir and atomically rename onto the canonical path. Stale staging dirs from interrupted runs are swept on the next install. The shared `.mops/_tmp/` zip download dir used by GitHub installs is also per-invocation now. If you have zero-byte files left over in your cache from a pre-fix crash, run `mops cache clean` once after upgrading.

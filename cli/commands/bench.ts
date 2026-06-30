@@ -22,6 +22,7 @@ import { parallel } from "../parallel.js";
 import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
+import { warnIfDfxReplica } from "../helpers/deprecate-dfx-replica.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
 import { sources } from "./sources.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
@@ -39,6 +40,8 @@ type BenchOptions = {
   compilerVersion: string;
   gc: "copying" | "compacting" | "generational" | "incremental";
   forceGc: boolean;
+  query: boolean;
+  legacyPersistence: boolean;
   save: boolean;
   compare: boolean;
   verbose: boolean;
@@ -60,6 +63,8 @@ export async function bench(
     compilerVersion: getMocVersion(true),
     gc: "copying",
     forceGc: true,
+    query: false,
+    legacyPersistence: false,
     save: false,
     compare: false,
     verbose: false,
@@ -98,7 +103,38 @@ export async function bench(
     options.replicaVersion = config.toolchain?.["pocket-ic"] || "";
   }
 
-  options.verbose && console.log(options);
+  warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");
+
+  if (options.verbose) {
+    // `dfx` post-optimizes the wasm on deploy (`optimize: "cycles"`, via ic-wasm);
+    // `pocket-ic` runs the raw moc output. This changes instruction counts, so surface it.
+    let optimize =
+      replicaType === "dfx" || replicaType === "dfx-pocket-ic"
+        ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
+        : "none (raw moc output)";
+    console.log(chalk.gray("Benchmark pipeline:"));
+    console.log(chalk.gray(`  compiler:  moc ${options.compilerVersion}`));
+    console.log(
+      chalk.gray(
+        `  replica:   ${replicaType}${options.replicaVersion ? ` ${options.replicaVersion}` : ""}`,
+      ),
+    );
+    console.log(
+      chalk.gray(
+        `  gc:        ${options.gc}${options.forceGc ? " (forced)" : ""}`,
+      ),
+    );
+    console.log(
+      chalk.gray(`  context:   ${options.query ? "query" : "update"}`),
+    );
+    console.log(
+      chalk.gray(
+        `  persistence: ${options.legacyPersistence ? "legacy" : "enhanced"}`,
+      ),
+    );
+    console.log(chalk.gray(`  profile:   ${options.profile}`));
+    console.log(chalk.gray(`  optimize:  ${optimize}`));
+  }
 
   let replica = new BenchReplica(replicaType, options.verbose);
 
@@ -246,7 +282,12 @@ function computeDiffAll(
 function getMocArgs(options: BenchOptions): string {
   let args = "";
 
+  // Benchmarks compile under enhanced orthogonal persistence (moc's default
+  // since 0.15) — the mode real canisters run. Pass `--legacy-persistence`
+  // only when the user opts in, and only where moc supports the flag (>= 0.15;
+  // legacy is already the default below it).
   if (
+    options.legacyPersistence &&
     options.compilerVersion &&
     new SemVer(options.compilerVersion).compare("0.15.0") >= 0
   ) {
@@ -300,14 +341,16 @@ async function deployBenchFile(
   // build canister
   let mocPath = getMocPath();
   let mocArgs = getMocArgs(options);
-  options.verbose && console.time(`build ${canisterName}`);
-  await execaCommand(
-    `${mocPath} -c --idl canister.mo ${globalMocArgs.join(" ")} ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`,
-    {
-      cwd: tempDir,
-      stdio: options.verbose ? "pipe" : ["pipe", "ignore", "pipe"],
-    },
-  );
+  let buildCmd = `${mocPath} -c --idl canister.mo ${globalMocArgs.join(" ")} ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`;
+  if (options.verbose) {
+    console.log(chalk.gray(`[${canisterName}] ${buildCmd}`));
+    console.time(`build ${canisterName}`);
+  }
+  await execaCommand(buildCmd, {
+    cwd: tempDir,
+    // `inherit` so the compiler output (warnings/errors) is streamed under --verbose
+    stdio: options.verbose ? "inherit" : ["pipe", "ignore", "pipe"],
+  });
   options.verbose && console.timeEnd(`build ${canisterName}`);
 
   // deploy canister
@@ -507,13 +550,14 @@ async function runBenchFile(
     log();
   }
 
-  // run all cells
+  // run all cells. `--query` measures in query context (how `query` methods
+  // actually run on the IC: no GC), at the cost of not supporting benches whose
+  // runner performs async calls. Otherwise use the update path.
   for (let [rowIndex, row] of schema.rows.entries()) {
     for (let [colIndex, col] of schema.cols.entries()) {
-      let res = await actor.runCellUpdateAwait(
-        BigInt(rowIndex),
-        BigInt(colIndex),
-      );
+      let res = options.query
+        ? await actor.runCellQuery(BigInt(rowIndex), BigInt(colIndex))
+        : await actor.runCellUpdateAwait(BigInt(rowIndex), BigInt(colIndex));
       results.set(`${row}:${col}`, res);
 
       // @ts-ignore

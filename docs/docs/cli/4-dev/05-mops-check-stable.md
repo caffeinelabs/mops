@@ -76,7 +76,7 @@ mops check-stable <old-file> [canister]
 - **`[canister]`** — Name of the canister to check against. When omitted, auto-detected if exactly one canister is defined; errors if multiple canisters exist.
 
 :::tip
-`mops build` generates a `.most` file for each canister alongside `.wasm` and `.did`. Save it before deploying an upgrade, then configure `[canisters.<name>.check-stable]` in `mops.toml` so `mops check-stable` (and `mops check`) verify upgrade safety automatically on every run.
+`mops build` generates a `.most` file for each canister alongside `.wasm` and `.did`. Use [`mops deployed`](/cli/mops-deployed) as a post-deploy hook to promote that `.most` into a committed `deployed/<name>.most` baseline, and configure `[canisters.<name>.check-stable]` in `mops.toml` so `mops check-stable` (and `mops check`) verify upgrade safety automatically on every run.
 :::
 
 ## Options
@@ -84,6 +84,16 @@ mops check-stable <old-file> [canister]
 ### `--verbose`
 
 Show detailed output including the `moc` commands being run and the intermediate file paths.
+
+### `--no-check-limit`
+
+Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming). Also suppresses the pending-migration warning that runs when `check-limit` is set.
+
+## Pending migration diagnostic
+
+When `[canisters.<name>.migrations].check-limit` is set, `mops check-stable` compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error (trimming started from the wrong state). If compat passed anyway, it is shown as a warning.
+
+The warning only applies when the baseline is a committed `.most` file (via `[check-stable].path` or passed as a `.most` argument). Baselines compiled from a `.mo` source on the command line are skipped — the scratch `.most` would not reflect what is actually deployed.
 
 ## Enhanced migration support
 

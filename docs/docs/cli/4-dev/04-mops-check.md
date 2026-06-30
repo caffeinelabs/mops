@@ -75,9 +75,21 @@ mops check --fix
 
 After applying fixes, `--fix` re-checks all files and runs stable compatibility checks (if configured). If type-checking fails after fixing, stable checks are skipped.
 
+Read-only files (e.g. frozen migration chain files `chmod`'d read-only) are skipped with a warning rather than aborting the run; the remaining files are still fixed.
+
+Concurrent `--fix` runs in the same project (e.g. two agents on the same checkout) serialize via an advisory lock at `.mops/fix.lock`. The second invocation prints `Waiting for another mops --fix run to finish...` and resumes once the first one releases. Plain `mops check` is read-only and never blocks.
+
 ### `--verbose`
 
 Print the full `moc` invocation before running it.
+
+### `--no-check-limit`
+
+Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. Useful with `--fix` to autofix issues in older migrations that the limit would normally skip. Also suppresses the pending-migration warning that runs when `check-limit` is set. See [chain trimming](/cli/mops-migrate#chain-trimming).
+
+```
+mops check --fix --no-check-limit
+```
 
 ## Passing flags to the Motoko compiler
 
@@ -111,6 +123,8 @@ actor { };
 ```
 
 For more details, see [`mops check-stable`](/cli/mops-check-stable).
+
+When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. Only applies when the baseline is a committed `.most` file configured via `[check-stable].path` (not a `.mo` source passed on the command line). See [chain trimming](/cli/mops-migrate#chain-trimming).
 
 ## Enhanced migration support
 

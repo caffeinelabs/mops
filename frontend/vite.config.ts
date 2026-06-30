@@ -92,7 +92,7 @@ export default defineConfig({
       targets: [
         {
           src: "external/*",
-          dest: "external",
+          dest: ".",
         },
         {
           src: ".ic-assets.json",
@@ -100,7 +100,7 @@ export default defineConfig({
         },
         {
           src: ".well-known/*",
-          dest: ".well-known",
+          dest: ".",
         },
       ],
     }),

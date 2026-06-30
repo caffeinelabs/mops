@@ -1,6 +1,14 @@
 import { beforeAll, describe, expect, test } from "@jest/globals";
-import { cpSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  readdirSync,
+  readFileSync,
+  unlinkSync,
+} from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "path";
+import { lock } from "proper-lockfile";
 import { parseDiagnostics } from "../helpers/autofix-motoko";
 import { cli, normalizePaths } from "./helpers";
 
@@ -20,7 +28,9 @@ describe("check --fix", () => {
 
   beforeAll(() => {
     for (const file of readdirSync(runDir).filter((f) => f.endsWith(".mo"))) {
-      unlinkSync(path.join(runDir, file));
+      const p = path.join(runDir, file);
+      chmodSync(p, 0o644);
+      unlinkSync(p);
     }
   });
 
@@ -59,6 +69,13 @@ describe("check --fix", () => {
 
     return runFilePath;
   }
+
+  test("parseDiagnostics tolerates missing moc output", () => {
+    // execa with reject:false yields undefined stdout when moc fails to spawn
+    // or is killed (e.g. OOM); parsing must degrade to no diagnostics, not throw.
+    expect(parseDiagnostics(undefined)).toEqual([]);
+    expect(parseDiagnostics("")).toEqual([]);
+  });
 
   test("M0223", async () => {
     await testCheckFix("M0223.mo", { M0223: 1 });
@@ -123,6 +140,22 @@ describe("check --fix", () => {
     expect(readFileSync(runFilePath, "utf-8")).not.toContain("<Nat>");
   });
 
+  test("read-only file is skipped, not crashed", async () => {
+    const runFilePath = copyFixture("M0223.mo");
+    const before = readFileSync(runFilePath, "utf-8");
+    chmodSync(runFilePath, 0o444);
+
+    const result = await cli(
+      ["check", runFilePath, "--fix", "--", warningFlags],
+      { cwd: fixDir },
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toMatch(/Skipped read-only file/);
+    // File left untouched since the fix couldn't be written.
+    expect(readFileSync(runFilePath, "utf-8")).toBe(before);
+  });
+
   test("verbose", async () => {
     const result = await cli(["check", "Ok.mo", "--fix", "--verbose"], {
       cwd: fixDir,
@@ -155,5 +188,42 @@ describe("check --fix", () => {
     expect(result.stdout).toContain("1 fix applied");
     expect(result.stderr).toMatch(/error/i);
     expect(result.stdout).not.toMatch(/✓ run/);
+  });
+
+  test("concurrent --fix runs serialize and produce the same output", async () => {
+    const runFilePath = copyFixture("edit-suggestions.mo");
+    await cli(["check", runFilePath, "--fix", "--", warningFlags], {
+      cwd: fixDir,
+    });
+    const expected = readFileSync(runFilePath, "utf-8");
+    copyFixture("edit-suggestions.mo");
+
+    // Hold the lock from the test process itself so both children
+    // deterministically hit ELOCKED, print "Waiting...", and queue.
+    const lockTarget = path.join(fixDir, ".mops", "fix.lock");
+    await mkdir(path.dirname(lockTarget), { recursive: true });
+    await writeFile(lockTarget, "", { flag: "a" });
+    const release = await lock(lockTarget, { stale: 30_000 });
+
+    const childA = cli(["check", runFilePath, "--fix", "--", warningFlags], {
+      cwd: fixDir,
+    });
+    const childB = cli(["check", runFilePath, "--fix", "--", warningFlags], {
+      cwd: fixDir,
+    });
+
+    // Hold long enough for both children to spawn (`npm run mops` → bundler →
+    // CLI startup) and attempt the non-blocking acquire. 5s is conservative —
+    // local runs land well under 2s, the headroom is purely to absorb CI jitter.
+    await new Promise((r) => setTimeout(r, 5000));
+    await release();
+
+    const [a, b] = await Promise.all([childA, childB]);
+    expect(a.exitCode).toBe(0);
+    expect(b.exitCode).toBe(0);
+    expect(readFileSync(runFilePath, "utf-8")).toBe(expected);
+    // At least one child must have hit the held lock and queued; if neither
+    // did, the lock didn't actually serialize anything.
+    expect(a.stdout + b.stdout).toContain("Waiting for another");
   });
 });

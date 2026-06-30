@@ -138,6 +138,46 @@ describe("install", () => {
     }
   });
 
+  // Regression: when a file under `.mops/` was edited locally (an unsupported
+  // but common AI-agent workflow), `--lock update` would regenerate the
+  // lockfile from registry hashes, then fail the per-file check, and tell the
+  // user to "Run `mops install --lock update` to regenerate it" — the exact
+  // command that just failed. The post-regen message now says the local copy
+  // was modified and points at the actual fix.
+  test("--lock update flags a locally edited .mops/ file with a clear recovery hint", async () => {
+    const cwd = path.join(import.meta.dirname, "install/success");
+    const lockFile = path.join(cwd, "mops.lock");
+    const localDep = path.join(cwd, ".mops", "core@1.0.0", "mops.toml");
+    rmSync(lockFile, { force: true });
+    rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    try {
+      const first = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(first.exitCode).toBe(0);
+      expect(existsSync(localDep)).toBe(true);
+
+      writeFileSync(
+        localDep,
+        readFileSync(localDep, "utf8") + "\n# tampered\n",
+      );
+
+      const result = await cli(["install", "--lock", "update"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        /\.mops\/core@1\.0\.0\/mops\.toml differs from the registry/,
+      );
+      expect(result.stderr).toMatch(
+        /delete the `\.mops\/core@1\.0\.0` directory and run `mops install`/,
+      );
+      expect(result.stderr).not.toMatch(/Run `mops install --lock update`/);
+    } finally {
+      rmSync(lockFile, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
   // Regression: parallel `mops install` runs against the same project used to
   // race in two places — global cache writes (`.mops/<pkg>` populated mid-write)
   // and local `.mops/<pkg>` copies — leaving zero-byte / partially-written
@@ -284,4 +324,72 @@ describe("update / outdated bounds", () => {
       cleanup();
     }
   });
+});
+
+// `--patch` restricts updates to patch versions only, never crossing the minor
+// bound. Fixture pins `core = "2.3.0"`; registry has 2.3.1 (patch) and 2.4.0,
+// 2.5.0 (minor). Caret default lets minors through; --patch must not.
+describe("update / outdated --patch bound", () => {
+  jest.setTimeout(120_000);
+
+  const cwd = path.join(import.meta.dirname, "install/update-bound-patch");
+  const tomlFile = path.join(cwd, "mops.toml");
+  const original = readFileSync(tomlFile, "utf8");
+
+  const cleanup = () => {
+    rmSync(path.join(cwd, "mops.lock"), { force: true });
+    rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    writeFileSync(tomlFile, original);
+  };
+
+  const coreVersion = (toml: string) =>
+    toml.match(/core = "(\d+\.\d+\.\d+)"/)?.[1];
+
+  test("mops update --patch restricts to patch bumps", async () => {
+    cleanup();
+    try {
+      await cli(["install"], { cwd, env: { CI: undefined } });
+      const result = await cli(["update", "--patch"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(result.exitCode).toBe(0);
+      const after = readFileSync(tomlFile, "utf8");
+      // Stays within 2.3.x — must not cross to 2.4.0 / 2.5.0
+      expect(coreVersion(after)).toMatch(/^2\.3\./);
+      expect(coreVersion(after)).not.toBe("2.3.0");
+    } finally {
+      cleanup();
+    }
+  });
+
+  test("mops outdated --patch reports patch-only updates", async () => {
+    cleanup();
+    try {
+      await cli(["install"], { cwd, env: { CI: undefined } });
+      const patch = normalizePaths(
+        (await cli(["outdated", "--patch"], { cwd, env: { CI: undefined } }))
+          .stdout,
+      );
+      // Only 2.3.x updates surface, never 2.4.x / 2.5.x
+      expect(patch).toMatch(/core 2\.3\.0 -> 2\.3\./);
+      expect(patch).not.toMatch(/core 2\.3\.0 -> 2\.[4-9]/);
+    } finally {
+      cleanup();
+    }
+  });
+
+  test.each([["update"], ["outdated"]])(
+    "mops %s rejects --major + --patch",
+    async (cmd) => {
+      const result = await cli([cmd, "--major", "--patch"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr).toMatch(
+        /option '--major' cannot be used with option '--patch'/,
+      );
+    },
+  );
 });

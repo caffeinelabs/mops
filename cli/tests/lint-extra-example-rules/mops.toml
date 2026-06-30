@@ -5,3 +5,4 @@ lintoko = "0.7.0"
 "src/Main.mo" = ["lint/no-types"]
 "src/Types.mo" = ["lint/types-only"]
 "src/Migration.mo" = ["lint/migration-only"]
+"migrations/*.mo" = ["lint/migration-self-contained"]

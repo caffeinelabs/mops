@@ -27,6 +27,9 @@ export type Config = {
     outputDir?: string;
     args?: string[];
   };
+  deployed?: {
+    dir?: string;
+  };
   lint?: {
     args?: string[];
     rules?: string[];
@@ -75,6 +78,7 @@ export type Tool = "moc" | "wasmtime" | "pocket-ic" | "lintoko";
 
 export type Requirements = {
   moc?: string;
+  lintoko?: string;
 };
 
 // export type Format = {

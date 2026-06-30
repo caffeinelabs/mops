@@ -13,9 +13,11 @@ import { bump } from "./commands/bump.js";
 import { check } from "./commands/check.js";
 import { checkCandid } from "./commands/check-candid.js";
 import { checkStable } from "./commands/check-stable.js";
+import { deployed, deployedInit } from "./commands/deployed.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
+import { generateCandid } from "./commands/generate.js";
 import { info } from "./commands/info.js";
 import { init } from "./commands/init.js";
 import { lint } from "./commands/lint.js";
@@ -97,6 +99,31 @@ function parseExtraArgs(variadicArgs?: string[]): {
   return { extraArgs, args };
 }
 
+// Shared `--help` section describing the enhanced migration `check-limit`
+// trimming and its override flag, so the limit behaviour is discoverable
+// from `--help`. `withFix` appends the `--fix` hint for commands that support it.
+// `withPendingWarning` adds the stable-check pending-migration warning (check / check-stable only).
+function enhancedMigrationHelp(
+  options: {
+    withFix?: boolean;
+    withPendingWarning?: boolean;
+  } = {},
+): string {
+  const example = options.withFix ? " (e.g. to --fix older migrations)" : "";
+  let text =
+    "\nEnhanced migration ([canisters.<name>.migrations]):\n" +
+    "  The canister is checked against its migration chain. [migrations].check-limit\n" +
+    "  trims it to the last N migrations (older ones are skipped). Pass --no-check-limit\n" +
+    `  to use the full chain${example}.`;
+  if (options.withPendingWarning) {
+    text +=
+      "\n  When check-limit is set, the stable check reports if more migrations are pending\n" +
+      "  (relative to the deployed .most baseline) than the limit allows — as an error if\n" +
+      "  compat failed, otherwise a warning.";
+  }
+  return text;
+}
+
 program.name("mops");
 
 // --version
@@ -116,7 +143,7 @@ program
   .command("add <pkg>")
   .description("Install the package and save it to mops.toml")
   .option("--dev", "Add to [dev-dependencies] section")
-  .option("--verbose")
+  .option("--verbose", "Show more information")
   .addOption(
     new Option("--lock <action>", "Lockfile action").choices([
       "update",
@@ -157,7 +184,7 @@ program
   .alias("i")
   .description("Install all dependencies specified in mops.toml")
   .option("--no-toolchain", "Do not install toolchain")
-  .option("--verbose")
+  .option("--verbose", "Show more information")
   .addOption(
     new Option("--lock <action>", "Lockfile action").choices([
       "check",
@@ -200,7 +227,7 @@ program
   .option("--no-docs", "Do not generate docs")
   .option("--no-test", "Do not run tests")
   .option("--no-bench", "Do not run benchmarks")
-  .option("--verbose")
+  .option("--verbose", "Show more information")
   .action(async (options) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -313,6 +340,18 @@ program
   .description("Build a canister")
   .addOption(new Option("--verbose", "Verbose console output"))
   .addOption(new Option("--output, -o <output>", "Output directory"))
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops build -- -Werror",
+  )
+  .addHelpText(
+    "after",
+    "\nEnhanced migration ([canisters.<name>.migrations]):\n" +
+      "  The canister is built against its full migration chain (every migration is\n" +
+      "  compiled into the wasm). If mops check passes but mops build fails while\n" +
+      "  [migrations].check-limit is set, re-run with mops check --no-check-limit to\n" +
+      "  surface the issue (check trims the chain; build compiles all of it).",
+  )
   .allowUnknownOption(true) // TODO: restrict unknown before "--"
   .action(async (canisters, options) => {
     checkConfigFile(true);
@@ -341,6 +380,20 @@ program
       "--fix",
       "Apply autofixes to all files, including transitively imported ones",
     ),
+  )
+  .addOption(
+    new Option(
+      "--no-check-limit",
+      "Use the full migration chain, ignoring [migrations].check-limit; also suppresses the pending-migration warning",
+    ),
+  )
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check -- -Werror",
+  )
+  .addHelpText(
+    "after",
+    enhancedMigrationHelp({ withFix: true, withPendingWarning: true }),
   )
   .allowUnknownOption(true)
   .action(async (args, options) => {
@@ -378,6 +431,17 @@ program
     "Check stable variable compatibility. With no arguments, checks all canisters with [check-stable] configured. Arguments can be canister names or an old file path followed by an optional canister name",
   )
   .option("--verbose", "Verbose console output")
+  .addOption(
+    new Option(
+      "--no-check-limit",
+      "Use the full migration chain, ignoring [migrations].check-limit; also suppresses the pending-migration warning",
+    ),
+  )
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check-stable -- -Werror",
+  )
+  .addHelpText("after", enhancedMigrationHelp({ withPendingWarning: true }))
   .allowUnknownOption(true)
   .action(async (args, options) => {
     checkConfigFile(true);
@@ -392,6 +456,47 @@ program
       extraArgs,
     });
   });
+
+// deployed
+const deployedCommand = new Command("deployed")
+  .description(
+    "Post-deploy hook: promote .most stable-types files into the deployed directory so `mops check-stable` compares against the just-deployed version. Pass canister names to scope; with no arguments, all canisters in mops.toml are promoted",
+  )
+  .argument("[canisters...]")
+  .addOption(
+    new Option(
+      "--build-dir <dir>",
+      "Directory to read built .most files from (default: [build].outputDir or .mops/.build)",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--dir <dir>",
+      "Destination directory (default: [deployed].dir or deployed)",
+    ),
+  )
+  .action(async (canisters: string[], options) => {
+    checkConfigFile(true);
+    await deployed(canisters.length ? canisters : undefined, options);
+  });
+
+deployedCommand
+  .command("init [canisters...]")
+  .description(
+    "Pre-first-deploy bootstrap: create an empty-actor .most baseline in the deployed directory and wire [canisters.<name>.check-stable].path to it. Idempotent",
+  )
+  .addOption(
+    new Option(
+      "--dir <dir>",
+      "Destination directory (default: [deployed].dir or deployed)",
+    ),
+  )
+  .action(async (canisters: string[], options) => {
+    checkConfigFile(true);
+    await deployedInit(canisters.length ? canisters : undefined, options);
+  });
+
+program.addCommand(deployedCommand);
 
 // test
 program
@@ -413,7 +518,7 @@ program
   .addOption(
     new Option(
       "--replica <replica>",
-      "Which replica to use to run tests in replica mode",
+      "Which replica to use to run tests in replica mode (`dfx` is deprecated; prefer `pocket-ic`)",
     ).choices(["dfx", "pocket-ic"]),
   )
   .option("-w, --watch", "Enable watch mode")
@@ -435,7 +540,7 @@ program
   .addOption(
     new Option(
       "--replica <replica>",
-      "Which replica to use to run benchmarks",
+      "Which replica to use to run benchmarks (`dfx` is deprecated; prefer `pocket-ic`)",
     ).choices(["dfx", "pocket-ic"]),
   )
   .addOption(
@@ -453,7 +558,24 @@ program
     ),
   )
   // .addOption(new Option('--force-gc', 'Force GC'))
-  .addOption(new Option("--verbose", "Show more information"))
+  .addOption(
+    new Option(
+      "--query",
+      "Measure each cell in a query call (how `query` methods run on the IC: no GC). Only for benchmarks whose runner is synchronous (no inter-canister calls)",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--legacy-persistence",
+      "Compile benchmark canisters under legacy persistence instead of enhanced orthogonal persistence (the default)",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--verbose",
+      "Print the benchmark pipeline (compiler, replica, GC, optimization) and stream compiler/replica output, including dfx optimization warnings",
+    ),
+  )
   .action(async (filter, options) => {
     checkConfigFile(true);
     await installAll({
@@ -626,11 +748,19 @@ program
 // outdated
 program
   .command("outdated")
-  .description("Print outdated dependencies specified in mops.toml")
+  .description(
+    "Print outdated dependencies in mops.toml within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
+  )
   .addOption(
     new Option(
       "--major",
       "Allow updates that cross the caret bound (major versions, or for 0.x.y packages, minor versions)",
+    ).conflicts("patch"),
+  )
+  .addOption(
+    new Option(
+      "--patch",
+      "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
   .action(async (options) => {
@@ -640,11 +770,19 @@ program
 // update
 program
   .command("update [pkg]")
-  .description("Update dependencies specified in mops.toml")
+  .description(
+    "Update dependencies in mops.toml to the highest semver-compatible version within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
+  )
   .addOption(
     new Option(
       "--major",
       "Allow updates that cross the caret bound (major versions, or for 0.x.y packages, minor versions)",
+    ).conflicts("patch"),
+  )
+  .addOption(
+    new Option(
+      "--patch",
+      "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
   .addOption(
@@ -658,9 +796,11 @@ program
   });
 
 // toolchain
-const toolchainCommand = new Command("toolchain").description(
-  "Toolchain management",
-);
+const toolchainCommand = new Command("toolchain")
+  .description(
+    `Toolchain management for ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}`,
+  )
+  .showHelpAfterError();
 
 toolchainCommand
   .command("init")
@@ -679,8 +819,13 @@ toolchainCommand
 toolchainCommand
   .command("use")
   .description("Install specified tool version and update mops.toml")
-  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
-  .addArgument(new Argument("[version]"))
+  .addArgument(new Argument("<tool>", "tool to install").choices(TOOLCHAINS))
+  .addArgument(
+    new Argument(
+      "[version]",
+      "version to install (defaults to interactive picker)",
+    ),
+  )
   .action(async (tool, version) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -693,7 +838,12 @@ toolchainCommand
   .description(
     "Update specified tool or all tools to the latest version and update mops.toml",
   )
-  .addArgument(new Argument("[tool]").choices(TOOLCHAINS))
+  .addArgument(
+    new Argument(
+      "[tool]",
+      "tool to update (defaults to all configured tools)",
+    ).choices(TOOLCHAINS),
+  )
   .action(async (tool?: Tool) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -703,10 +853,8 @@ toolchainCommand
 
 toolchainCommand
   .command("bin")
-  .description(
-    `Get path to the tool binary\n<tool> can be one of ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}`,
-  )
-  .addArgument(new Argument("<tool>").choices(TOOLCHAINS))
+  .description("Get path to the tool binary")
+  .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
   .addOption(
     new Option(
       "--fallback",
@@ -742,6 +890,44 @@ migrateCommand
   });
 
 program.addCommand(migrateCommand);
+
+// generate
+const generateCommand = new Command("generate")
+  .description("Generate source-derived artifacts (Candid, ...)")
+  .showHelpAfterError();
+
+generateCommand
+  .command("candid [canisters...]")
+  .description(
+    "(Re)generate the curated `.did` file for one or more canisters from current Motoko source. With no canister names, generates for all canisters in mops.toml. When [canisters.<name>].candid is set, overwrites that file; otherwise writes <name>.did next to `main` and sets the field.",
+  )
+  .addOption(
+    new Option(
+      "--output, -o <output>",
+      "Write the generated .did to <output> (single-canister only; does not touch mops.toml)",
+    ),
+  )
+  .addOption(new Option("--verbose", "Verbose console output"))
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops generate candid -- -Werror",
+  )
+  .allowUnknownOption(true)
+  .action(async (canisters, options) => {
+    checkConfigFile(true);
+    const { extraArgs, args } = parseExtraArgs(canisters);
+    await installAll({
+      silent: true,
+      lock: "ignore",
+      installFromLockFile: true,
+    });
+    await generateCandid(args.length ? args : undefined, {
+      ...options,
+      extraArgs,
+    });
+  });
+
+program.addCommand(generateCommand);
 
 // self
 const selfCommand = new Command("self").description("Mops CLI management");
@@ -810,6 +996,17 @@ program
       "Directories containing rules (can be used multiple times)",
     ),
   )
+  .addOption(
+    new Option(
+      "--no-check-limit",
+      "Lint the full migration chain, ignoring [migrations].check-limit",
+    ),
+  )
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to lintoko, e.g.:\n  $ mops lint -- --severity warning",
+  )
+  .addHelpText("after", enhancedMigrationHelp({ withFix: true }))
   .allowUnknownOption(true)
   .action(async (filter, options) => {
     checkConfigFile(true);
@@ -817,6 +1014,7 @@ program
     await lint(filter, {
       ...options,
       extraArgs,
+      noCheckLimit: options.checkLimit === false,
     });
   });
 

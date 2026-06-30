@@ -1,24 +1,16 @@
-import { describe, expect, test, afterEach } from "@jest/globals";
+import { describe, expect, test } from "@jest/globals";
 import { readdirSync, readFileSync } from "node:fs";
-import { cp, rm, writeFile } from "node:fs/promises";
-import path from "path";
-import { cli, cliSnapshot, normalizePaths } from "./helpers";
+import { rm, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { cli, cliSnapshot, normalizePaths, useTempFixtures } from "./helpers";
 
 const normalizeTimestamp = (text: string) =>
   text.replace(/\d{8}_\d{6}/g, "<TIMESTAMP>");
 
-const fixturesDir = path.join(import.meta.dirname, "migrate");
-
 describe("migrate", () => {
-  const tempDirs: string[] = [];
-
-  async function makeTempFixture(fixture: string): Promise<string> {
-    const src = path.join(fixturesDir, fixture);
-    const dest = path.join(fixturesDir, `_tmp_${fixture}_${Date.now()}`);
-    await cp(src, dest, { recursive: true });
-    tempDirs.push(dest);
-    return dest;
-  }
+  const makeTempFixture = useTempFixtures(
+    path.join(import.meta.dirname, "migrate"),
+  );
 
   async function patchMigrations(cwd: string, extra: string): Promise<void> {
     const tomlPath = path.join(cwd, "mops.toml");
@@ -31,13 +23,6 @@ describe("migrate", () => {
       ),
     );
   }
-
-  afterEach(async () => {
-    for (const dir of tempDirs) {
-      await rm(dir, { recursive: true, force: true });
-    }
-    tempDirs.length = 0;
-  });
 
   describe("migrate new", () => {
     test("creates a migration file with timestamp and template", async () => {

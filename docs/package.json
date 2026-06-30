@@ -29,6 +29,9 @@
     "typescript": "~5.4.0",
     "webpack": "*"
   },
+  "overrides": {
+    "webpackbar": "^7.0.0"
+  },
   "browserslist": {
     "production": [
       ">0.5%",

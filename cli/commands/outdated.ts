@@ -3,7 +3,10 @@ import { checkConfigFile, readConfig } from "../mops.js";
 import { getAvailableUpdates } from "./available-updates.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 
-export async function outdated({ major }: { major?: boolean } = {}) {
+export async function outdated({
+  major,
+  patch,
+}: { major?: boolean; patch?: boolean } = {}) {
   if (!checkConfigFile()) {
     return;
   }
@@ -12,7 +15,7 @@ export async function outdated({ major }: { major?: boolean } = {}) {
   let available = await getAvailableUpdates(
     config,
     undefined,
-    major ? "major" : "caret",
+    major ? "major" : patch ? "patch" : "caret",
   );
 
   if (available.length === 0) {

@@ -9,6 +9,7 @@ import {
   resolveConfigPath,
 } from "../mops.js";
 import { AutofixResult, autofixMotoko } from "../helpers/autofix-motoko.js";
+import { withFixLock } from "../helpers/fix-lock.js";
 import { getMocSemVer } from "../helpers/get-moc-version.js";
 import {
   filterCanisters,
@@ -34,6 +35,8 @@ export interface CheckOptions {
   verbose: boolean;
   fix: boolean;
   extraArgs: string[];
+  /** Commander `--no-check-limit`: false ignores [migrations].check-limit. */
+  checkLimit: boolean;
 }
 
 function checkAllLibsSupport(verbose?: boolean): boolean {
@@ -83,6 +86,16 @@ export async function check(
   args: string[],
   options: Partial<CheckOptions> = {},
 ): Promise<void> {
+  if (options.fix) {
+    return withFixLock(() => checkImpl(args, options));
+  }
+  return checkImpl(args, options);
+}
+
+async function checkImpl(
+  args: string[],
+  options: Partial<CheckOptions> = {},
+): Promise<void> {
   const config = readConfig();
   const canisters = resolveCanisterConfigs(config);
   const hasCanisters = Object.keys(canisters).length > 0;
@@ -124,6 +137,7 @@ export async function check(
       fix: options.fix,
       rules: lintRules,
       files: lintFiles,
+      noCheckLimit: options.checkLimit === false,
     });
   }
 }
@@ -153,6 +167,7 @@ async function checkCanisters(
       canisterName,
       "check",
       options.verbose,
+      options.checkLimit === false,
     );
     try {
       const mocArgs = [
@@ -215,7 +230,12 @@ async function checkCanisters(
           globalMocArgs,
           canisterArgs: [...migration.migrationArgs, ...(canister.args ?? [])],
           sources,
-          options: { verbose: options.verbose, extraArgs: options.extraArgs },
+          migrations: canister.migrations,
+          options: {
+            verbose: options.verbose,
+            extraArgs: options.extraArgs,
+            checkLimit: options.checkLimit,
+          },
         });
       }
     } finally {

@@ -337,9 +337,7 @@ async function update(tool?: Tool) {
     config.toolchain[tool] = version;
     writeConfig(config);
 
-    if (tool === "moc") {
-      await checkRequirements();
-    }
+    await checkRequirements();
 
     if (oldVersion === version) {
       console.log(`Latest ${tool} ${version} is already installed`);

@@ -106,4 +106,28 @@ describe("check-stable", () => {
       expect(result.stdout).toMatch(/Stable compatibility check passed/);
     }
   }, 60_000);
+
+  test("fails with check-limit diagnostic when pending migrations exceed check-limit", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "check-stable/check-limit-warning",
+    );
+    await cliSnapshot(["check-stable"], { cwd }, 1);
+  });
+
+  test("does not warn when deployed baseline matches the chain", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/migrations-chain");
+    const result = await cli(["check-stable"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).not.toMatch(/pending migration\(s\) but check-limit/);
+  });
+
+  test("--no-check-limit suppresses pending migration warning", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "check-stable/check-limit-warning",
+    );
+    const result = await cli(["check-stable", "--no-check-limit"], { cwd });
+    expect(result.stderr).not.toMatch(/pending migration\(s\) but check-limit/);
+  });
 });

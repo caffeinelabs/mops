@@ -9,7 +9,7 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 
 ## Key Principles
 
-1. **No dfx** — always pin `moc` in `[toolchain]`. Use the newest `moc` version.
+1. **No dfx** — always pin `moc` in `[toolchain]`. Use the newest `moc` version. Pin `pocket-ic` too if you have replica tests or benchmarks (otherwise `mops test --mode replica`, `mops bench`, and `mops watch` fall back to the deprecated dfx replica and print a warning).
 2. **No `mo:base`** — it is deprecated. Always use `mo:core` (`import Array "mo:core/Array"`).
 3. **All config in `mops.toml`** — canisters, moc flags, toolchain versions, build settings.
 4. **Canister-centric workflow** — define all canisters in `[canisters]`; never pass file paths to `mops check`. Exception: library packages (no `[canisters]`) use file paths directly: `mops check src/**/*.mo`.
@@ -22,6 +22,7 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 [toolchain]
 moc = "1.7.0"
 lintoko = "0.10.0"
+pocket-ic = "12.0.0"  # only if you have replica tests / benchmarks
 
 [dependencies]
 core = "2.5.0"
@@ -37,21 +38,16 @@ chain = "src/backend/migrations"
 check-limit = 10   # optional — speeds up `mops check` when the chain gets long
 
 [canisters.backend.check-stable]
-path = ".old/src/backend/dist/backend.most"
+path = "deployed/backend.most"
 
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
 ```
 
-`check-stable` verifies stable variable compatibility against a `.most` file from the deployed version. For a new project with no prior deployment, create a trivial `.most` file representing an empty actor:
+`check-stable` runs ICP's upgrade-time stable-variable compatibility check locally, so incompatible changes fail in `mops check` instead of being rejected when upgrading a live canister. It compares the current code against a `.most` from the deployed version.
 
-```most
-// Version: 1.0.0
-actor {
-  
-};
-```
+Bootstrap that `.most`: new project → `mops deployed init` (empty-actor baseline); already-deployed canister → build from the deployed commit, then `mops deployed`. After every deploy, run `mops deployed` to promote the just-built `.most` (see [`mops deployed`](#mops-deployed) below).
 
 Optional canister fields: `candid` (path to .did for compatibility checking), `initArg` (Candid-encoded init args).
 
@@ -103,7 +99,7 @@ mops check -- -Werror     # treat warnings as errors
 
 **Always use canister names, not file paths.** Per-canister args from `mops.toml` are applied automatically.
 
-`--fix` applies machine-applicable fixes from both moc and lintoko in one pass.
+`--fix` applies machine-applicable fixes from both moc and lintoko in one pass. Concurrent `--fix` runs (across processes) serialize automatically via an advisory lock at `.mops/fix.lock` — safe to invoke from multiple agents on the same project. Read-only files (e.g. frozen migrations) are skipped with a warning, not fixed.
 
 ### `mops build`
 
@@ -116,12 +112,35 @@ mops build -- --ai-errors # pass extra moc flags
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
 
+### `mops deployed`
+
+Post-deploy hook — keeps the on-disk `.most` baseline used by `check-stable` in sync with what's actually deployed.
+
+```bash
+mops deployed init backend   # one-time bootstrap: empty-actor baseline + sets [check-stable].path
+mops deployed backend        # post-deploy: promotes .mops/.build/backend.most → deployed/backend.most
+mops deployed                # all canisters
+```
+
+Default destination is `deployed/<name>.most`; override with `[deployed].dir` in `mops.toml` or `--dir`. It reads built `.most` files from `[build].outputDir` (default `.mops/.build`); override with `--build-dir`. `mops deployed` errors if the source `.most` is missing — it never regenerates. Run it from your deploy pipeline immediately after a successful deploy.
+
+### `mops generate candid`
+
+```bash
+mops generate candid                # all canisters
+mops generate candid backend        # single canister
+mops generate candid backend -o <path>   # single canister, ad-hoc path
+```
+
+(Re)generates the curated `.did` from current Motoko source. With `[canisters.<name>].candid` set, overwrites that file. Without it, writes `<name>.did` next to `main` (e.g. `main = "src/Backend.mo"` → `src/backend.did`) and sets `[canisters.<name>].candid` in `mops.toml`. Run after every interface change; commit `.did` + `mops.toml` together. Same moc invocation as `mops build`, so the result always passes `mops build`'s subtype check.
+
 ### `mops toolchain`
 
 ```bash
 mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.10.0    # pin specific version
+mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the bundled pic-js client doesn't support)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
 mops toolchain bin moc               # print path to binary
@@ -135,7 +154,13 @@ When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, 
 
 Create migration files directly in the `chain` directory.
 
+After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run `mops build` to produce the wasm artifact.
+
 `check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
+
+Override `check-limit` for a single run with `--no-check-limit` (`mops check`, `mops check-stable`, `mops lint`) — e.g. `mops check --fix --no-check-limit` to autofix older, normally-trimmed migrations. On `mops check` and `mops check-stable`, `--no-check-limit` also suppresses the pending-migration warning.
+
+When `check-limit` is set, `mops check-stable` (and the stable check inside `mops check`) reports if more migrations are pending than the limit allows — as an error if compat failed (replacing the misleading `moc` message), otherwise a warning.
 
 ### `mops remove <package>`
 
@@ -150,6 +175,7 @@ mops outdated             # list outdated dependencies (caret-bound)
 mops update               # update all within caret bound (no major-version crossing)
 mops update core          # update specific package within caret bound
 mops update --major       # allow updates that cross major versions
+mops update --patch       # restrict to patch bumps only (mutually exclusive with --major)
 mops sync                 # add missing / remove unused packages
 ```
 
@@ -167,6 +193,8 @@ mops test --reporter verbose      # show Debug.print output
 mops test --watch                 # re-run on file changes
 ```
 
+Replica tests (actor files or `// @testmode replica`) use `pocket-ic` from `[toolchain]`. With no pin they fall back to the deprecated `dfx` replica (warning printed) — pin `pocket-ic` in `[toolchain]` to silence it. Same applies to `mops bench` and `mops watch`.
+
 ### `mops lint`
 
 Runs lintoko (also runs automatically as part of `mops check` when lintoko is in toolchain):
@@ -177,7 +205,7 @@ mops lint --fix           # autofix lint issues
 mops lint <name>          # filter to .mo files matching <name>
 ```
 
-When `[canisters.<name>.migrations].check-limit` is set, `mops lint` skips the trimmed chain migrations to match what `moc` sees during `mops check`. To lint a trimmed migration on demand, pass an explicit filter (e.g. `mops lint OldMigrationName`).
+When `[canisters.<name>.migrations].check-limit` is set, `mops lint` skips the trimmed chain migrations to match what `moc` sees during `mops check`. To lint a trimmed migration on demand, pass an explicit filter (e.g. `mops lint OldMigrationName`) or `--no-check-limit` to lint the full chain.
 
 ### `mops format`
 

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "DFX_NETWORK=${DFX_NETWORK:-local} vite --port 3000",
     "vite": "vite",
-    "build": "vite build",
+    "build": "vite build && node verify-build.mjs",
     "preview": "vite preview",
     "check": "svelte-check --threshold error"
   },
@@ -22,9 +22,9 @@
     "date-fns": "3.6.0",
     "filesize": "10.1.1",
     "hast-util-to-html": "9.0.5",
-    "ic-mops": "2.5.0",
+    "ic-mops": "2.14.0",
     "js-untar": "^2.0.0",
-    "markdown-it": "14.1.0",
+    "markdown-it": "14.2.0",
     "pako": "^2.1.0",
     "svelte-chartjs": "4.0.1",
     "svelte-spa-history-router": "2.1.1",
@@ -40,7 +40,10 @@
     "svelte": "5.55.7",
     "svelte-check": "4.4.6",
     "typescript": "5.9.2",
-    "vite": "8.0.8",
+    "vite": "8.0.16",
     "vite-plugin-static-copy": "4.0.1"
+  },
+  "overrides": {
+    "tar": "7.5.16"
   }
 }
