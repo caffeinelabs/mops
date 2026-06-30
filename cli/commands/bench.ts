@@ -40,6 +40,8 @@ type BenchOptions = {
   compilerVersion: string;
   gc: "copying" | "compacting" | "generational" | "incremental";
   forceGc: boolean;
+  query: boolean;
+  legacyPersistence: boolean;
   save: boolean;
   compare: boolean;
   verbose: boolean;
@@ -61,6 +63,8 @@ export async function bench(
     compilerVersion: getMocVersion(true),
     gc: "copying",
     forceGc: true,
+    query: false,
+    legacyPersistence: false,
     save: false,
     compare: false,
     verbose: false,
@@ -118,6 +122,14 @@ export async function bench(
     console.log(
       chalk.gray(
         `  gc:        ${options.gc}${options.forceGc ? " (forced)" : ""}`,
+      ),
+    );
+    console.log(
+      chalk.gray(`  context:   ${options.query ? "query" : "update"}`),
+    );
+    console.log(
+      chalk.gray(
+        `  persistence: ${options.legacyPersistence ? "legacy" : "enhanced"}`,
       ),
     );
     console.log(chalk.gray(`  profile:   ${options.profile}`));
@@ -270,7 +282,12 @@ function computeDiffAll(
 function getMocArgs(options: BenchOptions): string {
   let args = "";
 
+  // Benchmarks compile under enhanced orthogonal persistence (moc's default
+  // since 0.15) — the mode real canisters run. Pass `--legacy-persistence`
+  // only when the user opts in, and only where moc supports the flag (>= 0.15;
+  // legacy is already the default below it).
   if (
+    options.legacyPersistence &&
     options.compilerVersion &&
     new SemVer(options.compilerVersion).compare("0.15.0") >= 0
   ) {
@@ -533,13 +550,14 @@ async function runBenchFile(
     log();
   }
 
-  // run all cells
+  // run all cells. `--query` measures in query context (how `query` methods
+  // actually run on the IC: no GC), at the cost of not supporting benches whose
+  // runner performs async calls. Otherwise use the update path.
   for (let [rowIndex, row] of schema.rows.entries()) {
     for (let [colIndex, col] of schema.cols.entries()) {
-      let res = await actor.runCellUpdateAwait(
-        BigInt(rowIndex),
-        BigInt(colIndex),
-      );
+      let res = options.query
+        ? await actor.runCellQuery(BigInt(rowIndex), BigInt(colIndex))
+        : await actor.runCellUpdateAwait(BigInt(rowIndex), BigInt(colIndex));
       results.set(`${row}:${col}`, res);
 
       // @ts-ignore

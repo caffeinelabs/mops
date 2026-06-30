@@ -2,6 +2,10 @@
 
 ## Next
 
+## 2.16.0
+
+- `mops bench` now compiles benchmark canisters under **enhanced orthogonal persistence** (moc's default) instead of forcing `--legacy-persistence` — measuring the persistence mode real canisters run. Pass `--legacy-persistence` to opt back into legacy persistence.
+- `mops bench --query` measures each cell in a **query** call instead of an update call. Queries run no GC on the IC, so the instruction counts exclude GC work an update would incur — for benchmarking `query`/read-only workloads realistically. Only for synchronous benchmark runners (no inter-canister `await`).
 - `[requirements].lintoko` declares a minimum lintoko version for package consumers. `mops install` (and `mops add`, `mops toolchain use`) warn when the project's lintoko is below a dependency's requirement, same as `moc` (#597).
 
 ## 2.15.2
