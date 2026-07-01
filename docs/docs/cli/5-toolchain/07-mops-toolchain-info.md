@@ -11,6 +11,8 @@ Show release information about a toolchain tool from GitHub.
 mops toolchain info <tool>
 ```
 
+`<tool>` is one of `moc`, `lintoko`, `wasmtime`, or `pocket-ic`.
+
 Works without a `mops.toml` — useful for scripts that warm tool caches.
 
 ### Examples
@@ -36,6 +38,8 @@ mops toolchain info moc --versions
 ```
 
 Prereleases and drafts are excluded. Stable versions match what `mops toolchain update` and `mops toolchain use <tool> latest` resolve to (first stable GitHub release). Interactive `mops toolchain use` without a version may also list prereleases in its picker.
+
+For aggressive cache warming that lists many tools or full release histories, set `GITHUB_TOKEN` to avoid GitHub API rate limits.
 
 ## Output
 

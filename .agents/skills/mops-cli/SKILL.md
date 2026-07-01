@@ -143,12 +143,12 @@ mops toolchain use lintoko 0.10.0    # pin specific version
 mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the bundled pic-js client doesn't support)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
-mops toolchain info moc              # show release info (latest, pinned, history)
-mops toolchain info moc --versions   # list all stable moc releases (scripting)
+mops toolchain info <tool>           # show release info (latest, pinned, history)
+mops toolchain info <tool> --versions # list all stable releases (scripting)
 mops toolchain bin moc               # print path to binary
 ```
 
-**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry.
+**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml`; set `GITHUB_TOKEN` when listing tools with long release histories.
 
 ### Enhanced migrations
 
