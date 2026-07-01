@@ -2,6 +2,9 @@
 
 ## Next
 
+- `mops toolchain info <tool> --versions` lists all stable GitHub release versions for a toolchain tool (moc, lintoko, wasmtime, pocket-ic), one per line — for scripting and cache warming.
+- `mops toolchain info <tool>` shows latest stable release, pinned version, and recent version history.
+
 ## 2.16.1
 
 - Fix `mops bench` crashing on moc 0.15+ with the default `--gc copying`: `--copying-gc` is rejected under enhanced orthogonal persistence, which became the default persistence mode in 2.16.0. The default GC is now `incremental` (moc's default and the only collector available under EOP). Selecting a legacy collector (`copying`, `compacting`, `generational`) now implies `--legacy-persistence`, since moc only accepts them there.
