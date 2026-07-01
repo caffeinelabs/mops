@@ -143,6 +143,7 @@ mops toolchain use lintoko 0.10.0    # pin specific version
 mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the bundled pic-js client doesn't support)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
+mops toolchain info moc              # show release info (latest, pinned, history)
 mops toolchain info moc --versions   # list all stable moc releases (scripting)
 mops toolchain bin moc               # print path to binary
 ```

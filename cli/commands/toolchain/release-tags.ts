@@ -2,7 +2,7 @@ import { SemVer } from "semver";
 
 export type ReleaseInfo = {
   tag_name: string;
-  published_at: string;
+  published_at: string | null;
   prerelease: boolean;
   draft: boolean;
 };

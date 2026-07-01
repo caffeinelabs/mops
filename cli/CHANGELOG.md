@@ -3,6 +3,7 @@
 ## Next
 
 - `mops toolchain info <tool> --versions` lists all stable GitHub release versions for a toolchain tool (moc, lintoko, wasmtime, pocket-ic), one per line — for scripting and cache warming.
+- `mops toolchain info <tool>` shows latest stable release, pinned version, and recent version history.
 
 ## 2.16.1
 

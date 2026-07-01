@@ -22,6 +22,7 @@ import * as wasmtime from "./wasmtime.js";
 import * as lintoko from "./lintoko.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
 import * as toolchainUtils from "./toolchain-utils.js";
+import type { ReleaseInfo } from "./release-tags.js";
 
 function label(text: string): string {
   return chalk.bold(text.padEnd(16));
@@ -259,25 +260,23 @@ async function promptVersion(tool: Tool): Promise<string> {
     type: "select",
     name: "version",
     message: `Select ${tool} version`,
-    choices: releases.map(
-      (
-        release: { published_at: string | number | Date; tag_name: string },
-        i: any,
-      ) => {
-        let date = new Date(release.published_at).toLocaleDateString(
-          undefined,
-          { year: "numeric", month: "short", day: "numeric" },
-        );
-        return {
-          title:
-            release.tag_name +
-            chalk.gray(
-              `  ${date}${currentIndex === i ? chalk.italic(" (current)") : ""}`,
-            ),
-          value: release.tag_name,
-        };
-      },
-    ),
+    choices: releases.map((release: ReleaseInfo, i) => {
+      let date = release.published_at
+        ? new Date(release.published_at).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        : "";
+      return {
+        title:
+          release.tag_name +
+          chalk.gray(
+            `  ${date}${currentIndex === i ? chalk.italic(" (current)") : ""}`,
+          ),
+        value: release.tag_name,
+      };
+    }),
     initial: currentIndex == -1 ? 0 : currentIndex,
   });
 
@@ -358,21 +357,24 @@ async function update(tool?: Tool) {
 
 async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   let toolUtils = getToolUtils(tool);
-  let releases = await toolchainUtils.getAllReleases(toolUtils.repo);
-  let versions = toolchainUtils.stableReleaseTags(releases);
 
   if (options.versions) {
+    let versions = await toolchainUtils.getAllReleaseTags(toolUtils.repo);
     for (let ver of versions) {
       console.log(ver);
     }
     return;
   }
 
+  let [versions, latest] = await Promise.all([
+    toolchainUtils.getAllReleaseTags(toolUtils.repo),
+    toolUtils.getLatestReleaseTag(),
+  ]);
+
   let configFile = getClosestConfigFile();
   let pinned = configFile
     ? readConfig(configFile).toolchain?.[tool]
     : undefined;
-  let latest = versions.at(-1);
 
   console.log("");
   console.log(chalk.green.bold(tool));

@@ -35,7 +35,7 @@ Print all stable release versions, one per line (oldest to newest). Useful for s
 mops toolchain info moc --versions
 ```
 
-Prereleases and drafts are excluded — same set of versions `mops toolchain use` and `mops toolchain update` resolve against.
+Prereleases and drafts are excluded. Stable versions match what `mops toolchain update` and `mops toolchain use <tool> latest` resolve to (first stable GitHub release). Interactive `mops toolchain use` without a version may also list prereleases in its picker.
 
 ## Output
 
