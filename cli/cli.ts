@@ -855,6 +855,15 @@ toolchainCommand
   });
 
 toolchainCommand
+  .command("info")
+  .description("Show release information about a toolchain tool")
+  .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
+  .option("--versions", "List all stable release versions, one per line")
+  .action(async (tool: Tool, options) => {
+    await toolchain.info(tool, options);
+  });
+
+toolchainCommand
   .command("bin")
   .description("Get path to the tool binary")
   .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))

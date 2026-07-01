@@ -21,6 +21,15 @@ import * as pocketIc from "./pocket-ic.js";
 import * as wasmtime from "./wasmtime.js";
 import * as lintoko from "./lintoko.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
+import * as toolchainUtils from "./toolchain-utils.js";
+
+function label(text: string): string {
+  return chalk.bold(text.padEnd(16));
+}
+
+export interface ToolchainInfoOptions {
+  versions?: boolean;
+}
 
 function getToolUtils(tool: Tool) {
   if (tool === "moc") {
@@ -347,6 +356,53 @@ async function update(tool?: Tool) {
   }
 }
 
+async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
+  let toolUtils = getToolUtils(tool);
+  let releases = await toolchainUtils.getAllReleases(toolUtils.repo);
+  let versions = toolchainUtils.stableReleaseTags(releases);
+
+  if (options.versions) {
+    for (let ver of versions) {
+      console.log(ver);
+    }
+    return;
+  }
+
+  let configFile = getClosestConfigFile();
+  let pinned = configFile
+    ? readConfig(configFile).toolchain?.[tool]
+    : undefined;
+  let latest = versions.at(-1);
+
+  console.log("");
+  console.log(chalk.green.bold(tool));
+
+  if (latest) {
+    console.log(chalk.yellow(`latest: ${latest}`));
+  }
+
+  if (pinned) {
+    console.log(`${label("pinned")}${pinned}`);
+  }
+
+  console.log("");
+  console.log(
+    `${label("repository")}${chalk.cyan(`https://github.com/${toolUtils.repo}`)}`,
+  );
+
+  if (versions.length > 0) {
+    let versionsDisplay = versions.slice(-10).reverse().join(", ");
+    let extra =
+      versions.length > 10
+        ? ` ${chalk.gray(`(+${versions.length - 10} more)`)}`
+        : "";
+    console.log("");
+    console.log(`${label("versions")}${versionsDisplay}${extra}`);
+  }
+
+  console.log("");
+}
+
 // return current version from mops.toml
 async function bin(tool: Tool, { fallback = false } = {}): Promise<string> {
   let hasConfig = getClosestConfigFile();
@@ -399,6 +455,7 @@ export let toolchain = {
   use,
   update,
   bin,
+  info,
   installAll,
   checkToolchainInited,
 };

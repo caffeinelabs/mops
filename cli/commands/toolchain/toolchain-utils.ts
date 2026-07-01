@@ -11,6 +11,10 @@ import { Octokit } from "octokit";
 import { extract as extractTar } from "tar";
 
 import { getRootDir } from "../../mops.js";
+import { stableReleaseTags, type ReleaseInfo } from "./release-tags.js";
+
+export type { ReleaseInfo } from "./release-tags.js";
+export { sortReleaseTags, stableReleaseTags } from "./release-tags.js";
 
 export const TOOLCHAINS = ["moc", "wasmtime", "pocket-ic", "lintoko"];
 
@@ -75,34 +79,57 @@ export let downloadAndExtract = async (
   deleteSync([tmpDir], { force: true });
 };
 
+export let getAllReleases = async (repo: string): Promise<ReleaseInfo[]> => {
+  let octokit = new Octokit();
+  let releases: ReleaseInfo[] = [];
+
+  for (let page = 1; ; page++) {
+    let res = await octokit.request(`GET /repos/${repo}/releases`, {
+      per_page: 100,
+      page,
+      headers: {
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+    if (res.status !== 200) {
+      console.error("Releases fetch error");
+      process.exit(1);
+    }
+    if (res.data.length === 0) {
+      break;
+    }
+    for (let release of res.data) {
+      releases.push({
+        tag_name: release.tag_name.replace(/^v/, ""),
+        published_at: release.published_at,
+        prerelease: release.prerelease,
+        draft: release.draft,
+      });
+    }
+    if (res.data.length < 100) {
+      break;
+    }
+  }
+
+  return releases;
+};
+
+export let getAllReleaseTags = async (repo: string): Promise<string[]> => {
+  return stableReleaseTags(await getAllReleases(repo));
+};
+
 export let getLatestReleaseTag = async (repo: string): Promise<string> => {
-  let releases = await getReleases(repo);
+  let releases = await getAllReleases(repo);
   let release = releases.find(
-    (release: any) => !release.prerelease && !release.draft,
+    (release) => !release.prerelease && !release.draft,
   );
   if (!release?.tag_name) {
     console.error(`Failed to fetch latest release tag for ${repo}`);
     process.exit(1);
   }
-  return release.tag_name.replace(/^v/, "");
+  return release.tag_name;
 };
 
 export let getReleases = async (repo: string) => {
-  let octokit = new Octokit();
-  let res = await octokit.request(`GET /repos/${repo}/releases`, {
-    per_page: 10,
-    headers: {
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
-  if (res.status !== 200) {
-    console.log("Releases fetch error");
-    process.exit(1);
-  }
-  return res.data.map((release: any) => {
-    return {
-      ...release,
-      tag_name: release.tag_name.replace(/^v/, ""),
-    };
-  });
+  return getAllReleases(repo);
 };
