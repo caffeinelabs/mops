@@ -2,6 +2,8 @@
 
 ## Next
 
+- Fix `mops bench` accepting a `[moc] args` entry with an embedded space (e.g. `["-E=M0154 --legacy-persistence"]`) when it should reject it. `mops bench` now invokes `moc` with a proper argument array (same as `mops test`), so a mis-formatted entry produces the same error: `moc: invalid warning code: M0154 --legacy-persistence`.
+
 ## 2.16.1
 
 - Fix `mops bench` crashing on moc 0.15+ with the default `--gc copying`: `--copying-gc` is rejected under enhanced orthogonal persistence, which became the default persistence mode in 2.16.0. The default GC is now `incremental` (moc's default and the only collector available under EOP). Selecting a legacy collector (`copying`, `compacting`, `generational`) now implies `--legacy-persistence`, since moc only accepts them there.
