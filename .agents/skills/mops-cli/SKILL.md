@@ -59,11 +59,11 @@ Optional canister fields: `candid` (path to .did for compatibility checking), `i
 
 Flags are applied in this order (later overrides earlier):
 
-1. `[moc].args` — global, all commands (check, build, test, etc.)
+1. `[moc].args` — global, all commands (check, build, test, bench, etc.)
 2. `[build].args` — build only (e.g. `--release`)
 3. `[canisters.<name>.migrations]` — auto-injected `--enhanced-migration` (managed by mops)
 4. `[canisters.<name>].args` — per-canister
-5. CLI `-- <flags>` — one-off overrides
+5. CLI `-- <flags>` — one-off overrides; supported by `mops check`, `mops build`, `mops check-stable`, `mops generate`, `mops migrate`, `mops test`, and `mops bench`
 
 ## Core Commands
 
@@ -191,9 +191,23 @@ mops test my-test                 # filter by name
 mops test --mode wasi             # use wasmtime (for to_candid/from_candid)
 mops test --reporter verbose      # show Debug.print output
 mops test --watch                 # re-run on file changes
+mops test -- -Werror              # pass extra moc flags
 ```
 
 Replica tests (actor files or `// @testmode replica`) use `pocket-ic` from `[toolchain]`. With no pin they fall back to the deprecated `dfx` replica (warning printed) — pin `pocket-ic` in `[toolchain]` to silence it. Same applies to `mops bench` and `mops watch`.
+
+### `mops bench`
+
+Benchmarks live in `bench/*.bench.mo`:
+
+```bash
+mops bench                        # run all benchmarks
+mops bench my-bench               # filter by name
+mops bench --gc incremental       # select GC
+mops bench --save                 # save results to .bench/<name>.json
+mops bench --compare              # compare with saved results
+mops bench -- -Werror             # pass extra moc flags
+```
 
 ### `mops lint`
 
