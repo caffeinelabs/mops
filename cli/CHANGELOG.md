@@ -2,6 +2,8 @@
 
 ## Next
 
+- `mops test` no longer passes `-S preview2=n` to wasmtime. The flag was deprecated in wasmtime 46 (printing a warning to stderr that was misread as a test failure) and became a hard error in wasmtime 47.0.0 (2026-07-20). moc emits WASI-preview1 modules, which wasmtime runs correctly without the flag.
+
 ## 2.16.1
 
 - Fix `mops bench` crashing on moc 0.15+ with the default `--gc copying`: `--copying-gc` is rejected under enhanced orthogonal persistence, which became the default persistence mode in 2.16.0. The default GC is now `incremental` (moc's default and the only collector available under EOP). Selecting a legacy collector (`copying`, `compacting`, `generational`) now implies `--legacy-persistence`, since moc only accepts them there.
