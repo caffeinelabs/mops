@@ -366,8 +366,6 @@ export async function testWithReporter(
               config.toolchain?.wasmtime >= "14.0.0"
             ) {
               wasmtimeArgs = [
-                "-S",
-                "preview2=n",
                 "-C",
                 "cache=n",
                 "-W",

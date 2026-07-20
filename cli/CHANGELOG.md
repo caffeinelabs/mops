@@ -2,6 +2,7 @@
 
 ## Next
 
+- `mops test` no longer passes `-S preview2=n` to wasmtime. The flag was deprecated in wasmtime 46 (printing a warning to stderr that was misread as a test failure) and became a hard error in wasmtime 47.0.0 (2026-07-20). moc emits WASI-preview1 modules, which wasmtime runs correctly without the flag.
 - Fix `mops bench` accepting a `[moc] args` entry with an embedded space (e.g. `["-E=M0154 --legacy-persistence"]`) when it should reject it. `mops bench` now invokes `moc` with a proper argument array (same as `mops test`), so a mis-formatted entry produces the same error: `moc: invalid warning code: M0154 --legacy-persistence`.
 
 ## 2.16.1
