@@ -500,7 +500,7 @@ program.addCommand(deployedCommand);
 
 // test
 program
-  .command("test [filter]")
+  .command("test [filter...]")
   .description("Run tests")
   .addOption(
     new Option("-r, --reporter <reporter>", "Test reporter").choices([
@@ -528,9 +528,10 @@ program
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops test -- -Werror",
   )
   .allowUnknownOption(true)
-  .action(async (filter, options) => {
+  .action(async (filterArr, options) => {
     checkConfigFile(true);
-    const { extraArgs } = parseExtraArgs();
+    const { extraArgs, args } = parseExtraArgs(filterArr);
+    const filter = args[0] ?? "";
     await installAll({
       silent: true,
       lock: "ignore",
@@ -541,7 +542,7 @@ program
 
 // bench
 program
-  .command("bench [filter]")
+  .command("bench [filter...]")
   .description("Run benchmarks")
   .addOption(
     new Option(
@@ -590,9 +591,10 @@ program
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops bench -- -Werror",
   )
   .allowUnknownOption(true)
-  .action(async (filter, options) => {
+  .action(async (filterArr, options) => {
     checkConfigFile(true);
-    const { extraArgs } = parseExtraArgs();
+    const { extraArgs, args } = parseExtraArgs(filterArr);
+    const filter = args[0] ?? "";
     await installAll({
       silent: true,
       lock: "ignore",
