@@ -367,7 +367,7 @@ async function deployBenchFile(
     ...(await sourcesArgs({ cwd: tempDir })).flat(),
     ...globalMocArgs,
     ...mocArgsList,
-    ...(options.extraArgs ?? []),
+    ...options.extraArgs,
   ];
   if (options.verbose) {
     console.log(
