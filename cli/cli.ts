@@ -523,14 +523,20 @@ program
   )
   .option("-w, --watch", "Enable watch mode")
   .option("--verbose", "Verbose output")
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops test -- -Werror",
+  )
+  .allowUnknownOption(true)
   .action(async (filter, options) => {
     checkConfigFile(true);
+    const { extraArgs } = parseExtraArgs();
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await test(filter, options);
+    await test(filter, { ...options, extraArgs });
   });
 
 // bench
@@ -579,14 +585,20 @@ program
       "Print the benchmark pipeline (compiler, replica, GC, context, persistence, profile, optimization) and stream compiler/replica output, including dfx optimization warnings",
     ),
   )
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops bench -- -Werror",
+  )
+  .allowUnknownOption(true)
   .action(async (filter, options) => {
     checkConfigFile(true);
+    const { extraArgs } = parseExtraArgs();
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await bench(filter, options);
+    await bench(filter, { ...options, extraArgs });
   });
 
 // template

@@ -47,6 +47,7 @@ type BenchOptions = {
   verbose: boolean;
   silent: boolean;
   profile: "Debug" | "Release";
+  extraArgs: string[];
 };
 
 export async function bench(
@@ -70,6 +71,7 @@ export async function bench(
     verbose: false,
     silent: false,
     profile: dfxJson?.profile || "Release",
+    extraArgs: [],
   };
 
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
@@ -365,6 +367,7 @@ async function deployBenchFile(
     ...(await sourcesArgs({ cwd: tempDir })).flat(),
     ...globalMocArgs,
     ...mocArgsList,
+    ...(options.extraArgs ?? []),
   ];
   if (options.verbose) {
     console.log(

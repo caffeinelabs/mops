@@ -44,6 +44,7 @@ type TestOptions = {
   mode: TestMode;
   replica: ReplicaName;
   verbose: boolean;
+  extraArgs: string[];
 };
 
 let replica = new Replica();
@@ -84,6 +85,8 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
 
   replica.type = replicaType;
   replica.verbose = !!options.verbose;
+
+  let extraArgs = options.extraArgs ?? [];
 
   if (options.watch) {
     replica.ttl = 60 * 15; // 15 minutes
@@ -128,6 +131,7 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
         true,
         controller.signal,
         explicitReplica,
+        extraArgs,
       );
       await curRun;
 
@@ -157,6 +161,7 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       false,
       undefined,
       explicitReplica,
+      extraArgs,
     );
     if (!passed) {
       process.exit(maxMocExit >= 2 ? 2 : 1);
@@ -182,6 +187,7 @@ async function runAll(
   watch = false,
   signal?: AbortSignal,
   explicitReplica = false,
+  extraArgs: string[] = [],
 ): Promise<boolean> {
   let done = await testWithReporter(
     reporterName,
@@ -191,6 +197,7 @@ async function runAll(
     watch,
     signal,
     explicitReplica,
+    extraArgs,
   );
   return done;
 }
@@ -203,6 +210,7 @@ export async function testWithReporter(
   watch = false,
   signal?: AbortSignal,
   explicitReplica = false,
+  extraArgs: string[] = [],
 ): Promise<boolean> {
   maxMocExit = 0;
   let rootDir = getRootDir();
@@ -322,6 +330,7 @@ export async function testWithReporter(
         "--error-detail=2",
         ...sourcesArr,
         ...globalMocArgs,
+        ...extraArgs,
         file,
       ].filter((x) => x);
 
