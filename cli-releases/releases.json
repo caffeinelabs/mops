@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.16.1"
+    "latest": "2.17.0"
   },
   "versions": {
     "0.41.0": {
@@ -504,6 +504,14 @@
       "commitHash": "4bccdc13b512048f41b3296c3590b776c1836fe1",
       "url": "https://cli.mops.one/versions/2.16.1.tgz",
       "hash": "35ebb4899e777367c55fd526ebfa2618ba6c390698fc72cd239533b76cd6e188"
+    },
+    "2.17.0": {
+      "time": 1784616628873,
+      "size": 2412975,
+      "relseaseNotes": "* `mops test` no longer passes `-S preview2=n` to wasmtime. The flag was deprecated in wasmtime 46 (printing a warning to stderr that was misread as a test failure) and became a hard error in wasmtime 47.0.0 (2026-07-20). moc emits WASI-preview1 modules, which wasmtime runs correctly without the flag.\n* Fix `mops bench` accepting a `[moc] args` entry with an embedded space (e.g. `[\"-E=M0154 --legacy-persistence\"]`) when it should reject it. `mops bench` now invokes `moc` with a proper argument array (same as `mops test`), so a mis-formatted entry produces the same error: `moc: invalid warning code: M0154 --legacy-persistence`.\n* `mops test` and `mops bench` now support `-- <moc flags>` to pass extra flags directly to the Motoko compiler for that invocation (e.g. `mops test -- -Werror`), consistent with `mops build`, `mops check`, `mops check-stable`, `mops generate`, and `mops migrate`.\n",
+      "commitHash": "5f60960957ecb8684f4d323c5a2bee82b1b4497a",
+      "url": "https://cli.mops.one/versions/2.17.0.tgz",
+      "hash": "09db74533b0d6cbb2b4f48ea163d219676bea647110ef39428e35fc0a1f99050"
     }
   }
 }
