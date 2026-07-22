@@ -235,7 +235,9 @@ export async function checkLockFile(force = false, regenerated = false) {
   // check if lock file exists
   if (!fs.existsSync(lockFile)) {
     if (force) {
-      console.error("Missing lock file. Run `mops install` to generate it.");
+      console.error(
+        "Missing lock file. Run `mops install --lock update` to generate it.",
+      );
       process.exit(1);
     }
     return;
