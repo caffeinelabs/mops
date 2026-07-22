@@ -65,5 +65,6 @@ lintoko = "../custom-lintoko/bin/lintoko"
 - [`mops toolchain init`](/cli/mops-toolchain-init)
 - [`mops toolchain use`](/cli/mops-toolchain-use)
 - [`mops toolchain update`](/cli/mops-toolchain-update)
+- [`mops toolchain info`](/cli/mops-toolchain-info)
 - [`mops toolchain bin`](/cli/mops-toolchain-bin)
 - [`mops toolchain reset`](/cli/mops-toolchain-reset)

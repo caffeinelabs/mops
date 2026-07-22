@@ -21,6 +21,17 @@ import * as pocketIc from "./pocket-ic.js";
 import * as wasmtime from "./wasmtime.js";
 import * as lintoko from "./lintoko.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
+import * as toolchainUtils from "./toolchain-utils.js";
+import type { ReleaseInfo } from "./release-tags.js";
+
+function label(text: string): string {
+  return chalk.bold(text.padEnd(16));
+}
+
+export interface ToolchainInfoOptions {
+  versions?: boolean;
+  all?: boolean;
+}
 
 function getToolUtils(tool: Tool) {
   if (tool === "moc") {
@@ -250,25 +261,23 @@ async function promptVersion(tool: Tool): Promise<string> {
     type: "select",
     name: "version",
     message: `Select ${tool} version`,
-    choices: releases.map(
-      (
-        release: { published_at: string | number | Date; tag_name: string },
-        i: any,
-      ) => {
-        let date = new Date(release.published_at).toLocaleDateString(
-          undefined,
-          { year: "numeric", month: "short", day: "numeric" },
-        );
-        return {
-          title:
-            release.tag_name +
-            chalk.gray(
-              `  ${date}${currentIndex === i ? chalk.italic(" (current)") : ""}`,
-            ),
-          value: release.tag_name,
-        };
-      },
-    ),
+    choices: releases.map((release: ReleaseInfo, i) => {
+      let date = release.published_at
+        ? new Date(release.published_at).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        : "";
+      return {
+        title:
+          release.tag_name +
+          chalk.gray(
+            `  ${date}${currentIndex === i ? chalk.italic(" (current)") : ""}`,
+          ),
+        value: release.tag_name,
+      };
+    }),
     initial: currentIndex == -1 ? 0 : currentIndex,
   });
 
@@ -347,6 +356,68 @@ async function update(tool?: Tool) {
   }
 }
 
+async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
+  let toolUtils = getToolUtils(tool);
+
+  if (options.all && !options.versions) {
+    console.error("--all requires --versions");
+    process.exit(1);
+  }
+
+  if (options.versions) {
+    let { tags } = await toolchainUtils.getStableReleaseTags(toolUtils.repo, {
+      all: options.all,
+    });
+    for (let ver of tags) {
+      console.log(ver);
+    }
+    return;
+  }
+
+  // First page only — enough for latest + a short history preview.
+  let { tags, truncated, publishedLatest } =
+    await toolchainUtils.getStableReleaseTags(toolUtils.repo);
+
+  let latest = publishedLatest ?? (await toolUtils.getLatestReleaseTag());
+
+  let configFile = getClosestConfigFile();
+  let pinned = configFile
+    ? readConfig(configFile).toolchain?.[tool]
+    : undefined;
+
+  console.log("");
+  console.log(chalk.green.bold(tool));
+
+  if (latest) {
+    console.log(chalk.yellow(`latest: ${latest}`));
+  }
+
+  if (pinned) {
+    console.log(`${label("pinned")}${pinned}`);
+  }
+
+  console.log("");
+  console.log(
+    `${label("repository")}${chalk.cyan(`https://github.com/${toolUtils.repo}`)}`,
+  );
+
+  if (tags.length > 0) {
+    let shown = tags.slice(0, 10);
+    let versionsDisplay = shown.join(", ");
+    let remaining = tags.length - shown.length;
+    let extra =
+      remaining > 0
+        ? ` ${chalk.gray(`(+${remaining} more)`)}`
+        : truncated
+          ? ` ${chalk.gray("(+more)")}`
+          : "";
+    console.log("");
+    console.log(`${label("versions")}${versionsDisplay}${extra}`);
+  }
+
+  console.log("");
+}
+
 // return current version from mops.toml
 async function bin(tool: Tool, { fallback = false } = {}): Promise<string> {
   let hasConfig = getClosestConfigFile();
@@ -399,6 +470,7 @@ export let toolchain = {
   use,
   update,
   bin,
+  info,
   installAll,
   checkToolchainInited,
 };
