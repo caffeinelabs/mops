@@ -153,7 +153,7 @@ mops toolchain info <tool> --versions --all # full stable history (cache warming
 mops toolchain bin moc               # print path to binary
 ```
 
-**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history). Set `GITHUB_TOKEN` when listing tools with long release histories.
+**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
 
 ### Enhanced migrations
 
