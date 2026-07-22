@@ -11,8 +11,8 @@ export function warnCiLockAutoDetect(): void {
   console.log(
     chalk.yellow(
       "Using the `CI` environment variable to default `--lock` to `check` is deprecated and will be removed in a future release.\n" +
-        "Pass `--lock check` explicitly (and commit `mops.lock`) to keep failing on a missing or stale lockfile.\n" +
-        "Note: explicit `--lock check` errors when the lock is missing; the deprecated CI auto-path skips a missing lock.",
+        "Pass `--lock check` explicitly (and commit `mops.lock`) to keep failing on a stale lockfile.\n" +
+        "Note: explicit `--lock check` also errors when the lock is missing; the deprecated CI auto-path skips a missing lock.",
     ),
   );
 }

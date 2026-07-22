@@ -40,9 +40,9 @@ Verbose output.
 
 ## CI
 
-**Deprecated:** when the `CI` environment variable is set and `--lock` is omitted, `mops install` still defaults to `--lock check` and prints a deprecation warning. This auto-detection will be removed in a future release — pass `--lock check` explicitly (and commit `mops.lock`) to keep failing on a missing or stale lockfile.
+**Deprecated:** when the `CI` environment variable is set and `--lock` is omitted, `mops install` still defaults to `--lock check` and prints a deprecation warning. This auto-detection will be removed in a future release — pass `--lock check` explicitly (and commit `mops.lock`) to keep failing on a stale lockfile.
 
-Note: explicit `--lock check` errors when the lock is missing; the deprecated CI auto-path skips a missing lock. If the lockfile is stale, install fails and suggests `mops install --lock update`.
+Note: explicit `--lock check` also errors when the lock is missing; the deprecated CI auto-path skips a missing lock. If the lockfile is stale, install fails and suggests `mops install --lock update`.
 
 `mops add`, `mops remove`, `mops update`, and `mops sync` are unaffected — they always default to updating the lockfile.
 

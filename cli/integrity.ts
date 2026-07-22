@@ -37,7 +37,7 @@ type LockFile = LockFileV1 | LockFileV2 | LockFileV3;
 type CheckIntegrityOptions = {
   // When `--lock` is omitted, use this instead of the CI-aware default.
   // Mutating commands pass `"update"` so `CI` cannot force check after changing deps.
-  defaultLock?: "check" | "update";
+  defaultLock?: "update";
 };
 
 export async function checkIntegrity(
@@ -337,6 +337,7 @@ export async function checkLockFile(force = false, regenerated = false) {
         console.error(
           `File ${fileId} in lock file does not belong to package ${packageId}`,
         );
+        console.error("Run `mops install --lock update` to regenerate it.");
         process.exit(1);
       }
 
