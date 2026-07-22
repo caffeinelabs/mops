@@ -2,8 +2,8 @@
 
 ## Next
 
-- `mops toolchain info <tool> --versions` lists all stable GitHub release versions for a toolchain tool (moc, lintoko, wasmtime, pocket-ic), one per line — for scripting and cache warming.
-- `mops toolchain info <tool>` shows latest stable release, pinned version, and recent version history.
+- `mops toolchain info <tool> --versions` lists stable GitHub release versions for a toolchain tool (moc, lintoko, wasmtime, pocket-ic), one per line, newest first. Defaults to the first releases page; pass `--all` for the full history (cache warming).
+- `mops toolchain info <tool>` shows latest stable release, pinned version, and recent version history (first page only).
 - Fix `mops install` under `CI=1` aborting on a stale `mops.lock` with no recovery path (AGE-291). The deps-hash mismatch error now suggests `mops install --lock update`. `mops add` / `remove` / `update` / `sync` always default to updating the lockfile even when `CI` is set (they never supported `--lock check`). Using `CI` to auto-select `--lock check` on `mops install` is deprecated and warns; pass `--lock check` explicitly. Removal tracked in `NEXT-MAJOR.md` (GH #516).
 
 ## 2.17.0

@@ -30,6 +30,7 @@ function label(text: string): string {
 
 export interface ToolchainInfoOptions {
   versions?: boolean;
+  all?: boolean;
 }
 
 function getToolUtils(tool: Tool) {
@@ -358,18 +359,26 @@ async function update(tool?: Tool) {
 async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   let toolUtils = getToolUtils(tool);
 
+  if (options.all && !options.versions) {
+    console.error("--all requires --versions");
+    process.exit(1);
+  }
+
   if (options.versions) {
-    let versions = await toolchainUtils.getAllReleaseTags(toolUtils.repo);
-    for (let ver of versions) {
+    let { tags } = await toolchainUtils.getStableReleaseTags(toolUtils.repo, {
+      all: options.all,
+    });
+    for (let ver of tags) {
       console.log(ver);
     }
     return;
   }
 
-  let [versions, latest] = await Promise.all([
-    toolchainUtils.getAllReleaseTags(toolUtils.repo),
-    toolUtils.getLatestReleaseTag(),
-  ]);
+  // First page only — enough for latest + a short history preview.
+  let { tags, truncated, publishedLatest } =
+    await toolchainUtils.getStableReleaseTags(toolUtils.repo);
+
+  let latest = publishedLatest ?? (await toolUtils.getLatestReleaseTag());
 
   let configFile = getClosestConfigFile();
   let pinned = configFile
@@ -392,12 +401,16 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
     `${label("repository")}${chalk.cyan(`https://github.com/${toolUtils.repo}`)}`,
   );
 
-  if (versions.length > 0) {
-    let versionsDisplay = versions.slice(-10).reverse().join(", ");
+  if (tags.length > 0) {
+    let shown = tags.slice(0, 10);
+    let versionsDisplay = shown.join(", ");
+    let remaining = tags.length - shown.length;
     let extra =
-      versions.length > 10
-        ? ` ${chalk.gray(`(+${versions.length - 10} more)`)}`
-        : "";
+      remaining > 0
+        ? ` ${chalk.gray(`(+${remaining} more)`)}`
+        : truncated
+          ? ` ${chalk.gray("(+more)")}`
+          : "";
     console.log("");
     console.log(`${label("versions")}${versionsDisplay}${extra}`);
   }

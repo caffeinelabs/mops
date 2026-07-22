@@ -17,10 +17,11 @@ export let sortReleaseTags = (tags: string[]): string[] => {
   });
 };
 
+/** Stable tags, newest (highest semver) first. */
 export let stableReleaseTags = (releases: ReleaseInfo[]): string[] => {
   return sortReleaseTags(
     releases
       .filter((release) => !release.draft && !release.prerelease)
       .map((release) => release.tag_name),
-  );
+  ).reverse();
 };

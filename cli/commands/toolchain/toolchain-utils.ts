@@ -79,11 +79,40 @@ export let downloadAndExtract = async (
   deleteSync([tmpDir], { force: true });
 };
 
-export let getAllReleases = async (repo: string): Promise<ReleaseInfo[]> => {
+export type StableReleaseTagsResult = {
+  tags: string[];
+  /** True when only the first page was fetched and GitHub may have more. */
+  truncated: boolean;
+  /** First stable tag in GitHub publish order from the fetched pages, if any. */
+  publishedLatest?: string;
+};
+
+let mapRelease = (release: {
+  tag_name: string;
+  published_at: string | null;
+  prerelease: boolean;
+  draft: boolean;
+}): ReleaseInfo => ({
+  tag_name: release.tag_name.replace(/^v/, ""),
+  published_at: release.published_at,
+  prerelease: release.prerelease,
+  draft: release.draft,
+});
+
+let fetchReleasePages = async (
+  repo: string,
+  { maxPages }: { maxPages?: number } = {},
+): Promise<{ releases: ReleaseInfo[]; truncated: boolean }> => {
   let octokit = new Octokit();
   let releases: ReleaseInfo[] = [];
+  let truncated = false;
 
   for (let page = 1; ; page++) {
+    if (maxPages !== undefined && page > maxPages) {
+      truncated = true;
+      break;
+    }
+
     let res = await octokit.request(`GET /repos/${repo}/releases`, {
       per_page: 100,
       page,
@@ -99,23 +128,35 @@ export let getAllReleases = async (repo: string): Promise<ReleaseInfo[]> => {
       break;
     }
     for (let release of res.data) {
-      releases.push({
-        tag_name: release.tag_name.replace(/^v/, ""),
-        published_at: release.published_at,
-        prerelease: release.prerelease,
-        draft: release.draft,
-      });
+      releases.push(mapRelease(release));
     }
     if (res.data.length < 100) {
       break;
     }
+    if (maxPages !== undefined && page >= maxPages) {
+      truncated = true;
+      break;
+    }
   }
 
-  return releases;
+  return { releases, truncated };
 };
 
-export let getAllReleaseTags = async (repo: string): Promise<string[]> => {
-  return stableReleaseTags(await getAllReleases(repo));
+/** Stable release tags, newest first. Default: first GitHub page only. */
+export let getStableReleaseTags = async (
+  repo: string,
+  { all = false } = {},
+): Promise<StableReleaseTagsResult> => {
+  let { releases, truncated } = await fetchReleasePages(repo, {
+    maxPages: all ? undefined : 1,
+  });
+  return {
+    tags: stableReleaseTags(releases),
+    truncated: all ? false : truncated,
+    publishedLatest: releases.find(
+      (release) => !release.draft && !release.prerelease,
+    )?.tag_name,
+  };
 };
 
 export let getLatestReleaseTag = async (repo: string): Promise<string> => {
@@ -162,17 +203,5 @@ export let getReleases = async (repo: string): Promise<ReleaseInfo[]> => {
     console.error("Releases fetch error");
     process.exit(1);
   }
-  return res.data.map(
-    (release: {
-      tag_name: string;
-      published_at: string | null;
-      prerelease: boolean;
-      draft: boolean;
-    }): ReleaseInfo => ({
-      tag_name: release.tag_name.replace(/^v/, ""),
-      published_at: release.published_at,
-      prerelease: release.prerelease,
-      draft: release.draft,
-    }),
-  );
+  return res.data.map(mapRelease);
 };

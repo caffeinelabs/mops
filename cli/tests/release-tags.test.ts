@@ -15,11 +15,11 @@ describe("toolchain-utils release tags", () => {
     ]);
   });
 
-  test("stableReleaseTags excludes drafts and prereleases", () => {
+  test("stableReleaseTags excludes drafts and prereleases, newest first", () => {
     let releases: ReleaseInfo[] = [
       {
-        tag_name: "1.1.0",
-        published_at: "2024-01-03T00:00:00Z",
+        tag_name: "1.0.0",
+        published_at: "2024-01-01T00:00:00Z",
         prerelease: false,
         draft: false,
       },
@@ -30,13 +30,19 @@ describe("toolchain-utils release tags", () => {
         draft: false,
       },
       {
-        tag_name: "1.0.0",
-        published_at: "2024-01-01T00:00:00Z",
+        tag_name: "1.1.0",
+        published_at: "2024-01-03T00:00:00Z",
+        prerelease: false,
+        draft: false,
+      },
+      {
+        tag_name: "0.9.0",
+        published_at: "2023-12-01T00:00:00Z",
         prerelease: false,
         draft: true,
       },
     ];
 
-    expect(stableReleaseTags(releases)).toEqual(["1.1.0"]);
+    expect(stableReleaseTags(releases)).toEqual(["1.1.0", "1.0.0"]);
   });
 });

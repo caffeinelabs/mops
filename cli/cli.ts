@@ -874,7 +874,11 @@ toolchainCommand
   .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
   .option(
     "--versions",
-    "List all stable release versions, one per line (oldest to newest)",
+    "List stable release versions, one per line (newest first; first GitHub page by default)",
+  )
+  .option(
+    "--all",
+    "With --versions, fetch every release page instead of the first page only",
   )
   .action(async (tool: Tool, options) => {
     await toolchain.info(tool, options);

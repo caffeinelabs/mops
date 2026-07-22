@@ -31,10 +31,18 @@ mops toolchain info lintoko
 
 ### `--versions`
 
-Print all stable release versions, one per line (oldest to newest). Useful for scripting.
+Print stable release versions, one per line (newest first). By default fetches only the first GitHub releases page (up to 100 releases). Useful for scripting.
 
 ```
 mops toolchain info moc --versions
+```
+
+### `--all`
+
+With `--versions`, paginate through every GitHub releases page. Use for full-history cache warming.
+
+```
+mops toolchain info moc --versions --all
 ```
 
 Prereleases and drafts are excluded. Stable versions match what `mops toolchain update` and `mops toolchain use <tool> latest` resolve to (first stable GitHub release). Interactive `mops toolchain use` without a version may also list prereleases in its picker.
@@ -47,4 +55,4 @@ Displays:
 - Latest stable release
 - Pinned version from `[toolchain]` in `mops.toml` (when run inside a project)
 - GitHub repository link
-- Recent version history
+- Recent version history (from the first releases page)

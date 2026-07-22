@@ -68,7 +68,7 @@ We can't credibly tell users to drop `dfx` while our own dev loop runs on it.
 - Revert default test reporter to `verbose` (or auto-pick by file count). (GH #288)
 - Enable `--format` by default in `mops watch`. (GH #288)
 - `mops watch` defaults: today no flags = "do almost everything" (`cli/commands/watch/watch.ts:32-42`). Make conservative; require explicit opt-in for `deploy`/`test`.
-
+- Flip `mops info <pkg> --versions` to newest-first. Today it prints oldest→newest; `mops toolchain info --versions` already established newest-first as the standard — align package info in v3 so scripts are not stuck with the earlier order.
 ### Cleanup that affects users
 - `mops install` semantics change (drop CI env auto-detection, drop implicit `.mops/` re-hash).
 - Remove `dfx` fallback paths entirely.
