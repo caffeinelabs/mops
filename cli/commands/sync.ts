@@ -42,7 +42,7 @@ export async function sync({ lock }: SyncOptions = {}) {
     await remove(pkg, { dev, lock: "ignore" });
   }
 
-  await checkIntegrity(lock);
+  await checkIntegrity(lock, { defaultLock: "update" });
 }
 
 async function getUsedPackages(): Promise<string[]> {

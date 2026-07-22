@@ -7,6 +7,7 @@ import { getDependencyType, getRootDir, readConfig } from "./mops.js";
 import { mainActor } from "./api/actors.js";
 import { resolvePackages } from "./resolve-packages.js";
 import { getPackageId } from "./helpers/get-package-id.js";
+import { warnCiLockAutoDetect } from "./helpers/deprecate-ci-lock.js";
 
 type LockFileGeneric = {
   version: number;
@@ -33,11 +34,28 @@ type LockFileV3 = {
 
 type LockFile = LockFileV1 | LockFileV2 | LockFileV3;
 
-export async function checkIntegrity(lock?: "check" | "update" | "ignore") {
+type CheckIntegrityOptions = {
+  // When `--lock` is omitted, use this instead of the CI-aware default.
+  // Mutating commands pass `"update"` so `CI` cannot force check after changing deps.
+  defaultLock?: "check" | "update";
+};
+
+export async function checkIntegrity(
+  lock?: "check" | "update" | "ignore",
+  { defaultLock }: CheckIntegrityOptions = {},
+) {
+  // Explicit `--lock` forces regeneration; omitted flag keeps the light skip path.
   let force = !!lock;
 
   if (!lock) {
-    lock = process.env["CI"] ? "check" : "update";
+    if (defaultLock) {
+      lock = defaultLock;
+    } else if (process.env["CI"]) {
+      warnCiLockAutoDetect();
+      lock = "check";
+    } else {
+      lock = "update";
+    }
   }
 
   if (lock === "update") {
@@ -246,6 +264,7 @@ export async function checkLockFile(force = false, regenerated = false) {
       console.error("Mismatched mops.toml hash");
       console.error(`Locked hash: ${lockFileJson.mopsTomlHash}`);
       console.error(`Actual hash: ${getMopsTomlHash()}`);
+      console.error("Run `mops install --lock update` to regenerate it.");
       process.exit(1);
     }
   }
@@ -257,6 +276,7 @@ export async function checkLockFile(force = false, regenerated = false) {
       console.error("Mismatched mops.toml dependencies hash");
       console.error(`Locked hash: ${lockFileJson.mopsTomlDepsHash}`);
       console.error(`Actual hash: ${getMopsTomlDepsHash()}`);
+      console.error("Run `mops install --lock update` to regenerate it.");
       process.exit(1);
     }
   }

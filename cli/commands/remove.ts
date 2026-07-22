@@ -131,7 +131,7 @@ export async function remove(
   dryRun || writeConfig(config);
 
   await syncLocalCache();
-  await checkIntegrity(lock);
+  await checkIntegrity(lock, { defaultLock: "update" });
 
   console.log(chalk.green("Package removed ") + `${name} = "${version}"`);
 }

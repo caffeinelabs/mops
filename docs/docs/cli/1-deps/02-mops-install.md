@@ -40,6 +40,10 @@ Verbose output.
 
 ## CI
 
-In CI environments (`CI` env var is set), the default `--lock` mode is `check` instead of `update` — the lockfile is never auto-created in CI. If no lockfile is present in CI, integrity checking is silently skipped.
+**Deprecated:** when the `CI` environment variable is set and `--lock` is omitted, `mops install` still defaults to `--lock check` and prints a deprecation warning. This auto-detection will be removed in a future release — pass `--lock check` explicitly (or a future `mops ci` / `--frozen` mode) to keep failing on a stale lockfile.
+
+While the auto-path remains: the lockfile is never auto-created in CI. If no lockfile is present, integrity checking is silently skipped. If the lockfile is stale, install fails and suggests `mops install --lock update`.
+
+`mops add`, `mops remove`, `mops update`, and `mops sync` are unaffected — they always default to updating the lockfile.
 
 See [CI environments](/mops.lock#ci-environments) on the mops.lock page for full details.

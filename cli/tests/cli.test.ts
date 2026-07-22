@@ -178,6 +178,86 @@ describe("install", () => {
     }
   });
 
+  // AGE-291: with CI set, install defaults to `--lock check` and used to abort
+  // on a stale deps hash with no recovery hint — a deadlock for agents that
+  // cannot `rm mops.lock`. Hint + deprecation warning for the CI auto-path.
+  test("CI install on a stale lock hints --lock update and warns about CI auto-detect", async () => {
+    const cwd = path.join(import.meta.dirname, "install/success");
+    const lockFile = path.join(cwd, "mops.lock");
+    const tomlFile = path.join(cwd, "mops.toml");
+    const originalToml = readFileSync(tomlFile, "utf8");
+    rmSync(lockFile, { force: true });
+    try {
+      const first = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(first.exitCode).toBe(0);
+
+      writeFileSync(
+        tomlFile,
+        '[dependencies]\ncore = "1.0.0"\nfuzz = "1.0.0"\n',
+      );
+
+      const result = await cli(["install"], { cwd, env: { CI: "1" } });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/Mismatched mops\.toml dependencies hash/);
+      expect(result.stderr).toMatch(/Run `mops install --lock update`/);
+      expect(result.stdout + result.stderr).toMatch(
+        /`CI` environment variable.*deprecated/,
+      );
+    } finally {
+      writeFileSync(tomlFile, originalToml);
+      rmSync(lockFile, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
+  test("CI install --lock check does not emit the CI auto-detect deprecation", async () => {
+    const cwd = path.join(import.meta.dirname, "install/success");
+    const lockFile = path.join(cwd, "mops.lock");
+    rmSync(lockFile, { force: true });
+    try {
+      const first = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(first.exitCode).toBe(0);
+
+      const result = await cli(["install", "--lock", "check"], {
+        cwd,
+        env: { CI: "1" },
+      });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout + result.stderr).not.toMatch(
+        /`CI` environment variable.*deprecated/,
+      );
+    } finally {
+      rmSync(lockFile, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
+  // Mutating commands bypass CI→check so agents can add deps under CI=1.
+  test("mops add under CI updates the lockfile (does not abort on check)", async () => {
+    const cwd = path.join(import.meta.dirname, "install/success");
+    const lockFile = path.join(cwd, "mops.lock");
+    const tomlFile = path.join(cwd, "mops.toml");
+    const originalToml = readFileSync(tomlFile, "utf8");
+    rmSync(lockFile, { force: true });
+    try {
+      const first = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(first.exitCode).toBe(0);
+
+      const result = await cli(["add", "fuzz@1.0.0"], {
+        cwd,
+        env: { CI: "1" },
+      });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toMatch(/Integrity check failed/);
+      expect(readFileSync(tomlFile, "utf8")).toMatch(/fuzz/);
+      expect(readFileSync(lockFile, "utf8")).toMatch(/fuzz@1\.0\.0/);
+    } finally {
+      writeFileSync(tomlFile, originalToml);
+      rmSync(lockFile, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
   // Regression: parallel `mops install` runs against the same project used to
   // race in two places — global cache writes (`.mops/<pkg>` populated mid-write)
   // and local `.mops/<pkg>` copies — leaving zero-byte / partially-written
