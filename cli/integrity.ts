@@ -7,6 +7,7 @@ import { getDependencyType, getRootDir, readConfig } from "./mops.js";
 import { mainActor } from "./api/actors.js";
 import { resolvePackages } from "./resolve-packages.js";
 import { getPackageId } from "./helpers/get-package-id.js";
+import { warnCiLockAutoDetect } from "./helpers/deprecate-ci-lock.js";
 
 type LockFileGeneric = {
   version: number;
@@ -33,11 +34,28 @@ type LockFileV3 = {
 
 type LockFile = LockFileV1 | LockFileV2 | LockFileV3;
 
-export async function checkIntegrity(lock?: "check" | "update" | "ignore") {
+type CheckIntegrityOptions = {
+  // When `--lock` is omitted, use this instead of the CI-aware default.
+  // Mutating commands pass `"update"` so `CI` cannot force check after changing deps.
+  defaultLock?: "update";
+};
+
+export async function checkIntegrity(
+  lock?: "check" | "update" | "ignore",
+  { defaultLock }: CheckIntegrityOptions = {},
+) {
+  // Explicit `--lock` forces regeneration; omitted flag keeps the light skip path.
   let force = !!lock;
 
   if (!lock) {
-    lock = process.env["CI"] ? "check" : "update";
+    if (defaultLock) {
+      lock = defaultLock;
+    } else if (process.env["CI"]) {
+      warnCiLockAutoDetect();
+      lock = "check";
+    } else {
+      lock = "update";
+    }
   }
 
   if (lock === "update") {
@@ -136,7 +154,7 @@ export function readLockFile(): LockFile | null {
       return JSON.parse(fs.readFileSync(lockFile).toString()) as LockFile;
     } catch {
       console.error(
-        "mops.lock is corrupted. Delete it and run `mops install` to regenerate.",
+        "mops.lock is corrupted. Run `mops install --lock update` to regenerate it.",
       );
       process.exit(1);
     }
@@ -217,7 +235,9 @@ export async function checkLockFile(force = false, regenerated = false) {
   // check if lock file exists
   if (!fs.existsSync(lockFile)) {
     if (force) {
-      console.error("Missing lock file. Run `mops install` to generate it.");
+      console.error(
+        "Missing lock file. Run `mops install --lock update` to generate it.",
+      );
       process.exit(1);
     }
     return;
@@ -234,6 +254,7 @@ export async function checkLockFile(force = false, regenerated = false) {
     console.error(
       `Invalid lock file version: ${lockFileJsonGeneric.version}. Supported versions: ${supportedVersions.join(", ")}`,
     );
+    console.error("Run `mops install --lock update` to regenerate it.");
     process.exit(1);
   }
 
@@ -246,6 +267,7 @@ export async function checkLockFile(force = false, regenerated = false) {
       console.error("Mismatched mops.toml hash");
       console.error(`Locked hash: ${lockFileJson.mopsTomlHash}`);
       console.error(`Actual hash: ${getMopsTomlHash()}`);
+      console.error("Run `mops install --lock update` to regenerate it.");
       process.exit(1);
     }
   }
@@ -257,6 +279,7 @@ export async function checkLockFile(force = false, regenerated = false) {
       console.error("Mismatched mops.toml dependencies hash");
       console.error(`Locked hash: ${lockFileJson.mopsTomlDepsHash}`);
       console.error(`Actual hash: ${getMopsTomlDepsHash()}`);
+      console.error("Run `mops install --lock update` to regenerate it.");
       process.exit(1);
     }
   }
@@ -272,6 +295,7 @@ export async function checkLockFile(force = false, regenerated = false) {
         console.error(`Mismatched package ${name}`);
         console.error(`Locked: ${lockedDeps[name]}`);
         console.error(`Actual: ${resolvedDeps[name]}`);
+        console.error("Run `mops install --lock update` to regenerate it.");
         process.exit(1);
       }
     }
@@ -283,6 +307,7 @@ export async function checkLockFile(force = false, regenerated = false) {
     console.error(
       `Mismatched number of resolved packages: ${JSON.stringify(Object.keys(lockFileJson.hashes).length)} vs ${JSON.stringify(packageIds.length)}`,
     );
+    console.error("Run `mops install --lock update` to regenerate it.");
     process.exit(1);
   }
 
@@ -291,6 +316,7 @@ export async function checkLockFile(force = false, regenerated = false) {
     if (!(packageId in lockFileJson.hashes)) {
       console.error("Integrity check failed");
       console.error(`Missing package ${packageId} in lock file`);
+      console.error("Run `mops install --lock update` to regenerate it.");
       process.exit(1);
     }
   }
@@ -302,6 +328,7 @@ export async function checkLockFile(force = false, regenerated = false) {
       console.error(
         `Package ${packageId} in lock file but not in resolved packages`,
       );
+      console.error("Run `mops install --lock update` to regenerate it.");
       process.exit(1);
     }
 
@@ -312,6 +339,7 @@ export async function checkLockFile(force = false, regenerated = false) {
         console.error(
           `File ${fileId} in lock file does not belong to package ${packageId}`,
         );
+        console.error("Run `mops install --lock update` to regenerate it.");
         process.exit(1);
       }
 

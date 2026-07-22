@@ -19,4 +19,15 @@ describe("bench", () => {
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
     }
   });
+
+  test("rejects moc args with embedded spaces (single array entry with space)", async () => {
+    const cwd = path.join(import.meta.dirname, "bench/moc-args-invalid");
+    try {
+      const result = await cli(["bench"], { cwd });
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr).toMatch(/invalid warning code/);
+    } finally {
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
 });

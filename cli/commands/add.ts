@@ -134,7 +134,10 @@ export async function add(
 
   let installedPackages = await syncLocalCache();
 
-  await Promise.all([notifyInstalls(installedPackages), checkIntegrity(lock)]);
+  await Promise.all([
+    notifyInstalls(installedPackages),
+    checkIntegrity(lock, { defaultLock: "update" }),
+  ]);
 
   logUpdate.clear();
 

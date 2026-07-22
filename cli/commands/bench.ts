@@ -6,7 +6,7 @@ import chalk from "chalk";
 import { globSync } from "glob";
 import { markdownTable } from "markdown-table";
 import { createLogUpdate } from "log-update";
-import { execaCommand } from "execa";
+import { execa } from "execa";
 import stringWidth from "string-width";
 import { filesize } from "filesize";
 import terminalSize from "terminal-size";
@@ -24,7 +24,7 @@ import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 import { warnIfDfxReplica } from "../helpers/deprecate-dfx-replica.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
-import { sources } from "./sources.js";
+import { sourcesArgs } from "./sources.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
@@ -47,6 +47,7 @@ type BenchOptions = {
   verbose: boolean;
   silent: boolean;
   profile: "Debug" | "Release";
+  extraArgs: string[];
 };
 
 export async function bench(
@@ -70,6 +71,7 @@ export async function bench(
     verbose: false,
     silent: false,
     profile: dfxJson?.profile || "Release",
+    extraArgs: [],
   };
 
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
@@ -294,35 +296,35 @@ function isLegacyGc(gc: BenchOptions["gc"]): boolean {
   return gc === "copying" || gc === "compacting" || gc === "generational";
 }
 
-function getMocArgs(options: BenchOptions): string {
-  let args = "";
+function getMocArgs(options: BenchOptions): string[] {
+  const args: string[] = [];
 
-  let mocAtLeast015 =
+  const mocAtLeast015 =
     !!options.compilerVersion &&
     new SemVer(options.compilerVersion).compare("0.15.0") >= 0;
 
   // Legacy collectors require legacy persistence; moc < 0.15 is already legacy
   // and has no --legacy-persistence flag.
-  let useLegacyPersistence =
+  const useLegacyPersistence =
     options.legacyPersistence || isLegacyGc(options.gc);
 
   if (useLegacyPersistence && mocAtLeast015) {
-    args += " --legacy-persistence";
+    args.push("--legacy-persistence");
   }
 
   if (options.forceGc) {
-    args += " --force-gc";
+    args.push("--force-gc");
   }
 
   // Under EOP the GC is fixed; only pass a collector flag where it's selectable.
   if (options.gc && (useLegacyPersistence || !mocAtLeast015)) {
-    args += ` --${options.gc}-gc`;
+    args.push(`--${options.gc}-gc`);
   }
 
   if (options.profile === "Debug") {
-    args += " --debug";
+    args.push("--debug");
   } else if (options.profile === "Release") {
-    args += " --release";
+    args.push("--release");
   }
 
   return args;
@@ -357,13 +359,23 @@ async function deployBenchFile(
 
   // build canister
   let mocPath = getMocPath();
-  let mocArgs = getMocArgs(options);
-  let buildCmd = `${mocPath} -c --idl canister.mo ${globalMocArgs.join(" ")} ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`;
+  let mocArgsList = getMocArgs(options);
+  let buildArgs = [
+    "-c",
+    "--idl",
+    "canister.mo",
+    ...(await sourcesArgs({ cwd: tempDir })).flat(),
+    ...globalMocArgs,
+    ...mocArgsList,
+    ...options.extraArgs,
+  ];
   if (options.verbose) {
-    console.log(chalk.gray(`[${canisterName}] ${buildCmd}`));
+    console.log(
+      chalk.gray(`[${canisterName}] ${mocPath} ${buildArgs.join(" ")}`),
+    );
     console.time(`build ${canisterName}`);
   }
-  await execaCommand(buildCmd, {
+  await execa(mocPath, buildArgs, {
     cwd: tempDir,
     // `inherit` so the compiler output (warnings/errors) is streamed under --verbose
     stdio: options.verbose ? "inherit" : ["pipe", "ignore", "pipe"],

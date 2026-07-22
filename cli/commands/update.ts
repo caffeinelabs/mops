@@ -106,5 +106,5 @@ export async function update(
     }
   }
 
-  await checkIntegrity(lock);
+  await checkIntegrity(lock, { defaultLock: "update" });
 }

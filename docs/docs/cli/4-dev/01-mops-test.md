@@ -85,7 +85,13 @@ If you run `mops test --replica pocket-ic` AND `pocket-ic` is not specified in `
 
 Show replica logs
 
+### `-- <moc flags>`
 
+Pass extra flags directly to the Motoko compiler for this invocation. Appended after `[moc].args` from `mops.toml`.
+
+```
+mops test -- -Werror
+```
 
 ## Replica tests
 
