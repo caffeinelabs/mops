@@ -46,9 +46,9 @@ _It's only faster when there are no globally cached packages — for example whe
 
 ## CI environments
 
-**Deprecated:** when the `CI` environment variable is set and `--lock` is omitted, `mops install` defaults to `--lock check` and prints a deprecation warning. This auto-detection will be removed in a future release — pass `--lock check` explicitly to keep that behavior.
+**Deprecated:** when the `CI` environment variable is set and `--lock` is omitted, `mops install` defaults to `--lock check` and prints a deprecation warning. This auto-detection will be removed in a future release — pass `--lock check` explicitly (and commit `mops.lock`) to keep that behavior.
 
-While it remains: if `mops.lock` does not exist, integrity checking is skipped and no lock file is created. To enforce the lock in CI, commit `mops.lock` and pass `--lock check` (or rely on the deprecated `CI` auto-path for now). If the lock is stale, regenerate with `mops install --lock update`.
+Note: explicit `--lock check` errors when the lock is missing; the deprecated CI auto-path skips a missing lock. If the lock is stale, regenerate with `mops install --lock update`.
 
 Dependency-mutating commands (`mops add`, `mops remove`, `mops update`, `mops sync`) always default to updating the lockfile, even when `CI` is set.
 

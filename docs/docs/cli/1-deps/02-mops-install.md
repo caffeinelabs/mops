@@ -26,7 +26,7 @@ See [mops.lock](/mops.lock) for details on lockfile contents and when to commit 
 What to do with the [lockfile](/mops.lock).
 
 Possible values:
-- `update` — keep the lockfile in sync with current dependencies and verify file integrity (default). Pass explicitly to force regeneration if the lockfile is stale or corrupt.
+- `update` — keep the lockfile in sync with current dependencies and verify file integrity (default outside CI). Pass explicitly to force regeneration if the lockfile is stale or corrupt.
 - `check` — verify file integrity against an existing lockfile; fail if the lockfile is missing or out of date
 - `ignore` — skip the lockfile entirely
 
@@ -40,9 +40,9 @@ Verbose output.
 
 ## CI
 
-**Deprecated:** when the `CI` environment variable is set and `--lock` is omitted, `mops install` still defaults to `--lock check` and prints a deprecation warning. This auto-detection will be removed in a future release — pass `--lock check` explicitly (or a future `mops ci` / `--frozen` mode) to keep failing on a stale lockfile.
+**Deprecated:** when the `CI` environment variable is set and `--lock` is omitted, `mops install` still defaults to `--lock check` and prints a deprecation warning. This auto-detection will be removed in a future release — pass `--lock check` explicitly (and commit `mops.lock`) to keep failing on a missing or stale lockfile.
 
-While the auto-path remains: the lockfile is never auto-created in CI. If no lockfile is present, integrity checking is silently skipped. If the lockfile is stale, install fails and suggests `mops install --lock update`.
+Note: explicit `--lock check` errors when the lock is missing; the deprecated CI auto-path skips a missing lock. If the lockfile is stale, install fails and suggests `mops install --lock update`.
 
 `mops add`, `mops remove`, `mops update`, and `mops sync` are unaffected — they always default to updating the lockfile.
 

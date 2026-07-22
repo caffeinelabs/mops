@@ -203,6 +203,13 @@ describe("install", () => {
       expect(result.stdout + result.stderr).toMatch(
         /`CI` environment variable.*deprecated/,
       );
+
+      const recovered = await cli(["install", "--lock", "update"], {
+        cwd,
+        env: { CI: "1" },
+      });
+      expect(recovered.exitCode).toBe(0);
+      expect(readFileSync(lockFile, "utf8")).toMatch(/fuzz@1\.0\.0/);
     } finally {
       writeFileSync(tomlFile, originalToml);
       rmSync(lockFile, { force: true });
@@ -249,8 +256,41 @@ describe("install", () => {
       });
       expect(result.exitCode).toBe(0);
       expect(result.stderr).not.toMatch(/Integrity check failed/);
+      expect(result.stdout + result.stderr).not.toMatch(
+        /`CI` environment variable.*deprecated/,
+      );
       expect(readFileSync(tomlFile, "utf8")).toMatch(/fuzz/);
       expect(readFileSync(lockFile, "utf8")).toMatch(/fuzz@1\.0\.0/);
+    } finally {
+      writeFileSync(tomlFile, originalToml);
+      rmSync(lockFile, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
+  test("mops remove under CI updates the lockfile", async () => {
+    const cwd = path.join(import.meta.dirname, "install/success");
+    const lockFile = path.join(cwd, "mops.lock");
+    const tomlFile = path.join(cwd, "mops.toml");
+    const originalToml = readFileSync(tomlFile, "utf8");
+    rmSync(lockFile, { force: true });
+    try {
+      writeFileSync(
+        tomlFile,
+        '[dependencies]\ncore = "1.0.0"\nfuzz = "1.0.0"\n',
+      );
+      const first = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(first.exitCode).toBe(0);
+      expect(readFileSync(lockFile, "utf8")).toMatch(/fuzz@1\.0\.0/);
+
+      const result = await cli(["remove", "fuzz"], {
+        cwd,
+        env: { CI: "1" },
+      });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toMatch(/Integrity check failed/);
+      expect(readFileSync(tomlFile, "utf8")).not.toMatch(/fuzz/);
+      expect(readFileSync(lockFile, "utf8")).not.toMatch(/fuzz@1\.0\.0/);
     } finally {
       writeFileSync(tomlFile, originalToml);
       rmSync(lockFile, { force: true });

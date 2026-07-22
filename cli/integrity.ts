@@ -154,7 +154,7 @@ export function readLockFile(): LockFile | null {
       return JSON.parse(fs.readFileSync(lockFile).toString()) as LockFile;
     } catch {
       console.error(
-        "mops.lock is corrupted. Delete it and run `mops install` to regenerate.",
+        "mops.lock is corrupted. Run `mops install --lock update` to regenerate it.",
       );
       process.exit(1);
     }
@@ -252,6 +252,7 @@ export async function checkLockFile(force = false, regenerated = false) {
     console.error(
       `Invalid lock file version: ${lockFileJsonGeneric.version}. Supported versions: ${supportedVersions.join(", ")}`,
     );
+    console.error("Run `mops install --lock update` to regenerate it.");
     process.exit(1);
   }
 
@@ -292,6 +293,7 @@ export async function checkLockFile(force = false, regenerated = false) {
         console.error(`Mismatched package ${name}`);
         console.error(`Locked: ${lockedDeps[name]}`);
         console.error(`Actual: ${resolvedDeps[name]}`);
+        console.error("Run `mops install --lock update` to regenerate it.");
         process.exit(1);
       }
     }
@@ -303,6 +305,7 @@ export async function checkLockFile(force = false, regenerated = false) {
     console.error(
       `Mismatched number of resolved packages: ${JSON.stringify(Object.keys(lockFileJson.hashes).length)} vs ${JSON.stringify(packageIds.length)}`,
     );
+    console.error("Run `mops install --lock update` to regenerate it.");
     process.exit(1);
   }
 
@@ -311,6 +314,7 @@ export async function checkLockFile(force = false, regenerated = false) {
     if (!(packageId in lockFileJson.hashes)) {
       console.error("Integrity check failed");
       console.error(`Missing package ${packageId} in lock file`);
+      console.error("Run `mops install --lock update` to regenerate it.");
       process.exit(1);
     }
   }
@@ -322,6 +326,7 @@ export async function checkLockFile(force = false, regenerated = false) {
       console.error(
         `Package ${packageId} in lock file but not in resolved packages`,
       );
+      console.error("Run `mops install --lock update` to regenerate it.");
       process.exit(1);
     }
 
