@@ -26,7 +26,7 @@ Close the gap between update path and resolve path.
 
 ### Trust & lockfile model (move closer to npm/cargo)
 - Verify integrity at **download time**, stop re-hashing `.mops/` on every install; move on-disk verification behind `mops verify`. (GH #517)
-- Add `mops ci` (or `--frozen`): fail loudly on missing/out-of-date lock; drop the `CI` env-var auto-detection in `mops install`. (GH #516)
+- Add `mops ci` (or `--frozen`): fail loudly on missing/out-of-date lock; drop the `CI` env-var auto-detection in `mops install`. (GH #516). Deprecated with warnings in 2.x via `cli/helpers/deprecate-ci-lock.ts`.
 - `mops install` becomes purely additive (`npm install` semantics) — no implicit "switch to check mode".
 - `mops.lock` enabled by default (already done in 2.8); remove opt-in/legacy paths. (GH #288)
 

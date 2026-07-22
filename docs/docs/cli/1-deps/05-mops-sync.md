@@ -19,7 +19,7 @@ mops sync
 
 What to do with the [lockfile](/mops.lock).
 
-Default value is `update` if lockfile exists and `ignore` otherwise.
+Default: `update` (create or refresh the lockfile, then verify). Unaffected by the `CI` environment variable — dependency-mutating commands always update the lock by default.
 
 Possible values:
 - `update` - update lockfile (create if not exists). Always checks after update

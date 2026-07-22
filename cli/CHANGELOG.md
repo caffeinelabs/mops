@@ -2,6 +2,8 @@
 
 ## Next
 
+- Fix `mops install` under `CI=1` aborting on a stale `mops.lock` with no recovery path (AGE-291). The deps-hash mismatch error now suggests `mops install --lock update`. `mops add` / `remove` / `update` / `sync` always default to updating the lockfile even when `CI` is set (they never supported `--lock check`). Using `CI` to auto-select `--lock check` on `mops install` is deprecated and warns; pass `--lock check` explicitly. Removal tracked in `NEXT-MAJOR.md` (GH #516).
+
 ## 2.17.0
 
 - `mops test` no longer passes `-S preview2=n` to wasmtime. The flag was deprecated in wasmtime 46 (printing a warning to stderr that was misread as a test failure) and became a hard error in wasmtime 47.0.0 (2026-07-20). moc emits WASI-preview1 modules, which wasmtime runs correctly without the flag.

@@ -71,9 +71,13 @@ Flags are applied in this order (later overrides earlier):
 
 ```bash
 mops install
+mops install --lock update   # regenerate a stale/corrupt mops.lock
+mops install --lock check    # fail if lockfile is missing or stale (CI)
 ```
 
-Run after cloning or after manual `mops.toml` edits. Updates `mops.lock`. In CI, uses `--lock check` by default (fails if lockfile is stale).
+Run after cloning or after manual `mops.toml` edits. Updates `mops.lock` by default.
+
+When the `CI` env var is set and `--lock` is omitted, defaults to `--lock check` (deprecated — pass `--lock check` explicitly; auto-detection will be removed in v3). A stale lock fails with a hint to run `mops install --lock update`.
 
 ### `mops add <package>`
 
@@ -83,7 +87,7 @@ mops add core@2.5.0       # specific version
 mops add --dev test       # dev dependency
 ```
 
-Updates `mops.toml` and `mops.lock`.
+Updates `mops.toml` and `mops.lock` (even when `CI` is set).
 
 ### `mops check`
 
