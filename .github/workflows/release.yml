@@ -154,6 +154,7 @@ jobs:
       # Dispatch before canister deploy / artifacts so those failures cannot block the bump.
 
       - name: Create GitHub App Token for app repo
+        continue-on-error: true
         uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
         id: app-dispatch-token
         with:
@@ -162,6 +163,7 @@ jobs:
           repositories: app
 
       - name: Trigger ic-mops bump in app repo
+        continue-on-error: true
         uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3
         with:
           token: ${{ steps.app-dispatch-token.outputs.token }}
