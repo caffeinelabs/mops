@@ -3,7 +3,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 import { execaCommand } from "execa";
-import { getRootDir } from "../mops.js";
+import { getRootDir, readConfig } from "../mops.js";
 import {
   type AnyPocketIcServer,
   type AnyPocketIc,
@@ -13,6 +13,7 @@ import {
 import { createActor, idlFactory } from "../declarations/bench/index.js";
 import { toolchain } from "./toolchain/index.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
+import { isOptimizeEnabled } from "../helpers/optimize-config.js";
 
 export class BenchReplica {
   type: "dfx" | "pocket-ic" | "dfx-pocket-ic";
@@ -109,12 +110,16 @@ export class BenchReplica {
   dfxJson(canisterName: string) {
     let canisters: Record<string, any> = {};
     if (canisterName) {
-      canisters[canisterName] = {
+      let canister: Record<string, unknown> = {
         type: "custom",
         wasm: "canister.wasm",
         candid: "canister.did",
-        optimize: "cycles",
       };
+      // mops already ran wasm-opt; avoid a second (stale ic-wasm) pass on deploy
+      if (!isOptimizeEnabled(readConfig())) {
+        canister.optimize = "cycles";
+      }
+      canisters[canisterName] = canister;
     }
 
     return {

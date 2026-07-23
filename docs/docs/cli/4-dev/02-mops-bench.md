@@ -30,12 +30,14 @@ Under the hood, Mops will:
 
 The number you get is for the exact wasm the chosen replica runs, and the two replicas install it differently:
 
-- **`pocket-ic`** runs the raw `moc` output — **no optimization**.
-- **`dfx`** post-optimizes the module before installing it (`optimize: "cycles"`, via `ic-wasm`), so its instruction counts can be meaningfully lower.
+- **With [`[optimize]`](/mops.toml#optimize)** — `mops bench` runs `wasm-opt` on the module before deploy (same pass as `mops build`). Prefer this when you want bench numbers to match an optimized deploy artifact. When `[optimize]` is set, the deprecated `dfx` replica path does **not** apply a second `optimize: "cycles"` pass.
+- **Without `[optimize]`**:
+  - **`pocket-ic`** runs the raw `moc` output — **no optimization**.
+  - **`dfx`** post-optimizes before install (`optimize: "cycles"`, via `ic-wasm`), so instruction counts can be lower — and that path fails on EOP Motoko (Table64), falling back to unoptimized Wasm.
 
-The same benchmark can therefore report different numbers across replicas. Always compare runs made with the **same replica**.
+Always compare runs made with the **same replica** and the same `[optimize]` settings.
 
-Also note that `dfx`'s optimization is best-effort: if it fails (for example, on wasm modules using features the bundled `ic-wasm` can't process, such as multi-value), `dfx` prints `WARNING: Failed to optimize the Wasm module` and falls back to the **unoptimized** module. Run with [`--verbose`](#--verbose) to see this warning.
+If `wasm-opt` fails, mops warns and keeps the unoptimized module. Run with [`--verbose`](#--verbose) for details.
 
 :::
 

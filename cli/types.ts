@@ -36,6 +36,12 @@ export type Config = {
     extends?: string[] | true;
     extra?: Record<string, string[]>;
   };
+  /** Post-build Wasm optimization via Binaryen wasm-opt. Section present (even empty) enables it. */
+  optimize?: {
+    level?: string;
+    "keep-names"?: boolean;
+    args?: string[];
+  };
 };
 
 export type MigrationsConfig = {
@@ -72,9 +78,10 @@ export type Toolchain = {
   wasmtime?: string;
   "pocket-ic"?: string;
   lintoko?: string;
+  "wasm-opt"?: string;
 };
 
-export type Tool = "moc" | "wasmtime" | "pocket-ic" | "lintoko";
+export type Tool = "moc" | "wasmtime" | "pocket-ic" | "lintoko" | "wasm-opt";
 
 export type Requirements = {
   moc?: string;

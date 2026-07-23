@@ -1,0 +1,11 @@
+[dependencies]
+core = "1.0.0"
+
+[toolchain]
+wasm-opt = "./mock-wasm-opt"
+
+[canisters.main]
+main = "src/Main.mo"
+
+[optimize]
+level = "O3"

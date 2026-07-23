@@ -2,6 +2,8 @@
 
 ## Next
 
+- `[optimize]` runs Binaryen `wasm-opt` after `mops build` / `mops bench` (opt-in). Empty `[optimize]` defaults to `-O3 -g`. Pin via `[toolchain] wasm-opt` (Binaryen version, e.g. `131`); auto-pins latest if missing. Soft-fails to unoptimized Wasm on error.
+
 ## 2.18.0
 
 - `mops toolchain info <tool> --versions` lists stable GitHub release versions for a toolchain tool (moc, lintoko, wasmtime, pocket-ic), one per line, newest first. Defaults to the first releases page; pass `--all` for the full history (cache warming).

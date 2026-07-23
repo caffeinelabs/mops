@@ -20,6 +20,7 @@ import * as moc from "./moc.js";
 import * as pocketIc from "./pocket-ic.js";
 import * as wasmtime from "./wasmtime.js";
 import * as lintoko from "./lintoko.js";
+import * as wasmOpt from "./wasm-opt.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
 import * as toolchainUtils from "./toolchain-utils.js";
 import type { ReleaseInfo } from "./release-tags.js";
@@ -42,6 +43,8 @@ function getToolUtils(tool: Tool) {
     return wasmtime;
   } else if (tool === "lintoko") {
     return lintoko;
+  } else if (tool === "wasm-opt") {
+    return wasmOpt;
   } else {
     console.error(`Unknown tool '${tool}'`);
     process.exit(1);
@@ -239,6 +242,12 @@ async function installAll({ silent = false, verbose = false } = {}) {
   }
   if (config.toolchain?.lintoko) {
     await download("lintoko", config.toolchain.lintoko, { silent, verbose });
+  }
+  if (config.toolchain?.["wasm-opt"]) {
+    await download("wasm-opt", config.toolchain["wasm-opt"], {
+      silent,
+      verbose,
+    });
   }
 
   if (!silent) {
