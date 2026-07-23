@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.17.0"
+    "latest": "2.18.0"
   },
   "versions": {
     "0.41.0": {
@@ -512,6 +512,14 @@
       "commitHash": "5f60960957ecb8684f4d323c5a2bee82b1b4497a",
       "url": "https://cli.mops.one/versions/2.17.0.tgz",
       "hash": "09db74533b0d6cbb2b4f48ea163d219676bea647110ef39428e35fc0a1f99050"
+    },
+    "2.18.0": {
+      "time": 1784801380865,
+      "size": 2414323,
+      "relseaseNotes": "* `mops toolchain info <tool> --versions` lists stable GitHub release versions for a toolchain tool (moc, lintoko, wasmtime, pocket-ic), one per line, newest first. Defaults to the first releases page; pass `--all` for the full history (cache warming).\n* `mops toolchain info <tool>` shows latest stable release, pinned version, and recent version history (first page only).\n* Fix `mops install` under `CI=1` aborting on a stale `mops.lock` with no recovery path (AGE-291). The deps-hash mismatch error now suggests `mops install --lock update`. `mops add` / `remove` / `update` / `sync` always default to updating the lockfile even when `CI` is set (they never supported `--lock check`). Using `CI` to auto-select `--lock check` on `mops install` is deprecated and warns; pass `--lock check` explicitly. Removal tracked in `NEXT-MAJOR.md` (GH #516).\n",
+      "commitHash": "586d4f4a340724dbf56da0b5c3bc5ff8f3d70dc4",
+      "url": "https://cli.mops.one/versions/2.18.0.tgz",
+      "hash": "044272e4445433875e27aa38d31bd08099ea9d66c5fbce4e3351be4cc676b0e4"
     }
   }
 }
