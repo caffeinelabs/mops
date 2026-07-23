@@ -30,7 +30,7 @@ Under the hood, Mops will:
 
 The number you get is for the exact wasm the chosen replica runs, and the two replicas install it differently:
 
-- **With [`[optimize]`](/mops.toml#optimize)** — `mops bench` runs `wasm-opt` on the module before deploy (same pass as `mops build`). Prefer this when you want bench numbers to match an optimized deploy artifact. When `[optimize]` is set, the deprecated `dfx` replica path does **not** apply a second `optimize: "cycles"` pass.
+- **With [`[optimize]`](/mops.toml#optimize)** — `mops bench` runs `wasm-opt` on the module before deploy (same pass as `mops build`). Prefer this when you want bench numbers to match an optimized deploy artifact. When that pass **succeeds**, the deprecated `dfx` replica path does **not** apply a second `optimize: "cycles"` pass (on soft-fail, dfx still may).
 - **Without `[optimize]`**:
   - **`pocket-ic`** runs the raw `moc` output — **no optimization**.
   - **`dfx`** post-optimizes before install (`optimize: "cycles"`, via `ic-wasm`), so instruction counts can be lower — and that path fails on EOP Motoko (Table64), falling back to unoptimized Wasm.

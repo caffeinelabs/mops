@@ -57,7 +57,10 @@ export let getReleases = async (): Promise<ReleaseInfo[]> => {
 };
 
 export let isCached = (version: string) => {
-  return fs.existsSync(binaryPath(version));
+  let dir = path.join(cacheDir, version);
+  return (
+    fs.existsSync(binaryPath(version)) && fs.existsSync(path.join(dir, "lib"))
+  );
 };
 
 export let download = async (
@@ -113,18 +116,23 @@ export let download = async (
     );
     process.exit(1);
   }
-  await fs.move(path.join(nestedRoot, "bin"), path.join(destDir, "bin"));
-  await fs.move(path.join(nestedRoot, "lib"), path.join(destDir, "lib"));
-  chmodSync(path.join(destDir, "bin", "wasm-opt"), 0o700);
-  await fs.remove(stagingDir);
+  try {
+    await fs.move(path.join(nestedRoot, "bin"), path.join(destDir, "bin"));
+    await fs.move(path.join(nestedRoot, "lib"), path.join(destDir, "lib"));
+    chmodSync(path.join(destDir, "bin", "wasm-opt"), 0o700);
+    await fs.remove(stagingDir);
 
-  let smoke = await execa(binaryPath(version), ["--version"], {
-    reject: false,
-  });
-  if (smoke.exitCode !== 0) {
+    let smoke = await execa(binaryPath(version), ["--version"], {
+      reject: false,
+    });
+    if (smoke.exitCode !== 0) {
+      throw new Error(smoke.stderr?.trim() || `exit code ${smoke.exitCode}`);
+    }
+  } catch (err: any) {
     await fs.remove(destDir);
+    await fs.remove(stagingDir);
     console.error(
-      `wasm-opt ${version} failed to run after install${smoke.stderr ? `: ${smoke.stderr.trim()}` : ""}`,
+      `wasm-opt ${version} failed to install${err?.message ? `: ${err.message}` : ""}`,
     );
     process.exit(1);
   }
