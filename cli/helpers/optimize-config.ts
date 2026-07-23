@@ -8,9 +8,13 @@ export type OptimizeResolved = {
   args: string[];
 };
 
-/** `[optimize]` present (including empty table) enables the post-pass. */
+/** `[optimize]` present as a table (including empty) enables the post-pass. */
 export function isOptimizeEnabled(config: Config): boolean {
-  return config.optimize !== undefined;
+  return (
+    typeof config.optimize === "object" &&
+    config.optimize !== null &&
+    !Array.isArray(config.optimize)
+  );
 }
 
 export function resolveOptimizeConfig(config: Config): OptimizeResolved | null {

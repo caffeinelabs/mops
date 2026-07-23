@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "fs-extra";
 import { chmodSync } from "node:fs";
 import { Octokit } from "octokit";
+import { execa } from "execa";
 
 import { globalCacheDir } from "../../mops.js";
 import * as toolchainUtils from "./toolchain-utils.js";
@@ -14,6 +15,10 @@ export { normalizeBinaryenVersion } from "../../helpers/binaryen-version.js";
 let cacheDir = path.join(globalCacheDir, "wasm-opt");
 
 export let repo = "WebAssembly/binaryen";
+
+/** Resolved wasm-opt path inside a versioned cache dir (keeps sibling `lib/` for rpath). */
+export let binaryPath = (version: string) =>
+  path.join(cacheDir, version, "bin", "wasm-opt");
 
 export let getLatestReleaseTag = async () => {
   let octokit = new Octokit();
@@ -52,8 +57,7 @@ export let getReleases = async (): Promise<ReleaseInfo[]> => {
 };
 
 export let isCached = (version: string) => {
-  let dir = path.join(cacheDir, version);
-  return fs.existsSync(dir) && fs.existsSync(path.join(dir, "wasm-opt"));
+  return fs.existsSync(binaryPath(version));
 };
 
 export let download = async (
@@ -62,6 +66,10 @@ export let download = async (
 ) => {
   if (!version) {
     console.error("version is not defined");
+    process.exit(1);
+  }
+  if (process.platform === "win32") {
+    console.error("wasm-opt toolchain is not supported on Windows");
     process.exit(1);
   }
   if (isCached(version)) {
@@ -89,18 +97,35 @@ export let download = async (
   }
 
   let destDir = path.join(cacheDir, version);
-  await toolchainUtils.downloadAndExtract(url, destDir);
+  // Fresh extract into a temp sibling, then replace — avoids a half-cached broken install.
+  let stagingDir = path.join(cacheDir, `.${version}.staging`);
+  await fs.remove(stagingDir);
+  await fs.remove(destDir);
+  await toolchainUtils.downloadAndExtract(url, stagingDir);
 
-  // Tarball nests bin/ under binaryen-version_N/; flatten to match other tools.
-  let nestedBin = path.join(destDir, `binaryen-${tag}`, "bin", "wasm-opt");
-  let flatBin = path.join(destDir, "wasm-opt");
+  // Keep bin/ + lib/ (wasm-opt is linked with @rpath → ../lib/libbinaryen).
+  let nestedRoot = path.join(stagingDir, `binaryen-${tag}`);
+  let nestedBin = path.join(nestedRoot, "bin", "wasm-opt");
   if (!fs.existsSync(nestedBin)) {
+    await fs.remove(stagingDir);
     console.error(
       `wasm-opt binary not found in Binaryen archive: ${nestedBin}`,
     );
     process.exit(1);
   }
-  fs.moveSync(nestedBin, flatBin);
-  chmodSync(flatBin, 0o700);
-  fs.removeSync(path.join(destDir, `binaryen-${tag}`));
+  await fs.move(path.join(nestedRoot, "bin"), path.join(destDir, "bin"));
+  await fs.move(path.join(nestedRoot, "lib"), path.join(destDir, "lib"));
+  chmodSync(path.join(destDir, "bin", "wasm-opt"), 0o700);
+  await fs.remove(stagingDir);
+
+  let smoke = await execa(binaryPath(version), ["--version"], {
+    reject: false,
+  });
+  if (smoke.exitCode !== 0) {
+    await fs.remove(destDir);
+    console.error(
+      `wasm-opt ${version} failed to run after install${smoke.stderr ? `: ${smoke.stderr.trim()}` : ""}`,
+    );
+    process.exit(1);
+  }
 };

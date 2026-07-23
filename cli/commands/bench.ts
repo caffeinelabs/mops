@@ -348,10 +348,6 @@ async function deployBenchFile(
 
   // prepare temp files
   fs.mkdirSync(tempDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(tempDir, "dfx.json"),
-    JSON.stringify(replica.dfxJson(canisterName), null, 2),
-  );
 
   let benchCanisterData = fs.readFileSync(
     new URL("./bench/bench-canister.mo", import.meta.url),
@@ -390,7 +386,17 @@ async function deployBenchFile(
 
   // deploy canister
   let wasm = path.join(tempDir, "canister.wasm");
-  await optimizeWasm(wasm, readConfig(), { verbose: options.verbose });
+  let optimized = await optimizeWasm(wasm, readConfig(), {
+    verbose: options.verbose,
+  });
+  fs.writeFileSync(
+    path.join(tempDir, "dfx.json"),
+    JSON.stringify(
+      replica.dfxJson(canisterName, { skipDfxOptimize: optimized }),
+      null,
+      2,
+    ),
+  );
   options.verbose && console.time(`deploy ${canisterName}`);
   // await execaCommand(`dfx deploy ${canisterName} --mode reinstall --yes --identity anonymous`, {cwd: tempDir, stdio: options.verbose ? 'pipe' : ['pipe', 'ignore', 'pipe']});
   await replica.deploy(canisterName, wasm, tempDir);

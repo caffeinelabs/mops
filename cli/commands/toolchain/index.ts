@@ -456,6 +456,8 @@ async function bin(tool: Tool, { fallback = false } = {}): Promise<string> {
 
     if (tool === "moc") {
       return path.join(globalCacheDir, "moc", version, tool);
+    } else if (tool === "wasm-opt") {
+      return path.join(globalCacheDir, "wasm-opt", version, "bin", "wasm-opt");
     } else {
       return path.join(globalCacheDir, tool, version, tool);
     }

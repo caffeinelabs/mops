@@ -11,6 +11,12 @@ describe("optimize-config", () => {
   test("isOptimizeEnabled: absent vs empty table", () => {
     expect(isOptimizeEnabled({} as Config)).toBe(false);
     expect(isOptimizeEnabled({ optimize: {} } as Config)).toBe(true);
+    expect(isOptimizeEnabled({ optimize: false } as unknown as Config)).toBe(
+      false,
+    );
+    expect(isOptimizeEnabled({ optimize: true } as unknown as Config)).toBe(
+      false,
+    );
   });
 
   test("resolveOptimizeConfig defaults", () => {

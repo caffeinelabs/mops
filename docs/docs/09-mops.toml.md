@@ -220,7 +220,7 @@ keep-names = false
 args = ["--enable-bulk-memory"]
 ```
 
-Pin Binaryen via `[toolchain] wasm-opt` (e.g. `"131"`). If `[optimize]` is set and `wasm-opt` is not pinned, mops auto-pins the latest Binaryen release into `mops.toml` on the next build/bench.
+Pin Binaryen via `[toolchain] wasm-opt` (e.g. `"131"`). If `[optimize]` is set and `wasm-opt` is not pinned, mops auto-pins the latest Binaryen release into `mops.toml` on the next build/bench (rewrites the file like `mops add` — prefer pinning explicitly in CI).
 
 If `wasm-opt` fails, mops warns and keeps the unoptimized Wasm (same soft-fail behavior as dfx). Use `--verbose` for full `wasm-opt` output.
 

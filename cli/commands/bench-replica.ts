@@ -3,7 +3,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 import { execaCommand } from "execa";
-import { getRootDir, readConfig } from "../mops.js";
+import { getRootDir } from "../mops.js";
 import {
   type AnyPocketIcServer,
   type AnyPocketIc,
@@ -13,7 +13,6 @@ import {
 import { createActor, idlFactory } from "../declarations/bench/index.js";
 import { toolchain } from "./toolchain/index.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
-import { isOptimizeEnabled } from "../helpers/optimize-config.js";
 
 export class BenchReplica {
   type: "dfx" | "pocket-ic" | "dfx-pocket-ic";
@@ -107,7 +106,10 @@ export class BenchReplica {
     return this.canisters[name]?.canisterId || "";
   }
 
-  dfxJson(canisterName: string) {
+  dfxJson(
+    canisterName: string,
+    { skipDfxOptimize = false }: { skipDfxOptimize?: boolean } = {},
+  ) {
     let canisters: Record<string, any> = {};
     if (canisterName) {
       let canister: Record<string, unknown> = {
@@ -115,8 +117,8 @@ export class BenchReplica {
         wasm: "canister.wasm",
         candid: "canister.did",
       };
-      // mops already ran wasm-opt; avoid a second (stale ic-wasm) pass on deploy
-      if (!isOptimizeEnabled(readConfig())) {
+      // Only skip dfx's pass when mops already optimized successfully
+      if (!skipDfxOptimize) {
         canister.optimize = "cycles";
       }
       canisters[canisterName] = canister;
