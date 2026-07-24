@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.18.0"
+    "latest": "2.19.0"
   },
   "versions": {
     "0.41.0": {
@@ -520,6 +520,14 @@
       "commitHash": "586d4f4a340724dbf56da0b5c3bc5ff8f3d70dc4",
       "url": "https://cli.mops.one/versions/2.18.0.tgz",
       "hash": "044272e4445433875e27aa38d31bd08099ea9d66c5fbce4e3351be4cc676b0e4"
+    },
+    "2.19.0": {
+      "time": 1784899587744,
+      "size": 2416716,
+      "relseaseNotes": "* `[optimize]` runs Binaryen `wasm-opt` after `mops build` / `mops bench` (opt-in). Empty `[optimize]` defaults to `-O3 -g`. Pin via `[toolchain] wasm-opt` (Binaryen version, e.g. `131`); auto-pins latest if missing. Soft-fails to unoptimized Wasm on error.\n* `mops build` and `mops bench` accept `--no-optimize` to skip the `[optimize]` `wasm-opt` post-pass for a single run without editing `mops.toml` (no-op when `[optimize]` is not set).\n",
+      "commitHash": "be449cbeaf8bd9ce6c929b3ceb41591afe8bedca",
+      "url": "https://cli.mops.one/versions/2.19.0.tgz",
+      "hash": "f97b0a3e4544268e43896f08296a739379fe4ba59b2724eb77eec94123416292"
     }
   }
 }
