@@ -2,6 +2,8 @@
 
 ## Next
 
+## 2.19.0
+
 - `[optimize]` runs Binaryen `wasm-opt` after `mops build` / `mops bench` (opt-in). Empty `[optimize]` defaults to `-O3 -g`. Pin via `[toolchain] wasm-opt` (Binaryen version, e.g. `131`); auto-pins latest if missing. Soft-fails to unoptimized Wasm on error.
 - `mops build` and `mops bench` accept `--no-optimize` to skip the `[optimize]` `wasm-opt` post-pass for a single run without editing `mops.toml` (no-op when `[optimize]` is not set).
 
