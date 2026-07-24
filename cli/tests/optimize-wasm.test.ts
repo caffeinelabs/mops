@@ -59,6 +59,15 @@ describe("optimize-config", () => {
     ).toBe("wasm-opt 131 -Oz");
   });
 
+  test("formatOptimizePipeline: --no-optimize overrides an enabled config", () => {
+    expect(
+      formatOptimizePipeline(
+        { optimize: {}, toolchain: { "wasm-opt": "131" } } as Config,
+        { optimize: false },
+      ),
+    ).toBe("none (--no-optimize)");
+  });
+
   test("normalizeBinaryenVersion", () => {
     expect(normalizeBinaryenVersion("version_131")).toBe("131");
     expect(normalizeBinaryenVersion("ersion_131")).toBe("131");

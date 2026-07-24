@@ -36,7 +36,13 @@ export function resolveOptimizeConfig(config: Config): OptimizeResolved | null {
 }
 
 /** Describe the active optimize settings for bench/build verbose output. */
-export function formatOptimizePipeline(config: Config): string {
+export function formatOptimizePipeline(
+  config: Config,
+  { optimize }: { optimize?: boolean } = {},
+): string {
+  if (optimize === false) {
+    return "none (--no-optimize)";
+  }
   let resolved = resolveOptimizeConfig(config);
   if (!resolved) {
     return "none (raw moc output)";
