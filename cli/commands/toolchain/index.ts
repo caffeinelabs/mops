@@ -24,9 +24,15 @@ import * as wasmOpt from "./wasm-opt.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
 import * as toolchainUtils from "./toolchain-utils.js";
 import type { ReleaseInfo } from "./release-tags.js";
+import { normalizeBinaryenVersion } from "../../helpers/binaryen-version.js";
 
 function label(text: string): string {
   return chalk.bold(text.padEnd(16));
+}
+
+/** Map GitHub tags to the pin format stored in mops.toml (Binaryen: `version_131` → `131`). */
+function normalizeReleaseTag(tool: Tool, tag: string): string {
+  return tool === "wasm-opt" ? normalizeBinaryenVersion(tag) : tag;
 }
 
 export interface ToolchainInfoOptions {
@@ -378,16 +384,22 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
       all: options.all,
     });
     for (let ver of tags) {
-      console.log(ver);
+      console.log(normalizeReleaseTag(tool, ver));
     }
     return;
   }
 
   // First page only — enough for latest + a short history preview.
-  let { tags, truncated, publishedLatest } =
-    await toolchainUtils.getStableReleaseTags(toolUtils.repo);
+  let {
+    tags: rawTags,
+    truncated,
+    publishedLatest,
+  } = await toolchainUtils.getStableReleaseTags(toolUtils.repo);
+  let tags = rawTags.map((tag) => normalizeReleaseTag(tool, tag));
 
-  let latest = publishedLatest ?? (await toolUtils.getLatestReleaseTag());
+  let latest = publishedLatest
+    ? normalizeReleaseTag(tool, publishedLatest)
+    : await toolUtils.getLatestReleaseTag();
 
   let configFile = getClosestConfigFile();
   let pinned = configFile
