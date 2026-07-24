@@ -20,12 +20,19 @@ import * as moc from "./moc.js";
 import * as pocketIc from "./pocket-ic.js";
 import * as wasmtime from "./wasmtime.js";
 import * as lintoko from "./lintoko.js";
+import * as wasmOpt from "./wasm-opt.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
 import * as toolchainUtils from "./toolchain-utils.js";
 import type { ReleaseInfo } from "./release-tags.js";
+import { normalizeBinaryenVersion } from "../../helpers/binaryen-version.js";
 
 function label(text: string): string {
   return chalk.bold(text.padEnd(16));
+}
+
+/** Map GitHub tags to the pin format stored in mops.toml (Binaryen: `version_131` → `131`). */
+function normalizeReleaseTag(tool: Tool, tag: string): string {
+  return tool === "wasm-opt" ? normalizeBinaryenVersion(tag) : tag;
 }
 
 export interface ToolchainInfoOptions {
@@ -42,6 +49,8 @@ function getToolUtils(tool: Tool) {
     return wasmtime;
   } else if (tool === "lintoko") {
     return lintoko;
+  } else if (tool === "wasm-opt") {
+    return wasmOpt;
   } else {
     console.error(`Unknown tool '${tool}'`);
     process.exit(1);
@@ -240,6 +249,12 @@ async function installAll({ silent = false, verbose = false } = {}) {
   if (config.toolchain?.lintoko) {
     await download("lintoko", config.toolchain.lintoko, { silent, verbose });
   }
+  if (config.toolchain?.["wasm-opt"]) {
+    await download("wasm-opt", config.toolchain["wasm-opt"], {
+      silent,
+      verbose,
+    });
+  }
 
   if (!silent) {
     logUpdate.clear();
@@ -369,16 +384,22 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
       all: options.all,
     });
     for (let ver of tags) {
-      console.log(ver);
+      console.log(normalizeReleaseTag(tool, ver));
     }
     return;
   }
 
   // First page only — enough for latest + a short history preview.
-  let { tags, truncated, publishedLatest } =
-    await toolchainUtils.getStableReleaseTags(toolUtils.repo);
+  let {
+    tags: rawTags,
+    truncated,
+    publishedLatest,
+  } = await toolchainUtils.getStableReleaseTags(toolUtils.repo);
+  let tags = rawTags.map((tag) => normalizeReleaseTag(tool, tag));
 
-  let latest = publishedLatest ?? (await toolUtils.getLatestReleaseTag());
+  let latest = publishedLatest
+    ? normalizeReleaseTag(tool, publishedLatest)
+    : await toolUtils.getLatestReleaseTag();
 
   let configFile = getClosestConfigFile();
   let pinned = configFile
@@ -447,6 +468,8 @@ async function bin(tool: Tool, { fallback = false } = {}): Promise<string> {
 
     if (tool === "moc") {
       return path.join(globalCacheDir, "moc", version, tool);
+    } else if (tool === "wasm-opt") {
+      return path.join(globalCacheDir, "wasm-opt", version, "bin", "wasm-opt");
     } else {
       return path.join(globalCacheDir, tool, version, tool);
     }

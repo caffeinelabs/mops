@@ -24,6 +24,10 @@ import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 import { warnIfDfxReplica } from "../helpers/deprecate-dfx-replica.js";
 import { getMocPath } from "../helpers/get-moc-path.js";
+import {
+  formatOptimizePipeline,
+  optimizeWasm,
+} from "../helpers/optimize-wasm.js";
 import { sourcesArgs } from "./sources.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 
@@ -108,12 +112,14 @@ export async function bench(
   warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");
 
   if (options.verbose) {
-    // `dfx` post-optimizes the wasm on deploy (`optimize: "cycles"`, via ic-wasm);
-    // `pocket-ic` runs the raw moc output. This changes instruction counts, so surface it.
-    let optimize =
-      replicaType === "dfx" || replicaType === "dfx-pocket-ic"
-        ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
-        : "none (raw moc output)";
+    // Without [optimize], dfx still post-optimizes on deploy; pocket-ic runs raw moc output.
+    let optimize = formatOptimizePipeline(config);
+    if (optimize === "none (raw moc output)") {
+      optimize =
+        replicaType === "dfx" || replicaType === "dfx-pocket-ic"
+          ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
+          : optimize;
+    }
     let legacyGc = isLegacyGc(options.gc);
     let effectiveLegacyPersistence = options.legacyPersistence || legacyGc;
     console.log(chalk.gray("Benchmark pipeline:"));
@@ -342,10 +348,6 @@ async function deployBenchFile(
 
   // prepare temp files
   fs.mkdirSync(tempDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(tempDir, "dfx.json"),
-    JSON.stringify(replica.dfxJson(canisterName), null, 2),
-  );
 
   let benchCanisterData = fs.readFileSync(
     new URL("./bench/bench-canister.mo", import.meta.url),
@@ -384,6 +386,17 @@ async function deployBenchFile(
 
   // deploy canister
   let wasm = path.join(tempDir, "canister.wasm");
+  let optimized = await optimizeWasm(wasm, readConfig(), {
+    verbose: options.verbose,
+  });
+  fs.writeFileSync(
+    path.join(tempDir, "dfx.json"),
+    JSON.stringify(
+      replica.dfxJson(canisterName, { skipDfxOptimize: optimized }),
+      null,
+      2,
+    ),
+  );
   options.verbose && console.time(`deploy ${canisterName}`);
   // await execaCommand(`dfx deploy ${canisterName} --mode reinstall --yes --identity anonymous`, {cwd: tempDir, stdio: options.verbose ? 'pipe' : ['pipe', 'ignore', 'pipe']});
   await replica.deploy(canisterName, wasm, tempDir);

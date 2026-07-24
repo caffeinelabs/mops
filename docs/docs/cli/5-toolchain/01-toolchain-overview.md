@@ -14,6 +14,7 @@ When you run `mops install` command, Mops will install the specified version of 
 - `wasmtime` - Wasmtime runtime (used by `mops test --mode wasi`)
 - `pocket-ic` - PocketIC replica (used by `mops bench --replica pocket-ic`)
 - `lintoko` - Extensible linter for Motoko ([https://github.com/caffeinelabs/lintoko](https://github.com/caffeinelabs/lintoko))
+- `wasm-opt` - Binaryen Wasm optimizer (used when [`[optimize]`](/mops.toml#optimize) is set)
 
 ## Specifying tool versions
 
@@ -25,6 +26,7 @@ mops toolchain use moc 0.10.3
 mops toolchain use wasmtime 16.0.0
 mops toolchain use pocket-ic 1.0.0
 mops toolchain use lintoko 0.7.0
+mops toolchain use wasm-opt 131
 ```
 
 No need to run `mops install` when you use `mops toolchain use` command.
@@ -39,6 +41,7 @@ moc = "0.10.3"
 wasmtime = "16.0.0"
 lintoko = "0.7.0"
 pocket-ic = "1.0.0"
+wasm-opt = "131"
 ```
 
 You need to run `mops install` command when you edit `mops.toml` file manually.

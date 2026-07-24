@@ -16,7 +16,13 @@ import { stableReleaseTags, type ReleaseInfo } from "./release-tags.js";
 export type { ReleaseInfo } from "./release-tags.js";
 export { sortReleaseTags, stableReleaseTags } from "./release-tags.js";
 
-export const TOOLCHAINS = ["moc", "wasmtime", "pocket-ic", "lintoko"];
+export const TOOLCHAINS = [
+  "moc",
+  "wasmtime",
+  "pocket-ic",
+  "lintoko",
+  "wasm-opt",
+];
 
 export let tryDownloadFile = async (url: string): Promise<Buffer | null> => {
   let res = await fetch(url);

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+out=""
+infile=""
+prev=""
+for a in "$@"; do
+  if [[ "$prev" == "-o" ]]; then
+    out="$a"
+    prev=""
+    continue
+  fi
+  if [[ "$a" == "-o" ]]; then
+    prev="-o"
+    continue
+  fi
+  if [[ "$a" != -* ]]; then
+    infile="$a"
+  fi
+  prev="$a"
+done
+if [[ -z "$infile" || -z "$out" ]]; then
+  echo "mock-wasm-opt: missing input or -o" >&2
+  exit 1
+fi
+cp "$infile" "$out"
+# stamp so tests can assert the mock ran
+touch "$(dirname "$infile")/.wasm-opt-ran"

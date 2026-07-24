@@ -43,6 +43,12 @@ path = "deployed/backend.most"
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
+
+# Opt-in Wasm optimization (Binaryen wasm-opt) for build + bench
+[optimize]
+# level = "O3"       # default
+# keep-names = true  # default
+# wasm-opt pin: [toolchain] wasm-opt = "131" (auto-pinned to latest if missing)
 ```
 
 `check-stable` runs ICP's upgrade-time stable-variable compatibility check locally, so incompatible changes fail in `mops check` instead of being rejected when upgrading a live canister. It compares the current code against a `.most` from the deployed version.
@@ -116,6 +122,8 @@ mops build -- --ai-errors # pass extra moc flags
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
 
+With `[optimize]` in `mops.toml`, runs `wasm-opt` after candid metadata (default `-O3 -g`). Pin Binaryen with `mops toolchain use wasm-opt 131` (or let auto-pin write latest on first build). Soft-fails to unoptimized Wasm on error.
+
 ### `mops deployed`
 
 Post-deploy hook — keeps the on-disk `.most` baseline used by `check-stable` in sync with what's actually deployed.
@@ -145,6 +153,7 @@ mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.10.0    # pin specific version
 mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the bundled pic-js client doesn't support)
+mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
 mops toolchain info <tool>           # show release info (latest, pinned, history)

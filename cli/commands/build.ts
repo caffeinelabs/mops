@@ -11,6 +11,7 @@ import {
   resolveCanisterConfigs,
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
+import { optimizeWasm } from "../helpers/optimize-wasm.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
 import { Config } from "../types.js";
@@ -200,6 +201,7 @@ export async function build(
           customSections,
         );
         await writeFile(wasmPath, newWasm);
+        await optimizeWasm(wasmPath, config, { verbose: options.verbose });
       } catch (err: any) {
         if (err.message?.includes("Build failed for canister")) {
           throw err;

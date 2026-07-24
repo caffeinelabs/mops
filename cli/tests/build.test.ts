@@ -140,4 +140,33 @@ describe("build", () => {
       }
     },
   );
+
+  test("[optimize] runs wasm-opt after build", async () => {
+    const cwd = path.join(import.meta.dirname, "build/optimize");
+    const stamp = path.join(cwd, ".mops/.build/.wasm-opt-ran");
+    try {
+      const result = await cli(["build", "--verbose"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout + result.stderr).toMatch(/Optimized main\.wasm/);
+      expect(existsSync(path.join(cwd, ".mops/.build/main.wasm"))).toBe(true);
+      expect(existsSync(stamp)).toBe(true);
+    } finally {
+      cleanFixture(cwd);
+      rmSync(stamp, { force: true });
+    }
+  });
+
+  test("[optimize] soft-fails when wasm-opt errors", async () => {
+    const cwd = path.join(import.meta.dirname, "build/optimize-fail");
+    try {
+      const result = await cli(["build"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout + result.stderr).toMatch(
+        /Failed to optimize main\.wasm/,
+      );
+      expect(existsSync(path.join(cwd, ".mops/.build/main.wasm"))).toBe(true);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
 });

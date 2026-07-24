@@ -22,4 +22,11 @@ describe("toolchain", () => {
     const result = await cli(["install"], { cwd });
     expect(result.stderr).not.toContain("Invalid Version");
   });
+
+  test("wasm-opt file URI", async () => {
+    const cwd = path.join(import.meta.dirname, "build/optimize");
+    const result = await cli(["toolchain", "bin", "wasm-opt"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("./mock-wasm-opt");
+  });
 });

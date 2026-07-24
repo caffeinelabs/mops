@@ -106,15 +106,22 @@ export class BenchReplica {
     return this.canisters[name]?.canisterId || "";
   }
 
-  dfxJson(canisterName: string) {
+  dfxJson(
+    canisterName: string,
+    { skipDfxOptimize = false }: { skipDfxOptimize?: boolean } = {},
+  ) {
     let canisters: Record<string, any> = {};
     if (canisterName) {
-      canisters[canisterName] = {
+      let canister: Record<string, unknown> = {
         type: "custom",
         wasm: "canister.wasm",
         candid: "canister.did",
-        optimize: "cycles",
       };
+      // Only skip dfx's pass when mops already optimized successfully
+      if (!skipDfxOptimize) {
+        canister.optimize = "cycles";
+      }
+      canisters[canisterName] = canister;
     }
 
     return {
