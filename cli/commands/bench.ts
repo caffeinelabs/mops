@@ -51,6 +51,8 @@ type BenchOptions = {
   verbose: boolean;
   silent: boolean;
   profile: "Debug" | "Release";
+  /** `false` skips the `[optimize]` wasm-opt pass (`--no-optimize`). */
+  optimize: boolean;
   extraArgs: string[];
 };
 
@@ -75,6 +77,7 @@ export async function bench(
     verbose: false,
     silent: false,
     profile: dfxJson?.profile || "Release",
+    optimize: true,
     extraArgs: [],
   };
 
@@ -112,9 +115,12 @@ export async function bench(
   warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");
 
   if (options.verbose) {
-    // Without [optimize], dfx still post-optimizes on deploy; pocket-ic runs raw moc output.
-    let optimize = formatOptimizePipeline(config);
-    if (optimize === "none (raw moc output)") {
+    // With no mops pass (no [optimize] or --no-optimize), dfx still post-optimizes
+    // on deploy; pocket-ic runs raw moc output.
+    let optimize = formatOptimizePipeline(config, {
+      optimize: options.optimize,
+    });
+    if (optimize.startsWith("none")) {
       optimize =
         replicaType === "dfx" || replicaType === "dfx-pocket-ic"
           ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
@@ -388,6 +394,7 @@ async function deployBenchFile(
   let wasm = path.join(tempDir, "canister.wasm");
   let optimized = await optimizeWasm(wasm, readConfig(), {
     verbose: options.verbose,
+    optimize: options.optimize,
   });
   fs.writeFileSync(
     path.join(tempDir, "dfx.json"),

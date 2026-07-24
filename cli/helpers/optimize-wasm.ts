@@ -59,6 +59,8 @@ export async function ensureWasmOptPinned(
 
 export type OptimizeWasmOptions = {
   verbose?: boolean;
+  /** `false` force-disables the pass (e.g. `--no-optimize`), even if `[optimize]` is set. */
+  optimize?: boolean;
 };
 
 /**
@@ -70,6 +72,9 @@ export async function optimizeWasm(
   config: Config = readConfig(),
   options: OptimizeWasmOptions = {},
 ): Promise<boolean> {
+  if (options.optimize === false) {
+    return false;
+  }
   let resolved = resolveOptimizeConfigOrExit(config);
   if (!resolved) {
     return false;

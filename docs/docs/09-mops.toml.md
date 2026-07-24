@@ -224,6 +224,8 @@ Pin Binaryen via `[toolchain] wasm-opt` (e.g. `"131"`). If `[optimize]` is set a
 
 If `wasm-opt` fails, mops warns and keeps the unoptimized Wasm (same soft-fail behavior as dfx). Use `--verbose` for full `wasm-opt` output.
 
+Pass `--no-optimize` to [`mops build`](/cli/mops-build#--no-optimize) or [`mops bench`](/cli/mops-bench#--no-optimize) to skip this pass for a single run without editing `mops.toml`.
+
 :::note
 Deploy recipes (e.g. icp-cli) that also run `wasm-opt` should skip that step when mops already optimized the artifact — avoid stacking passes. Actor-class Wasm embedded inside Motoko modules is not recursively optimized.
 :::

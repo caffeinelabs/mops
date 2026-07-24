@@ -340,6 +340,12 @@ program
   .description("Build a canister")
   .addOption(new Option("--verbose", "Verbose console output"))
   .addOption(new Option("--output, -o <output>", "Output directory"))
+  .addOption(
+    new Option(
+      "--no-optimize",
+      "Skip the [optimize] wasm-opt post-pass even when it is configured in mops.toml",
+    ),
+  )
   .addHelpText(
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops build -- -Werror",
@@ -584,6 +590,12 @@ program
     new Option(
       "--verbose",
       "Print the benchmark pipeline (compiler, replica, GC, context, persistence, profile, optimization) and stream compiler/replica output, including dfx optimization warnings",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--no-optimize",
+      "Skip the [optimize] wasm-opt post-pass even when it is configured in mops.toml",
     ),
   )
   .addHelpText(

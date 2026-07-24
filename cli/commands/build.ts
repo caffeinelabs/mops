@@ -20,6 +20,8 @@ import { toolchain } from "./toolchain/index.js";
 export interface BuildOptions {
   outputDir: string;
   verbose: boolean;
+  /** `false` skips the `[optimize]` wasm-opt pass (`--no-optimize`). */
+  optimize: boolean;
   extraArgs: string[];
 }
 
@@ -201,7 +203,10 @@ export async function build(
           customSections,
         );
         await writeFile(wasmPath, newWasm);
-        await optimizeWasm(wasmPath, config, { verbose: options.verbose });
+        await optimizeWasm(wasmPath, config, {
+          verbose: options.verbose,
+          optimize: options.optimize,
+        });
       } catch (err: any) {
         if (err.message?.includes("Build failed for canister")) {
           throw err;
