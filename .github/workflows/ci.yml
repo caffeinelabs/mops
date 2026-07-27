@@ -10,8 +10,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    timeout-minutes: 45
     strategy:
       matrix:
         moc-version: [0.14.13]
@@ -104,6 +109,7 @@ jobs:
         run: cd cli && npm test
 
   bundle-smoke-test:
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     name: bundle build smoke test
     steps:
@@ -132,6 +138,7 @@ jobs:
           mops build
 
   ci-ok:
+    timeout-minutes: 5
     if: always()
     needs: [build, bundle-smoke-test]
     runs-on: ubuntu-latest
