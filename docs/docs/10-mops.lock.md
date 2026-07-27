@@ -44,7 +44,7 @@ _It's only faster when there are no globally cached packages — for example whe
 - All transitive dependencies with the final resolved versions
 - Hash of each file of each dependency (retrieved from the Mops registry canister)
 
-Local path dependencies are stored relative to the project root (e.g. `./packages/shared`, `../lib`) so the lockfile is portable across machines. If an older lock still has absolute paths, regenerate with `mops install --lock update`.
+Local path dependencies are stored relative to the project root (e.g. `./packages/shared`, `../lib`) so the lockfile is portable across machines. A plain `mops install` will not rewrite an older lock that still has absolute paths — run `mops install --lock update` explicitly. `--lock check` also will not flag absolute local paths (it compares the lock to itself when the deps hash matches). After regenerating, use a CLI that includes this fix; older CLIs treat relative lock paths as cwd-relative and break when run from a subdirectory.
 
 ## CI environments
 

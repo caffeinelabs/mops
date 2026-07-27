@@ -2,7 +2,7 @@ import path from "node:path";
 
 /**
  * Root-relative local dep path that always matches FILE_PATH_REGEX
- * (`./`, `../`, or absolute). Uses posix separators for portable locks.
+ * (`./…` or `../…`). Uses posix separators for portable locks.
  */
 export function normalizeLocalDepPath(
   rootDir: string,

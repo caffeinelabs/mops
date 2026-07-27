@@ -19,6 +19,7 @@ describe("normalizeLocalDepPath", () => {
 
   test("keeps parent-relative paths", () => {
     expect(normalizeLocalDepPath(root, "../lib")).toBe("../lib");
+    expect(normalizeLocalDepPath(root, "..")).toBe("./..");
   });
 
   test("maps the root itself to ./", () => {
