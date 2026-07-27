@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.19.1"
+    "latest": "2.19.2"
   },
   "versions": {
     "0.41.0": {
@@ -536,6 +536,14 @@
       "commitHash": "9d885e44f98db013e3ee89b5d717a910c179c2f4",
       "url": "https://cli.mops.one/versions/2.19.1.tgz",
       "hash": "b0a150d90407513ef231bf9dc5185b1b12c8adc2c984383933d8f7c9c83d8b72"
+    },
+    "2.19.2": {
+      "time": 1785174569064,
+      "size": 2394767,
+      "relseaseNotes": "* Fix local path dependencies being written into `mops.lock` as absolute filesystem paths, which made committed lockfiles non-portable across machines. Local deps are now stored root-relative (e.g. `./packages/shared`, `../lib`). Regenerate an existing absolute lock with `mops install --lock update` (a plain `mops install` will not rewrite it). After regenerating, all environments need a CLI that includes this fix — older CLIs treat relative lock paths as cwd-relative and break from subdirectories.\n",
+      "commitHash": "c40b1b81a57a09290a9d0803f3014cf8d8ba64ee",
+      "url": "https://cli.mops.one/versions/2.19.2.tgz",
+      "hash": "5573fe11f312f1b3d3881d21c2a11c0420f9ec8e1ceaad439d51455dbfa995e8"
     }
   }
 }
