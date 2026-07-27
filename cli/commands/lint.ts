@@ -41,7 +41,7 @@ async function resolveDepRules(
     const depType = getDependencyType(version);
     let pkgDir: string;
     if (depType === "local") {
-      pkgDir = version;
+      pkgDir = path.resolve(rootDir, version);
     } else if (depType === "github") {
       pkgDir = formatGithubDir(name, version);
     } else {

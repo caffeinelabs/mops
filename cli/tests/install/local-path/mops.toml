@@ -1,0 +1,3 @@
+[dependencies]
+shared = "./packages/shared"
+sibling = "../local-path-sibling"

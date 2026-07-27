@@ -12,16 +12,19 @@ import { VesselConfig, readVesselConfig } from "./vessel.js";
 import { Config, Dependency } from "./types.js";
 import { getDepCacheDir, getDepCacheName } from "./cache.js";
 import { getPackageId } from "./helpers/get-package-id.js";
+import { normalizeLocalDepPath } from "./helpers/normalize-local-path.js";
 import { checkLockFileLight, readLockFile } from "./integrity.js";
 
 export async function resolvePackages({
   conflicts = "ignore" as "warning" | "error" | "ignore",
+  // Bypass a valid lock so `--lock update` can rewrite absolute local paths.
+  skipLock = false,
 } = {}): Promise<Record<string, string>> {
   if (!checkConfigFile()) {
     return {};
   }
 
-  if (checkLockFileLight()) {
+  if (!skipLock && checkLockFileLight()) {
     let lockFileJson = readLockFile();
 
     if (lockFileJson && lockFileJson.version === 3) {
@@ -216,9 +219,11 @@ export async function resolvePackages({
       .map(([name, pkg]) => {
         let version: string;
         if (pkg.path) {
-          version = path
-            .resolve(rootDir, pkg.path)
-            .replaceAll("{MOPS_ENV}", process.env.MOPS_ENV || "local");
+          // Root-relative so mops.lock is portable across machines.
+          version = normalizeLocalDepPath(
+            rootDir,
+            pkg.path.replaceAll("{MOPS_ENV}", process.env.MOPS_ENV || "local"),
+          );
         } else if (pkg.repo) {
           version = pkg.repo;
         } else if (pkg.version) {

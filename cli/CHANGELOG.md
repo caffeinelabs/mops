@@ -2,6 +2,8 @@
 
 ## Next
 
+- Fix local path dependencies being written into `mops.lock` as absolute filesystem paths, which made committed lockfiles non-portable across machines. Local deps are now stored root-relative (e.g. `./packages/shared`, `../lib`). Regenerate an existing lock with `mops install --lock update`.
+
 ## 2.19.1
 
 - `mops user import` accepts identities in PKCS#8 format (`-----BEGIN PRIVATE KEY-----`, e.g. exported by icp-cli) in addition to the dfx-style SEC1 format, and validates the pem data at import time

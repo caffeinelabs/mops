@@ -44,6 +44,8 @@ _It's only faster when there are no globally cached packages — for example whe
 - All transitive dependencies with the final resolved versions
 - Hash of each file of each dependency (retrieved from the Mops registry canister)
 
+Local path dependencies are stored relative to the project root (e.g. `./packages/shared`, `../lib`) so the lockfile is portable across machines. If an older lock still has absolute paths, regenerate with `mops install --lock update`.
+
 ## CI environments
 
 **Deprecated:** when the `CI` environment variable is set and `--lock` is omitted, `mops install` defaults to `--lock check` and prints a deprecation warning. This auto-detection will be removed in a future release — pass `--lock check` explicitly (and commit `mops.lock`) to keep that behavior.
