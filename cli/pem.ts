@@ -3,13 +3,12 @@ import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
 import { Ed25519KeyIdentity } from "@icp-sdk/core/identity";
 import { Secp256k1KeyIdentity } from "@icp-sdk/core/identity/secp256k1";
-import pemfile from "pem-file";
 
 export function decodeFile(file: string, password?: string) {
   let rawKey = fs.readFileSync(file);
   if (password) {
     let decrypted = decrypt(rawKey, password);
-    let identity = decode(decrypted);
+    let identity = decodePem(decrypted);
     if (!hasMagic(rawKey)) {
       // legacy sha-256/ctr file; re-encrypt with the current format (best-effort)
       try {
@@ -18,22 +17,45 @@ export function decodeFile(file: string, password?: string) {
     }
     return identity;
   }
-  return decode(rawKey);
+  return decodePem(rawKey);
 }
 
-function decode(rawKey: Buffer) {
-  let buf: Buffer = pemfile.decode(rawKey);
-  if (rawKey.includes("EC PRIVATE KEY")) {
-    if (buf.length != 118) {
-      throw "expecting byte length 118 but got " + buf.length;
-    }
-    return Secp256k1KeyIdentity.fromSecretKey(buf.subarray(7, 39));
+export function decodePem(rawKey: Buffer | string) {
+  let key: crypto.KeyObject;
+  try {
+    key = crypto.createPrivateKey(rawKey);
+  } catch (err) {
+    throw new Error(
+      "failed to parse PEM data" +
+        (err instanceof Error ? ": " + err.message : ""),
+    );
   }
-  if (buf.length != 85) {
-    throw "expecting byte length 85 but got " + buf.length;
+  let jwk: crypto.JsonWebKey;
+  try {
+    jwk = key.export({ format: "jwk" });
+  } catch {
+    // key types JWK can't represent (dsa, dh, exotic ec curves)
+    throw new Error(
+      "unsupported key type '" +
+        key.asymmetricKeyType +
+        "', supported: secp256k1, Ed25519",
+    );
   }
-  let secretKey = Buffer.concat([buf.subarray(16, 48)]);
-  return Ed25519KeyIdentity.fromSecretKey(secretKey);
+  if (!jwk.d) {
+    throw new Error("not a private key");
+  }
+  let secretKey = Buffer.from(jwk.d, "base64url");
+  if (key.asymmetricKeyType === "ed25519") {
+    return Ed25519KeyIdentity.fromSecretKey(secretKey);
+  }
+  if (key.asymmetricKeyType === "ec" && jwk.crv === "secp256k1") {
+    return Secp256k1KeyIdentity.fromSecretKey(secretKey);
+  }
+  throw new Error(
+    "unsupported key type '" +
+      (jwk.crv || key.asymmetricKeyType) +
+      "', supported: secp256k1, Ed25519",
+  );
 }
 
 // v1 file layout: magic | 16-byte salt | 12-byte iv | 16-byte gcm auth tag | ciphertext.
