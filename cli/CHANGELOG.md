@@ -2,6 +2,8 @@
 
 ## Next
 
+- Strengthen encryption of password-protected identities (`mops user import` with a password): the key is now derived with scrypt and a random per-file salt, and the file is encrypted with authenticated AES-256-GCM (previously an unsalted SHA-256 of the password with AES-256-CTR). Existing encrypted identity files are transparently re-encrypted in the new format on next successful use.
+
 - Fix every `mops` command crashing on startup on Node.js 26 (GH #628) by bumping `octokit` `3.1.2` → `4.1.4`, which drops a transitive dependency incompatible with Node 26.
 
 ## 2.19.0
