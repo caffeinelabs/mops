@@ -2,6 +2,8 @@
 
 ## Next
 
+- `mops user import` accepts identities in PKCS#8 format (`-----BEGIN PRIVATE KEY-----`, e.g. exported by icp-cli) in addition to the dfx-style SEC1 format, and validates the pem data at import time
+
 ## 2.19.0
 
 - `[optimize]` runs Binaryen `wasm-opt` after `mops build` / `mops bench` (opt-in). Empty `[optimize]` defaults to `-O3 -g`. Pin via `[toolchain] wasm-opt` (Binaryen version, e.g. `131`); auto-pins latest if missing. Soft-fails to unoptimized Wasm on error.

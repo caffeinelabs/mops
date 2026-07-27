@@ -17,6 +17,8 @@ To be able to publish a packages to the `mops` registry, you need to import an i
 This command accepts PEM file contents, not a path to a file.
 :::
 
+Supported keys are secp256k1 and Ed25519, in SEC1 (`-----BEGIN EC PRIVATE KEY-----`) or PKCS#8 (`-----BEGIN PRIVATE KEY-----`) format. This covers identities exported by `dfx` and `icp-cli`.
+
 ### Import identity from DFX
 
 ```

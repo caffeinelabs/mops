@@ -7,7 +7,7 @@ import prompts from "prompts";
 import { deleteSync } from "del";
 import { mainActor } from "../api/actors.js";
 import { getIdentity, globalConfigDir } from "../mops.js";
-import { encrypt } from "../pem.js";
+import { decodePem, encrypt } from "../pem.js";
 
 export async function getUserProp(prop: string) {
   let actor = await mainActor();
@@ -56,6 +56,9 @@ export async function importPem(
   options: ImportIdentityOptions = { encrypt: true },
 ) {
   try {
+    // fail early on unsupported keys instead of at first use
+    decodePem(data);
+
     if (!fs.existsSync(globalConfigDir)) {
       fs.mkdirSync(globalConfigDir);
     }
@@ -103,6 +106,8 @@ export async function importPem(
     }
     console.log(chalk.green("Success"));
   } catch (err) {
-    console.log(chalk.red("Error: ") + err);
+    console.log(
+      chalk.red("Error: ") + (err instanceof Error ? err.message : err),
+    );
   }
 }
