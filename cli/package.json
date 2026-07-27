@@ -78,7 +78,7 @@
     "mdast-util-to-markdown": "2.1.2",
     "minimatch": "10.2.5",
     "ncp": "2.0.0",
-    "octokit": "3.1.2",
+    "octokit": "4.1.4",
     "pem-file": "1.0.1",
     "pic-ic": "0.5.4",
     "pic-js-mops": "0.14.8",

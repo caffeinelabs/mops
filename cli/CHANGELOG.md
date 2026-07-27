@@ -2,6 +2,8 @@
 
 ## Next
 
+- Bump `octokit` `3.1.2` → `4.1.4`. Fixes every `mops` command crashing on Node.js 26 with `TypeError: Cannot read properties of undefined (reading 'prototype')` in `buffer-equal-constant-time` (GH #628) — the old octokit pulled in `jsonwebtoken` → `jwa` → `buffer-equal-constant-time`, which touches the `SlowBuffer` API that Node 26 removed. octokit 4's GitHub App auth no longer depends on `jsonwebtoken`, so the broken package is gone from the tree.
+
 ## 2.19.0
 
 - `[optimize]` runs Binaryen `wasm-opt` after `mops build` / `mops bench` (opt-in). Empty `[optimize]` defaults to `-O3 -g`. Pin via `[toolchain] wasm-opt` (Binaryen version, e.g. `131`); auto-pins latest if missing. Soft-fails to unoptimized Wasm on error.
