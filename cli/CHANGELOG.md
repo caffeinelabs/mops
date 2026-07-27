@@ -2,6 +2,8 @@
 
 ## Next
 
+## 2.19.1
+
 - `mops user import` accepts identities in PKCS#8 format (`-----BEGIN PRIVATE KEY-----`, e.g. exported by icp-cli) in addition to the dfx-style SEC1 format, and validates the pem data at import time
 
 ## 2.19.0
