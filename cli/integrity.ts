@@ -189,7 +189,8 @@ export async function updateLockFile({
     return false;
   }
 
-  let resolvedDeps = await resolvePackages();
+  // skipLock: re-resolve from mops.toml so abs→relative local paths migrate.
+  let resolvedDeps = await resolvePackages({ skipLock: true });
 
   let fileHashes = await getFileHashesFromRegistry();
 
