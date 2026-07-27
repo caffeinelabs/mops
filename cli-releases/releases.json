@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.19.0"
+    "latest": "2.19.1"
   },
   "versions": {
     "0.41.0": {
@@ -528,6 +528,14 @@
       "commitHash": "be449cbeaf8bd9ce6c929b3ceb41591afe8bedca",
       "url": "https://cli.mops.one/versions/2.19.0.tgz",
       "hash": "f97b0a3e4544268e43896f08296a739379fe4ba59b2724eb77eec94123416292"
+    },
+    "2.19.1": {
+      "time": 1785163028463,
+      "size": 2393997,
+      "relseaseNotes": "* `mops user import` accepts identities in PKCS#8 format (`-----BEGIN PRIVATE KEY-----`, e.g. exported by icp-cli) in addition to the dfx-style SEC1 format, and validates the pem data at import time\n",
+      "commitHash": "9d885e44f98db013e3ee89b5d717a910c179c2f4",
+      "url": "https://cli.mops.one/versions/2.19.1.tgz",
+      "hash": "b0a150d90407513ef231bf9dc5185b1b12c8adc2c984383933d8f7c9c83d8b72"
     }
   }
 }
