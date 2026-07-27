@@ -2,6 +2,7 @@
 
 ## Next
 
+- `mops user import` accepts identities in PKCS#8 format (`-----BEGIN PRIVATE KEY-----`, e.g. exported by icp-cli) in addition to the dfx-style SEC1 format, and validates the pem data at import time
 - Fix every `mops` command crashing on startup on Node.js 26 (GH #628) by bumping `octokit` `3.1.2` → `4.1.4`, which drops a transitive dependency incompatible with Node 26.
 
 ## 2.19.0

@@ -645,8 +645,9 @@ userCommand
     new Option("--no-encrypt", "Do not ask for a password to encrypt identity"),
   )
   .action(async (data, options) => {
-    await importPem(data, options);
-    await getPrincipal();
+    if (await importPem(data, options)) {
+      await getPrincipal();
+    }
   });
 
 // user set <prop> <value>
