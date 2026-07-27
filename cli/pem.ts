@@ -22,7 +22,17 @@ export function decodePem(rawKey: Buffer | string) {
         (err instanceof Error ? ": " + err.message : ""),
     );
   }
-  let jwk = key.export({ format: "jwk" });
+  let jwk: crypto.JsonWebKey;
+  try {
+    jwk = key.export({ format: "jwk" });
+  } catch {
+    // key types JWK can't represent (dsa, dh, exotic ec curves)
+    throw new Error(
+      "unsupported key type '" +
+        key.asymmetricKeyType +
+        "', supported: secp256k1, Ed25519",
+    );
+  }
   if (!jwk.d) {
     throw new Error("not a private key");
   }

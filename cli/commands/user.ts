@@ -54,7 +54,7 @@ type ImportIdentityOptions = {
 export async function importPem(
   data: string,
   options: ImportIdentityOptions = { encrypt: true },
-) {
+): Promise<boolean> {
   try {
     // fail early on unsupported keys instead of at first use
     decodePem(data);
@@ -82,7 +82,7 @@ export async function importPem(
         });
         if (!res.ok) {
           console.log("aborted");
-          return;
+          return false;
         }
       }
     }
@@ -105,9 +105,12 @@ export async function importPem(
       fs.writeFileSync(identityPem, data);
     }
     console.log(chalk.green("Success"));
+    return true;
   } catch (err) {
     console.log(
       chalk.red("Error: ") + (err instanceof Error ? err.message : err),
     );
+    process.exitCode = 1;
+    return false;
   }
 }
