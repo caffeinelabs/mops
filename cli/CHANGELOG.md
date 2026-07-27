@@ -2,6 +2,8 @@
 
 ## Next
 
+- Fix every `mops` command crashing on startup on Node.js 26 (GH #628) by bumping `octokit` `3.1.2` → `4.1.4`, which drops a transitive dependency incompatible with Node 26.
+
 ## 2.19.0
 
 - `[optimize]` runs Binaryen `wasm-opt` after `mops build` / `mops bench` (opt-in). Empty `[optimize]` defaults to `-O3 -g`. Pin via `[toolchain] wasm-opt` (Binaryen version, e.g. `131`); auto-pins latest if missing. Soft-fails to unoptimized Wasm on error.
