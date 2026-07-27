@@ -2,7 +2,7 @@
 
 ## Next
 
-- Bump `octokit` `3.1.2` → `4.1.4`. Fixes every `mops` command crashing on Node.js 26 with `TypeError: Cannot read properties of undefined (reading 'prototype')` in `buffer-equal-constant-time` (GH #628) — the old octokit pulled in `jsonwebtoken` → `jwa` → `buffer-equal-constant-time`, which touches the `SlowBuffer` API that Node 26 removed. octokit 4's GitHub App auth no longer depends on `jsonwebtoken`, so the broken package is gone from the tree.
+- Fix every `mops` command crashing on startup on Node.js 26 (GH #628) by bumping `octokit` `3.1.2` → `4.1.4`, which drops a transitive dependency incompatible with Node 26.
 
 ## 2.19.0
 
