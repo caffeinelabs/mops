@@ -989,7 +989,7 @@ generateCommand
   )
   .addOption(new Option("--verbose", "Verbose console output"))
   .action(async (targets, options) => {
-    const adHoc = targets.length === 1 && String(targets[0]).endsWith(".did");
+    const adHoc = targets.some((t: string) => String(t).endsWith(".did"));
     if (!adHoc) {
       checkConfigFile(true);
     }

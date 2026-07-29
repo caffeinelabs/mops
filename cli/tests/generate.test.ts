@@ -272,4 +272,23 @@ describe("generate bindings", () => {
     expect(result.exitCode).toBe(0);
     expect(existsSync(outPath)).toBe(true);
   });
+
+  test("multi ad-hoc without mops.toml still errors as one-path", async () => {
+    const cwd = await makeTempFixture("bindings");
+    await rm(path.join(cwd, "mops.toml"));
+    const result = await cli(
+      [
+        "generate",
+        "bindings",
+        "candid/ledger.did",
+        "candid/custom.did",
+        "-o",
+        "out.mo",
+      ],
+      { cwd },
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/only one \.did path/i);
+    expect(result.stderr).not.toMatch(/mops\.toml not found/i);
+  });
 });

@@ -56,7 +56,7 @@ export async function generateBindings(
     ? targets.map((name) => {
         if (!bindings[name]) {
           cliError(
-            `Binding ${JSON.stringify(name)} not found in mops.toml [bindings]`,
+            `Binding ${JSON.stringify(name)} not found in mops.toml [bindings.*]`,
           );
         }
         return name;
@@ -147,6 +147,10 @@ async function generateAdHoc(
 
   await mkdir(path.dirname(dest.fsPath), { recursive: true });
   await writeFile(dest.fsPath, mo, "utf8");
+
+  if (options.verbose) {
+    console.log(chalk.gray(`wrote ${dest.fsPath} (${mo.length} bytes)`));
+  }
 
   console.log(chalk.green(`\n✓ Generated Motoko bindings`));
 }
