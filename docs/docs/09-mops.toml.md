@@ -178,6 +178,27 @@ backend = "src/main.mo"
 ```
 
 
+
+## [bindings]
+
+Declare external Candid interfaces to turn into Motoko binding modules via [`mops generate bindings`](/cli/mops-generate).
+
+Each entry is a named binding (the Motoko module basename).
+
+| Field | Description |
+| ----- | ----------- |
+| did   | Path to the source `.did` file (required) |
+| out   | Destination `.mo` path (optional). Defaults to `<dir(did)>/<name>.mo` |
+
+Example:
+```toml
+[bindings.ICRC]
+did = "candid/icrc.did"
+out = "bindings/ICRC.mo"
+```
+
+Import the generated module from Motoko and type runtime principals, e.g. `actor(id) : ICRC.Self`.
+
 ## [build]
 
 Global build settings used by [`mops build`](/cli/mops-build).

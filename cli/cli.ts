@@ -18,6 +18,7 @@ import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
 import { generateCandid } from "./commands/generate.js";
+import { generateBindings } from "./commands/generate-bindings.js";
 import { info } from "./commands/info.js";
 import { init } from "./commands/init.js";
 import { lint } from "./commands/lint.js";
@@ -939,7 +940,9 @@ program.addCommand(migrateCommand);
 
 // generate
 const generateCommand = new Command("generate")
-  .description("Generate source-derived artifacts (Candid, ...)")
+  .description(
+    "Generate source-derived artifacts (Candid, Motoko bindings, ...)",
+  )
   .showHelpAfterError();
 
 generateCommand
@@ -971,6 +974,23 @@ generateCommand
       ...options,
       extraArgs,
     });
+  });
+
+generateCommand
+  .command("bindings [targets...]")
+  .description(
+    "Generate Motoko binding modules from committed `.did` interfaces (for runtime `actor(id) : Foo.Self`). With no names, generates all `[bindings.*]` entries. Pass a `.did` path with `--output` for ad-hoc generation without mops.toml.",
+  )
+  .addOption(
+    new Option(
+      "--output, -o <output>",
+      "Write the generated .mo to <output> (single binding or ad-hoc .did only; does not touch mops.toml)",
+    ),
+  )
+  .addOption(new Option("--verbose", "Verbose console output"))
+  .action(async (targets, options) => {
+    checkConfigFile(true);
+    await generateBindings(targets.length ? targets : undefined, options);
   });
 
 program.addCommand(generateCommand);

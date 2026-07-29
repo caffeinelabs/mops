@@ -5,7 +5,7 @@ sidebar_label: mops generate
 
 # `mops generate`
 
-Generate source-derived artifacts from your Motoko code.
+Generate source-derived artifacts: curated Candid from Motoko, or Motoko bindings from Candid.
 
 ## `mops generate candid`
 
@@ -70,3 +70,68 @@ When `moc` fails, neither the destination file nor `mops.toml` is touched.
 ## Relation to `mops build`
 
 `mops build` subtype-checks the auto-generated interface against `[canisters.<name>].candid` (when set) and embeds the curated file as `candid:service` metadata. Use `mops generate candid` to keep that curated file in sync with source. The two commands share moc invocation logic so the generated `.did` always passes the build's compatibility check.
+
+## `mops generate bindings`
+
+```
+mops generate bindings [targets...]
+```
+
+Generate Motoko binding modules from committed `.did` interfaces. Use this when a canister talks to **many** principals sharing one interface (e.g. ICRC ledgers chosen at runtime via `actor(id) : ICRC.Self`). For a **single** fixed target, prefer `canister:` imports with `--actor-env-alias` instead.
+
+The `.did` is the source of truth — commit it, regenerate after interface changes, and commit the generated `.mo` (or regenerate in CI). The generator is the same Motoko bindgen `didc bind -t mo` uses, embedded in mops (no separate `didc` install).
+
+`.did` files with `import` statements are not supported yet — flatten or inline the interface first.
+
+### Config
+
+Declare interfaces under `[bindings.<name>]` in `mops.toml`:
+
+```toml
+[bindings.ICRC]
+did = "candid/icrc.did"
+# optional; default: <dir(did)>/<name>.mo  → candid/ICRC.mo
+# out = "bindings/ICRC.mo"
+```
+
+### Where the file is written
+
+1. `--output <path>` if given (single target only) — writes there; does not touch `mops.toml`.
+2. `[bindings.<name>].out` if set — overwrites that path.
+3. Default — `<name>.mo` next to the `.did` file.
+
+Paths inside `.mops/` are rejected.
+
+### Examples
+
+Generate all configured bindings
+```
+mops generate bindings
+```
+
+Generate one binding
+```
+mops generate bindings ICRC
+```
+
+Ad-hoc (no `[bindings]` entry required)
+```
+mops generate bindings candid/icrc.did -o bindings/ICRC.mo
+```
+
+### Options
+
+#### `--output`, `-o`
+
+Write the generated `.mo` to the given path. Single binding or ad-hoc `.did` only. Does not update `mops.toml`.
+
+#### `--verbose`
+
+Show extra details (bytes written).
+
+### Relation to `mops generate candid`
+
+| Command | Direction | Typical use |
+| --- | --- | --- |
+| `mops generate candid` | Motoko → `.did` | Your canister's public interface |
+| `mops generate bindings` | `.did` → Motoko | External service types for inter-canister calls |

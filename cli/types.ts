@@ -23,6 +23,7 @@ export type Config = {
     args?: string[];
   };
   canisters?: Record<string, string | CanisterConfig>;
+  bindings?: Record<string, BindingConfig>;
   build?: {
     outputDir?: string;
     args?: string[];
@@ -49,6 +50,12 @@ export type MigrationsConfig = {
   next?: string;
   "check-limit"?: number;
   "build-limit"?: number;
+};
+
+export type BindingConfig = {
+  did: string;
+  /** Defaults to `<dir(did)>/<binding-name>.mo`. */
+  out?: string;
 };
 
 export type CanisterConfig = {

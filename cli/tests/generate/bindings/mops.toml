@@ -1,0 +1,9 @@
+[toolchain]
+moc = "1.5.0"
+
+[bindings.Ledger]
+did = "candid/ledger.did"
+
+[bindings.CustomOut]
+did = "candid/custom.did"
+out = "src/Custom.mo"

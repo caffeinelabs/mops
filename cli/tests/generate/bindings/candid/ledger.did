@@ -1,0 +1,7 @@
+type Account = record { owner : principal; subaccount : opt blob };
+type TransferArgs = record { to : Account; amount : nat };
+type TransferResult = variant { Ok : nat; Err : text };
+service : {
+  icrc1_transfer : (TransferArgs) -> (TransferResult);
+  icrc1_balance_of : (Account) -> (nat) query;
+}

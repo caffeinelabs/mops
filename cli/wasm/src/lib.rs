@@ -1,7 +1,14 @@
 mod utils;
 mod wasm_utils;
 
-use candid_parser::utils::{service_compatible, CandidSource};
+use candid_parser::{
+    bindings::motoko,
+    pretty_parse,
+    syntax::{IDLMergedProg, IDLProg},
+    typing::check_prog,
+    utils::{service_compatible, CandidSource},
+    TypeEnv,
+};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::{js_value, JsResult};
@@ -13,6 +20,17 @@ pub fn is_candid_compatible(new_interface: &str, original_interface: &str) -> bo
         CandidSource::Text(original_interface),
     )
     .is_ok()
+}
+
+/// Motoko bindings from a self-contained `.did` (imports not resolved).
+#[wasm_bindgen]
+pub fn bind_motoko(did: &str) -> JsResult<String> {
+    let ast: IDLProg = pretty_parse("anonymous.did", did)
+        .map_err(|e| JsError::new(&e.to_string()))?;
+    let mut env = TypeEnv::new();
+    let actor = check_prog(&mut env, &ast).map_err(|e| JsError::new(&e.to_string()))?;
+    let prog = IDLMergedProg::new(ast);
+    Ok(motoko::compile(&env, &actor, &prog))
 }
 
 #[wasm_bindgen]

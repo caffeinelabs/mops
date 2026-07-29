@@ -5,6 +5,7 @@ export interface CustomSection {
 
 export interface WasmBindings {
   is_candid_compatible: (newCandid: string, originalCandid: string) => boolean;
+  bind_motoko: (did: string) => string;
   add_custom_sections: (
     bytes: Uint8Array,
     customSections: CustomSection[],

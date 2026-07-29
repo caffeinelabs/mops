@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, jest, test } from "@jest/globals";
 import { existsSync, readFileSync } from "node:fs";
-import { cp, rm } from "node:fs/promises";
+import { cp, rm, writeFile } from "node:fs/promises";
 import path from "path";
-import { cli, cliSnapshot } from "./helpers";
+import { cli, cliSnapshot, useTempFixtures } from "./helpers";
 
 const fixturesDir = path.join(import.meta.dirname, "generate");
 
@@ -136,5 +136,94 @@ describe("generate candid", () => {
     );
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toMatch(/collides with \[canisters\.bar\]\.candid/);
+  });
+});
+
+describe("generate bindings", () => {
+  jest.setTimeout(60_000);
+
+  const makeTempFixture = useTempFixtures(fixturesDir);
+
+  test("configured bindings: default out next to .did", async () => {
+    const cwd = await makeTempFixture("bindings");
+    await cliSnapshot(["generate", "bindings", "Ledger"], { cwd }, 0);
+
+    const mo = readFileSync(path.join(cwd, "candid/Ledger.mo"), "utf-8");
+    expect(mo).toMatch(/public type Self = actor/);
+    expect(mo).toMatch(/icrc1_transfer/);
+    expect(mo).toMatchSnapshot("candid/Ledger.mo");
+  });
+
+  test("configured out path is used", async () => {
+    const cwd = await makeTempFixture("bindings");
+    await cliSnapshot(["generate", "bindings", "CustomOut"], { cwd }, 0);
+    expect(existsSync(path.join(cwd, "src/Custom.mo"))).toBe(true);
+    expect(readFileSync(path.join(cwd, "src/Custom.mo"), "utf-8")).toMatch(
+      /ping/,
+    );
+  });
+
+  test("no names: generates all bindings", async () => {
+    const cwd = await makeTempFixture("bindings");
+    await cliSnapshot(["generate", "bindings"], { cwd }, 0);
+    expect(existsSync(path.join(cwd, "candid/Ledger.mo"))).toBe(true);
+    expect(existsSync(path.join(cwd, "src/Custom.mo"))).toBe(true);
+  });
+
+  test("ad-hoc .did with -o", async () => {
+    const cwd = await makeTempFixture("bindings");
+    const outPath = path.join(cwd, "out/AdHoc.mo");
+    const result = await cli(
+      ["generate", "bindings", "candid/ledger.did", "-o", outPath],
+      { cwd },
+    );
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(outPath)).toBe(true);
+    expect(readFileSync(outPath, "utf-8")).toMatch(/icrc1_balance_of/);
+  });
+
+  test("ad-hoc without -o errors", async () => {
+    const cwd = await makeTempFixture("bindings");
+    const result = await cli(["generate", "bindings", "candid/ledger.did"], {
+      cwd,
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/--output/i);
+  });
+
+  test("unknown binding name errors", async () => {
+    const cwd = await makeTempFixture("bindings");
+    const result = await cli(["generate", "bindings", "Nope"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/not found in mops\.toml/i);
+  });
+
+  test("rejects destination inside .mops/", async () => {
+    const cwd = await makeTempFixture("bindings");
+    const result = await cli(
+      ["generate", "bindings", "Ledger", "-o", ".mops/Ledger.mo"],
+      { cwd },
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/\.mops\//);
+  });
+
+  test("missing [bindings] errors with hint", async () => {
+    const cwd = await makeTempFixture("basic");
+    const result = await cli(["generate", "bindings"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/No \[bindings\]/);
+  });
+
+  test("invalid candid errors without writing output", async () => {
+    const cwd = await makeTempFixture("bindings");
+    await writeFile(
+      path.join(cwd, "candid/ledger.did"),
+      "this is not candid {{{",
+    );
+    const result = await cli(["generate", "bindings", "Ledger"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/Failed to generate Motoko bindings/);
+    expect(existsSync(path.join(cwd, "candid/Ledger.mo"))).toBe(false);
   });
 });

@@ -1,5 +1,51 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`generate bindings configured bindings: default out next to .did 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "generate bindings Ledger ← candid/ledger.did → candid/Ledger.mo
+
+✓ Generated Motoko bindings for 1 interface",
+}
+`;
+
+exports[`generate bindings configured bindings: default out next to .did: candid/Ledger.mo 1`] = `
+"// This is a generated Motoko binding.
+// Please use \`import service "ic:canister_id"\` instead to call canisters on the IC if possible.
+
+module {
+  public type Account = { owner : Principal; subaccount : ?Blob };
+  public type TransferArgs = { to : Account; amount : Nat };
+  public type TransferResult = { #Ok : Nat; #Err : Text };
+  public type Self = actor {
+    icrc1_balance_of : shared query Account -> async Nat;
+    icrc1_transfer : shared TransferArgs -> async TransferResult;
+  }
+}"
+`;
+
+exports[`generate bindings configured out path is used 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "generate bindings CustomOut ← candid/custom.did → src/Custom.mo
+
+✓ Generated Motoko bindings for 1 interface",
+}
+`;
+
+exports[`generate bindings no names: generates all bindings 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "generate bindings Ledger ← candid/ledger.did → candid/Ledger.mo
+generate bindings CustomOut ← candid/custom.did → src/Custom.mo
+
+✓ Generated Motoko bindings for 2 interfaces",
+}
+`;
+
 exports[`generate candid configured path: overwrites in place and does not touch mops.toml 1`] = `
 {
   "exitCode": 0,
