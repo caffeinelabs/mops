@@ -979,7 +979,7 @@ generateCommand
 generateCommand
   .command("bindings [targets...]")
   .description(
-    "Generate Motoko binding modules from committed `.did` interfaces (for runtime `actor(id) : Foo.Self`). With no names, generates all `[bindings.*]` entries. Pass a `.did` path with `--output` for ad-hoc generation without mops.toml.",
+    "Generate Motoko binding modules from committed `.did` interfaces (for runtime `actor(id) : Foo.Self`). With no names, generates all `[bindings.*]` entries. Pass a `.did` path with `--output` for ad-hoc generation (mops.toml optional).",
   )
   .addOption(
     new Option(
@@ -989,7 +989,10 @@ generateCommand
   )
   .addOption(new Option("--verbose", "Verbose console output"))
   .action(async (targets, options) => {
-    checkConfigFile(true);
+    const adHoc = targets.length === 1 && String(targets[0]).endsWith(".did");
+    if (!adHoc) {
+      checkConfigFile(true);
+    }
     await generateBindings(targets.length ? targets : undefined, options);
   });
 

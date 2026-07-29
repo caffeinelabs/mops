@@ -2,7 +2,7 @@
 
 ## Next
 
-- `mops generate bindings` generates Motoko modules from committed `.did` files (same Motoko bindgen as `didc bind -t mo`, embedded in mops). Declare `[bindings.<name>]` with `did` (and optional `out`) in `mops.toml`, or pass a `.did` path with `-o` for ad-hoc generation. Use for runtime-chosen principals (`actor(id) : Foo.Self`); for a single fixed target prefer `canister:` + `--actor-env-alias`.
+- `mops generate bindings` generates Motoko modules from committed `.did` files (same `candid_parser` Motoko bindgen as `didc bind -t mo`, embedded in mops; `.did` imports not supported). Declare `[bindings.<name>]` with `did` (and optional `out`) in `mops.toml`, or pass a `.did` path with `-o` for ad-hoc generation. Use for runtime-chosen principals (`actor(id) : Foo.Self`); for a single fixed target prefer `canister:` + `--actor-env-alias`.
 
 ## 2.19.2
 

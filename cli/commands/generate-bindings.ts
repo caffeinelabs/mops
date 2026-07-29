@@ -25,6 +25,12 @@ export async function generateBindings(
     return;
   }
   if (targets?.some(looksLikeDidPath)) {
+    if (options.output) {
+      cliError(
+        "Ad-hoc generation accepts only one .did path at a time:\n" +
+          "  mops generate bindings candid/foo.did -o bindings/Foo.mo",
+      );
+    }
     cliError(
       "Ad-hoc generation takes a single .did path and requires --output / -o:\n" +
         "  mops generate bindings candid/foo.did -o bindings/Foo.mo",
@@ -37,7 +43,7 @@ export async function generateBindings(
 
   if (!names.length) {
     cliError(
-      "No [bindings] entries in mops.toml.\n" +
+      "No [bindings.*] entries in mops.toml.\n" +
         "Add one, e.g.:\n" +
         "  [bindings.ICRC]\n" +
         '  did = "candid/icrc.did"\n' +
@@ -146,7 +152,7 @@ async function generateAdHoc(
 }
 
 function looksLikeDidPath(arg: string): boolean {
-  return arg.endsWith(".did") || arg.includes("/") || arg.includes("\\");
+  return arg.endsWith(".did");
 }
 
 function validateBindingEntry(name: string, entry: BindingConfig): void {
@@ -192,7 +198,8 @@ function resolveOutputPath(
   display?: string,
 ): Destination {
   const absPath = path.resolve(fsPath);
-  const dotMopsDir = path.resolve(rootDir, ".mops");
+  const projectRoot = rootDir || process.cwd();
+  const dotMopsDir = path.resolve(projectRoot, ".mops");
   if (absPath === dotMopsDir || absPath.startsWith(dotMopsDir + path.sep)) {
     cliError(
       `Refusing to write Motoko bindings inside .mops/ (private build cache): ${fsPath}\n` +

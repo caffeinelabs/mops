@@ -4,7 +4,7 @@ mod wasm_utils;
 use candid_parser::{
     bindings::motoko,
     pretty_parse,
-    syntax::{IDLMergedProg, IDLProg},
+    syntax::{Dec, IDLMergedProg, IDLProg},
     typing::check_prog,
     utils::{service_compatible, CandidSource},
     TypeEnv,
@@ -22,15 +22,29 @@ pub fn is_candid_compatible(new_interface: &str, original_interface: &str) -> bo
     .is_ok()
 }
 
-/// Motoko bindings from a self-contained `.did` (imports not resolved).
+/// Motoko bindings from a self-contained `.did` (imports rejected).
 #[wasm_bindgen]
 pub fn bind_motoko(did: &str) -> JsResult<String> {
     let ast: IDLProg = pretty_parse("anonymous.did", did)
         .map_err(|e| JsError::new(&e.to_string()))?;
+    for dec in &ast.decs {
+        match dec {
+            Dec::ImportType(path) | Dec::ImportServ(path) => {
+                return Err(JsError::new(&format!(
+                    "`.did` import {path:?} is not supported; flatten into a self-contained `.did` first"
+                )));
+            }
+            Dec::TypD(_) => {}
+        }
+    }
     let mut env = TypeEnv::new();
     let actor = check_prog(&mut env, &ast).map_err(|e| JsError::new(&e.to_string()))?;
     let prog = IDLMergedProg::new(ast);
-    Ok(motoko::compile(&env, &actor, &prog))
+    let mut mo = motoko::compile(&env, &actor, &prog);
+    if !mo.ends_with('\n') {
+        mo.push('\n');
+    }
+    Ok(mo)
 }
 
 #[wasm_bindgen]

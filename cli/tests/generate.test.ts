@@ -212,7 +212,7 @@ describe("generate bindings", () => {
     const cwd = await makeTempFixture("basic");
     const result = await cli(["generate", "bindings"], { cwd });
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(/No \[bindings\]/);
+    expect(result.stderr).toMatch(/No \[bindings\.\*\]/);
   });
 
   test("invalid candid errors without writing output", async () => {
@@ -225,5 +225,51 @@ describe("generate bindings", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/Failed to generate Motoko bindings/);
     expect(existsSync(path.join(cwd, "candid/Ledger.mo"))).toBe(false);
+  });
+
+  test("import statements are rejected", async () => {
+    const cwd = await makeTempFixture("bindings");
+    await writeFile(
+      path.join(cwd, "candid/ledger.did"),
+      'import service "other.did";\nservice : { ping : () -> () query; }\n',
+    );
+    const result = await cli(["generate", "bindings", "Ledger"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/import/i);
+    expect(existsSync(path.join(cwd, "candid/Ledger.mo"))).toBe(false);
+  });
+
+  test("named binding with -o writes to given path", async () => {
+    const cwd = await makeTempFixture("bindings");
+    const outPath = path.join(cwd, "elsewhere/Ledger.mo");
+    const result = await cli(
+      ["generate", "bindings", "Ledger", "-o", outPath],
+      { cwd },
+    );
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(outPath)).toBe(true);
+    expect(existsSync(path.join(cwd, "candid/Ledger.mo"))).toBe(false);
+  });
+
+  test("--output with multiple binding names errors", async () => {
+    const cwd = await makeTempFixture("bindings");
+    const result = await cli(
+      ["generate", "bindings", "Ledger", "CustomOut", "-o", "x.mo"],
+      { cwd },
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/single binding/i);
+  });
+
+  test("ad-hoc works without mops.toml", async () => {
+    const cwd = await makeTempFixture("bindings");
+    await rm(path.join(cwd, "mops.toml"));
+    const outPath = path.join(cwd, "out/NoToml.mo");
+    const result = await cli(
+      ["generate", "bindings", "candid/ledger.did", "-o", outPath],
+      { cwd },
+    );
+    expect(result.exitCode).toBe(0);
+    expect(existsSync(outPath)).toBe(true);
   });
 });

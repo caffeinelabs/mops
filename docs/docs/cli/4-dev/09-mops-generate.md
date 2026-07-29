@@ -5,7 +5,7 @@ sidebar_label: mops generate
 
 # `mops generate`
 
-Generate source-derived artifacts: curated Candid from Motoko, or Motoko bindings from Candid.
+Generate project artifacts: curated Candid from Motoko, or Motoko bindings from Candid.
 
 ## `mops generate candid`
 
@@ -79,9 +79,7 @@ mops generate bindings [targets...]
 
 Generate Motoko binding modules from committed `.did` interfaces. Use this when a canister talks to **many** principals sharing one interface (e.g. ICRC ledgers chosen at runtime via `actor(id) : ICRC.Self`). For a **single** fixed target, prefer `canister:` imports with `--actor-env-alias` instead.
 
-The `.did` is the source of truth — commit it, regenerate after interface changes, and commit the generated `.mo` (or regenerate in CI). The generator is the same Motoko bindgen `didc bind -t mo` uses, embedded in mops (no separate `didc` install).
-
-`.did` files with `import` statements are not supported yet — flatten or inline the interface first.
+The `.did` is the source of truth — commit it, regenerate after interface changes, and commit the generated `.mo` (or regenerate in CI). Codegen uses the same `candid_parser` Motoko bindgen as `didc bind -t mo`, embedded in mops (no separate `didc` install). Unlike `didc`, `.did` `import`s are rejected — flatten the interface first.
 
 ### Config
 
@@ -114,7 +112,7 @@ Generate one binding
 mops generate bindings ICRC
 ```
 
-Ad-hoc (no `[bindings]` entry required)
+Ad-hoc (no `[bindings]` entry required; `mops.toml` optional)
 ```
 mops generate bindings candid/icrc.did -o bindings/ICRC.mo
 ```

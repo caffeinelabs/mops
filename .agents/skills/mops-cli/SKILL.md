@@ -151,7 +151,7 @@ mops generate candid backend -o <path>   # single canister, ad-hoc path
 ```bash
 mops generate bindings                 # all [bindings.*]
 mops generate bindings ICRC            # one named binding
-mops generate bindings foo.did -o out.mo   # ad-hoc (no toml entry)
+mops generate bindings foo.did -o out.mo   # ad-hoc (mops.toml optional)
 ```
 
 Generates Motoko binding modules from committed `.did` files for runtime `actor(id) : Foo.Self` calls. Configure in `mops.toml`:
@@ -162,7 +162,7 @@ did = "candid/icrc.did"
 # out = "bindings/ICRC.mo"   # optional; default <dir(did)>/<name>.mo
 ```
 
-Commit the `.did` (source of truth) and the generated `.mo`. Prefer `canister:` + `--actor-env-alias` when the target principal is a single fixed canister. `.did` `import`s are not resolved — use a self-contained interface.
+Commit the `.did` (source of truth) and the generated `.mo`. Prefer `canister:` + `--actor-env-alias` when the target principal is a single fixed canister. `.did` `import`s are rejected — flatten into a self-contained interface.
 
 ### `mops toolchain`
 
