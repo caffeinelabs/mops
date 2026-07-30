@@ -36,6 +36,7 @@ export async function publish(
     test?: boolean;
     bench?: boolean;
     verbose?: boolean;
+    dryRun?: boolean;
   } = {},
 ) {
   if (!checkConfigFile()) {
@@ -45,7 +46,11 @@ export async function publish(
   let rootDir = getRootDir();
   let config = readConfig();
 
-  console.log(`Publishing ${config.package?.name}@${config.package?.version}`);
+  console.log(
+    options.dryRun
+      ? `Dry-run ${config.package?.name}@${config.package?.version}`
+      : `Publishing ${config.package?.name}@${config.package?.version}`,
+  );
 
   // required fields
   if (!config.package) {
@@ -69,7 +74,7 @@ export async function publish(
   // desired fields
   for (let key of ["description"]) {
     // @ts-ignore
-    if (!config.package[key] && !process.env.CI) {
+    if (!config.package[key] && !process.env.CI && !options.dryRun) {
       let res = await prompts({
         type: "confirm",
         name: "ok",
@@ -241,7 +246,7 @@ export async function publish(
   files = [...files, ...defaultFiles];
   files = globbySync([...files, ...defaultFiles]);
 
-  if (options.verbose) {
+  if (options.verbose && !options.dryRun) {
     console.log("Files:");
     console.log(files.map((file) => "  " + file).join("\n"));
   }
@@ -249,7 +254,7 @@ export async function publish(
   // generate docs
   let docsFile = path.join(rootDir, ".mops/.docs/docs.tgz");
   let docsCov = 0;
-  if (options.docs) {
+  if (options.docs && !options.dryRun) {
     console.log("Generating documentation...");
     docsCov = await docsCoverage({
       reporter: "silent",
@@ -296,10 +301,21 @@ export async function publish(
     process.exit(1);
   }
 
+  if (options.dryRun) {
+    console.log("Files:");
+    console.log(
+      [...files]
+        .sort()
+        .map((file) => "  " + file)
+        .join("\n"),
+    );
+  }
+
   // parse changelog
   console.log("Parsing CHANGELOG.md...");
   let changelog = parseChangelog(config.package.version);
   if (
+    !options.dryRun &&
     !changelog &&
     config.package.repository?.startsWith("https://github.com/")
   ) {
@@ -312,6 +328,14 @@ export async function publish(
   if (changelog) {
     console.log("Changelog:");
     console.log(chalk.gray(changelog));
+  }
+
+  if (options.dryRun) {
+    console.log(
+      chalk.green("Dry run OK") +
+        ` — packaging checks passed (${files.length} files). Nothing was published.`,
+    );
+    return;
   }
 
   // test

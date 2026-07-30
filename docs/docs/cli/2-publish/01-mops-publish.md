@@ -30,7 +30,21 @@ You can also view the diff of the benchmark results between the current version 
 
 Packages may contain up to **1000 files**. If your package exceeds this limit, `mops publish` will exit early with an error before contacting the registry.
 
+## Dry run
+
+Validate local packaging rules and list the files that would be uploaded, without contacting the registry or uploading anything:
+
+```
+mops publish --dry-run
+```
+
+Checks `[package]` metadata, dependency shape (no local or GitHub deps), required files (`mops.toml`, `README.md`), allowed extensions, and the file-count limit. Always prints the resolved file list.
+
+Does **not** run tests, generate docs, run benchmarks, or verify registry acceptance (already published, permissions, missing deps, etc.). A real `mops publish` can still fail after a successful dry run. Generated `docs.tgz` is also not included in the dry-run file list (it is added only during a real publish when docs are enabled).
+
 ## Options
+
+`--dry-run` - Validate local packaging rules and list files without publishing
 
 `--no-docs` - Do not generate docs
 
@@ -39,4 +53,3 @@ Packages may contain up to **1000 files**. If your package exceeds this limit, `
 `--no-bench` - Do not run benchmarks
 
 `--verbose` - Verbose output (print file names to be uploaded)
-

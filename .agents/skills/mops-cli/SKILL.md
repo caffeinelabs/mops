@@ -197,6 +197,16 @@ mops sync                 # add missing / remove unused packages
 
 ## Other Commands
 
+### `mops publish`
+
+```bash
+mops publish              # publish to the registry (runs tests/docs/bench by default)
+mops publish --dry-run    # local packaging checks + file list; no registry contact
+mops publish --no-test --no-docs --no-bench
+```
+
+`--dry-run` validates `[package]` metadata, dependency shape, required files, extensions, and the 1000-file limit. It does **not** prove registry acceptance (already published, permissions, missing deps). Prefer it before a real publish; still run `mops test` separately for code quality.
+
 ### `mops test`
 
 Tests live in `test/*.test.mo`:
