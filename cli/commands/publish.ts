@@ -74,14 +74,20 @@ export async function publish(
   // desired fields
   for (let key of ["description"]) {
     // @ts-ignore
-    if (!config.package[key] && !process.env.CI && !options.dryRun) {
-      let res = await prompts({
-        type: "confirm",
-        name: "ok",
-        message: `Missing recommended config key "${key}", publish anyway?`,
-      });
-      if (!res.ok) {
-        return;
+    if (!config.package[key]) {
+      if (options.dryRun) {
+        console.log(
+          chalk.yellow("Warning: ") + `Missing recommended config key "${key}"`,
+        );
+      } else if (!process.env.CI) {
+        let res = await prompts({
+          type: "confirm",
+          name: "ok",
+          message: `Missing recommended config key "${key}", publish anyway?`,
+        });
+        if (!res.ok) {
+          return;
+        }
       }
     }
   }
@@ -332,8 +338,8 @@ export async function publish(
 
   if (options.dryRun) {
     console.log(
-      chalk.green("Dry run OK") +
-        ` — packaging checks passed (${files.length} files). Nothing was published.`,
+      chalk.green("Dry-run OK") +
+        ` — local preflight checks passed (${files.length} files). Nothing was published.`,
     );
     return;
   }

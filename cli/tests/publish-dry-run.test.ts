@@ -66,4 +66,26 @@ files = ["**/*.mo", "extra/data.json"]
     expect(result.exitCode).toBe(1);
     expect(result.stdout + result.stderr).toMatch(/unsupported extension/i);
   });
+
+  test("rejects GitHub dependencies", async () => {
+    const cwd = await makeTempFixture("success");
+    await writeFile(
+      path.join(cwd, "mops.toml"),
+      `[package]
+name = "dry-run-fixture"
+version = "0.1.0"
+description = "Fixture for mops publish --dry-run"
+license = "MIT"
+
+[dependencies]
+other = "https://github.com/org/repo#main:src"
+`,
+    );
+    const result = await cli(["publish", "--dry-run"], {
+      cwd,
+      env: { CI: "1" },
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout + result.stderr).toMatch(/GitHub dependencies/i);
+  });
 });

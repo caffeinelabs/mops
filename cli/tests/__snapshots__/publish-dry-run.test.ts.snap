@@ -14,6 +14,6 @@ Parsing CHANGELOG.md...
 Changelog:
 * Initial release
 
-Dry run OK — packaging checks passed (4 files). Nothing was published.",
+Dry-run OK — local preflight checks passed (4 files). Nothing was published.",
 }
 `;

@@ -2,7 +2,7 @@
 
 ## Next
 
-- `mops publish --dry-run` validates local packaging rules and prints the file list without contacting the registry or uploading anything. Does not run tests/docs/bench or prove registry acceptance.
+- `mops publish --dry-run` runs local preflight checks and prints the file list without contacting the network or uploading anything. Does not run tests/docs/bench, canister config validation, or prove registry acceptance.
 
 ## 2.19.2
 
