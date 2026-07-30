@@ -1,2 +1,1 @@
-persistent actor class Main() {
-};
+persistent actor class Main() {};
