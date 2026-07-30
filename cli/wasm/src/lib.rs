@@ -1,7 +1,12 @@
 mod utils;
 mod wasm_utils;
 
-use candid_parser::utils::{service_compatible, CandidSource};
+use candid::types::TypeInner;
+use candid_parser::{
+    check_prog, parse_idl_args,
+    utils::{service_compatible, CandidSource},
+    IDLProg,
+};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::{js_value, JsResult};
@@ -13,6 +18,24 @@ pub fn is_candid_compatible(new_interface: &str, original_interface: &str) -> bo
         CandidSource::Text(original_interface),
     )
     .is_ok()
+}
+
+#[wasm_bindgen]
+pub fn encode_candid_args(args: &str, interface: &str) -> JsResult<Vec<u8>> {
+    let ast = interface
+        .parse::<IDLProg>()
+        .map_err(|e| JsError::new(&e.to_string()))?;
+    let mut env = candid::TypeEnv::new();
+    let actor = check_prog(&mut env, &ast)
+        .map_err(|e| JsError::new(&e.to_string()))?
+        .ok_or_else(|| JsError::new("Candid interface has no service"))?;
+    let init_types = match actor.as_ref() {
+        TypeInner::Class(types, _) => types.as_slice(),
+        _ => &[],
+    };
+    let args = parse_idl_args(args).map_err(|e| JsError::new(&e.to_string()))?;
+    args.to_bytes_with_types(&env, init_types)
+        .map_err(|e| JsError::new(&e.to_string()))
 }
 
 #[wasm_bindgen]

@@ -5,6 +5,7 @@ export interface CustomSection {
 
 export interface WasmBindings {
   is_candid_compatible: (newCandid: string, originalCandid: string) => boolean;
+  encode_candid_args: (args: string, candidInterface: string) => Uint8Array;
   add_custom_sections: (
     bytes: Uint8Array,
     customSections: CustomSection[],

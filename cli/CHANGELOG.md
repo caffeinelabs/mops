@@ -2,6 +2,8 @@
 
 ## Next
 
+- Add `mops build --test-deploy` to install built Wasm files on fresh PocketIC canisters and fail on deployment or initialization errors. Per-canister `wasmMemoryLimit` settings are applied during test deployment. All current PocketIC error names include their canonical IC error codes. The PocketIC client is loaded only when the flag is used.
+
 ## 2.19.2
 
 - Fix local path dependencies being written into `mops.lock` as absolute filesystem paths, which made committed lockfiles non-portable across machines. Local deps are now stored root-relative (e.g. `./packages/shared`, `../lib`). Regenerate an existing absolute lock with `mops install --lock update` (a plain `mops install` will not rewrite it). After regenerating, all environments need a CLI that includes this fix — older CLIs treat relative lock paths as cwd-relative and break from subdirectories.

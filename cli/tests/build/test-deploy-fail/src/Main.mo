@@ -1,0 +1,2 @@
+persistent actor class Main() {
+};

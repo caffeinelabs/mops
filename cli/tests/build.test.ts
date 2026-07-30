@@ -173,6 +173,41 @@ describe("build", () => {
     }
   });
 
+  test("--test-deploy installs the built Wasm on PocketIC", async () => {
+    const cwd = path.join(import.meta.dirname, "build/test-deploy");
+    try {
+      await cliSnapshot(["build", "--test-deploy"], { cwd }, 0);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--test-deploy reports Wasm memory limit failures", async () => {
+    const cwd = path.join(import.meta.dirname, "build/test-deploy-fail");
+    try {
+      const result = await cli(["build", "--test-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("PocketIC test deployment failed");
+      expect(result.stderr).toMatch("Wasm memory limit");
+      expect(result.stderr).toMatch(
+        "Error code: IC0539 (CanisterWasmMemoryLimitExceeded)",
+      );
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--test-deploy requires a pinned PocketIC version", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    try {
+      const result = await cli(["build", "foo", "--test-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("mops toolchain use pocket-ic 12.0.0");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
   test("[optimize] soft-fails when wasm-opt errors", async () => {
     const cwd = path.join(import.meta.dirname, "build/optimize-fail");
     try {

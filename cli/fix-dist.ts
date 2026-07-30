@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 
 // remove scripts
 let text = readFileSync("dist/package.json", "utf8");
@@ -19,3 +19,4 @@ writeFileSync(
   "dist/bin/mops.js",
   '#!/usr/bin/env node\n\nimport "../environments/nodejs/cli.js";\n',
 );
+chmodSync("dist/bin/mops.js", 0o755);

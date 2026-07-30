@@ -342,6 +342,12 @@ program
   .addOption(new Option("--output, -o <output>", "Output directory"))
   .addOption(
     new Option(
+      "--test-deploy",
+      "Install the built Wasm on PocketIC to detect deployment failures",
+    ),
+  )
+  .addOption(
+    new Option(
       "--no-optimize",
       "Skip the [optimize] wasm-opt post-pass even when it is configured in mops.toml",
     ),

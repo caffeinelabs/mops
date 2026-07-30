@@ -20,6 +20,7 @@ import { toolchain } from "./toolchain/index.js";
 export interface BuildOptions {
   outputDir: string;
   verbose: boolean;
+  testDeploy: boolean;
   /** `false` skips the `[optimize]` wasm-opt pass (`--no-optimize`). */
   optimize: boolean;
   extraArgs: string[];
@@ -52,6 +53,11 @@ export async function build(
   }
 
   let config = readConfig();
+  if (options.testDeploy && !config.toolchain?.["pocket-ic"]) {
+    cliError(
+      "PocketIC test deployment requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 12.0.0` to pin it.",
+    );
+  }
   let outputDir = resolveBuildOutputDir(config, options.outputDir);
   let mocPath = await toolchain.bin("moc", { fallback: true });
   let canisters = resolveCanisterConfigs(config);
@@ -64,6 +70,13 @@ export async function build(
   }
 
   const filteredCanisters = filterCanisters(canisters, canisterNames);
+  const testDeployArtifacts: Array<{
+    name: string;
+    wasmPath: string;
+    candid: string;
+    initArg?: string;
+    wasmMemoryLimit?: number;
+  }> = [];
 
   for (let [canisterName, canister] of Object.entries(filteredCanisters)) {
     console.log(chalk.blue("build canister"), chalk.bold(canisterName));
@@ -207,6 +220,13 @@ export async function build(
           verbose: options.verbose,
           optimize: options.optimize,
         });
+        testDeployArtifacts.push({
+          name: canisterName,
+          wasmPath,
+          candid: candidText,
+          initArg: canister.initArg,
+          wasmMemoryLimit: canister.wasmMemoryLimit,
+        });
       } catch (err: any) {
         if (err.message?.includes("Build failed for canister")) {
           throw err;
@@ -221,6 +241,17 @@ export async function build(
       try {
         await release?.();
       } catch {}
+    }
+  }
+
+  if (options.testDeploy) {
+    try {
+      const { testDeploy } = await import("../helpers/test-deploy.js");
+      await testDeploy(testDeployArtifacts, { verbose: options.verbose });
+    } catch (err: any) {
+      cliError(
+        `PocketIC test deployment failed${err?.message ? `\n${err.message}` : ""}`,
+      );
     }
   }
 

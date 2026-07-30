@@ -47,6 +47,11 @@ Build with custom output directory
 mops build --output ./build
 ```
 
+Build and verify that each Wasm installs on PocketIC
+```
+mops build --test-deploy
+```
+
 Pass additional arguments to the Motoko compiler
 ```
 mops build -- --release --ai-errors
@@ -75,6 +80,28 @@ Skip the [`[optimize]`](/mops.toml#optimize) `wasm-opt` post-pass for this run, 
 ```
 mops build --no-optimize
 ```
+
+### `--test-deploy`
+
+Install each built Wasm on a fresh PocketIC canister after compilation, metadata embedding, and optimization. The build fails if PocketIC rejects the Wasm or the canister initialization traps. Initialization uses the canister's configured `initArg`, or `()` when it is omitted.
+
+PocketIC must be pinned in `[toolchain]`:
+```toml
+[toolchain]
+pocket-ic = "12.0.0"
+```
+
+To test deployment with a non-default Wasm memory limit, configure the limit in
+bytes on the canister:
+```toml
+[canisters.backend]
+main = "src/backend/main.mo"
+wasmMemoryLimit = 16777216
+```
+
+The PocketIC client and binary are only loaded when this flag is used.
+PocketIC error names are reported with their canonical IC error codes,
+for example `IC0539 (CanisterWasmMemoryLimitExceeded)`.
 
 ## Configuration
 

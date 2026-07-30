@@ -50,7 +50,7 @@
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
   },
   "dependencies": {
-    "smol-toml": "1.6.1",
+    "@dfinity/pic": "0.22.0",
     "@icp-sdk/core": "4.0.2",
     "@noble/hashes": "1.8.0",
     "as-table": "1.0.55",
@@ -87,6 +87,7 @@
     "prompts": "2.4.2",
     "proper-lockfile": "4.1.2",
     "semver": "7.7.1",
+    "smol-toml": "1.6.1",
     "stream-to-promise": "3.0.0",
     "string-width": "7.2.0",
     "tar": "7.5.16",
