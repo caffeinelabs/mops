@@ -67,6 +67,26 @@ files = ["**/*.mo", "extra/data.json"]
     expect(result.stdout + result.stderr).toMatch(/unsupported extension/i);
   });
 
+  test("warns on missing description", async () => {
+    const cwd = await makeTempFixture("success");
+    await writeFile(
+      path.join(cwd, "mops.toml"),
+      `[package]
+name = "dry-run-fixture"
+version = "0.1.0"
+license = "MIT"
+`,
+    );
+    const result = await cli(["publish", "--dry-run"], {
+      cwd,
+      env: { CI: "1" },
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout + result.stderr).toMatch(
+      /Missing recommended config key "description"/,
+    );
+  });
+
   test("rejects GitHub dependencies", async () => {
     const cwd = await makeTempFixture("success");
     await writeFile(

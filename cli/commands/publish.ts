@@ -178,7 +178,7 @@ export async function publish(
     for (let keyword of config.package.keywords) {
       if (keyword.length > 20) {
         console.log(chalk.red("Error: ") + "max keyword length is 20");
-        return;
+        process.exit(1);
       }
     }
   }
@@ -189,7 +189,7 @@ export async function publish(
         console.log(
           chalk.red("Error: ") + "file path cannot start with '/' or '../'",
         );
-        return;
+        process.exit(1);
       }
     }
   }

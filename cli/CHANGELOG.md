@@ -3,6 +3,7 @@
 ## Next
 
 - `mops publish --dry-run` runs local preflight checks and prints the file list without contacting the network or uploading anything. Does not run tests/docs/bench, canister config validation, or prove registry acceptance.
+- Fix `mops publish` exiting 0 on keyword-length and invalid `package.files` path errors (now exit 1, same as other preflight failures).
 
 ## 2.19.2
 
