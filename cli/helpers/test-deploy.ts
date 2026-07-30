@@ -3,6 +3,7 @@ import { getWasmBindings } from "../wasm.js";
 import { toolchain } from "../commands/toolchain/index.js";
 import { mapPocketIcError } from "./ic-error-codes.js";
 import { startPocketIc, type AnyPocketIcServer } from "./pocket-ic-client.js";
+import type { PocketIc } from "@dfinity/pic";
 
 export interface TestDeployArtifact {
   name: string;
@@ -11,16 +12,6 @@ export interface TestDeployArtifact {
   initArg?: string;
   wasmMemoryLimit?: number;
 }
-
-type DeployClient = {
-  createCanister(options?: { wasmMemoryLimit?: bigint }): Promise<unknown>;
-  installCode(options: {
-    canisterId: unknown;
-    wasm: string;
-    arg: ArrayBufferLike;
-  }): Promise<void>;
-  tearDown(): Promise<void>;
-};
 
 export async function testDeploy(
   artifacts: TestDeployArtifact[],
@@ -40,25 +31,20 @@ export async function testDeploy(
 
   const pocketIcBin = await toolchain.bin("pocket-ic");
   let server: AnyPocketIcServer | undefined;
-  let client: DeployClient | undefined;
+  let client: PocketIc | undefined;
 
   try {
-    const pocketIc = await startPocketIc({
-      binPath: pocketIcBin,
-      showRuntimeLogs: verbose,
-      showCanisterLogs: verbose,
-      ttl: 60,
-    });
+    const pocketIc = await startPocketIc(
+      {
+        binPath: pocketIcBin,
+        showRuntimeLogs: verbose,
+        showCanisterLogs: verbose,
+        ttl: 60,
+      },
+      { client: "dfinity" },
+    );
     server = pocketIc.server;
-    client = pocketIc.client as unknown as DeployClient;
-
-    if (artifacts.some((artifact) => artifact.wasmMemoryLimit !== undefined)) {
-      await client.tearDown();
-      const { PocketIc } = await import("@dfinity/pic");
-      client = (await PocketIc.create(
-        server.getUrl(),
-      )) as unknown as DeployClient;
-    }
+    client = pocketIc.client;
 
     for (const artifact of artifacts) {
       console.log(
@@ -75,7 +61,7 @@ export async function testDeploy(
           artifact.initArg ?? "()",
           artifact.candid,
         ),
-      ).buffer;
+      );
       await client.installCode({
         canisterId,
         wasm: artifact.wasmPath,

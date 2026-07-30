@@ -5,6 +5,7 @@ import type {
   PocketIcServer as PocketIcServerModern,
   StartServerOptions,
 } from "pic-js-mops";
+import type { PocketIc as PocketIcDfinity } from "@dfinity/pic";
 import { readConfig } from "../mops.js";
 
 export type AnyPocketIcServer = PocketIcServer | PocketIcServerModern;
@@ -12,14 +13,34 @@ export type AnyPocketIc = PocketIc | PocketIcModern;
 export type AnySetupCanister = PocketIc["setupCanister"] &
   PocketIcModern["setupCanister"];
 
+type PocketIcResult = {
+  server: AnyPocketIcServer;
+  client: AnyPocketIc;
+};
+
 function isLegacy(): boolean {
   let version = readConfig().toolchain?.["pocket-ic"];
   return !!version && !!semver.valid(version) && semver.lt(version, "9.0.0");
 }
 
+export function startPocketIc(
+  options: StartServerOptions,
+  clientOptions: { client: "dfinity" },
+): Promise<{ server: AnyPocketIcServer; client: PocketIcDfinity }>;
+export function startPocketIc(
+  options: StartServerOptions,
+): Promise<PocketIcResult>;
+
 export async function startPocketIc(
   options: StartServerOptions,
-): Promise<{ server: AnyPocketIcServer; client: AnyPocketIc }> {
+  {
+    client: clientName = "versioned",
+  }: {
+    client?: "versioned" | "dfinity";
+  } = {},
+): Promise<
+  PocketIcResult | { server: AnyPocketIcServer; client: PocketIcDfinity }
+> {
   // Imported lazily so commands that never start a replica don't load the
   // PocketIC client. `pic-js-mops` ships ESM without `type: module`, which a
   // static import fails to resolve under tsx (local dev); a dynamic import
@@ -27,12 +48,20 @@ export async function startPocketIc(
   if (isLegacy()) {
     const { PocketIc, PocketIcServer } = await import("pic-ic");
     let server = await PocketIcServer.start(options);
+    if (clientName === "dfinity") {
+      const { PocketIc: PocketIcDfinity } = await import("@dfinity/pic");
+      return { server, client: await PocketIcDfinity.create(server.getUrl()) };
+    }
     let client = await PocketIc.create(server.getUrl());
     return { server, client };
   }
 
   const { PocketIc, PocketIcServer } = await import("pic-js-mops");
   let server = await PocketIcServer.start(options);
+  if (clientName === "dfinity") {
+    const { PocketIc: PocketIcDfinity } = await import("@dfinity/pic");
+    return { server, client: await PocketIcDfinity.create(server.getUrl()) };
+  }
   let client = await PocketIc.create(server.getUrl());
   return { server, client };
 }
