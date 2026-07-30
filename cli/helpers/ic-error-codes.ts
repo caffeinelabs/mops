@@ -65,9 +65,7 @@ export const ICP_ERROR_CODE_NUMBERS = {
 
 export function icErrorCodeFor(pocketIcCode: string): string | undefined {
   const code =
-    ICP_ERROR_CODE_NUMBERS[
-      pocketIcCode as keyof typeof ICP_ERROR_CODE_NUMBERS
-    ];
+    ICP_ERROR_CODE_NUMBERS[pocketIcCode as keyof typeof ICP_ERROR_CODE_NUMBERS];
   return code === undefined ? undefined : `IC${String(code).padStart(4, "0")}`;
 }
 
@@ -77,9 +75,7 @@ export function mapPocketIcError(error: unknown): Error {
     /Error code: ([A-Za-z0-9_]+)/,
     (match, pocketIcCode: string) => {
       const icCode = icErrorCodeFor(pocketIcCode);
-      return icCode
-        ? `Error code: ${icCode} (${pocketIcCode})`
-        : match;
+      return icCode ? `Error code: ${icCode} (${pocketIcCode})` : match;
     },
   );
   return message === original.message ? original : new Error(message);
