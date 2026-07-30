@@ -8,7 +8,7 @@ import type { PocketIc } from "@dfinity/pic";
 export interface TestDeployArtifact {
   name: string;
   wasmPath: string;
-  candid: string;
+  initCandid: string;
   initArg?: string;
   wasmMemoryLimit?: number;
 }
@@ -59,7 +59,7 @@ export async function testDeploy(
       const arg = Uint8Array.from(
         getWasmBindings().encode_candid_args(
           artifact.initArg ?? "()",
-          artifact.candid,
+          artifact.initCandid,
         ),
       );
       await client.installCode({

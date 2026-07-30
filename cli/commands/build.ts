@@ -73,7 +73,7 @@ export async function build(
   const testDeployArtifacts: Array<{
     name: string;
     wasmPath: string;
-    candid: string;
+    initCandid: string;
     initArg?: string;
     wasmMemoryLimit?: number;
   }> = [];
@@ -201,6 +201,9 @@ export async function build(
           console.log(chalk.gray(`Adding metadata to ${wasmPath}`));
         const candidPath = resolvedCandidPath ?? generatedDidPath;
         const candidText = await readFile(candidPath, "utf-8");
+        const initCandidText = resolvedCandidPath
+          ? await readFile(generatedDidPath, "utf-8")
+          : candidText;
         const customSections: CustomSection[] = [
           { name: `${candidVisibility} candid:service`, data: candidText },
         ];
@@ -223,7 +226,7 @@ export async function build(
         testDeployArtifacts.push({
           name: canisterName,
           wasmPath,
-          candid: candidText,
+          initCandid: initCandidText,
           initArg: canister.initArg,
           wasmMemoryLimit: canister.wasmMemoryLimit,
         });
