@@ -3,6 +3,8 @@ import { getWasmBindings } from "../wasm.js";
 import { toolchain } from "../commands/toolchain/index.js";
 import { mapPocketIcError } from "./ic-error-codes.js";
 import { startPocketIc, type AnyPocketIcServer } from "./pocket-ic-client.js";
+// TODO: switch to pic-js-mops@0.22.0 once released — removes the @dfinity/pic
+// runtime dependency and its install-time binary download.
 import type { PocketIc } from "@dfinity/pic";
 
 export interface TestDeployArtifact {

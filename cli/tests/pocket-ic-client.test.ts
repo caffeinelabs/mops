@@ -1,6 +1,6 @@
 import { describe, expect, jest, test } from "@jest/globals";
 const { assertDfinityClientSupportsPocketIc, createClientOrStopServer } =
-  await import("../helpers/pocket-ic-client-utils");
+  await import("../helpers/pocket-ic-startup");
 
 describe("PocketIC client compatibility", () => {
   test.each(["4.0.0", "8.9.9"])(

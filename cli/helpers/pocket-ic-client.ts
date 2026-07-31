@@ -4,13 +4,16 @@ import type {
   PocketIcServer as PocketIcServerModern,
   StartServerOptions,
 } from "pic-js-mops";
+// TODO: switch to pic-js-mops@0.22.0 once released — same client without
+// @dfinity/pic's postinstall (unverified 98 MB binary download at install
+// time, hard failure on Windows). See pic-js-mops@0.14.8 for the precedent.
 import type { PocketIc as PocketIcDfinity } from "@dfinity/pic";
 import { readConfig } from "../mops.js";
 import {
   assertDfinityClientSupportsPocketIc,
   createClientOrStopServer,
   isLegacyPocketIcVersion,
-} from "./pocket-ic-client-utils.js";
+} from "./pocket-ic-startup.js";
 
 export type AnyPocketIcServer = PocketIcServer | PocketIcServerModern;
 export type AnyPocketIc = PocketIc | PocketIcModern;
@@ -49,25 +52,20 @@ export async function startPocketIc(
   // PocketIC client. `pic-js-mops` ships ESM without `type: module`, which a
   // static import fails to resolve under tsx (local dev); a dynamic import
   // resolves it on every platform.
-  if (isLegacyPocketIcVersion(version)) {
-    const { PocketIc, PocketIcServer } = await import("pic-ic");
-    let server = await PocketIcServer.start(options);
-    let client = await createClientOrStopServer(server, () =>
-      PocketIc.create(server.getUrl()),
-    );
-    return { server, client };
-  }
+  const { PocketIc, PocketIcServer } = isLegacyPocketIcVersion(version)
+    ? await import("pic-ic")
+    : await import("pic-js-mops");
+  const server = await PocketIcServer.start(options);
 
-  const { PocketIc, PocketIcServer } = await import("pic-js-mops");
-  let server = await PocketIcServer.start(options);
   if (clientName === "dfinity") {
+    // TODO: import from pic-js-mops@0.22.0 once released (see note above).
     const { PocketIc: PocketIcDfinity } = await import("@dfinity/pic");
     const client = await createClientOrStopServer(server, () =>
       PocketIcDfinity.create(server.getUrl()),
     );
     return { server, client };
   }
-  let client = await createClientOrStopServer(server, () =>
+  const client = await createClientOrStopServer<AnyPocketIc>(server, () =>
     PocketIc.create(server.getUrl()),
   );
   return { server, client };

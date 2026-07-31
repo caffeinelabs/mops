@@ -1,5 +1,9 @@
 import semver from "semver";
 
+// Two independent thresholds that currently coincide: MIN_MODERN selects
+// which client package `startPocketIc` loads (`pic-ic` vs `pic-js-mops`),
+// MIN_DFINITY_CLIENT gates `--test-deploy` support. Keep them separate —
+// they can diverge when either client drops or gains server compatibility.
 export const MIN_MODERN_POCKET_IC_VERSION = "9.0.0";
 export const MIN_DFINITY_CLIENT_POCKET_IC_VERSION = "9.0.0";
 

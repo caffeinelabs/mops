@@ -220,6 +220,16 @@ describe("build", () => {
     }
   });
 
+  test("--test-deploy rejects a legacy PocketIC pin before building", async () => {
+    const cwd = path.join(import.meta.dirname, "build/test-deploy-legacy");
+    const result = await cli(["build", "--test-deploy"], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch("requires pocket-ic 9.0.0 or newer");
+    // The guard fires before compilation — no build output for this canister.
+    expect(result.stdout).not.toMatch("build canister");
+  });
+
   test("rejects an invalid wasmMemoryLimit without --test-deploy", async () => {
     const cwd = path.join(import.meta.dirname, "build/invalid-memory-limit");
     const result = await cli(["build"], { cwd });

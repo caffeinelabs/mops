@@ -12,6 +12,7 @@ import {
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { optimizeWasm } from "../helpers/optimize-wasm.js";
+import { assertDfinityClientSupportsPocketIc } from "../helpers/pocket-ic-startup.js";
 import type { TestDeployArtifact } from "../helpers/test-deploy.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
@@ -61,8 +62,6 @@ export async function build(
         "PocketIC test deployment requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 12.0.0` to pin it.",
       );
     }
-    const { assertDfinityClientSupportsPocketIc } =
-      await import("../helpers/pocket-ic-client-utils.js");
     try {
       assertDfinityClientSupportsPocketIc(pocketIcVersion);
     } catch (err) {
@@ -206,6 +205,9 @@ export async function build(
           console.log(chalk.gray(`Adding metadata to ${wasmPath}`));
         const candidPath = resolvedCandidPath ?? generatedDidPath;
         const candidText = await readFile(candidPath, "utf-8");
+        // Init args must be encoded against the Motoko-generated init
+        // signature — a declared `candid` file is typically service-only and
+        // has no init types. The ternary only avoids re-reading the same file.
         const initCandidText = resolvedCandidPath
           ? await readFile(generatedDidPath, "utf-8")
           : candidText;

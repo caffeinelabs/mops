@@ -81,6 +81,10 @@ mod tests {
         let interface = "service : (nat) -> { ping : () -> () }";
         let error = encode_candid_args_inner("()", interface).unwrap_err();
 
-        assert_eq!(error, "wrong number of argument values");
+        // Owned by candid_parser — assert the substance, not the exact wording.
+        assert!(
+            error.contains("number of argument"),
+            "unexpected error: {error}"
+        );
     }
 }

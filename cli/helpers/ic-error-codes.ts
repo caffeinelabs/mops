@@ -1,4 +1,7 @@
 // Keep synchronized with packages/ic-error-types/src/lib.rs in dfinity/ic.
+// The full table is kept deliberately, including codes unreachable from
+// create/install: the mapping stays correct no matter which operations end up
+// surfacing errors, and unknown codes pass through unmapped anyway.
 export const ICP_ERROR_CODE_NUMBERS = {
   SubnetOversubscribed: 101,
   MaxNumberOfCanistersReached: 102,
@@ -72,7 +75,7 @@ export function icErrorCodeFor(pocketIcCode: string): string | undefined {
 export function mapPocketIcError(error: unknown): Error {
   const original = error instanceof Error ? error : new Error(String(error));
   const message = original.message.replace(
-    /Error code: ([A-Za-z0-9_]+)/,
+    /Error code: ([A-Za-z0-9_]+)/g,
     (match, pocketIcCode: string) => {
       const icCode = icErrorCodeFor(pocketIcCode);
       return icCode ? `Error code: ${icCode} (${pocketIcCode})` : match;

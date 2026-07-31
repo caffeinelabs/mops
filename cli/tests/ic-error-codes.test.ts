@@ -31,6 +31,18 @@ describe("mapPocketIcError", () => {
     expect(codes).toEqual([...codes].sort((a, b) => a - b));
   });
 
+  test("maps every occurrence in a chained rejection", () => {
+    const error = mapPocketIcError(
+      new Error(
+        "Rejected. Error code: CanisterCalledTrap. " +
+          "Caused by: Error code: CanisterOutOfMemory",
+      ),
+    );
+
+    expect(error.message).toContain("Error code: IC0503 (CanisterCalledTrap)");
+    expect(error.message).toContain("Error code: IC0507 (CanisterOutOfMemory)");
+  });
+
   test("preserves unknown PocketIC error codes", () => {
     const original = new Error("Rejected. Error code: UnknownCode");
 
