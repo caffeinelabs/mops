@@ -32,21 +32,21 @@ Packages may contain up to **1000 files**. If your package exceeds this limit, `
 
 ## Dry run
 
-Run the same local preflight checks as `mops publish` before upload, and on success print the files that would be uploaded — without contacting the network or uploading anything:
+Run the same local publish steps as `mops publish` (packaging checks, docs, tests, benchmarks, changelog) and on success print the final file list — without contacting the registry or uploading anything:
 
 ```
 mops publish --dry-run
 ```
 
-Does **not** require an imported identity and does **not** contact the network.
+Does **not** require an imported identity and does **not** contact the mops registry. `--no-docs`, `--no-test`, and `--no-bench` work the same as for a real publish.
 
-Covers field length limits, dependency shape (no local or GitHub deps), required files (`mops.toml`, `README.md`), allowed extensions, and the file-count limit.
+Does **not** run canister config validation (SPDX license, semver, name charset/reserved names, keyword format) or prove registry acceptance (already published, permissions, missing deps). A real `mops publish` can still fail after a successful dry run.
 
-Does **not** run tests, generate docs, run benchmarks, or run canister config validation (SPDX license, semver, name charset/reserved names, keyword format). Also does not prove registry acceptance (already published, permissions, missing deps). A real `mops publish` can still fail after a successful dry run. Generated `docs.tgz` is also not included in the dry-run file list (it is added only during a real publish when docs are enabled).
+When docs are enabled, the file list includes the generated `docs.tgz` (cleaned up after the dry run).
 
 ## Options
 
-`--dry-run` - Validate local packaging rules and list files without publishing
+`--dry-run` - Run local publish steps without contacting the registry or uploading
 
 `--no-docs` - Do not generate docs
 
@@ -54,4 +54,4 @@ Does **not** run tests, generate docs, run benchmarks, or run canister config va
 
 `--no-bench` - Do not run benchmarks
 
-`--verbose` - Verbose output (print file names to be uploaded; on `--dry-run` the file list is always printed)
+`--verbose` - Verbose output (print file names to be uploaded; on `--dry-run` the final file list is always printed)

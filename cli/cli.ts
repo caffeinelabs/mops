@@ -229,7 +229,7 @@ program
   .option("--no-bench", "Do not run benchmarks")
   .option(
     "--dry-run",
-    "Validate local packaging rules and list files without publishing",
+    "Run local publish steps without contacting the registry or uploading",
   )
   .option("--verbose", "Show more information")
   .action(async (options) => {

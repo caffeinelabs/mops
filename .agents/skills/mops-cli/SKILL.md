@@ -201,11 +201,12 @@ mops sync                 # add missing / remove unused packages
 
 ```bash
 mops publish              # publish to the registry (runs tests/docs/bench by default)
-mops publish --dry-run    # local preflight + file list; no network / identity required
+mops publish --dry-run    # same local steps as publish; no registry contact / identity
+mops publish --dry-run --no-test --no-docs --no-bench   # packaging checks only
 mops publish --no-test --no-docs --no-bench
 ```
 
-`--dry-run` runs the same local preflight as publish before upload (field lengths, dependency shape, required files, extensions, 1000-file limit). It does **not** run canister config validation (SPDX/semver/name rules) or prove registry acceptance (already published, permissions, missing deps). Prefer it before a real publish; still run `mops test` separately for code quality.
+`--dry-run` runs the same local publish pipeline (packaging checks, docs, tests, benchmarks, changelog) and prints the final file list, then stops before identity/upload. `--no-*` flags work as usual. It does **not** run canister config validation (SPDX/semver/name rules) or prove registry acceptance (already published, permissions, missing deps).
 
 ### `mops test`
 

@@ -260,7 +260,7 @@ export async function publish(
   // generate docs
   let docsFile = path.join(rootDir, ".mops/.docs/docs.tgz");
   let docsCov = 0;
-  if (options.docs && !options.dryRun) {
+  if (options.docs) {
     console.log("Generating documentation...");
     docsCov = await docsCoverage({
       reporter: "silent",
@@ -307,21 +307,10 @@ export async function publish(
     process.exit(1);
   }
 
-  if (options.dryRun) {
-    console.log("Files:");
-    console.log(
-      [...files]
-        .sort()
-        .map((file) => "  " + file)
-        .join("\n"),
-    );
-  }
-
   // parse changelog
   console.log("Parsing CHANGELOG.md...");
   let changelog = parseChangelog(config.package.version);
   if (
-    !options.dryRun &&
     !changelog &&
     config.package.repository?.startsWith("https://github.com/")
   ) {
@@ -334,14 +323,6 @@ export async function publish(
   if (changelog) {
     console.log("Changelog:");
     console.log(chalk.gray(changelog));
-  }
-
-  if (options.dryRun) {
-    console.log(
-      chalk.green("Dry-run OK") +
-        ` — local preflight checks passed (${files.length} files). Nothing was published.`,
-    );
-    return;
   }
 
   // test
@@ -375,6 +356,28 @@ export async function publish(
       console.log(chalk.red("Error: ") + "benchmarks failed");
       process.exit(1);
     }
+  }
+
+  if (options.dryRun) {
+    console.log("Files:");
+    console.log(
+      [...files]
+        .map((file) =>
+          file === docsFile ? path.relative(rootDir, file) : file,
+        )
+        .sort()
+        .map((file) => "  " + file)
+        .join("\n"),
+    );
+    fs.rmSync(path.join(rootDir, ".mops/.docs"), {
+      force: true,
+      recursive: true,
+    });
+    console.log(
+      chalk.green("Dry-run OK") +
+        ` — local publish steps passed (${files.length} files). Nothing was published.`,
+    );
+    return;
   }
 
   // progress
