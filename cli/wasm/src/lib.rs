@@ -43,3 +43,27 @@ pub fn add_custom_sections(bytes: &[u8], custom_sections: JsValue) -> JsResult<V
     wasm_utils::add_custom_sections(bytes, js_value(custom_sections)?)
         .map_err(|e| JsError::new(&e.to_string()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candid::{Encode, Nat};
+
+    #[test]
+    fn encodes_candid_constructor_args() {
+        let interface = "service : (nat, text) -> { greet : () -> (text) query }";
+        let encoded = encode_candid_args(r#"(42, "Motoko")"#, interface).unwrap();
+        let expected = Encode!(&Nat::from(42_u8), &"Motoko").unwrap();
+
+        assert_eq!(encoded, expected);
+    }
+
+    #[test]
+    fn encodes_empty_args_for_service_without_constructor() {
+        let interface = "service : { ping : () -> () }";
+        let encoded = encode_candid_args("()", interface).unwrap();
+        let expected = Encode!().unwrap();
+
+        assert_eq!(encoded, expected);
+    }
+}

@@ -17,17 +17,15 @@ export async function testDeploy(
   artifacts: TestDeployArtifact[],
   { verbose = false } = {},
 ): Promise<void> {
-  for (const artifact of artifacts) {
-    if (
-      artifact.wasmMemoryLimit !== undefined &&
-      (!Number.isSafeInteger(artifact.wasmMemoryLimit) ||
-        artifact.wasmMemoryLimit <= 0)
-    ) {
-      throw new Error(
-        `Invalid wasmMemoryLimit for canister ${artifact.name}: expected a positive integer number of bytes`,
-      );
-    }
-  }
+  const preparedArtifacts = artifacts.map((artifact) => ({
+    ...artifact,
+    arg: Uint8Array.from(
+      getWasmBindings().encode_candid_args(
+        artifact.initArg ?? "()",
+        artifact.initCandid,
+      ),
+    ),
+  }));
 
   const pocketIcBin = await toolchain.bin("pocket-ic");
   let server: AnyPocketIcServer | undefined;
@@ -46,7 +44,7 @@ export async function testDeploy(
     server = pocketIc.server;
     client = pocketIc.client;
 
-    for (const artifact of artifacts) {
+    for (const artifact of preparedArtifacts) {
       console.log(
         chalk.blue("test deploy canister"),
         chalk.bold(artifact.name),
@@ -56,20 +54,15 @@ export async function testDeploy(
           ? undefined
           : { wasmMemoryLimit: BigInt(artifact.wasmMemoryLimit) },
       );
-      const arg = Uint8Array.from(
-        getWasmBindings().encode_candid_args(
-          artifact.initArg ?? "()",
-          artifact.initCandid,
-        ),
-      );
       await client.installCode({
         canisterId,
         wasm: artifact.wasmPath,
-        arg,
+        arg: artifact.arg,
       });
     }
   } catch (error) {
-    throw mapPocketIcError(error);
+    const mappedError = mapPocketIcError(error);
+    throw new Error(`PocketIC test deployment failed\n${mappedError.message}`);
   } finally {
     await client?.tearDown().catch(() => {});
     await server?.stop();

@@ -85,7 +85,7 @@ mops build --no-optimize
 
 Install each built Wasm on a fresh PocketIC canister after compilation, metadata embedding, and optimization. The build fails if PocketIC rejects the Wasm or the canister initialization traps. Initialization uses the canister's configured `initArg`, or `()` when it is omitted.
 
-PocketIC must be pinned in `[toolchain]`:
+PocketIC 9.0.0 or newer must be pinned in `[toolchain]`:
 ```toml
 [toolchain]
 pocket-ic = "12.0.0"

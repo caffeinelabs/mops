@@ -21,7 +21,11 @@ type PocketIcResult = {
 export const MIN_DFINITY_CLIENT_POCKET_IC_VERSION = "9.0.0";
 
 function isLegacy(version: string | undefined): boolean {
-  return !!version && !!semver.valid(version) && semver.lt(version, "9.0.0");
+  return (
+    !!version &&
+    !!semver.valid(version) &&
+    semver.lt(version, MIN_DFINITY_CLIENT_POCKET_IC_VERSION)
+  );
 }
 
 export function assertDfinityClientSupportsPocketIc(
@@ -30,7 +34,8 @@ export function assertDfinityClientSupportsPocketIc(
   if (isLegacy(version)) {
     throw new Error(
       `PocketIC ${version} is incompatible with test deployment. ` +
-        `\`mops build --test-deploy\` requires pocket-ic ${MIN_DFINITY_CLIENT_POCKET_IC_VERSION} or newer.`,
+        `\`mops build --test-deploy\` requires pocket-ic ${MIN_DFINITY_CLIENT_POCKET_IC_VERSION} or newer. ` +
+        "Run `mops toolchain use pocket-ic 12.0.0` to pin a supported version.",
     );
   }
 }
@@ -77,13 +82,6 @@ export async function startPocketIc(
   if (isLegacy(version)) {
     const { PocketIc, PocketIcServer } = await import("pic-ic");
     let server = await PocketIcServer.start(options);
-    if (clientName === "dfinity") {
-      const { PocketIc: PocketIcDfinity } = await import("@dfinity/pic");
-      const client = await createClientOrStopServer(server, () =>
-        PocketIcDfinity.create(server.getUrl()),
-      );
-      return { server, client };
-    }
     let client = await createClientOrStopServer(server, () =>
       PocketIc.create(server.getUrl()),
     );

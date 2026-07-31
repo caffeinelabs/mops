@@ -101,7 +101,7 @@ Each canister entry specifies the entrypoint file and optional compiler settings
 | args     | Array of additional `moc` arguments for this canister (optional). Applied after `[moc].args` in `check`, `check-stable`, and `build`. |
 | candid   | Path to a Candid interface file (optional). `mops build` subtype-checks the generated interface against this file and embeds it into the wasm as `candid:service` metadata. `mops generate candid` writes the regenerated `.did` to this path. |
 | initArg  | Candid-encoded initialization arguments (optional)              |
-| wasmMemoryLimit | Wasm memory limit in bytes for `mops build --test-deploy` (optional) |
+| wasmMemoryLimit | Positive integer Wasm memory limit in bytes for `mops build --test-deploy` (optional) |
 
 Example:
 ```toml

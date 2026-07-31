@@ -197,6 +197,17 @@ describe("build", () => {
     }
   });
 
+  test("--test-deploy reports Candid encoding errors without a deployment label", async () => {
+    const cwd = path.join(import.meta.dirname, "build/test-deploy-invalid-arg");
+    try {
+      const result = await cli(["build", "--test-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).not.toMatch("PocketIC test deployment failed");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
   test("--test-deploy requires a pinned PocketIC version", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
     try {
@@ -206,6 +217,17 @@ describe("build", () => {
     } finally {
       cleanFixture(cwd);
     }
+  });
+
+  test("rejects an invalid wasmMemoryLimit without --test-deploy", async () => {
+    const cwd = path.join(import.meta.dirname, "build/invalid-memory-limit");
+    const result = await cli(["build"], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(
+      "Invalid wasmMemoryLimit for canister main: expected a positive integer number of bytes",
+    );
+    expect(result.stderr).not.toMatch("PocketIC test deployment failed");
   });
 
   test("[optimize] soft-fails when wasm-opt errors", async () => {

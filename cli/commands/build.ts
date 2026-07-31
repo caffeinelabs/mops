@@ -12,6 +12,7 @@ import {
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { optimizeWasm } from "../helpers/optimize-wasm.js";
+import type { TestDeployArtifact } from "../helpers/test-deploy.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
 import { Config } from "../types.js";
@@ -53,30 +54,35 @@ export async function build(
   }
 
   let config = readConfig();
-  if (options.testDeploy && !config.toolchain?.["pocket-ic"]) {
-    cliError(
-      "PocketIC test deployment requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 12.0.0` to pin it.",
+  if (options.testDeploy) {
+    const pocketIcVersion = config.toolchain?.["pocket-ic"];
+    if (!pocketIcVersion) {
+      cliError(
+        "PocketIC test deployment requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 12.0.0` to pin it.",
+      );
+    }
+    const { assertDfinityClientSupportsPocketIc } = await import(
+      "../helpers/pocket-ic-client.js"
     );
+    try {
+      assertDfinityClientSupportsPocketIc(pocketIcVersion);
+    } catch (err) {
+      cliError(err instanceof Error ? err.message : String(err));
+    }
   }
   let outputDir = resolveBuildOutputDir(config, options.outputDir);
-  let mocPath = await toolchain.bin("moc", { fallback: true });
   let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {
     cliError(`No Motoko canisters found in mops.toml configuration`);
   }
+  let mocPath = await toolchain.bin("moc", { fallback: true });
 
   if (!(await exists(outputDir))) {
     await mkdir(outputDir, { recursive: true });
   }
 
   const filteredCanisters = filterCanisters(canisters, canisterNames);
-  const testDeployArtifacts: Array<{
-    name: string;
-    wasmPath: string;
-    initCandid: string;
-    initArg?: string;
-    wasmMemoryLimit?: number;
-  }> = [];
+  const testDeployArtifacts: TestDeployArtifact[] = [];
 
   for (let [canisterName, canister] of Object.entries(filteredCanisters)) {
     console.log(chalk.blue("build canister"), chalk.bold(canisterName));
@@ -251,10 +257,8 @@ export async function build(
     try {
       const { testDeploy } = await import("../helpers/test-deploy.js");
       await testDeploy(testDeployArtifacts, { verbose: options.verbose });
-    } catch (err: any) {
-      cliError(
-        `PocketIC test deployment failed${err?.message ? `\n${err.message}` : ""}`,
-      );
+    } catch (err) {
+      cliError(err instanceof Error ? err.message : String(err));
     }
   }
 
