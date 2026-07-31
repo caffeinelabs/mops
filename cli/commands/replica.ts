@@ -14,6 +14,7 @@ import { Actor, HttpAgent } from "@icp-sdk/core/agent";
 import chalk from "chalk";
 
 import {
+  addPocketIcCycles,
   type AnyPocketIcServer,
   type AnyPocketIc,
   type AnySetupCanister,
@@ -293,7 +294,7 @@ export class Replica {
         return;
       }
 
-      await this.pocketIc.addCycles(canisterId as any, 1_000_000_000_000);
+      await addPocketIcCycles(this.pocketIc, canisterId, 1_000_000_000_000n);
 
       if (signal?.aborted) {
         return;

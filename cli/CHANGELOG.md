@@ -2,6 +2,8 @@
 
 ## Next
 
+- Replace the temporary `pic-js-mops` fork with upstream `@dfinity/pic` 0.22.0. Mops continues to launch the PocketIC version pinned in `[toolchain]` rather than the client package's binary.
+
 ## 2.19.2
 
 - Fix local path dependencies being written into `mops.lock` as absolute filesystem paths, which made committed lockfiles non-portable across machines. Local deps are now stored root-relative (e.g. `./packages/shared`, `../lib`). Regenerate an existing absolute lock with `mops install --lock update` (a plain `mops install` will not rewrite it). After regenerating, all environments need a CLI that includes this fix — older CLIs treat relative lock paths as cwd-relative and break from subdirectories.

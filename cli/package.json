@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "smol-toml": "1.6.1",
+    "@dfinity/pic": "0.22.0",
     "@icp-sdk/core": "4.0.2",
     "@noble/hashes": "1.8.0",
     "as-table": "1.0.55",
@@ -80,7 +81,6 @@
     "ncp": "2.0.0",
     "octokit": "4.1.4",
     "pic-ic": "0.5.4",
-    "pic-js-mops": "0.14.8",
     "prettier": "3.5.3",
     "prettier-plugin-motoko": "0.13.0",
     "promisify-child-process": "4.1.2",
