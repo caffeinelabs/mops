@@ -2,6 +2,9 @@
 
 ## Next
 
+- `mops publish --dry-run` runs the same local publish steps as a real publish (packaging checks, docs, changelog, tests, benchmarks) and prints the final file list, without contacting the registry or uploading. Honors `--no-docs` / `--no-test` / `--no-bench`. Does not run canister config validation or prove registry acceptance.
+- Fix `mops publish` exiting 0 on keyword-length and invalid `package.files` path errors (now exit 1, same as other preflight failures).
+
 ## 2.19.2
 
 - Fix local path dependencies being written into `mops.lock` as absolute filesystem paths, which made committed lockfiles non-portable across machines. Local deps are now stored root-relative (e.g. `./packages/shared`, `../lib`). Regenerate an existing absolute lock with `mops install --lock update` (a plain `mops install` will not rewrite it). After regenerating, all environments need a CLI that includes this fix — older CLIs treat relative lock paths as cwd-relative and break from subdirectories.

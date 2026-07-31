@@ -1,0 +1,8 @@
+[package]
+name = "dry-run-fixture"
+version = "0.1.0"
+description = "Fixture for mops publish --dry-run"
+license = "MIT"
+
+[dependencies]
+core = "1.0.0"
