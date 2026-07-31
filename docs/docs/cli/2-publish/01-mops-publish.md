@@ -32,13 +32,15 @@ Packages may contain up to **1000 files**. If your package exceeds this limit, `
 
 ## Dry run
 
-Run the same local publish steps as `mops publish` (packaging checks, docs, tests, benchmarks, changelog) and on success print the final file list — without contacting the registry or uploading anything:
+Run the same local publish steps as `mops publish` (packaging checks, docs, changelog, tests, benchmarks) and on success print the final file list — without contacting the registry or uploading anything:
 
 ```
 mops publish --dry-run
 ```
 
 Does **not** require an imported identity and does **not** contact the mops registry. `--no-docs`, `--no-test`, and `--no-bench` work the same as for a real publish.
+
+May still fetch GitHub release notes when `CHANGELOG.md` has no entry for the version and `[package].repository` is a GitHub URL (same as a real publish).
 
 Does **not** run canister config validation (SPDX license, semver, name charset/reserved names, keyword format) or prove registry acceptance (already published, permissions, missing deps). A real `mops publish` can still fail after a successful dry run.
 

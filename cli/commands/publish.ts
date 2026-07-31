@@ -369,10 +369,12 @@ export async function publish(
         .map((file) => "  " + file)
         .join("\n"),
     );
-    fs.rmSync(path.join(rootDir, ".mops/.docs"), {
-      force: true,
-      recursive: true,
-    });
+    if (options.docs) {
+      fs.rmSync(path.join(rootDir, ".mops/.docs"), {
+        force: true,
+        recursive: true,
+      });
+    }
     console.log(
       chalk.green("Dry-run OK") +
         ` — local publish steps passed (${files.length} files). Nothing was published.`,

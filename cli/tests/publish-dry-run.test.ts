@@ -117,6 +117,48 @@ other = "https://github.com/org/repo#main:src"
     expect(result.stdout + result.stderr).toMatch(/GitHub dependencies/i);
   });
 
+  test("rejects oversized keywords", async () => {
+    const cwd = await makeTempFixture("success");
+    await writeFile(
+      path.join(cwd, "mops.toml"),
+      `[package]
+name = "dry-run-fixture"
+version = "0.1.0"
+description = "Fixture for mops publish --dry-run"
+license = "MIT"
+keywords = ["this-keyword-is-way-too-long"]
+`,
+    );
+    const result = await cli([...packagingArgs], {
+      cwd,
+      env: { CI: "1" },
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout + result.stderr).toMatch(/max keyword length/i);
+  });
+
+  test("rejects package.files paths outside the package", async () => {
+    const cwd = await makeTempFixture("success");
+    await writeFile(
+      path.join(cwd, "mops.toml"),
+      `[package]
+name = "dry-run-fixture"
+version = "0.1.0"
+description = "Fixture for mops publish --dry-run"
+license = "MIT"
+files = ["../outside.mo"]
+`,
+    );
+    const result = await cli([...packagingArgs], {
+      cwd,
+      env: { CI: "1" },
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout + result.stderr).toMatch(
+      /file path cannot start with/i,
+    );
+  });
+
   test("runs the test step by default", async () => {
     const cwd = path.join(fixturesDir, "success");
     const result = await cli(
