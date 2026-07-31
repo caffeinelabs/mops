@@ -93,7 +93,7 @@ Concrete patterns this repo cares about. Treat these as high-priority candidates
 - CI flakiness, lint config tweaks, formatting-only changes.
 - Subjective style nits.
 - Pre-existing defects that are unchanged from the Base SHA.
-- **Findings that would apply equally to every PR** (e.g. generic prompt-injection risk on this AI review workflow, supply-chain risk on the unpinned Cursor CLI installer) — assume the existing mitigations hold and do NOT surface them unless this specific PR weakens them (no-approval contract, base-SHA prompt loading, sandbox deny rules, fork/draft gating).
+- **Findings that would apply equally to every PR** (e.g. generic prompt-injection risk on this AI review workflow, supply-chain risk on the unpinned Cursor CLI installer) — assume the existing mitigations hold and do NOT surface them unless this specific PR weakens them (verdict-gated bot approval with stale-approval dismissal, base-SHA prompt loading, sandbox deny rules, fork/draft gating).
 - Cursor CLI install-pinning concerns — the upstream installer is not checksummed; this is a known platform constraint, not a per-PR finding.
 - Missing tests where the surrounding code has no tests.
 - Any secrets — NEVER reproduce; redact as [REDACTED].

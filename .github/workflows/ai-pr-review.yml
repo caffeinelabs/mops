@@ -1,10 +1,17 @@
 name: AI PR review
 
-# Posts an advisory Cursor AI review as a single updatable PR comment with a
-# verdict header (APPROVE / REQUEST_CHANGES / REQUEST_HUMAN_REVIEW / REVIEW_ERROR).
-# Never approves or requests changes via the GitHub Reviews API; the only signal
-# beyond the comment is the workflow exit status — REQUEST_CHANGES fails the job
-# (red X), every other verdict succeeds.
+# Posts a Cursor AI review as a single updatable PR comment with a verdict
+# header (APPROVE / REQUEST_CHANGES / REQUEST_HUMAN_REVIEW / REVIEW_ERROR).
+# An APPROVE verdict also submits an approving review via the GitHub Reviews
+# API so branch protection's required-approval rule can be satisfied by either
+# a human or this workflow; any other verdict dismisses still-active automated
+# approvals from previous runs. CHANGES_REQUESTED reviews are never submitted —
+# REQUEST_CHANGES fails the job (red X) instead, so a human approval can
+# override a false positive without dismissing a bot review.
+#
+# Requires the repo setting "Allow GitHub Actions to create and approve pull
+# requests" (Settings → Actions → General); without it the approval submission
+# fails with a warning and the workflow degrades to comment-only.
 #
 # Skips draft, forked, and dependabot PRs, and PRs labeled `skip-ai-review`,
 # so CURSOR_API_TOKEN is never exposed to external contributors.
@@ -368,6 +375,70 @@ jobs:
                 issue_number,
                 body,
               });
+            }
+
+      - name: Submit or dismiss GitHub approval
+        # APPROVE submits an approving review (skipped if this head SHA is
+        # already approved); every other verdict — including UNKNOWN from an
+        # early failure — dismisses still-active automated approvals so a
+        # stale approval can't carry new commits over the required-review bar.
+        # Approval failure is a warning (the repo setting may be off; humans
+        # can still approve); dismissal failure fails the job because leaving
+        # a stale approval standing is a gating bug.
+        if: always() && steps.token.outputs.configured == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          AI_REVIEW_VERDICT: ${{ env.AI_REVIEW_VERDICT }}
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const pull_number = context.payload.pull_request.number;
+            const headSha = context.payload.pull_request.head.sha;
+            const verdict = process.env.AI_REVIEW_VERDICT || "REVIEW_ERROR";
+            const marker = "<!-- cursor-ai-review-approval -->";
+
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner,
+              repo,
+              pull_number,
+            });
+            const botApprovals = reviews.filter((review) =>
+              review.state === "APPROVED" &&
+              (review.user || {}).login === "github-actions[bot]" &&
+              (review.body || "").includes(marker)
+            );
+
+            if (verdict === "APPROVE") {
+              if (botApprovals.some((review) => review.commit_id === headSha)) {
+                core.info(`Commit ${headSha} already has an automated approval; skipping.`);
+                return;
+              }
+              try {
+                await github.rest.pulls.createReview({
+                  owner,
+                  repo,
+                  pull_number,
+                  commit_id: headSha,
+                  event: "APPROVE",
+                  body: `${marker}\nAutomated approval: the AI review verdict for ${headSha} is APPROVE. See the "Cursor AI review" comment for details.`,
+                });
+              } catch (error) {
+                core.warning(`Could not submit automated approval (is "Allow GitHub Actions to create and approve pull requests" enabled?): ${error.message}`);
+              }
+            } else {
+              for (const review of botApprovals) {
+                try {
+                  await github.rest.pulls.dismissReview({
+                    owner,
+                    repo,
+                    pull_number,
+                    review_id: review.id,
+                    message: `AI review verdict for ${headSha} is ${verdict}; dismissing stale automated approval.`,
+                  });
+                } catch (error) {
+                  core.setFailed(`Could not dismiss stale automated approval ${review.id}: ${error.message}`);
+                }
+              }
             }
 
       - name: Fail job on REQUEST_CHANGES
