@@ -199,6 +199,17 @@ mops sync                 # add missing / remove unused packages
 
 ## Other Commands
 
+### `mops publish`
+
+```bash
+mops publish              # publish to the registry (runs tests/docs/bench by default)
+mops publish --dry-run    # same local steps as publish; no registry contact / identity
+mops publish --dry-run --no-test --no-docs --no-bench   # packaging checks only
+mops publish --no-test --no-docs --no-bench
+```
+
+`--dry-run` runs the same local publish pipeline (packaging checks, docs, changelog, tests, benchmarks) and prints the final file list, then stops before identity/upload. `--no-*` flags work as usual. It does **not** run canister config validation (SPDX/semver/name rules) or prove registry acceptance (already published, permissions, missing deps).
+
 ### `mops test`
 
 Tests live in `test/*.test.mo`:

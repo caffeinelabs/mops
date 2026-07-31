@@ -36,6 +36,7 @@ export async function publish(
     test?: boolean;
     bench?: boolean;
     verbose?: boolean;
+    dryRun?: boolean;
   } = {},
 ) {
   if (!checkConfigFile()) {
@@ -45,7 +46,11 @@ export async function publish(
   let rootDir = getRootDir();
   let config = readConfig();
 
-  console.log(`Publishing ${config.package?.name}@${config.package?.version}`);
+  console.log(
+    options.dryRun
+      ? `Dry-run ${config.package?.name}@${config.package?.version}`
+      : `Publishing ${config.package?.name}@${config.package?.version}`,
+  );
 
   // required fields
   if (!config.package) {
@@ -69,14 +74,20 @@ export async function publish(
   // desired fields
   for (let key of ["description"]) {
     // @ts-ignore
-    if (!config.package[key] && !process.env.CI) {
-      let res = await prompts({
-        type: "confirm",
-        name: "ok",
-        message: `Missing recommended config key "${key}", publish anyway?`,
-      });
-      if (!res.ok) {
-        return;
+    if (!config.package[key]) {
+      if (options.dryRun) {
+        console.log(
+          chalk.yellow("Warning: ") + `Missing recommended config key "${key}"`,
+        );
+      } else if (!process.env.CI) {
+        let res = await prompts({
+          type: "confirm",
+          name: "ok",
+          message: `Missing recommended config key "${key}", publish anyway?`,
+        });
+        if (!res.ok) {
+          return;
+        }
       }
     }
   }
@@ -167,7 +178,7 @@ export async function publish(
     for (let keyword of config.package.keywords) {
       if (keyword.length > 20) {
         console.log(chalk.red("Error: ") + "max keyword length is 20");
-        return;
+        process.exit(1);
       }
     }
   }
@@ -178,7 +189,7 @@ export async function publish(
         console.log(
           chalk.red("Error: ") + "file path cannot start with '/' or '../'",
         );
-        return;
+        process.exit(1);
       }
     }
   }
@@ -241,7 +252,7 @@ export async function publish(
   files = [...files, ...defaultFiles];
   files = globbySync([...files, ...defaultFiles]);
 
-  if (options.verbose) {
+  if (options.verbose && !options.dryRun) {
     console.log("Files:");
     console.log(files.map((file) => "  " + file).join("\n"));
   }
@@ -345,6 +356,30 @@ export async function publish(
       console.log(chalk.red("Error: ") + "benchmarks failed");
       process.exit(1);
     }
+  }
+
+  if (options.dryRun) {
+    console.log("Files:");
+    console.log(
+      [...files]
+        .map((file) =>
+          file === docsFile ? path.relative(rootDir, file) : file,
+        )
+        .sort()
+        .map((file) => "  " + file)
+        .join("\n"),
+    );
+    if (options.docs) {
+      fs.rmSync(path.join(rootDir, ".mops/.docs"), {
+        force: true,
+        recursive: true,
+      });
+    }
+    console.log(
+      chalk.green("Dry-run OK") +
+        ` — local publish steps passed (${files.length} files). Nothing was published.`,
+    );
+    return;
   }
 
   // progress

@@ -3,6 +3,8 @@
 ## Next
 
 - On moc 1.12.0+, `mops check` and `mops check-stable` verify upgrade compatibility inside the same `moc --check` invocation via `--stable-baseline <deployed.most>`, instead of generating a `.most` and running a separate `--stable-compatible`. Applies to enhanced-migration canisters with a committed `.most` baseline; everything else keeps the previous 3-step path. Diagnostics now point at your source (`src/main.mo:3.1-11.2`) instead of `(unknown location)`, and a forgotten field in the initial actor is a `M0267` type error rather than a `M0254` warning.
+- `mops publish --dry-run` runs the same local publish steps as a real publish (packaging checks, docs, changelog, tests, benchmarks) and prints the final file list, without contacting the registry or uploading. Honors `--no-docs` / `--no-test` / `--no-bench`. Does not run canister config validation or prove registry acceptance.
+- Fix `mops publish` exiting 0 on keyword-length and invalid `package.files` path errors (now exit 1, same as other preflight failures).
 
 ## 2.19.2
 
