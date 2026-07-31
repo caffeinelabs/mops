@@ -19,6 +19,7 @@ import {
   validateCanisterArgs,
 } from "../helpers/resolve-canisters.js";
 import {
+  checkLimitExplainsFailure,
   getCheckLimitPendingIssue,
   prepareMigrationArgs,
   reportCheckLimitPendingIssue,
@@ -247,10 +248,12 @@ async function checkCanisters(
               options.checkLimit === false,
               true,
             );
-            // Replace moc output only for compat-style failures (classic
-            // check-limit behavior). Surface type errors first.
-            const hasTypeError = /type error/i.test(result.stderr ?? "");
-            if (issue && !hasTypeError) {
+            // Replace moc output only when trimming explains every diagnostic
+            // (classic check-limit behavior). A genuine compile error wins.
+            const replaceWithCheckLimit = checkLimitExplainsFailure(
+              result.stderr,
+            );
+            if (issue && replaceWithCheckLimit) {
               reportCheckLimitPendingIssue(issue, true);
             }
             if (result.stdout) {
@@ -259,7 +262,7 @@ async function checkCanisters(
             if (result.stderr) {
               console.error(result.stderr);
             }
-            if (issue && hasTypeError) {
+            if (issue && !replaceWithCheckLimit) {
               reportCheckLimitPendingIssue(issue, false);
             }
           }

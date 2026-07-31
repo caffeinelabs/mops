@@ -5,6 +5,7 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { cliError, cliExit } from "../error.js";
 import {
+  checkLimitExplainsFailure,
   getCheckLimitPendingIssue,
   prepareMigrationArgs,
   reportCheckLimitPendingIssue,
@@ -216,12 +217,23 @@ export function reportStableCheckOutcome(
     params.baselineIsMostFile,
   );
 
+  const failed = params.exitCode !== 0;
+  // On the folded path `moc --check` also type-checks, so a failure may be an
+  // ordinary compile error. Only let the check-limit diagnostic replace moc's
+  // output when trimming actually explains every diagnostic.
+  const replaceWithCheckLimit =
+    failed && checkLimitExplainsFailure(params.stderr);
+
+  if (issue && replaceWithCheckLimit) {
+    reportCheckLimitPendingIssue(issue, true);
+  }
+  if (failed && params.stderr) {
+    console.error(params.stderr);
+  }
   if (issue) {
-    reportCheckLimitPendingIssue(issue, params.exitCode !== 0);
-  } else if (params.exitCode !== 0) {
-    if (params.stderr) {
-      console.error(params.stderr);
-    }
+    reportCheckLimitPendingIssue(issue, false);
+  }
+  if (failed) {
     cliExit(
       params.exitCode ?? 1,
       `✗ Stable compatibility check failed for canister '${canisterName}'`,
@@ -233,6 +245,56 @@ export function reportStableCheckOutcome(
       `✓ Stable compatibility check passed for canister '${canisterName}'`,
     ),
   );
+}
+
+/** One `moc --check --stable-baseline` covering typecheck + upgrade compat. */
+async function runFoldedStableCheck(params: {
+  canisterMain: string;
+  canisterName: string;
+  mocPath: string;
+  baselinePath: string;
+  baselineIsMostFile: boolean;
+  sources: string[];
+  globalMocArgs: string[];
+  canisterArgs: string[];
+  migrations?: MigrationsConfig;
+  options: Partial<CheckStableOptions>;
+}): Promise<void> {
+  const args = [
+    params.canisterMain,
+    "--check",
+    "--all-libs",
+    "--stable-baseline",
+    params.baselinePath,
+    ...params.sources,
+    ...params.globalMocArgs,
+    ...params.canisterArgs,
+    ...(params.options.extraArgs ?? []),
+  ];
+
+  if (params.options.verbose) {
+    console.log(
+      chalk.blue("check-stable"),
+      chalk.gray(
+        `Checking ${params.canisterMain} against baseline ${params.baselinePath}`,
+      ),
+    );
+    console.log(chalk.gray(params.mocPath, JSON.stringify(args)));
+  }
+
+  const result = await execa(params.mocPath, args, {
+    stdio: "pipe",
+    reject: false,
+  });
+
+  reportStableCheckOutcome(params.canisterName, {
+    migrations: params.migrations,
+    oldMostPath: params.baselinePath,
+    baselineIsMostFile: params.baselineIsMostFile,
+    checkLimit: params.options.checkLimit,
+    exitCode: result.exitCode,
+    stderr: result.stderr,
+  });
 }
 
 export async function runStableCheck(
@@ -257,37 +319,17 @@ export async function runStableCheck(
 
   // Fast path: .most baseline + moc 1.12.0+ → one --check, no scratch dir.
   if (isOldMostFile && canUseStableBaselineCheck(canisterArgs)) {
-    const args = [
+    await runFoldedStableCheck({
       canisterMain,
-      "--check",
-      "--all-libs",
-      "--stable-baseline",
-      oldFile,
-      ...sources,
-      ...globalMocArgs,
-      ...canisterArgs,
-      ...(options.extraArgs ?? []),
-    ];
-    if (options.verbose) {
-      console.log(
-        chalk.blue("check-stable"),
-        chalk.gray(`Checking ${canisterMain} against baseline ${oldFile}`),
-      );
-      console.log(chalk.gray(mocPath, JSON.stringify(args)));
-    }
-
-    const result = await execa(mocPath, args, {
-      stdio: "pipe",
-      reject: false,
-    });
-
-    reportStableCheckOutcome(canisterName, {
-      migrations: params.migrations,
-      oldMostPath: oldFile,
+      canisterName,
+      mocPath,
+      baselinePath: oldFile,
       baselineIsMostFile: true,
-      checkLimit: options.checkLimit,
-      exitCode: result.exitCode,
-      stderr: result.stderr,
+      sources,
+      globalMocArgs,
+      canisterArgs,
+      migrations: params.migrations,
+      options,
     });
     return;
   }
@@ -310,39 +352,17 @@ export async function runStableCheck(
         );
 
     if (canUseStableBaselineCheck(canisterArgs)) {
-      const args = [
+      await runFoldedStableCheck({
         canisterMain,
-        "--check",
-        "--all-libs",
-        "--stable-baseline",
-        oldMostPath,
-        ...sources,
-        ...globalMocArgs,
-        ...canisterArgs,
-        ...(options.extraArgs ?? []),
-      ];
-      if (options.verbose) {
-        console.log(
-          chalk.blue("check-stable"),
-          chalk.gray(
-            `Checking ${canisterMain} against baseline ${oldMostPath}`,
-          ),
-        );
-        console.log(chalk.gray(mocPath, JSON.stringify(args)));
-      }
-
-      const result = await execa(mocPath, args, {
-        stdio: "pipe",
-        reject: false,
-      });
-
-      reportStableCheckOutcome(canisterName, {
-        migrations: params.migrations,
-        oldMostPath,
+        canisterName,
+        mocPath,
+        baselinePath: oldMostPath,
         baselineIsMostFile: isOldMostFile,
-        checkLimit: options.checkLimit,
-        exitCode: result.exitCode,
-        stderr: result.stderr,
+        sources,
+        globalMocArgs,
+        canisterArgs,
+        migrations: params.migrations,
+        options,
       });
       return;
     }

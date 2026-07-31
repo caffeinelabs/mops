@@ -133,6 +133,20 @@ describe("check-stable", () => {
     await cliSnapshot(["check-stable"], { cwd }, 1);
   });
 
+  // A type error is the real problem: the check-limit diagnostic must not
+  // replace it, or the compile failure is invisible. `mops check` already
+  // does this; the folded check-stable path has to match.
+  test("type error is not masked by the check-limit diagnostic", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "check-stable/check-limit-type-error",
+    );
+    const result = await cli(["check-stable"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/type error/i);
+    expect(result.stderr).toMatch(/not a Nat|M0050/);
+  });
+
   test("does not warn when deployed baseline matches the chain", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/migrations-chain");
     const result = await cli(["check-stable"], { cwd });
