@@ -90,3 +90,13 @@ Svelte 5 + Vite 8, queries the main canister. Staging canister: `ogp6e-diaaa-aaa
 - **dfx version**: pinned in `dfx.json` via `dfxvm`. Do not run `dfxvm update/install/default` to change it.
 - **Declarations must be regenerated** after backend changes: `npm run decl` (requires local dfx running).
 - **API version** in `cli/mops.ts` (`apiVersion`) and `backend/main/main-canister.mo` (`API_VERSION`) must match.
+
+## High-risk areas (extra scrutiny)
+
+Changes here can corrupt live registry state, break published packages, or silently affect every user's build even when all tests pass, because coverage is necessarily incomplete:
+
+- `backend/main/**` — the production registry canister holds live state; a bad state-shape change or upgrade path can corrupt or strand data. Publish protocol lives in `PackagePublisher.mo`; published versions are immutable, so a defect there is permanent.
+- Authn/authz — owner/maintainer/admin checks in `backend/main/main-canister.mo` and `Users.mo`, identity handling in `cli/mops.ts` and `cli/pem.ts`. A wrongly-accepted caller is worse than a wrongly-rejected one.
+- `backend/storage/**` — package file chunks; integrity of everything already published.
+- Install/resolution paths — `cli/commands/install/**`, `cli/resolve-packages.ts`, `cli/integrity.ts` (lockfile), `cli/cache.ts`, `cli/api/**`. Wrong version resolution or a corrupted cache/lockfile silently affects every downstream build.
+- Release/deploy pipeline — `.github/workflows/release*.yml`, canister IDs in `canister_ids.json` / `dfx.json`.
