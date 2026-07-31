@@ -2,6 +2,8 @@
 
 ## Next
 
+- On moc 1.12.0+, `mops check` and `mops check-stable` verify upgrade compatibility inside the same `moc --check` invocation via `--stable-baseline <deployed.most>`, instead of generating a `.most` and running a separate `--stable-compatible`. Applies to enhanced-migration canisters with a committed `.most` baseline; everything else keeps the previous 3-step path. Diagnostics now point at your source (`src/main.mo:3.1-11.2`) instead of `(unknown location)`, and a forgotten field in the initial actor is a `M0267` type error rather than a `M0254` warning.
+
 ## 2.19.2
 
 - Fix local path dependencies being written into `mops.lock` as absolute filesystem paths, which made committed lockfiles non-portable across machines. Local deps are now stored root-relative (e.g. `./packages/shared`, `../lib`). Regenerate an existing absolute lock with `mops install --lock update` (a plain `mops install` will not rewrite it). After regenerating, all environments need a CLI that includes this fix — older CLIs treat relative lock paths as cwd-relative and break from subdirectories.
@@ -14,7 +16,6 @@
 
 - `[optimize]` runs Binaryen `wasm-opt` after `mops build` / `mops bench` (opt-in). Empty `[optimize]` defaults to `-O3 -g`. Pin via `[toolchain] wasm-opt` (Binaryen version, e.g. `131`); auto-pins latest if missing. Soft-fails to unoptimized Wasm on error.
 - `mops build` and `mops bench` accept `--no-optimize` to skip the `[optimize]` `wasm-opt` post-pass for a single run without editing `mops.toml` (no-op when `[optimize]` is not set).
-
 ## 2.18.0
 
 - `mops toolchain info <tool> --versions` lists stable GitHub release versions for a toolchain tool (moc, lintoko, wasmtime, pocket-ic), one per line, newest first. Defaults to the first releases page; pass `--all` for the full history (cache warming).

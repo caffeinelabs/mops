@@ -113,6 +113,17 @@ describe("check", () => {
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
+  // Fixture pinned to moc 1.12.0: folding needs --enhanced-migration, so a
+  // non-EM canister keeps the classic path even on a moc that supports it.
+  test("deployed: non-EM canister does not fold into --stable-baseline", async () => {
+    const cwd = path.join(import.meta.dirname, "check/deployed-compatible");
+    const result = await cli(["check", "--verbose"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).not.toMatch(/--stable-baseline/);
+    expect(result.stdout).toMatch(/--stable-compatible/);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
   test("deployed: skips when file missing and skipIfMissing, with deprecation warning", async () => {
     const cwd = path.join(import.meta.dirname, "check/deployed-missing-skip");
     const result = await cli(["check"], { cwd });
@@ -127,6 +138,19 @@ describe("check", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/Deployed file not found/);
     expect(result.stderr).toMatch(/empty actor/);
+  });
+
+  // Regression: deciding whether to fold used to resolve the baseline eagerly,
+  // so a missing baseline masked the compile error that moc reports first.
+  test("deployed: compile error wins over a missing .most baseline", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "check/deployed-missing-baseline-compile-error",
+    );
+    const result = await cli(["check"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/thisshouldnotcompile/);
+    expect(result.stderr).not.toMatch(/Deployed file not found/);
   });
 
   test("--fix runs stable check after fixing", async () => {
