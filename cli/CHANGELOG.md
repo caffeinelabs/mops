@@ -2,7 +2,7 @@
 
 ## Next
 
-- Add `mops build --test-deploy` to install built Wasm files on fresh PocketIC canisters and fail on deployment or initialization errors. PocketIC 9.0.0 or newer is required. Per-canister `wasmMemoryLimit` settings are applied during test deployment. All current PocketIC error names include their canonical IC error codes. The PocketIC client is loaded only when the flag is used.
+- Add `mops build --test-deploy` to install built Wasm files on fresh PocketIC canisters and fail on deployment or initialization errors. PocketIC 9.0.0 or newer is required. Per-canister `wasmMemoryLimit` settings are applied during test deployment, and every command that resolves canisters rejects non-positive or non-integer limits. All current PocketIC error names include their canonical IC error codes. The PocketIC client is loaded only when the flag is used.
 
 ## 2.19.2
 

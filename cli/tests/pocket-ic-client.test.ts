@@ -1,20 +1,6 @@
 import { describe, expect, jest, test } from "@jest/globals";
-let pocketIcVersion: string | undefined;
-jest.unstable_mockModule(
-  "../mops.js",
-  () => ({
-    readConfig: () => ({
-      toolchain: { "pocket-ic": pocketIcVersion },
-    }),
-  }),
-  { virtual: true },
-);
-
-const {
-  assertDfinityClientSupportsPocketIc,
-  createClientOrStopServer,
-  startPocketIc,
-} = await import("../helpers/pocket-ic-client");
+const { assertDfinityClientSupportsPocketIc, createClientOrStopServer } =
+  await import("../helpers/pocket-ic-client-utils");
 
 describe("PocketIC client compatibility", () => {
   test.each(["4.0.0", "8.9.9"])(
@@ -33,16 +19,14 @@ describe("PocketIC client compatibility", () => {
     },
   );
 
-  test("rejects a legacy test deployment before starting a server", async () => {
-    pocketIcVersion = "4.0.0";
-    try {
-      await expect(startPocketIc({}, { client: "dfinity" })).rejects.toThrow(
-        "PocketIC 4.0.0 is incompatible with test deployment",
+  test.each(["8", "latest", "not-a-version"])(
+    "rejects malformed PocketIC version %s",
+    (version) => {
+      expect(() => assertDfinityClientSupportsPocketIc(version)).toThrow(
+        "Use an exact semantic version",
       );
-    } finally {
-      pocketIcVersion = undefined;
-    }
-  });
+    },
+  );
 });
 
 describe("PocketIC client startup", () => {

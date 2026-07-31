@@ -202,6 +202,7 @@ describe("build", () => {
     try {
       const result = await cli(["build", "--test-deploy"], { cwd });
       expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("Invalid initArg for canister main");
       expect(result.stderr).not.toMatch("PocketIC test deployment failed");
     } finally {
       cleanFixture(cwd);

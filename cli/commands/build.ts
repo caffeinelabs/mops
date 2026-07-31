@@ -61,9 +61,8 @@ export async function build(
         "PocketIC test deployment requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 12.0.0` to pin it.",
       );
     }
-    const { assertDfinityClientSupportsPocketIc } = await import(
-      "../helpers/pocket-ic-client.js"
-    );
+    const { assertDfinityClientSupportsPocketIc } =
+      await import("../helpers/pocket-ic-client-utils.js");
     try {
       assertDfinityClientSupportsPocketIc(pocketIcVersion);
     } catch (err) {

@@ -1,4 +1,3 @@
-import semver from "semver";
 import type { PocketIc, PocketIcServer } from "pic-ic";
 import type {
   PocketIc as PocketIcModern,
@@ -7,6 +6,11 @@ import type {
 } from "pic-js-mops";
 import type { PocketIc as PocketIcDfinity } from "@dfinity/pic";
 import { readConfig } from "../mops.js";
+import {
+  assertDfinityClientSupportsPocketIc,
+  createClientOrStopServer,
+  isLegacyPocketIcVersion,
+} from "./pocket-ic-client-utils.js";
 
 export type AnyPocketIcServer = PocketIcServer | PocketIcServerModern;
 export type AnyPocketIc = PocketIc | PocketIcModern;
@@ -17,40 +21,6 @@ type PocketIcResult = {
   server: AnyPocketIcServer;
   client: AnyPocketIc;
 };
-
-export const MIN_DFINITY_CLIENT_POCKET_IC_VERSION = "9.0.0";
-
-function isLegacy(version: string | undefined): boolean {
-  return (
-    !!version &&
-    !!semver.valid(version) &&
-    semver.lt(version, MIN_DFINITY_CLIENT_POCKET_IC_VERSION)
-  );
-}
-
-export function assertDfinityClientSupportsPocketIc(
-  version: string | undefined,
-): void {
-  if (isLegacy(version)) {
-    throw new Error(
-      `PocketIC ${version} is incompatible with test deployment. ` +
-        `\`mops build --test-deploy\` requires pocket-ic ${MIN_DFINITY_CLIENT_POCKET_IC_VERSION} or newer. ` +
-        "Run `mops toolchain use pocket-ic 12.0.0` to pin a supported version.",
-    );
-  }
-}
-
-export async function createClientOrStopServer<T>(
-  server: { stop(): Promise<void> },
-  createClient: () => Promise<T>,
-): Promise<T> {
-  try {
-    return await createClient();
-  } catch (error) {
-    await server.stop().catch(() => {});
-    throw error;
-  }
-}
 
 export function startPocketIc(
   options: StartServerOptions,
@@ -79,7 +49,7 @@ export async function startPocketIc(
   // PocketIC client. `pic-js-mops` ships ESM without `type: module`, which a
   // static import fails to resolve under tsx (local dev); a dynamic import
   // resolves it on every platform.
-  if (isLegacy(version)) {
+  if (isLegacyPocketIcVersion(version)) {
     const { PocketIc, PocketIcServer } = await import("pic-ic");
     let server = await PocketIcServer.start(options);
     let client = await createClientOrStopServer(server, () =>

@@ -17,15 +17,25 @@ export async function testDeploy(
   artifacts: TestDeployArtifact[],
   { verbose = false } = {},
 ): Promise<void> {
-  const preparedArtifacts = artifacts.map((artifact) => ({
-    ...artifact,
-    arg: Uint8Array.from(
-      getWasmBindings().encode_candid_args(
-        artifact.initArg ?? "()",
-        artifact.initCandid,
-      ),
-    ),
-  }));
+  const preparedArtifacts = artifacts.map((artifact) => {
+    try {
+      return {
+        ...artifact,
+        arg: Uint8Array.from(
+          getWasmBindings().encode_candid_args(
+            artifact.initArg ?? "()",
+            artifact.initCandid,
+          ),
+        ),
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Invalid initArg for canister ${artifact.name}: ${message}`,
+        { cause: error },
+      );
+    }
+  });
 
   const pocketIcBin = await toolchain.bin("pocket-ic");
   let server: AnyPocketIcServer | undefined;
@@ -62,9 +72,11 @@ export async function testDeploy(
     }
   } catch (error) {
     const mappedError = mapPocketIcError(error);
-    throw new Error(`PocketIC test deployment failed\n${mappedError.message}`);
+    throw new Error(`PocketIC test deployment failed\n${mappedError.message}`, {
+      cause: error,
+    });
   } finally {
     await client?.tearDown().catch(() => {});
-    await server?.stop();
+    await server?.stop().catch(() => {});
   }
 }
