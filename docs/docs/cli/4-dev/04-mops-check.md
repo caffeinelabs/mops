@@ -122,6 +122,8 @@ If the file at `path` doesn't exist, the check fails with an error. For initial 
 actor { };
 ```
 
+On moc 1.12.0+, enhanced-migration canisters with a `.most` baseline verify upgrade compatibility inside the same `moc --check` call rather than in a separate step, so a compatibility failure is reported as part of the check. See [single-invocation checking](/cli/mops-check-stable#single-invocation-checking-on-moc-1120) for what changes.
+
 For more details, see [`mops check-stable`](/cli/mops-check-stable).
 
 When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. Only applies when the baseline is a committed `.most` file configured via `[check-stable].path` (not a `.mo` source passed on the command line). See [chain trimming](/cli/mops-migrate#chain-trimming).

@@ -13,7 +13,7 @@ mops check-stable [args...]
 
 Verifies that an upgrade from an old actor to the current canister entrypoint is safe — i.e., that stable variable signatures are compatible. This prevents `Memory-incompatible program upgrade` traps at deploy time.
 
-The command handles the full workflow internally: generating `.most` stable type signatures, comparing them, and cleaning up intermediate files.
+The command handles the full workflow internally: generating `.most` stable type signatures, comparing them, and cleaning up intermediate files. On moc 1.12.0+ the comparison happens inside a single compiler invocation — see [single-invocation checking](#single-invocation-checking-on-moc-1120).
 
 When checking canisters, per-canister `[canisters.<name>].args` from `mops.toml` are applied alongside global `[moc].args`.
 
@@ -98,6 +98,32 @@ The warning only applies when the baseline is a committed `.most` file (via `[ch
 ## Enhanced migration support
 
 When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops check-stable` automatically injects the `--enhanced-migration` flag when generating stable type signatures.
+
+## Single-invocation checking on moc 1.12.0+
+
+moc 1.12.0 can run the upgrade check as part of type-checking, via `--stable-baseline <deployed.most>`. When it is available, `mops check-stable` uses it instead of the 3-step workflow:
+
+```bash
+# moc < 1.12.0 — three invocations
+moc --stable-types -o .mops/…/old.wasm deployed.mo …   # only for a .mo baseline
+moc --stable-types -o .mops/…/new.wasm src/main.mo …
+moc --stable-compatible deployed.most .mops/…/new.most
+
+# moc 1.12.0+
+moc src/main.mo --check --all-libs --stable-baseline deployed.most --enhanced-migration=… …
+```
+
+This applies when **both** hold:
+
+- The baseline is a `.most` file — from `[check-stable].path` or passed as a `.most` argument. A `.mo` baseline is still compiled to `.most` first.
+- The canister uses enhanced migration, which `moc --stable-baseline` requires. Canisters without `[migrations]` (or an explicit `--enhanced-migration` in `args`) keep the 3-step path.
+
+Anything else — an older moc pin, a non-`.most` baseline, a non-EM canister — behaves exactly as before. Two diagnostics change when the single-invocation path is used:
+
+- A field the initial actor requires but no migration produces is a type error [**M0267**] instead of a warning [M0254]. Fields whose baseline type is already a stable subtype of the required type stay M0254.
+- Compatibility errors report a source location (`src/main.mo:3.1-11.2`) rather than `(unknown location)`.
+
+Run with `--verbose` to see which path was taken.
 
 ## Passing flags to the Motoko compiler
 

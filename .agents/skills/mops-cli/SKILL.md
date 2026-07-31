@@ -99,6 +99,8 @@ Updates `mops.toml` and `mops.lock` (even when `CI` is set).
 
 Primary correctness command — runs moc check, then check-stable (if configured), then lint (if lintoko is in toolchain).
 
+On moc 1.12.0+, enhanced-migration canisters with a committed `.most` baseline verify upgrade compatibility inside the same `moc --check --stable-baseline` call (no separate `--stable-compatible`). Older moc pins and non-EM canisters keep the 3-step path. Behavioral difference to expect: a forgotten field in the initial actor is an `M0267` type error, not an `M0254` warning, and compat diagnostics carry a source location.
+
 ```bash
 mops check                # all canisters
 mops check backend        # single canister
