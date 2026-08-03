@@ -5,7 +5,6 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { cliError, cliExit } from "../error.js";
 import {
-  checkLimitExplainsFailure,
   getCheckLimitPendingIssue,
   prepareMigrationArgs,
   reportCheckLimitPendingIssue,
@@ -217,23 +216,12 @@ export function reportStableCheckOutcome(
     params.baselineIsMostFile,
   );
 
-  const failed = params.exitCode !== 0;
-  // On the folded path `moc --check` also type-checks, so a failure may be an
-  // ordinary compile error. Only let the check-limit diagnostic replace moc's
-  // output when trimming actually explains every diagnostic.
-  const replaceWithCheckLimit =
-    failed && checkLimitExplainsFailure(params.stderr);
-
-  if (issue && replaceWithCheckLimit) {
-    reportCheckLimitPendingIssue(issue, true);
-  }
-  if (failed && params.stderr) {
-    console.error(params.stderr);
-  }
   if (issue) {
-    reportCheckLimitPendingIssue(issue, false);
-  }
-  if (failed) {
+    reportCheckLimitPendingIssue(issue, params.exitCode !== 0);
+  } else if (params.exitCode !== 0) {
+    if (params.stderr) {
+      console.error(params.stderr);
+    }
     cliExit(
       params.exitCode ?? 1,
       `✗ Stable compatibility check failed for canister '${canisterName}'`,

@@ -93,7 +93,7 @@ Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limi
 
 When `[canisters.<name>.migrations].check-limit` is set, `mops check-stable` compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error (trimming started from the wrong state). If compat passed anyway, it is shown as a warning.
 
-The replacement only happens when trimming accounts for every diagnostic `moc` reported (`M0169`, `M0254`, `M0263`, `M0267`). If the failure also carries an unrelated error — an ordinary type error, say — `moc`'s output is shown and the pending-migration diagnostic is demoted to a warning, so a compile failure is never hidden behind it. This matters on moc 1.12.0+, where a trimmed chain's missing field is itself a type error (`M0267`).
+On the single-invocation path this replacement also covers type errors `moc` reported in the same run, since one invocation now does both jobs. The command still exits non-zero; fold the pending migrations (or pass `--no-check-limit`) to see the compiler's own diagnostics.
 
 The warning only applies when the baseline is a committed `.most` file (via `[check-stable].path` or passed as a `.most` argument). Baselines compiled from a `.mo` source on the command line are skipped — the scratch `.most` would not reflect what is actually deployed.
 

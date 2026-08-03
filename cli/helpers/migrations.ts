@@ -333,37 +333,6 @@ function formatCheckLimitPendingLines(issue: CheckLimitPendingIssue): string[] {
   ];
 }
 
-/**
- * Diagnostics a trimmed chain explains: the baseline-vs-chain mismatch that
- * `check-limit` itself causes. On moc 1.12.0+ the missing-field case is a type
- * error (M0267), so "is it a type error" cannot be the test.
- */
-const CHECK_LIMIT_EXPLAINABLE_CODES = new Set([
-  "M0169",
-  "M0254",
-  "M0263",
-  "M0267",
-]);
-
-/**
- * Whether the check-limit diagnostic may replace `moc`'s output — true only
- * when every diagnostic is one trimming accounts for. A genuine compile error,
- * or a failure carrying no diagnostic code at all (e.g. a compiler crash),
- * must be surfaced instead: trimming does not explain it.
- */
-export function checkLimitExplainsFailure(stderr: string | undefined): boolean {
-  const codes: string[] = [];
-  for (const match of (stderr ?? "").matchAll(/\[(M\d{4})\]/g)) {
-    if (match[1]) {
-      codes.push(match[1]);
-    }
-  }
-  return (
-    codes.length > 0 &&
-    codes.every((code) => CHECK_LIMIT_EXPLAINABLE_CODES.has(code))
-  );
-}
-
 /** Warn on accidental compat pass; fail with this diagnostic when compat already failed. */
 export function reportCheckLimitPendingIssue(
   issue: CheckLimitPendingIssue,

@@ -19,7 +19,6 @@ import {
   validateCanisterArgs,
 } from "../helpers/resolve-canisters.js";
 import {
-  checkLimitExplainsFailure,
   getCheckLimitPendingIssue,
   prepareMigrationArgs,
   reportCheckLimitPendingIssue,
@@ -248,12 +247,10 @@ async function checkCanisters(
               options.checkLimit === false,
               true,
             );
-            // Replace moc output only when trimming explains every diagnostic
-            // (classic check-limit behavior). A genuine compile error wins.
-            const replaceWithCheckLimit = checkLimitExplainsFailure(
-              result.stderr,
-            );
-            if (issue && replaceWithCheckLimit) {
+            // Trimming started from the wrong state, so moc's compat output is
+            // misleading — replace it with the actionable hint, same as the
+            // 3-step path does.
+            if (issue) {
               reportCheckLimitPendingIssue(issue, true);
             }
             if (result.stdout) {
@@ -261,9 +258,6 @@ async function checkCanisters(
             }
             if (result.stderr) {
               console.error(result.stderr);
-            }
-            if (issue && !replaceWithCheckLimit) {
-              reportCheckLimitPendingIssue(issue, false);
             }
           }
           cliExit(
