@@ -42,7 +42,7 @@
     "bundle:tar": "rm -f bundle/cli.tgz && touch -t 200101010101 bundle/cli.tgz && find bundle -exec touch -d '1970-01-01 00:00:00' {} + && tar --sort name --exclude bundle/cli.tgz -cvf - bundle | gzip -n > bundle/cli.tgz",
     "copy": "cp -r commands/bench dist/commands && cp -r declarations templates package.json bin dist | true",
     "prepare": "rm -rf dist && run-s dist copy vendor:pic fix-dist",
-    "vendor:pic": "esbuild vendor/pic-entry.mjs --bundle --platform=node --format=esm --outfile=dist/vendor/pic.mjs --external:@icp-sdk/core --external:@icp-sdk/core/* --banner:js=\"import{fileURLToPath as __vfu}from 'node:url';import{dirname as __vdn}from 'node:path';import{createRequire as __vcr}from 'node:module';const require=__vcr(import.meta.url);const __filename=__vfu(import.meta.url);const __dirname=__vdn(__filename);\"",
+    "vendor:pic": "esbuild vendor/pic-entry.mjs --bundle --platform=node --format=esm --outfile=dist/vendor/pic.mjs --banner:js=\"import{fileURLToPath as __vfu}from 'node:url';import{dirname as __vdn}from 'node:path';import{createRequire as __vcr}from 'node:module';const require=__vcr(import.meta.url);const __filename=__vfu(import.meta.url);const __dirname=__vdn(__filename);\"",
     "fix-dist": "tsx ./fix-dist.ts",
     "release": "tsx release-cli.ts",
     "check": "tsc --project tsconfig.json --noEmit",
@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "smol-toml": "1.6.1",
-    "@icp-sdk/core": "5.4.0",
+    "@icp-sdk/core": "4.0.2",
     "@noble/hashes": "1.8.0",
     "as-table": "1.0.55",
     "buffer": "6.0.3",
