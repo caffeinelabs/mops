@@ -30,7 +30,8 @@
     "webpack": "*"
   },
   "overrides": {
-    "webpackbar": "^7.0.0"
+    "webpackbar": "^7.0.0",
+    "postcss": ">=8.5.18"
   },
   "browserslist": {
     "production": [
