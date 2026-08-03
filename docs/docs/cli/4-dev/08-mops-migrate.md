@@ -93,6 +93,6 @@ The limits count the full virtual chain (frozen + pending next migration). This 
 
 Already-applied migrations are skipped at runtime by the Motoko RTS, so trimming is safe. When trimming is active, M0254 warnings are automatically suppressed.
 
-On moc 1.12.0+ that suppression covers fields the deployed `.most` baseline already provides — the normal trimming case. A field that the baseline does not provide and no migration in the chain produces is reported as an M0267 type error instead of an M0254 warning. See [single-invocation checking](/cli/mops-check-stable#single-invocation-checking-on-moc-1120).
+On moc 1.12.0+ that suppression covers fields the deployed `.most` baseline already provides — the normal trimming case. A field that the baseline does not provide and no migration in the chain produces fails as an M0267 error instead of warning. See [diagnostics on moc 1.12.0+](/cli/mops-check-stable#diagnostics-on-moc-1120).
 
 When `check-limit` is set, `mops check-stable` (and the stable check inside `mops check`) compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, mops reports a diagnostic suggesting to fold all changes into the latest pending migration. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. Only runs when `check-limit` is configured and the baseline is a committed `.most` file (not a `.mo` source passed on the command line).

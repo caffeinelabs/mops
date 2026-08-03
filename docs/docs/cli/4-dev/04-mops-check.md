@@ -122,7 +122,7 @@ If the file at `path` doesn't exist, the check fails with an error. For initial 
 actor { };
 ```
 
-On moc 1.12.0+, enhanced-migration canisters with a `.most` baseline verify upgrade compatibility inside the same `moc --check` call rather than in a separate step, so a compatibility failure is reported as part of the check. See [single-invocation checking](/cli/mops-check-stable#single-invocation-checking-on-moc-1120) for what changes.
+On `moc` 1.12.0+, canisters with `[migrations]` configured and a `.most` baseline get better upgrade diagnostics — see [diagnostics on moc 1.12.0+](/cli/mops-check-stable#diagnostics-on-moc-1120).
 
 For more details, see [`mops check-stable`](/cli/mops-check-stable).
 
