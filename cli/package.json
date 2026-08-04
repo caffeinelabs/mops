@@ -8,15 +8,10 @@
     "moc-wrapper": "bin/moc-wrapper.sh"
   },
   "files": [
-    "*",
-    "!network.txt",
-    "!Dockerfile",
-    "!verify.sh",
-    "!build.sh",
-    "!DEVELOPMENT.md",
-    "!.mops",
-    "/templates",
-    "/wasm"
+    "/dist",
+    "!/dist/tests",
+    "/bin",
+    "/CHANGELOG.md"
   ],
   "homepage": "https://mops.one",
   "repository": {

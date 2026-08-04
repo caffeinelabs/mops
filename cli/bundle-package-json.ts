@@ -8,6 +8,10 @@ packageJson.bin["ic-mops"] = "bin/mops.js";
 delete packageJson.scripts;
 delete packageJson.devDependencies;
 delete packageJson.overrides;
+
+// `files` is an allowlist relative to cli/, so inheriting it here would pack
+// almost nothing when bundle/ is installed directly (`npm i -g ./bundle`).
+delete packageJson.files;
 packageJson.dependencies = {
   "dhall-to-json-cli": packageJson.dependencies["dhall-to-json-cli"],
   "decomp-tarxz": packageJson.dependencies["decomp-tarxz"],

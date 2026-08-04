@@ -5,6 +5,10 @@ let text = readFileSync("dist/package.json", "utf8");
 let json = JSON.parse(text);
 delete json.scripts;
 
+// `files` is an allowlist relative to cli/, so inheriting it here would pack
+// almost nothing when dist/ is installed directly (`npm i -g ./cli/dist`).
+delete json.files;
+
 // dist/bin/cli.js -> bin/cli.js
 json.bin.mops = "bin/mops.js";
 json.bin["ic-mops"] = "bin/mops.js";
