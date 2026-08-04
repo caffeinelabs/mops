@@ -72,7 +72,7 @@
     "glob": "13.0.6",
     "globby": "14.0.2",
     "got": "14.4.6",
-    "jsdom": "28.1.0",
+    "jsdom": "30.0.1",
     "log-update": "6.1.0",
     "markdown-table": "3.0.4",
     "mdast-util-from-markdown": "2.0.2",
