@@ -41,7 +41,8 @@
     "bundle:package-json": "tsx bundle-package-json.ts",
     "bundle:tar": "rm -f bundle/cli.tgz && touch -t 200101010101 bundle/cli.tgz && find bundle -exec touch -d '1970-01-01 00:00:00' {} + && tar --sort name --exclude bundle/cli.tgz -cvf - bundle | gzip -n > bundle/cli.tgz",
     "copy": "cp -r commands/bench dist/commands && cp -r declarations templates package.json bin dist | true",
-    "prepare": "rm -rf dist && run-s dist copy fix-dist",
+    "prepare": "rm -rf dist && run-s dist copy vendor:pic fix-dist",
+    "vendor:pic": "esbuild vendor/pic-entry.mjs --bundle --platform=node --format=esm --outfile=dist/vendor/pic.mjs --banner:js=\"import{fileURLToPath as __vfu}from 'node:url';import{dirname as __vdn}from 'node:path';import{createRequire as __vcr}from 'node:module';const require=__vcr(import.meta.url);const __filename=__vfu(import.meta.url);const __dirname=__vdn(__filename);\"",
     "fix-dist": "tsx ./fix-dist.ts",
     "release": "tsx release-cli.ts",
     "check": "tsc --project tsconfig.json --noEmit",
@@ -80,7 +81,6 @@
     "ncp": "2.0.0",
     "octokit": "4.1.4",
     "pic-ic": "0.5.4",
-    "pic-js-mops": "0.14.8",
     "prettier": "3.5.3",
     "prettier-plugin-motoko": "0.13.0",
     "promisify-child-process": "4.1.2",
@@ -94,6 +94,7 @@
     "vscode-languageserver-textdocument": "1.0.12"
   },
   "devDependencies": {
+    "@dfinity/pic": "0.23.0",
     "@tsconfig/strictest": "2.0.5",
     "@types/debounce": "1.2.4",
     "@types/decompress": "4.2.7",

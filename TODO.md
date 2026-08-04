@@ -10,7 +10,7 @@ Refs: GH = `caffeinelabs/mops`, LIN = Linear ticket title.
 
 **Trust / lockfile / registry**
 - `mops verify` as an explicit on-disk integrity command. The breaking half (removing the implicit re-hash from `install`) waits for v3. (GH #517)
-- `mops ci` (or `--frozen`) with strict-lockfile semantics. Old `mops install` unchanged. The breaking half (dropping `CI` env-var auto-detection in `cli/integrity.ts:40`) waits for v3. (GH #516)
+- `--locked` with strict-lockfile semantics (fail if `mops.lock` is missing or would change; never write it), on `install` and every implicitly-resolving command. Old `mops install` unchanged. Decided 2026-07 against a separate `mops ci` command — cargo/pnpm/yarn all use a flag; see `NEXT-MAJOR.md`. The breaking half (dropping `CI` env-var auto-detection in `cli/integrity.ts:50-59`, dropping `--lock`) waits for v3. (GH #516)
 - Resolve dependency tree on the backend — additive query method. (GH #19)
 - `yank` / `deprecate` / `unpublish`. (GH #291)
 - Downloadable package index (cargo/purescript style), additive endpoint. (GH #291)
@@ -18,6 +18,7 @@ Refs: GH = `caffeinelabs/mops`, LIN = Linear ticket title.
 **Bundling / runtime**
 - `MOPS_PASSWORD` / `--password` for non-interactive identity (today `getIdentity()` blocks on stdin for encrypted PEMs — `cli/mops.ts:59-82`).
 - Standalone binary distribution alongside npm — additive third channel. (LIN: standalone binary)
+- Narrow `files` in `cli/package.json` (currently `["*"]` with a few exclusions). The published npm tarball ships **both** distributions: the unbundled `dist/` tree that `bin` actually points at *and* the 5.9 MB bun `bundle/cli.js` that only the `cli.mops.one` installer uses (that installer downloads `bundle/cli.tgz` from the releases canister instead — `cli-releases/install.sh` → `cli/release-cli.ts:33-41`). Excluding `bundle/` would roughly halve the npm download. Pre-existing; found while investigating the `@dfinity/pic` postinstall (see `NEXT-MAJOR.md`).
 
 **Backend additions**
 - File blobs in stable memory (storage canisters). Invisible to clients. (GH #18)
