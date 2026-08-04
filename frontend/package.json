@@ -20,7 +20,7 @@
     "chart.js": "4.4.2",
     "chartjs-adapter-date-fns": "^3.0.0",
     "date-fns": "3.6.0",
-    "dompurify": "3.4.11",
+    "dompurify": "3.4.12",
     "filesize": "10.1.1",
     "hast-util-to-html": "9.0.5",
     "ic-mops": "2.14.0",
