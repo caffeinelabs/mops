@@ -15,6 +15,12 @@ Refs: GH = `caffeinelabs/mops`, LIN = Linear ticket title.
 - `yank` / `deprecate` / `unpublish`. (GH #291)
 - Downloadable package index (cargo/purescript style), additive endpoint. (GH #291)
 
+**Security / dependency hygiene**
+- **Replace `decompress` (critical, no fix available).** `cli/package.json` pins `decompress` 4.2.1, but both advisories against it cover `<=4.2.1`, so the newest release is still affected and `npm audit` reports no fix: [GHSA-mp2f-45pm-3cg9](https://github.com/advisories/GHSA-mp2f-45pm-3cg9) (extraction can create files and links outside the target directory) and [GHSA-h39j-r5qq-r9mm](https://github.com/advisories/GHSA-h39j-r5qq-r9mm) (zip-slip arbitrary file write). Removing the dependency is the only remedy. Two call sites, both need a maintained extractor (or Node's own `zlib`/`tar` plus explicit path validation):
+  - `cli/commands/toolchain/toolchain-utils.ts:64` — moc / wasmtime / pocket-ic / lintoko archives from GitHub releases.
+  - `cli/vessel.ts:167` via `installFromGithub` — archives from **arbitrary user-specified repos** (`repo = "..."` deps), so this is the more exposed surface: a malicious package repo is exactly the zip-slip threat model.
+  Non-breaking, so it should not wait for v3. Note `installFromGithub` survives v3 (it serves git deps, not vessel — see `NEXT-MAJOR.md`), so dropping vessel does not resolve this on its own. Whatever replaces it must keep handling `.tar.xz` (currently via the `decomp-tarxz` plugin) and preserve executable bits on extracted toolchain binaries.
+
 **Bundling / runtime**
 - `MOPS_PASSWORD` / `--password` for non-interactive identity (today `getIdentity()` blocks on stdin for encrypted PEMs — `cli/mops.ts:59-82`).
 - Standalone binary distribution alongside npm — additive third channel. (LIN: standalone binary)
