@@ -53,7 +53,7 @@ jobs:
             exit 1
           fi
 
-      - name: Abort if ## Next has no entries
+      - name: "Abort if ## Next has no entries"
         working-directory: cli
         run: |
           set -euo pipefail
@@ -90,51 +90,62 @@ jobs:
             exit 1
           fi
 
-      - name: Roll ## Next into version heading
+      - name: "Roll ## Next into version heading"
         working-directory: cli
         env:
           VERSION: ${{ steps.bump.outputs.version }}
         run: |
           set -euo pipefail
-          NOTES_FILE=$(mktemp)
-          awk '/^## Next$/{found=1; next} found && /^## /{exit} found' CHANGELOG.md > "$NOTES_FILE"
+          python3 - "$VERSION" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
 
-          awk -v version="$VERSION" -v notesfile="$NOTES_FILE" '
-            /^## Next$/ {
-              print "## Next"
-              print ""
-              print "## " version
-              started = 0
-              while ((getline line < notesfile) > 0) {
-                if (!started) {
-                  if (line ~ /^[[:space:]]*$/) continue
-                  started = 1
-                }
-                print line
-              }
-              close(notesfile)
-              print ""
-              while ((getline) > 0) {
-                if ($0 ~ /^## /) {
-                  print
-                  break
-                }
-              }
-              next
-            }
-            { print }
-          ' CHANGELOG.md > /tmp/CHANGELOG.md
-          mv /tmp/CHANGELOG.md CHANGELOG.md
-          rm -f "$NOTES_FILE"
+          version = sys.argv[1]
+          path = Path("CHANGELOG.md")
+          raw = path.read_bytes()
+          had_trailing_newline = raw.endswith(b"\n")
+          text = raw.decode()
+
+          match = re.search(r"^## Next\n", text, re.M)
+          if not match:
+              sys.exit("::error::## Next heading not found in CHANGELOG.md")
+
+          after_next = text[match.end() :]
+          next_heading = re.search(r"^## ", after_next, re.M)
+          if not next_heading:
+              sys.exit("::error::No version heading after ## Next in CHANGELOG.md")
+
+          notes = after_next[: next_heading.start()]
+          bullets = [line for line in notes.splitlines() if line.startswith("- ")]
+          if not bullets:
+              sys.exit("::error::## Next has no changelog entries to release")
+
+          rolled = (
+              "## Next\n\n"
+              f"## {version}\n"
+              + "\n".join(bullets)
+              + "\n\n"
+              + after_next[next_heading.start() :]
+          )
+          out = text[: match.start()] + rolled
+          data = out.encode()
+          if had_trailing_newline and not data.endswith(b"\n"):
+              data += b"\n"
+          elif not had_trailing_newline and data.endswith(b"\n"):
+              data = data[:-1]
+          path.write_bytes(data)
 
           # Sanity: version section must be non-empty (same check as release-pr.yml)
-          ESCAPED=$(echo "$VERSION" | sed 's/\./\\./g')
-          NOTES=$(awk "/^## ${ESCAPED}$/{found=1; next} found && /^## /{exit} found" CHANGELOG.md)
-          if [[ -z "$NOTES" ]]; then
-            echo "::error::Changelog rewrite left an empty ## ${VERSION} section"
-            exit 1
-          fi
-          echo "Changelog updated for v${VERSION}."
+          section = re.search(
+              rf"^## {re.escape(version)}$\n(.*?)(?=^## |\Z)",
+              path.read_text(),
+              re.M | re.S,
+          )
+          if not section or not section.group(1).strip():
+              sys.exit(f"::error::Changelog rewrite left an empty ## {version} section")
+          print(f"Changelog updated for v{version}.")
+          PY
 
       - name: Create release PR
         env:
