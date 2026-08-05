@@ -1,0 +1,16 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`cross-major conflicts reports a cross-major diamond and still resolves 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "Warning! Conflicting major versions of dependency "test"
+  test 1.2.0 is a dependency of legacy@1.0.0
+  test 2.1.2 is a dependency of cross-major@1.0.0
+  Resolved to test 2.1.2, so every dependent on another major compiles against an API it did not ask for.
+  To pick the version yourself, pin it in your root mops.toml: test = "1.2.0"",
+  "stdout": "--package test .mops/test@2.1.2/src
+--package core .mops/core@2.0.0/src
+--package legacy legacy
+--package base .mops/base@0.10.2/src",
+}
+`;

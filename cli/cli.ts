@@ -274,7 +274,7 @@ program
   .addOption(
     new Option(
       "--conflicts <action>",
-      "What to do with dependency version conflicts",
+      "What to do with cross-major dependency version conflicts (always reported on stderr)",
     )
       .choices(["ignore", "warning", "error"])
       .default("warning"),

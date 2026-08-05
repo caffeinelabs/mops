@@ -1,0 +1,6 @@
+# `check-candid` only needs a config file to exist; the check itself is pure
+# Wasm and reads no dependencies. Without this the fixture resolved the mops
+# repo's own root mops.toml, so its snapshots picked up that graph.
+[package]
+name = "check-candid"
+version = "1.0.0"

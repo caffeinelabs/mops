@@ -13,10 +13,16 @@ import { Config, Dependency } from "./types.js";
 import { getDepCacheDir, getDepCacheName } from "./cache.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { normalizeLocalDepPath } from "./helpers/normalize-local-path.js";
+import { compareVersions, majorVersion } from "./helpers/compare-versions.js";
 import { checkLockFileLight, readLockFile } from "./integrity.js";
 
+// A single command resolves several times (local cache sync, lockfile write,
+// integrity check), so remember what has been reported to keep one conflict
+// from being printed three times.
+const reportedConflicts = new Set<string>();
+
 export async function resolvePackages({
-  conflicts = "ignore" as "warning" | "error" | "ignore",
+  conflicts = "warning" as "warning" | "error" | "ignore",
   // Bypass a valid lock so `--lock update` can rewrite absolute local paths.
   skipLock = false,
 } = {}): Promise<Record<string, string>> {
@@ -43,42 +49,24 @@ export async function resolvePackages({
     }>
   > = {};
 
-  let compareVersions = (a: string = "0.0.0", b: string = "0.0.0") => {
-    let ap = a.split(".").map((x: string) => parseInt(x) || 0) as [
-      number,
-      number,
-      number,
-    ];
-    let bp = b.split(".").map((x: string) => parseInt(x) || 0) as [
-      number,
-      number,
-      number,
-    ];
-    if (ap[0] - bp[0]) {
-      return Math.sign(ap[0] - bp[0]);
-    }
-    if (ap[0] === bp[0] && ap[1] - bp[1]) {
-      return Math.sign(ap[1] - bp[1]);
-    }
-    if (ap[0] === bp[0] && ap[1] === bp[1] && ap[2] - bp[2]) {
-      return Math.sign(ap[2] - bp[2]);
-    }
-    return 0;
+  const gitVerRegex = /v(\d{1,2}\.\d{1,2}\.\d{1,2})(-.*)?$/;
+
+  // Capture the version instead of slicing off the first character, so a tag
+  // like `release-v1.2.0` yields `1.2.0` and not `elease-v1.2.0`.
+  const gitRefVersion = (repo: string): string | null => {
+    const match = gitVerRegex.exec(parseGithubURL(repo).branch);
+    return match ? `${match[1]}${match[2] ?? ""}` : null;
   };
 
-  const gitVerRegex = new RegExp(/v(\d{1,2}\.\d{1,2}\.\d{1,2})(-.*)?$/);
-
   const compareGitVersions = (repoA: string, repoB: string) => {
-    const { branch: a } = parseGithubURL(repoA);
-    const { branch: b } = parseGithubURL(repoB);
+    const a = gitRefVersion(repoA);
+    const b = gitRefVersion(repoB);
 
-    if (gitVerRegex.test(a) && gitVerRegex.test(b)) {
-      return compareVersions(a.substring(1), b.substring(1));
-    } else if (!gitVerRegex.test(a)) {
-      return -1;
-    } else {
-      return 1;
+    if (a !== null && b !== null) {
+      return compareVersions(a, b);
     }
+    // A ref that carries no version (`main`, `moc-0.9.1`) always loses.
+    return a === null ? -1 : 1;
   };
 
   let collectDeps = async (
@@ -183,34 +171,71 @@ export async function resolvePackages({
   let config = readConfig();
   await collectDeps(config, rootDir, true);
 
-  // show conflicts
+  // Cross-major conflicts always report, whatever `conflicts` says: handing a
+  // dependency a different major than it asked for changes the API it compiles
+  // against, so it must never happen quietly. Same-major skew stays silent.
   let hasConflicts = false;
 
-  if (conflicts !== "ignore") {
-    for (let [dep, vers] of Object.entries(versions)) {
-      let majors = new Set(
-        vers.filter((x) => x.isMopsPackage).map((x) => x.version.split(".")[0]),
-      );
-      if (majors.size > 1) {
-        console.error(
-          chalk.reset("") +
-            chalk.redBright(conflicts === "error" ? "Error!" : "Warning!"),
-          `Conflicting versions of dependency "${dep}"`,
-        );
+  for (let [dep, vers] of Object.entries(versions)) {
+    // Only registry deps carry comparable majors; git refs are excluded.
+    let mopsVers = [...vers].reverse().filter((x) => x.isMopsPackage);
+    let majors = new Set(mopsVers.map((x) => majorVersion(x.version)));
 
-        for (let { version, dependencyOf } of [...vers].reverse()) {
-          console.error(
-            chalk.reset("  ") +
-              `${dep} ${chalk.bold.red(version.split(".")[0])}.${version.split(".").slice(1).join(".")} is dependency of ${chalk.bold(dependencyOf)}`,
-          );
-        }
+    if (majors.size < 2) {
+      continue;
+    }
 
-        hasConflicts = true;
+    hasConflicts = true;
+
+    if (reportedConflicts.has(dep)) {
+      continue;
+    }
+    reportedConflicts.add(dep);
+
+    console.error(
+      chalk.reset("") + chalk.redBright("Warning!"),
+      `Conflicting major versions of dependency "${dep}"`,
+    );
+
+    let seen = new Set<string>();
+    for (let { version, dependencyOf } of mopsVers) {
+      let [major, ...rest] = version.split(".");
+      let dependent = dependencyOf || "<unknown>";
+      if (seen.has(`${version} ${dependent}`)) {
+        continue;
       }
+      seen.add(`${version} ${dependent}`);
+      console.error(
+        chalk.reset("  ") +
+          `${dep} ${chalk.bold.red(major)}${rest.length ? `.${rest.join(".")}` : ""} is a dependency of ${chalk.bold(dependent)}`,
+      );
+    }
+
+    let resolved = packages[dep]?.version;
+    if (resolved) {
+      let other = mopsVers.find(
+        (x) => majorVersion(x.version) !== majorVersion(resolved),
+      );
+      // Alias keys like `core@1` are not bare TOML keys.
+      let tomlKey = /^[\w-]+$/.test(dep) ? dep : `"${dep}"`;
+      console.error(
+        chalk.reset("  ") +
+          `Resolved to ${chalk.bold(`${dep} ${resolved}`)}, so every dependent on another major compiles against an API it did not ask for.`,
+      );
+      console.error(
+        chalk.reset("  ") +
+          `To pick the version yourself, pin it in your root mops.toml: ${chalk.bold(`${tomlKey} = "${other?.version ?? resolved}"`)}`,
+      );
     }
   }
 
+  // The report above is always a warning, so escalation is a separate line
+  // rather than a relabelled duplicate of a report an earlier pass printed.
   if (conflicts === "error" && hasConflicts) {
+    console.error(
+      chalk.reset("") + chalk.redBright("Error!"),
+      "Cross-major dependency conflicts found, failing because --conflicts error was requested",
+    );
     process.exit(1);
   }
 

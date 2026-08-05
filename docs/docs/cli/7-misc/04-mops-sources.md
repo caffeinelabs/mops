@@ -38,9 +38,13 @@ Do not install dependencies before resolving sources.
 
 What to do with dependency version conflicts.
 
-If the dependency graph contains packages with the same name but different major versions, they will be treated as conflicting.
+If the dependency graph contains packages with the same name but different major versions, they will be treated as conflicting. Packages that differ only in minor or patch version are not conflicting — the highest one wins.
+
+Conflicts are always reported, and always on stderr, so the resolved sources on stdout stay parseable by dfx.
 
 Possible values:
-- `warning` - Show conflicts _(default)_
-- `error` - Show conflicts and exit with error code
-- `ignore` - Ignore conflicts
+- `warning` - Report conflicts _(default)_
+- `error` - Report conflicts and exit with error code
+- `ignore` - Accepted for compatibility, behaves like `warning`. It no longer silences the report
+
+To resolve a conflict, pin the version you want in your own `mops.toml`: a root dependency always wins over a transitive one. This is also how you pick up a transitive dependency's bugfix release before the package in between republishes.
