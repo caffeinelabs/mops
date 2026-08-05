@@ -3,7 +3,6 @@ import events from "node:events";
 import process from "node:process";
 
 import { resolve } from "node:path";
-import { getNetwork } from "./api/network.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
 import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
@@ -52,8 +51,6 @@ import {
   checkConfigFile,
   getGlobalMocArgs,
   readConfig,
-  readSavedNetwork,
-  setNetwork,
   version,
 } from "./mops.js";
 import { resolvePackages } from "./resolve-packages.js";
@@ -61,8 +58,6 @@ import { Tool } from "./types.js";
 import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
 
 declare global {
-  // eslint-disable-next-line no-var
-  var MOPS_NETWORK: string;
   // eslint-disable-next-line no-var
   var mopsReplicaTestRunning: boolean;
 }
@@ -73,14 +68,6 @@ events.setMaxListeners(20);
 let cwd = process.env["MOPS_CWD"];
 if (cwd) {
   process.chdir(resolve(cwd));
-}
-
-// MOPS_NETWORK env var takes precedence (see getNetwork), skip file reads
-if (!process.env["MOPS_NETWORK"]) {
-  let savedNetwork = readSavedNetwork();
-  if (savedNetwork) {
-    globalThis.MOPS_NETWORK = savedNetwork;
-  }
 }
 
 let program = new Command();
@@ -247,31 +234,6 @@ program
     if (compatible) {
       await publish(options);
     }
-  });
-
-// set-network
-program
-  .command("set-network <network>")
-  .alias("sn")
-  .description("Set network local|staging|ic for the current project")
-  .option(
-    "-g, --global",
-    "Set the network for all projects (project-local setting takes precedence)",
-  )
-  .action(async (network, options) => {
-    setNetwork(network, options);
-    console.log(
-      `Selected '${network}' network${options.global ? " (global)" : ""}`,
-    );
-  });
-
-// get-network
-program
-  .command("get-network")
-  .alias("gn")
-  .description("Get network")
-  .action(async () => {
-    console.log(getNetwork());
   });
 
 // sources
