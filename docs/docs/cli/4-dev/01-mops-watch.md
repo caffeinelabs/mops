@@ -104,3 +104,13 @@ or
 ```
 mops watch -tgd
 ```
+
+Everything: warnings, formatting, tests, declarations and deploys
+
+```
+mops watch -wtgdf
+```
+
+:::note
+Because passing any flag selects only the named tasks, `-tgd` does **not** include the warning check or formatting — add `-w` and `-f` when you want them.
+:::
