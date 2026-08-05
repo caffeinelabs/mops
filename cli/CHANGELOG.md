@@ -4,6 +4,8 @@
 
 ## 3.0.0 (unreleased)
 
+- **Breaking**: Node.js >= 20 is required (`engines` bump from >= 18); installs on Node 18 fail with an engines error. (#288)
+- Removed legacy `mocv` detection: `mops toolchain init` no longer refuses to run when `mocv` is installed (and no longer strips mocv-era `DFX_MOC_PATH` lines from shell configs), and `mops docs` no longer resolves `mo-doc` from a mocv-managed `DFX_MOC_PATH`. Use `mops toolchain use moc <version>` to pin the compiler.
 - Remove vessel/dhall support (deprecated since 2.14). `mops init` no longer migrates `vessel.dhall` — copy your dependencies into `mops.toml` manually and delete `vessel.dhall` / `package-set.dhall`. GitHub dependencies (`repo = "..."`) are unaffected, but their transitive dependencies declared via `vessel.dhall` / `package-set.dhall` are no longer resolved or installed — add them to your own `mops.toml` if you need them. `.vessel` directories are no longer excluded from `mops test`/`watch` file scans, and the `dhall-to-json-cli` dependency is gone from the CLI.
 
 ## 2.20.0

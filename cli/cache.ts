@@ -5,11 +5,11 @@ import getFolderSize from "get-folder-size";
 
 import {
   getDependencyType,
-  getNetwork,
   getRootDir,
   globalCacheDir,
   parseGithubURL,
 } from "./mops.js";
+import { getNetwork } from "./api/network.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 
 let getGlobalCacheDir = () => {
