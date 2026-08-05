@@ -14,7 +14,6 @@ delete packageJson.overrides;
 delete packageJson.files;
 packageJson.dependencies = {
   "dhall-to-json-cli": packageJson.dependencies["dhall-to-json-cli"],
-  "decomp-tarxz": packageJson.dependencies["decomp-tarxz"],
   buffer: packageJson.dependencies["buffer"],
 };
 

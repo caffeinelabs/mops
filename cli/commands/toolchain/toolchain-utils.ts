@@ -2,10 +2,10 @@ import process from "node:process";
 import path from "node:path";
 import { Buffer } from "node:buffer";
 import { unzipSync } from "node:zlib";
-import { chmodSync } from "node:fs";
+import { chmodSync, createReadStream } from "node:fs";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import fs from "fs-extra";
-import decompress from "decompress";
-// import decompressTarxz from 'decomp-tarxz';
 import { deleteSync } from "del";
 import { Octokit } from "octokit";
 import { extract as extractTar } from "tar";
@@ -59,30 +59,37 @@ export let downloadAndExtract = async (
 
   fs.mkdirSync(destDir, { recursive: true });
 
-  if (archive.endsWith(".xz")) {
-    let decompressTarxz = await import("decomp-tarxz");
-    await decompress(archive, tmpDir, {
-      plugins: [decompressTarxz.default()],
-    }).catch(() => {
-      deleteSync([tmpDir]);
-    });
-    fs.cpSync(
-      path.join(tmpDir, path.parse(archive).name.replace(".tar", "")),
-      destDir,
-      { recursive: true },
-    );
-  } else if (archive.endsWith("tar.gz")) {
-    await extractTar({
-      file: archive,
-      cwd: destDir,
-    });
-  } else if (archive.endsWith(".gz")) {
-    let destFile = path.join(destDir, destFileName || path.parse(archive).name);
-    fs.writeFileSync(destFile, unzipSync(buffer));
-    chmodSync(destFile, 0o700);
+  try {
+    if (archive.endsWith(".xz")) {
+      // Imported lazily so the xz WASM blob only loads for .xz archives.
+      let xz = await import("xz-decompress");
+      // xz-decompress is CJS: tsx exposes the class as a named export, plain
+      // node ESM nests it under `default`.
+      let XzReadableStream = xz.XzReadableStream ?? xz.default.XzReadableStream;
+      // Toolchain .tar.xz archives wrap everything in one top-level directory,
+      // so `strip: 1` lands their contents directly in destDir.
+      await pipeline(
+        Readable.fromWeb(
+          new XzReadableStream(Readable.toWeb(createReadStream(archive))),
+        ),
+        extractTar({ cwd: destDir, strip: 1 }),
+      );
+    } else if (archive.endsWith("tar.gz")) {
+      await extractTar({
+        file: archive,
+        cwd: destDir,
+      });
+    } else if (archive.endsWith(".gz")) {
+      let destFile = path.join(
+        destDir,
+        destFileName || path.parse(archive).name,
+      );
+      fs.writeFileSync(destFile, unzipSync(buffer));
+      chmodSync(destFile, 0o700);
+    }
+  } finally {
+    deleteSync([tmpDir], { force: true });
   }
-
-  deleteSync([tmpDir], { force: true });
 };
 
 export type StableReleaseTagsResult = {
