@@ -452,7 +452,8 @@ type VerifyResult = {
 
 // Full on-disk audit for `mops verify`: every file the lock records must exist
 // under `.mops/` with the locked hash, and the lock itself must still match
-// mops.toml, resolution and the registry.
+// mops.toml and the registry. Returns errors instead of exiting so the caller
+// can report them all at once.
 export async function verifyIntegrity(): Promise<VerifyResult> {
   let state = readLockFileState();
 
@@ -509,8 +510,8 @@ export async function verifyIntegrity(): Promise<VerifyResult> {
     );
   }
 
-  // Disk first: a cold `.mops/` is reported as "not installed" rather than
-  // blowing up in resolution, which reads dependency manifests from the cache.
+  // Disk first, so "not installed" is reported ahead of registry mismatches —
+  // it is the more actionable diagnosis when both apply.
   let fileCount = 0;
   let missing: string[] = [];
   for (let [packageId, hashes] of Object.entries(lock.hashes)) {
