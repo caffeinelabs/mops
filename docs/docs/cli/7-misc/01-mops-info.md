@@ -26,7 +26,7 @@ mops info base@0.10.0
 
 ### `--versions`
 
-Print all published versions, one per line (oldest to newest). Useful for scripting.
+Print all published versions, one per line (newest to oldest, matching `mops toolchain info --versions`). Useful for scripting.
 ```
 mops info base --versions
 ```

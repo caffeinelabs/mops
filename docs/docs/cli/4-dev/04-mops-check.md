@@ -83,6 +83,14 @@ Concurrent `--fix` runs in the same project (e.g. two agents on the same checkou
 
 Print the full `moc` invocation before running it.
 
+### `--no-lint`
+
+Skip the automatic lint step for a single run, even when `lintoko` is pinned in `[toolchain]`. See [Lint integration](#lint-integration).
+
+```
+mops check --no-lint
+```
+
 ### `--no-check-limit`
 
 Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. Useful with `--fix` to autofix issues in older migrations that the limit would normally skip. Also suppresses the pending-migration warning that runs when `check-limit` is set. See [chain trimming](/cli/mops-migrate#chain-trimming).
@@ -136,7 +144,7 @@ If a stable compatibility check fails and `[migrations]` is configured, a hint i
 
 After type-checking succeeds, `mops check` automatically runs [`mops lint`](/cli/mops-lint) when `lintoko` is pinned in `[toolchain]`.
 
-This means `mops check` is the single command for all correctness checks — type errors and lint violations are both caught in one pass.
+This means `mops check` is the single command for all correctness checks — type errors and lint violations are both caught in one pass. Pass `--no-lint` to skip the lint step for a single run. Projects without a `lintoko` pin are unaffected.
 
 ```
 mops check --fix

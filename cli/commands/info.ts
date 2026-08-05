@@ -34,9 +34,9 @@ export async function info(pkgArg: string, options: InfoOptions = {}) {
   let d: PackageDetails = res.ok;
   let c = d.config;
 
-  // Oldest-first; v3 flips to newest-first (NEXT-MAJOR.md). toolchain info --versions already is.
+  // Newest-first, matching `mops toolchain info --versions`.
   if (options.versions) {
-    for (let ver of d.versions) {
+    for (let ver of [...d.versions].reverse()) {
       console.log(ver);
     }
     return;
