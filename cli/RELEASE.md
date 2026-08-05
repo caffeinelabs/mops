@@ -1,6 +1,28 @@
 # Mops CLI Release
 
-## 1. Update changelog
+## Automated (preferred)
+
+1. Ensure `## Next` in [`CHANGELOG.md`](CHANGELOG.md) has the entries you want to ship.
+2. Run [**Prepare CLI release**](https://github.com/caffeinelabs/mops/actions/workflows/prepare-cli-release.yml) → choose `patch` / `minor` / `major`.
+3. Approve the release PR when CI is green (auto-merge is already enabled).
+
+That workflow rolls `## Next` into a version heading, bumps `cli/package.json`, and opens a PR titled `release: CLI vX.Y.Z` with the `release` label.
+
+The [`release-pr.yml`](../.github/workflows/release-pr.yml) workflow validates the PR (title, changelog entry, `package.json` version). On merge it pushes the `cli-vX.Y.Z` tag, which triggers [`release.yml`](../.github/workflows/release.yml) — build, npm publish, GitHub Release, and deploy of `cli.mops.one` / `docs.mops.one`.
+
+> **Note:** This pipeline only deploys the `cli` and `docs` canisters. The `main`, `assets`, `blog`, and `play-frontend` canisters require a manual deploy. If a release includes changes to any of those (e.g. `backend/main/` or `frontend/`), upgrade them manually (staging first, then `ic`):
+>
+> ```bash
+> NODE_ENV=production dfx deploy --no-wallet --identity mops --network <staging|ic> <canister>
+> ```
+
+## Artifacts PR
+
+After the release pipeline completes, it creates and auto-merges a `cli-releases: vX.Y.Z artifacts` PR. No action needed unless it fails — monitor at [Actions → Release CLI](https://github.com/caffeinelabs/mops/actions/workflows/release.yml) and merge the artifacts PR manually if needed.
+
+## Manual fallback
+
+### 1. Update changelog
 
 Move items from `## Next` in `CHANGELOG.md` into a new version heading:
 
@@ -14,14 +36,14 @@ Move items from `## Next` in `CHANGELOG.md` into a new version heading:
 
 The heading must match the exact version string — the release workflow parses it to extract release notes.
 
-## 2. Bump version
+### 2. Bump version
 
 ```bash
 cd cli
 npm version patch --no-git-tag-version  # or: minor / major
 ```
 
-## 3. Create a release PR and enable auto-merge
+### 3. Create a release PR and enable auto-merge
 
 ```bash
 git checkout -b <username>/release-X.Y.Z
@@ -34,23 +56,6 @@ gh pr create \
   --label release
 gh pr merge --auto --squash
 ```
-
-The [`release-pr.yml`](../.github/workflows/release-pr.yml) workflow runs on every update and validates:
-- PR title matches `release: CLI vX.Y.Z`
-- `cli/CHANGELOG.md` has an entry for the version
-- `cli/package.json` version matches
-
-Once all required checks pass the PR merges automatically. On merge, `release-pr.yml` pushes the `cli-vX.Y.Z` tag, which triggers the [`release.yml`](../.github/workflows/release.yml) workflow — it builds, publishes to npm, creates a GitHub Release, and deploys canisters (`cli.mops.one` and `docs.mops.one`).
-
-> **Note:** This workflow only deploys the `cli` and `docs` canisters. The `main`, `assets`, `blog`, and `play-frontend` canisters require a manual deploy. If a release includes changes to any of those (e.g. `backend/main/` or `frontend/`), upgrade them manually (staging first, then `ic`):
->
-> ```bash
-> NODE_ENV=production dfx deploy --no-wallet --identity mops --network <staging|ic> <canister>
-> ```
-
-## 5. Artifacts PR
-
-After the release pipeline completes, it creates and auto-merges a `cli-releases: vX.Y.Z artifacts` PR. No action needed unless it fails — monitor at [Actions → Release CLI](https://github.com/caffeinelabs/mops/actions/workflows/release.yml) and merge the artifacts PR manually if needed.
 
 ## Verify build
 
