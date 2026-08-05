@@ -178,7 +178,11 @@ describe("--locked", () => {
     }
   });
 
-  test("fails when a locked file hash disagrees with the registry", async () => {
+  // Replaces the old #514 regression test. A corrupted hash *value* still
+  // satisfies every staleness check, so plain `mops install` does not rewrite
+  // it — which means the error must not tell the operator to run `mops install`,
+  // or CI loops forever on advice that cannot work.
+  test("fails on a locked file hash that disagrees with the registry, with a hint that recovers", async () => {
     cleanup();
     try {
       await install();
@@ -192,8 +196,97 @@ describe("--locked", () => {
         env: { CI: undefined },
       });
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(/mops\.lock is out of date, but --locked/);
+      expect(result.stderr).toMatch(/mops\.lock does not match the registry/);
       expect(result.stderr).toMatch(new RegExp(`${fileId}: locked b{64}`));
+      // The hint must be the one that works, not "run `mops install`".
+      expect(result.stderr).toMatch(
+        /delete it and run `mops install` to regenerate it/,
+      );
+      expect(result.stderr).not.toMatch(
+        /Run `mops install` \(without --locked\)/,
+      );
+
+      // Documented behavior: plain install does not repair a bad hash value.
+      const plain = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(plain.exitCode).toBe(0);
+      expect(readFileSync(lockFile, "utf8")).toContain("b".repeat(64));
+
+      // The documented recovery does work.
+      rmSync(lockFile, { force: true });
+      const recovered = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(recovered.exitCode).toBe(0);
+      expect(readFileSync(lockFile, "utf8")).not.toContain("b".repeat(64));
+      expect(
+        (await cli(["install", "--locked"], { cwd, env: { CI: undefined } }))
+          .exitCode,
+      ).toBe(0);
+    } finally {
+      cleanup();
+    }
+  });
+
+  // Structural disagreement between `deps` and `hashes` is detectable offline,
+  // so it self-heals for free — unlike a bad hash value, which would need a
+  // ~1.2s registry update call on every install to notice.
+  test("self-heals a lock whose hashes and deps disagree", async () => {
+    cleanup();
+    try {
+      await install();
+      const lock = readLock();
+      lock.hashes["ghost@9.9.9"] = { "ghost@9.9.9/x.mo": "a".repeat(64) };
+      writeLock(lock);
+
+      const locked = await cli(["install", "--locked"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(locked.exitCode).toBe(1);
+      expect(locked.stderr).toMatch(/mops\.lock is internally inconsistent/);
+      expect(locked.stderr).toMatch(
+        /package ghost@9\.9\.9 has file hashes but is not a locked dependency/,
+      );
+
+      const plain = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(plain.exitCode).toBe(0);
+      expect(readLock().hashes["ghost@9.9.9"]).toBeUndefined();
+    } finally {
+      cleanup();
+    }
+  });
+
+  // A lock can be valid JSON and still be unusable (wrong shape). Every reader
+  // indexes into `deps` / `hashes`, so these used to crash with a raw Node
+  // stack trace instead of self-healing.
+  test.each([
+    ["deps missing", (lock: any) => delete lock.deps],
+    ["deps not an object", (lock: any) => (lock.deps = [])],
+    ["deps value not a string", (lock: any) => (lock.deps = { x: 123 })],
+    ["deps value empty", (lock: any) => (lock.deps = { x: "" })],
+    ["hashes missing", (lock: any) => delete lock.hashes],
+    ["hashes value not an object", (lock: any) => (lock.hashes = { p: "no" })],
+  ])("self-heals a parseable v3 lock with %s", async (_label, mutate) => {
+    cleanup();
+    try {
+      await install();
+      const lock = readLock();
+      mutate(lock);
+      writeLock(lock);
+
+      // --locked reports it cleanly rather than crashing.
+      const locked = await cli(["install", "--locked"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(locked.exitCode).toBe(1);
+      expect(locked.stderr).toMatch(/mops\.lock could not be parsed/);
+      expect(locked.stderr).not.toMatch(/TypeError|at Object\./);
+
+      // Plain install regenerates it.
+      const plain = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(plain.exitCode).toBe(0);
+      expect(plain.stderr).not.toMatch(/TypeError/);
+      expect(readLock().version).toBe(3);
+      expect(Object.keys(readLock().deps).length).toBeGreaterThan(0);
     } finally {
       cleanup();
     }

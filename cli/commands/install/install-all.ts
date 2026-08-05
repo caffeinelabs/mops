@@ -35,6 +35,17 @@ export async function installAll({
   // is not going to become valid by installing.
   if (lock === "locked") {
     checkLockedPrerequisites();
+    // Belt and braces for the invariant documented on checkLockFileLight: if
+    // the prerequisites ever accept a lock the light check rejects, we would
+    // install by re-resolving mops.toml instead of from the lock, which is
+    // exactly what `--locked` exists to prevent. Fail loudly instead.
+    if (!checkLockFileLight()) {
+      console.error(
+        "Error: mops.lock passed the --locked checks but is not usable for installation.",
+      );
+      console.error("This is a bug in mops; please report it.");
+      process.exit(1);
+    }
   }
 
   let config = readConfig();

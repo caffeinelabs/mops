@@ -40,9 +40,13 @@ mops.lock
 - unparseable
 - an older format version
 - inconsistent with the `[dependencies]` / `[dev-dependencies]` in `mops.toml`
+- pinning a dependency to a different version than `mops.toml` declares
+- recording file hashes for packages that are not in its own `deps`
 - carrying absolute local `path` dependencies written by an older CLI
 
 A broken lockfile is only a dead end under [`--locked`](#ci-environments), where failing is the point.
+
+One case is deliberately not self-healed: a lockfile whose recorded file *hash values* are wrong, which you can only get by hand-editing it or botching a merge. Noticing that requires a registry call that costs about a second, and paying it on every install would cost more than it saves. Those hashes are only read by `--locked` and `mops verify`, never by the build, so a wrong hash cannot give you a wrong build. Both commands report it and tell you to restore `mops.lock` from version control, or delete it and run `mops install`.
 
 ## CI environments
 

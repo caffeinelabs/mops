@@ -100,6 +100,36 @@ describe("portable local path deps in mops.lock", () => {
     }
   });
 
+  // `--locked` must reject an absolute-path lock rather than accept it: plain
+  // install rewrites such a lock, and `installAll` refuses to install from it,
+  // so accepting it under --locked meant silently re-resolving mops.toml.
+  test("--locked rejects a lock with absolute local paths", async () => {
+    cleanup();
+    try {
+      const first = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(first.exitCode).toBe(0);
+
+      const lock = JSON.parse(readFileSync(lockFile, "utf8"));
+      lock.deps.shared = path.resolve(cwd, "packages/shared");
+      lock.deps.sibling = path.resolve(cwd, "../local-path-sibling");
+      const tampered = JSON.stringify(lock, null, 2);
+      writeFileSync(lockFile, tampered);
+
+      const result = await cli(["install", "--locked"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        /mops\.lock records machine-specific absolute paths/,
+      );
+      // And it did not write the lock.
+      expect(readFileSync(lockFile, "utf8")).toBe(tampered);
+    } finally {
+      cleanup();
+    }
+  });
+
   test("sources from a subdirectory still resolves local deps", async () => {
     cleanup();
     try {

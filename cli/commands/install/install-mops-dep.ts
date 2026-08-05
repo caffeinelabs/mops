@@ -107,20 +107,27 @@ export async function installMopsDep(
 
       // Integrity is checked here, once, on the bytes that just arrived —
       // nothing reaches the cache unless it matches the registry's hashes.
-      let integrityErrors = await verifyDownloadedPackageFiles(
+      let verification = await verifyDownloadedPackageFiles(
         cacheName,
         filesData,
       );
-      if (integrityErrors.length) {
+      if (verification.errors.length) {
         logUpdate.clear();
         console.error(
           chalk.red("Error: ") +
             `integrity check failed for ${depName}@${version}`,
         );
-        for (let error of integrityErrors) {
+        for (let error of verification.errors) {
           console.error("  " + error);
         }
         return false;
+      }
+      if (verification.unverified && !silent) {
+        logUpdate.clear();
+        console.warn(
+          chalk.yellow("Warning: ") +
+            `${depName}@${version} publishes no file hashes, so its contents could not be verified`,
+        );
       }
 
       let stagingDir = createStagingDir(cacheDir);

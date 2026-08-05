@@ -90,6 +90,19 @@ function parseExtraArgs(variadicArgs?: string[]): {
   return { extraArgs, args };
 }
 
+// Implicit install for build/check/test/bench/generate. Exits on failure:
+// a download that fails its integrity check, or any other install error, must
+// not let the command carry on against a half-populated `.mops/`.
+async function installAllOrExit(options: { locked?: boolean }): Promise<void> {
+  let ok = await installAll({
+    silent: true,
+    lock: options.locked ? "locked" : "maintain",
+  });
+  if (!ok) {
+    process.exit(1);
+  }
+}
+
 // Shared `--help` section describing the enhanced migration `check-limit`
 // trimming and its override flag, so the limit behaviour is discoverable
 // from `--help`. `withFix` appends the `--fix` hint for commands that support it.
@@ -364,10 +377,7 @@ program
   .action(async (canisters, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(canisters);
-    await installAll({
-      silent: true,
-      lock: options.locked ? "locked" : "maintain",
-    });
+    await installAllOrExit(options);
     await build(args.length ? args : undefined, {
       ...options,
       outputDir: options.output,
@@ -417,10 +427,7 @@ program
   .action(async (args, options) => {
     checkConfigFile(true);
     const { extraArgs, args: argList } = parseExtraArgs(args);
-    await installAll({
-      silent: true,
-      lock: options.locked ? "locked" : "maintain",
-    });
+    await installAllOrExit(options);
     await check(argList, {
       ...options,
       extraArgs,
@@ -430,6 +437,7 @@ program
 // check-candid
 program
   .command("check-candid <new-candid> <original-candid>")
+  .description("Check Candid interface compatibility between two Candid files")
   .addOption(
     new Option(
       "--locked",
@@ -438,10 +446,7 @@ program
   )
   .action(async (newCandid, originalCandid, options) => {
     checkConfigFile(true);
-    await installAll({
-      silent: true,
-      lock: options.locked ? "locked" : "maintain",
-    });
+    await installAllOrExit(options);
     await checkCandid(newCandid, originalCandid);
   });
 
@@ -472,10 +477,7 @@ program
   .action(async (args, options) => {
     checkConfigFile(true);
     const { extraArgs, args: argList } = parseExtraArgs(args);
-    await installAll({
-      silent: true,
-      lock: options.locked ? "locked" : "maintain",
-    });
+    await installAllOrExit(options);
     await checkStable(argList, {
       ...options,
       extraArgs,
@@ -559,10 +561,7 @@ program
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
-    await installAll({
-      silent: true,
-      lock: options.locked ? "locked" : "maintain",
-    });
+    await installAllOrExit(options);
     await test(filter, { ...options, extraArgs });
   });
 
@@ -632,10 +631,7 @@ program
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
-    await installAll({
-      silent: true,
-      lock: options.locked ? "locked" : "maintain",
-    });
+    await installAllOrExit(options);
     await bench(filter, { ...options, extraArgs });
   });
 
@@ -989,10 +985,7 @@ generateCommand
   .action(async (canisters, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(canisters);
-    await installAll({
-      silent: true,
-      lock: options.locked ? "locked" : "maintain",
-    });
+    await installAllOrExit(options);
     await generateCandid(args.length ? args : undefined, {
       ...options,
       extraArgs,
