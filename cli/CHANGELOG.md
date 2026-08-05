@@ -2,6 +2,15 @@
 
 ## Next
 
+## 3.0.0 (unreleased)
+
+- **Breaking**: unknown flags before `--` are now rejected with an error instead of being silently swallowed as arguments (a mistyped flag like `mops check --nope` used to be treated as an ordinary argument, with confusing downstream errors or none at all). Applies to `build`, `check`, `check-stable`, `test`, `bench`, `generate candid` and `lint`. The `-- <tool flags>` passthrough is unaffected: `mops check -- -Werror`, `mops test -- -Werror`, `mops lint -- --severity warning` keep working. Migration: if a script passes a flag mops doesn't recognize, either drop it or move it after `--` if it was meant for the underlying tool.
+- Fix `mops lint -- <lintoko flags>` failing with `too many arguments` (regression from the Commander 13 upgrade). `mops lint <filter> -- <lintoko flags>` works too.
+- **Breaking**: `mops info <pkg> --versions` now lists versions newest-first (it was oldest-first), matching `mops toolchain info --versions`. Migration: scripts that took the last line to get the latest version (`... | tail -1`) should take the first (`... | head -1`).
+- **Breaking**: `mops test` defaults to the `verbose` reporter for any number of test files (it used to switch to the `files` reporter when more than one file was found). Migration: pass `--reporter files` to get the old multi-file output.
+- **Breaking**: `mops watch` without flags now runs only the safe informative set — error check, warning check and formatting — instead of "almost everything". Tests, declaration generation and deploys are opt-in: pass `--test` / `--generate` / `--deploy` (e.g. `mops watch -tgd` for the closest equivalent of the old default plus formatting). Formatting is now part of the default set; error checking remains always-on.
+- `mops check` gets `--no-lint` to skip the automatic lint step for a single run when `lintoko` is pinned in `[toolchain]`. Projects without a `lintoko` pin are unaffected.
+
 ## 2.20.0
 - Fix `mops bench` (and `mops sync`, `mops watch`) ignoring `[toolchain] moc` and always resolving the compiler via `DFX_MOC_PATH` / `dfx cache show`, unlike `mops build`/`test`/`check`/`check-stable`/`generate`/`docs`. A pinned `[toolchain] moc` is now the compiler these commands invoke, regardless of `DFX_MOC_PATH`.
 - `.tar.xz` toolchain archives (`lintoko`, `wasmtime`) are now unpacked with `tar` plus a standalone xz decompressor instead of `decompress` and its `decomp-tarxz` plugin. Extraction output is unchanged — same files, same permissions — but `decompress` is unmaintained, with two open critical advisories and no fixed version, so the toolchain download path no longer depends on it. Failures during unpacking now surface as errors instead of being swallowed and reported later as a missing-directory copy error, and the temporary download directory is always cleaned up. `decomp-tarxz` is no longer a runtime dependency of the published CLI.

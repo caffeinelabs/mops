@@ -6,18 +6,20 @@ sidebar_position: 5
 
 # `mops watch`
 
-Watch Motoko files and check for syntax errors, warnings, run tests, generate declarations and deploy canisters
+Watch Motoko files, check them for syntax errors and warnings, and format them
 
 ```
 mops watch
 ```
 
-By default, `mops watch` will:
+By default, `mops watch` runs the safe informative set:
 - Check for syntax errors
 - Check for warnings
-- Run tests
-- Generate declarations for Motoko canisters
-- Deploy Motoko canisters to the local replica
+- Format Motoko files
+
+Tests, declaration generation and deploys are **opt-in** — they run only when requested with `--test`, `--generate` or `--deploy`.
+
+Passing any flag runs only the selected tasks (error checking is always on).
 
 ## Options
 
@@ -35,6 +37,8 @@ mops watch --error
 
 Check Motoko files for warnings.
 
+Part of the default set (runs when no flags are passed).
+
 ```
 mops watch --warning
 ```
@@ -43,13 +47,15 @@ mops watch --warning
 
 Format Motoko files.
 
+Part of the default set (runs when no flags are passed).
+
 ```
 mops watch --format
 ```
 
 ### `--test`
 
-Run Motoko tests.
+Run Motoko tests. Opt-in — never runs unless this flag is passed.
 
 ```
 mops watch --test
@@ -61,7 +67,7 @@ Replica tests use `pocket-ic` if it's pinned in `mops.toml` under `[toolchain]`,
 
 ### `--generate`
 
-Generate declarations for Motoko canisters from `dfx.json` that have `declarations` field.
+Generate declarations for Motoko canisters from `dfx.json` that have `declarations` field. Opt-in — never runs unless this flag is passed.
 
 ```
 mops watch --generate
@@ -69,7 +75,7 @@ mops watch --generate
 
 ### `--deploy`
 
-Deploy Motoko canisters to the local replica.
+Deploy Motoko canisters to the local replica. Opt-in — never runs unless this flag is passed.
 
 ```
 mops watch --deploy
@@ -77,13 +83,13 @@ mops watch --deploy
 
 ## Examples
 
-Check syntax errors, show warnings, run tests, generate declarations and deploy canisters
+Check syntax errors, show warnings and format files (the default set)
 
 ```
 mops watch
 ```
 
-Check syntax errors and show warnings
+Check syntax errors and show warnings (no formatting)
 
 ```
 mops watch --warning
