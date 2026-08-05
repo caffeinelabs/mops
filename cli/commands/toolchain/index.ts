@@ -132,25 +132,6 @@ async function init({
     process.exit(1);
   }
 
-  try {
-    let res = execSync("which mocv").toString().trim();
-    if (res) {
-      console.error(
-        "Mops is not compatible with mocv. Please uninstall mocv and try again.",
-      );
-      console.log("Steps to uninstall mocv:");
-      console.log('1. Run "mocv reset"');
-      console.log('2. Run "npm uninstall -g mocv"');
-      console.log(
-        'TIP: Alternative to "mocv use <version>" is "mops toolchain use moc <version>" (installs moc only for current project)',
-      );
-      console.log("TIP: More details at https://docs.mops.one/cli/toolchain");
-      if (!process.env.CI || !silent) {
-        process.exit(1);
-      }
-    }
-  } catch {}
-
   let shellConfigFiles: string[] = [];
 
   if (reset) {
@@ -191,13 +172,7 @@ async function init({
 
     let newLines = [setDfxMocPathLine];
 
-    let oldLines = [
-      // legacy mocv lines
-      `\nexport DFX_MOC_PATH=${path.join(path.join(os.homedir(), ".cache/mocv"), "versions/current")}/moc`,
-      '\nexport DFX_MOC_PATH="$HOME/.cache/mocv/versions/current/moc"',
-      // new
-      setDfxMocPathLine,
-    ];
+    let oldLines = [setDfxMocPathLine];
 
     // remove old lines
     for (let oldLine of oldLines) {

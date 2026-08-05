@@ -1,6 +1,6 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { execa } from "execa";
-import { existsSync, rmSync } from "node:fs";
+import { appendFileSync, existsSync, rmSync } from "node:fs";
 import path from "path";
 import { cli, cliSnapshot } from "./helpers";
 
@@ -185,5 +185,55 @@ describe("build", () => {
     } finally {
       cleanFixture(cwd);
     }
+  });
+
+  // `build` used to install with `lock: "ignore"`, so a lockfile was never
+  // written and a tampered `.mops/` went unnoticed on every build.
+  describe("lock policy", () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    const lockFile = path.join(cwd, "mops.lock");
+
+    test("creates mops.lock without announcing it", async () => {
+      rmSync(lockFile, { force: true });
+      try {
+        const result = await cli(["build", "foo"], {
+          cwd,
+          env: { CI: undefined },
+        });
+        expect(result.exitCode).toBe(0);
+        expect(existsSync(lockFile)).toBe(true);
+        expect(result.stdout).not.toMatch(/mops\.lock created/);
+      } finally {
+        cleanFixture(cwd, lockFile);
+      }
+    });
+
+    test("fails on a locally modified .mops/ file", async () => {
+      rmSync(lockFile, { force: true });
+      try {
+        const first = await cli(["build", "foo"], {
+          cwd,
+          env: { CI: undefined },
+        });
+        expect(first.exitCode).toBe(0);
+
+        appendFileSync(
+          path.join(cwd, ".mops/core@1.0.0/src/Array.mo"),
+          "\n// tampered\n",
+        );
+
+        const result = await cli(["build", "foo"], {
+          cwd,
+          env: { CI: undefined },
+        });
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toMatch(/Integrity check failed/);
+        expect(result.stderr).toMatch(
+          /Mismatched hash for core@1\.0\.0\/src\/Array\.mo/,
+        );
+      } finally {
+        cleanFixture(cwd, lockFile);
+      }
+    });
   });
 });

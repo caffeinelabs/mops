@@ -11,7 +11,7 @@ Select the registry network for the current project.
 mops set-network <local|staging|ic>
 ```
 
-The selection is stored in `.mops/network` inside the project, so it applies only to the project you run the command in.
+The selection is stored in `.mops/network` inside the project, so it applies only to the project you run the command in. [`mops cache clean`](/cli/mops-cache) keeps it — it only removes cached packages.
 
 ### Examples
 

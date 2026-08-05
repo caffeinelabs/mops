@@ -5,11 +5,12 @@ import getFolderSize from "get-folder-size";
 
 import {
   getDependencyType,
-  getNetwork,
   getRootDir,
   globalCacheDir,
   parseGithubURL,
+  PROJECT_STATE_FILES,
 } from "./mops.js";
+import { getNetwork } from "./api/network.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 
 let getGlobalCacheDir = () => {
@@ -169,6 +170,28 @@ export let cacheSize = async () => {
   return (size / 1024 / 1024).toFixed(2) + " MB";
 };
 
+// Empty the project's `.mops` dir but keep durable settings stored there,
+// removing the dir entirely when there is nothing to keep.
+function cleanLocalCache(localCacheDir: string) {
+  if (!fs.existsSync(localCacheDir)) {
+    return;
+  }
+  let kept = 0;
+  for (let entry of fs.readdirSync(localCacheDir)) {
+    if (PROJECT_STATE_FILES.includes(entry)) {
+      kept++;
+      continue;
+    }
+    fs.rmSync(path.join(localCacheDir, entry), {
+      recursive: true,
+      force: true,
+    });
+  }
+  if (kept === 0) {
+    fs.rmSync(localCacheDir, { recursive: true, force: true });
+  }
+}
+
 export let cleanCache = async () => {
   if (
     !getGlobalCacheDir().endsWith("mops/cache") &&
@@ -179,7 +202,7 @@ export let cleanCache = async () => {
   }
 
   // local cache
-  fs.rmSync(path.join(getRootDir(), ".mops"), { recursive: true, force: true });
+  cleanLocalCache(path.join(getRootDir(), ".mops"));
 
   // global cache
   fs.rmSync(getGlobalCacheDir(), { recursive: true, force: true });

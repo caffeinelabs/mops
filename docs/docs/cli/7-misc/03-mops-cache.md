@@ -23,4 +23,4 @@ Print global cache size.
 
 ### `mops cache clean`
 
-Clean global and local cache directories.
+Clean global and local cache directories. The project's network selection (`.mops/network`, written by [`mops set-network`](/cli/mops-set-network)) is kept.

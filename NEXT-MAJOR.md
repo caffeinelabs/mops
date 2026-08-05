@@ -34,11 +34,11 @@ Rationale: `=`/range syntax in *published* packages needs backend validator chan
 
 ### Hidden-state cleanup (silent-wrong-behavior — high priority)
 
-- Move `network.txt` out of the installed CLI directory (`new URL("./network.txt", import.meta.url)` in `cli/mops.ts:48`) into project-local + XDG global. Today `mops set-network local` in one project leaks into every project sharing the same `ic-mops` install.
-- Stop invisible `installAll({ lock: "ignore" })` in `build`/`check`/`check-candid`/`check-stable`/`test`/`bench` (six sites in `cli/cli.ts`, ~365–612). Should respect the project's lock policy like `mops install` does.
-- `mops toolchain init`: opt-in per shell instead of writing every detected init file plus `$GITHUB_ENV` (`cli/commands/toolchain/index.ts:98-164`).
+- ~~Move `network.txt` out of the installed CLI directory into project-local + XDG global~~ — **done on `v3`**: project-local `.mops/network`, then a `network` file in the identity config dir (written by `mops set-network --global`), then the legacy install-dir file as a read-only fallback with a migration hint.
+- ~~Stop invisible `installAll({ lock: "ignore" })` in `build`/`check`/`check-candid`/`check-stable`/`test`/`bench`~~ — **done on `v3`** (plus `generate candid`, a seventh site). They pass `defaultLock: "update"`, so they maintain the lock like `mops install` without tripping the deprecated `CI` auto-`check` path. `mops sources` intentionally keeps `lock: "ignore"` — its stdout is machine-parsed by the dfx packtool.
+- ~~`mops toolchain init`: opt-in per shell instead of writing every detected init file plus `$GITHUB_ENV`~~ — **done on `v3`**: writes only the shell from `$SHELL`, `--shell <bash|zsh>` targets others, `$GITHUB_ENV` still written in GitHub Actions, and `toolchain reset` still cleans all known files.
 - ~~Align `--lock` flag values across all commands~~ — superseded: `--lock` is dropped entirely (see Trust & lockfile model); remove the flag from `add`/`remove`/`install`/`sync`/`update` in `cli/cli.ts`.
-- Exit codes: install SIGINT already exits `130` (standard — `cli/commands/install/install-mops-dep.ts:108-112`), so only the replica bind-failure exit `11` (`cli/commands/replica.ts:96`) remains to decide: keep as a documented distinct code or normalize to `1`.
+- ~~Exit codes: the replica bind-failure exit `11` (`cli/commands/replica.ts:96`) remains to decide~~ — **done on `v3`**: normalized to `1`. Install SIGINT keeps the standard `130` (`cli/commands/install/install-mops-dep.ts:108-112`).
 
 ### dfx — remove implicit rules, keep explicit opt-in
 
@@ -60,7 +60,7 @@ Compromise (2026-07): we have not migrated our own dev loop to `icp` yet, so v3 
 
 ### Toolchain & runtime
 
-- Drop Node.js < 20 (`cli/package.json` engines currently `>=18.0.0`). (GH #288)
+- ~~Drop Node.js < 20 (`cli/package.json` engines currently `>=18.0.0`)~~ — **done on `v3`** (engines now `>=20.0.0`). (GH #288)
 - **Drop the legacy PocketIC client** (decision 2026-07; **deprecated in 2.x, drop here** — decision 2026-08-03 to split rather than hold the whole switch for v3, matching the dfx-replica/vessel deprecate-then-drop pattern): delete the `pic-ic` 0.5.4 dep and the `< 9.0.0` switch in `cli/helpers/pocket-ic-client.ts`; upstream `@dfinity/pic` (switched to in 2.x, see below) becomes the only client, killing the `AnyPocketIcServer`/`AnyPocketIc`/`AnySetupCanister` union types that leak into `test`/`bench`/`replica`/`bench-replica`/`watch` signatures. Breaks only explicit `[toolchain] pocket-ic < 9.0.0` pins — error with the verbatim fix (`mops toolchain use pocket-ic 12.0.0`). Unpinned projects never hit it (they get `DEFAULT_POCKET_IC_VERSION`). Subsumes the old "PocketIC v9 → v10" item (GH #288): with one client, enforce a **supported server range** (floor 9.0.0, ceiling = shipped client's max) at `toolchain use` time — fixes the `latest`-resolves-to-incompatible-server footgun (see AGENTS.md caution); future ceiling raises are routine client updates, not majors. Keep the range as a maintained constant pair next to `DEFAULT_POCKET_IC_VERSION`.
 - ~~**Eliminate the `pic-js-mops` fork**~~ — **done, shipped in 2.x** (caffeinelabs/mops#642, merged 2026-08-03; closed GH #561). The fork had no public source repo; the two patches mops needed went upstream as dfinity/pic-js#276 (`binPath` + `POCKET_IC_BIN`) and #278 (`ttl`), released in `@dfinity/pic` 0.23.0. `pocket-ic` >= 9.0.0 now runs on upstream pic; `pic-ic` remains only for the deprecated `< 9.0.0` pins removed by the item above. `pic-js-mops` cannot be deprecated on npm — nobody has publish access (GH #657, closed).
 
@@ -86,8 +86,8 @@ Carried over from that work, all tracked as issues:
 
 - `mops install` semantics change (drop CI env auto-detection, drop implicit `.mops/` re-hash).
 - Bump `apiVersion` (CLI ↔ backend) only if schema-affecting changes land — nothing in this scope requires it.
-- Remove `// compatibility with older versions` re-exports (`cli/mops.ts:324-325`).
-- Drop legacy mocv detection in `cli/commands/docs.ts:44-49` and `cli/commands/toolchain/index.ts:80-95,132-138`.
+- ~~Remove `// compatibility with older versions` re-exports (`cli/mops.ts:324-325`)~~ — **done on `v3`** (the one in-repo user, `cli/cache.ts`, now imports `getNetwork` from `cli/api/network.ts`).
+- ~~Drop legacy mocv detection in `cli/commands/docs.ts:44-49` and `cli/commands/toolchain/index.ts:80-95,132-138`~~ — **done on `v3`**.
 
 ### Decide before release
 
