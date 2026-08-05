@@ -24,15 +24,17 @@ export async function watch(options: {
   deploy: boolean;
   format: boolean;
 }) {
+  // No flags = the safe informative set. Heavy/side-effectful tasks
+  // (test, generate, deploy) run only when explicitly requested.
   let hasOptions = Object.values(options).includes(true);
   if (!hasOptions) {
     options = {
       error: true,
       warning: true,
-      test: true,
-      generate: true,
-      deploy: true,
-      format: false,
+      format: true,
+      test: false,
+      generate: false,
+      deploy: false,
     };
   }
   options.error = true;
