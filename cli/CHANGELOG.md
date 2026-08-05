@@ -11,7 +11,6 @@
 - `npm i -g ic-mops` downloads 1.4 MiB instead of 5.0 MiB. The published tarball used to ship the whole `cli/` directory, which meant two copies of the CLI: the `dist/` tree that the `mops` binary actually runs, and the 2.3 MiB bun single-file bundle that only `curl -fsSL cli.mops.one/install.sh | sh` uses. It also carried the TypeScript sources, the test suite and a second copy of `templates/`, `declarations/` and the Wasm helper that `dist/` already contains. Now only `dist/`, `bin/moc-wrapper.sh` and the changelog are published. Nothing changes for `cli.mops.one/install.sh`, which downloads the bundle from the releases canister, or for `mops self update`, which uses the same source.
 - Deprecated `[toolchain] pocket-ic` pins below `9.0.0`. They still work — the legacy `pic-ic` client is unchanged and still handles them — but now print a warning, and support will be removed in mops v3. Run `mops toolchain use pocket-ic 12.0.0` to move to a supported version.
 
-
 ## 2.19.2
 
 - Fix local path dependencies being written into `mops.lock` as absolute filesystem paths, which made committed lockfiles non-portable across machines. Local deps are now stored root-relative (e.g. `./packages/shared`, `../lib`). Regenerate an existing absolute lock with `mops install --lock update` (a plain `mops install` will not rewrite it). After regenerating, all environments need a CLI that includes this fix — older CLIs treat relative lock paths as cwd-relative and break from subdirectories.
