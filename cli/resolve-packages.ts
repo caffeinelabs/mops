@@ -18,8 +18,7 @@ import { checkLockFileLight, readLockFile } from "./integrity.js";
 
 // A single command resolves several times (local cache sync, lockfile write,
 // integrity check), so remember what has been reported to keep one conflict
-// from being printed three times. Keyed on the conflict, not the dependency —
-// `mops watch` is long-lived and must still report a conflict that changed.
+// from being printed three times.
 const reportedConflicts = new Set<string>();
 
 export type ConflictPolicy = "warning" | "error" | "ignore";
@@ -208,8 +207,7 @@ export async function resolvePackages({
 
       // Keyed on the conflict itself, not just the dependency name, so the 3-5
       // resolution passes in one command collapse to one report while a
-      // genuinely different conflict — as `mops watch` sees after a toml edit —
-      // still gets through.
+      // genuinely different set of dependents still gets through.
       let conflictKey = `${dep}:${mopsVers
         .map((x) => `${x.version}@${x.dependencyOf}`)
         .sort()

@@ -21,7 +21,7 @@ See [mops.lock](/mops.lock) for details on lockfile contents and when to commit 
 
 ## Version conflicts
 
-When dependency resolution runs, `mops install` reports any dependency that two packages in the graph request at different **major** versions:
+When dependency resolution runs, `mops install` reports any **registry** dependency that two packages in the graph request at different **major** versions:
 
 ```
 Warning! Conflicting major versions of dependency "test"
@@ -31,7 +31,7 @@ Warning! Conflicting major versions of dependency "test"
   If you want a different version, pin it in your root mops.toml — a root dependency always wins.
 ```
 
-Resolution still succeeds: the highest major wins, unless your own `mops.toml` pins the dependency, in which case yours wins. Packages differing only in minor or patch version are not conflicts and are not reported.
+Resolution still succeeds: the highest major wins, unless your own `mops.toml` pins the dependency, in which case yours wins. Packages differing only in minor or patch version are not conflicts and are not reported. Neither are `repo` or `path` dependencies, which carry no comparable major version.
 
 Since resolution is skipped when the lockfile is up to date, the report appears on the run that creates or updates `mops.lock`. If you have reviewed a conflict and decided to keep it, [`mops sources --conflicts ignore`](/cli/mops-sources#--conflicts) silences it for `dfx` builds.
 

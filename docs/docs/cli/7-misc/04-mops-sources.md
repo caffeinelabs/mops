@@ -38,7 +38,7 @@ Do not install dependencies before resolving sources.
 
 What to do with dependency version conflicts.
 
-If the dependency graph contains packages with the same name but different major versions, they will be treated as conflicting. Packages that differ only in minor or patch version are not conflicting — the highest one wins.
+If the dependency graph requests the same registry dependency at different major versions, that is treated as conflicting. Packages that differ only in minor or patch version are not conflicting — the highest one wins. `repo` and `path` dependencies carry no comparable major version and never take part in a conflict.
 
 Conflicts are reported on stderr, so the resolved sources on stdout stay parseable by dfx.
 
