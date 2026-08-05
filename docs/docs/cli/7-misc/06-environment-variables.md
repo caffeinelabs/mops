@@ -11,7 +11,7 @@ Mops CLI supports several environment variables to customize its behavior.
 
 ### `MOPS_NETWORK`
 
-Override the active network (`local`, `staging`, or `ic`). Equivalent to `mops set-network` but without persisting to disk. Useful in CI/CD pipelines and Docker containers where `mops set-network` may not have write access.
+Override the active network (`local`, `staging`, or `ic`). Takes precedence over [`mops set-network`](/cli/mops-set-network) and does not persist to disk. Useful in CI/CD pipelines and Docker containers.
 
 When set to `local`, the agent fetches the root key from the replica (required for local replicas) and defaults to `http://127.0.0.1:4943`.
 

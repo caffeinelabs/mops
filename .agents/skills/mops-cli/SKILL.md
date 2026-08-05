@@ -81,7 +81,7 @@ mops install --lock update   # regenerate a stale/corrupt mops.lock
 mops install --lock check    # fail if lockfile is missing or stale (CI)
 ```
 
-Run after cloning or after manual `mops.toml` edits. Updates `mops.lock` by default. Local path dependencies are stored root-relative in the lockfile (portable across machines). A plain install will not rewrite absolute paths left by older CLIs — use `mops install --lock update`, and ensure every environment has a CLI that understands relative lock paths.
+Run after cloning or after manual `mops.toml` edits. Updates `mops.lock` by default. Commands that install dependencies implicitly (`mops build`, `mops check`, `mops check-stable`, `mops check-candid`, `mops test`, `mops bench`, `mops generate candid`) maintain `mops.lock` the same way and fail on a tampered lock — regenerate with `mops install --lock update`. Local path dependencies are stored root-relative in the lockfile (portable across machines). A plain install will not rewrite absolute paths left by older CLIs — use `mops install --lock update`, and ensure every environment has a CLI that understands relative lock paths.
 
 When the `CI` env var is set and `--lock` is omitted, defaults to `--lock check` (deprecated — pass `--lock check` explicitly; auto-detection will be removed in v3). A stale lock fails with a hint to run `mops install --lock update`.
 

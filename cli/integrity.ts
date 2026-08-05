@@ -38,11 +38,13 @@ type CheckIntegrityOptions = {
   // When `--lock` is omitted, use this instead of the CI-aware default.
   // Mutating commands pass `"update"` so `CI` cannot force check after changing deps.
   defaultLock?: "update";
+  // Suppress informational output (implicit installs); errors still print.
+  silent?: boolean;
 };
 
 export async function checkIntegrity(
   lock?: "check" | "update" | "ignore",
-  { defaultLock }: CheckIntegrityOptions = {},
+  { defaultLock, silent }: CheckIntegrityOptions = {},
 ) {
   // Explicit `--lock` forces regeneration; omitted flag keeps the light skip path.
   let force = !!lock;
@@ -59,7 +61,7 @@ export async function checkIntegrity(
   }
 
   if (lock === "update") {
-    let regenerated = await updateLockFile({ force });
+    let regenerated = await updateLockFile({ force, silent });
     await checkLockFile(force, regenerated);
   } else if (lock === "check") {
     await checkLockFile(force);
@@ -70,6 +72,9 @@ async function getFileHashesFromRegistry(): Promise<
   [string, [string, Uint8Array | number[]][]][]
 > {
   let packageIds = await getResolvedMopsPackageIds();
+  if (packageIds.length === 0) {
+    return [];
+  }
   let actor = await mainActor();
   let fileHashesByPackageIds =
     await actor.getFileHashesByPackageIds(packageIds);
@@ -181,7 +186,8 @@ export function checkLockFileLight(): boolean {
 // because the existing lock is still valid.
 export async function updateLockFile({
   force = false,
-}: { force?: boolean } = {}): Promise<boolean> {
+  silent = false,
+}: { force?: boolean; silent?: boolean } = {}): Promise<boolean> {
   // if lock file exists and mops.toml hasn't changed, don't update it
   // (unless forced: `--lock update` must unconditionally regenerate so users
   // can recover from a corrupt lockfile without `rm mops.lock`)
@@ -217,7 +223,7 @@ export async function updateLockFile({
   let lockFile = path.join(rootDir, "mops.lock");
   let isNew = !fs.existsSync(lockFile);
   fs.writeFileSync(lockFile, JSON.stringify(lockFileJson, null, 2));
-  if (isNew) {
+  if (isNew && !silent) {
     console.log("mops.lock created.");
     console.log("  Applications: commit this file.");
     console.log("  Libraries: add mops.lock to .gitignore.");
