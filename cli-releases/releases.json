@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "2.19.2"
+    "latest": "2.20.0"
   },
   "versions": {
     "0.41.0": {
@@ -544,6 +544,14 @@
       "commitHash": "c40b1b81a57a09290a9d0803f3014cf8d8ba64ee",
       "url": "https://cli.mops.one/versions/2.19.2.tgz",
       "hash": "5573fe11f312f1b3d3881d21c2a11c0420f9ec8e1ceaad439d51455dbfa995e8"
+    },
+    "2.20.0": {
+      "time": 1785920195469,
+      "size": 2433019,
+      "relseaseNotes": "* Fix `mops bench` (and `mops sync`, `mops watch`) ignoring `[toolchain] moc` and always resolving the compiler via `DFX_MOC_PATH` / `dfx cache show`, unlike `mops build`/`test`/`check`/`check-stable`/`generate`/`docs`. A pinned `[toolchain] moc` is now the compiler these commands invoke, regardless of `DFX_MOC_PATH`.\n* `.tar.xz` toolchain archives (`lintoko`, `wasmtime`) are now unpacked with `tar` plus a standalone xz decompressor instead of `decompress` and its `decomp-tarxz` plugin. Extraction output is unchanged — same files, same permissions — but `decompress` is unmaintained, with two open critical advisories and no fixed version, so the toolchain download path no longer depends on it. Failures during unpacking now surface as errors instead of being swallowed and reported later as a missing-directory copy error, and the temporary download directory is always cleaned up. `decomp-tarxz` is no longer a runtime dependency of the published CLI.\n* `mops publish --dry-run` runs the same local publish steps as a real publish (packaging checks, docs, changelog, tests, benchmarks) and prints the final file list, without contacting the registry or uploading. Honors `--no-docs` / `--no-test` / `--no-bench`. Does not run canister config validation or prove registry acceptance.\n* Fix `mops publish` exiting 0 on keyword-length and invalid `package.files` path errors (now exit 1, same as other preflight failures).\n* The PocketIC client used by `mops test --mode replica`, `mops bench`, and `mops watch` for `pocket-ic` `9.0.0` and newer is now upstream `@dfinity/pic` (`0.23.0`) instead of the `pic-js-mops` fork. The two patches mops needed — passing an explicit binary path and a server `--ttl` — landed upstream, so the fork no longer has a reason to exist and mops tracks PocketIC releases directly. No behavior change: the same toolchain-managed binary is started with the same `--ttl`. `@dfinity/pic` is a devDependency pre-bundled into the published CLI, because its postinstall downloads a ~94 MB pocket-ic binary and fails without network, and mops manages that binary itself via `[toolchain] pocket-ic`. That bundle carries pic's own `@icp-sdk/core` (`5.x`), so mops itself stays on `4.0.2`: `5.x` drops the IC HTTP API `v2` endpoints, which are the only ones the `dfx` and `dfx-pocket-ic` replicas serve, and projects with no `pocket-ic` pin still use those.\n* `npm i -g ic-mops` downloads 1.4 MiB instead of 5.0 MiB. The published tarball used to ship the whole `cli/` directory, which meant two copies of the CLI: the `dist/` tree that the `mops` binary actually runs, and the 2.3 MiB bun single-file bundle that only `curl -fsSL cli.mops.one/install.sh | sh` uses. It also carried the TypeScript sources, the test suite and a second copy of `templates/`, `declarations/` and the Wasm helper that `dist/` already contains. Now only `dist/`, `bin/moc-wrapper.sh` and the changelog are published. Nothing changes for `cli.mops.one/install.sh`, which downloads the bundle from the releases canister, or for `mops self update`, which uses the same source.\n* Deprecated `[toolchain] pocket-ic` pins below `9.0.0`. They still work — the legacy `pic-ic` client is unchanged and still handles them — but now print a warning, and support will be removed in mops v3. Run `mops toolchain use pocket-ic 12.0.0` to move to a supported version.\n",
+      "commitHash": "a079cb8c4d752403cc1d68c7bcc04a3be71dadf9",
+      "url": "https://cli.mops.one/versions/2.20.0.tgz",
+      "hash": "0b42e28fce12ec801b7c41bdff99def988b564104d9769e0a8fcdb5abc860177"
     }
   }
 }
