@@ -33,7 +33,7 @@ Available reporters:
 - `compact` - pretty progress bar
 - `silent` - print only errors
 
-Default `verbose` if there is only one file to test and `files` otherwise.
+Default `verbose`.
 
 :::note
 Only `verbose` reporter prints `Debug.print` output.
