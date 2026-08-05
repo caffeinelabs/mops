@@ -11,16 +11,15 @@ import {
 } from "../mops.js";
 import { resolvePackages } from "../resolve-packages.js";
 
-export async function sourcesArgs({
-  conflicts = "ignore" as "warning" | "error" | "ignore",
-  cwd = process.cwd(),
-} = {}): Promise<string[][]> {
+export async function sourcesArgs({ cwd = process.cwd() } = {}): Promise<
+  string[][]
+> {
   if (!checkConfigFile()) {
     return [];
   }
 
   let rootDir = getRootDir();
-  let resolvedPackages = await resolvePackages({ conflicts });
+  let resolvedPackages = await resolvePackages();
 
   // sources
   return Object.entries(resolvedPackages)
@@ -61,9 +60,6 @@ export async function sourcesArgs({
     .filter((x) => x != null);
 }
 
-export async function sources({
-  conflicts = "ignore" as "warning" | "error" | "ignore",
-  cwd = process.cwd(),
-} = {}): Promise<string[]> {
-  return (await sourcesArgs({ conflicts, cwd })).map((args) => args.join(" "));
+export async function sources({ cwd = process.cwd() } = {}): Promise<string[]> {
+  return (await sourcesArgs({ cwd })).map((args) => args.join(" "));
 }

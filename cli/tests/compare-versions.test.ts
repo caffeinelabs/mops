@@ -58,6 +58,20 @@ describe("compareVersions", () => {
     }
   });
 
+  // The backend's validator does not reject leading zeros, so `01.2.3` is
+  // publishable and `Semver.major("01.2.3")` is 1 there. Strict semver rejects
+  // it outright, which would have sorted it as 0.0.0 and silently downgraded a
+  // dependency that resolved to it before. Hence `loose: true`.
+  test("reads leading zeros the way the backend does", () => {
+    expect(compareVersions("01.2.3", "1.2.3")).toBe(0);
+    expect(compareVersions("1.02.3", "1.2.3")).toBe(0);
+    expect(compareVersions("0.16.01", "0.16.1")).toBe(0);
+    expect(majorVersion("01.2.3")).toBe(1);
+    expect(parseVersion("01.2.3").version).toBe("1.2.3");
+    // and it still loses to nothing it used to beat
+    expect(compareVersions("01.2.3", "1.0.0")).toBe(1);
+  });
+
   // Registry versions are validated by the backend as `xx.xx.xx` with no
   // prerelease (backend/main/utils/semver.mo), which is exactly the subset
   // where `Semver.compare` and `compareVersions` must agree.
@@ -71,6 +85,10 @@ describe("compareVersions", () => {
       ["2.0.0", "1.99.99", 1],
       ["10.0.0", "9.99.99", 1],
       ["0.16.1", "0.16.0", 1],
+      // leading zeros: textToNat("01") is 1, so major is 1 and minor 2 wins
+      ["01.2.3", "1.0.0", 1],
+      // textToNat("01") is 1, so this pair is equal on the backend too
+      ["0.16.01", "0.16.1", 0],
     ];
     for (let [x, y, expected] of cases) {
       expect(compareVersions(x, y)).toBe(expected);
@@ -93,5 +111,15 @@ describe("parseVersion", () => {
     expect(parseVersion("1.2-rc.1").version).toBe("1.2.0-rc.1");
     expect(parseVersion("1.2.3").version).toBe("1.2.3");
     expect(parseVersion("main").version).toBe("0.0.0");
+  });
+
+  // `SemVer` is mutable, so handing every caller the same fallback instance
+  // would let one `.inc()` poison every later no-version comparison.
+  test("returns a fresh fallback instance each call", () => {
+    let first = parseVersion("main");
+    first.inc("major");
+    expect(first.version).toBe("1.0.0");
+    expect(parseVersion("also-not-a-version").version).toBe("0.0.0");
+    expect(compareVersions("main", "0.0.0")).toBe(0);
   });
 });

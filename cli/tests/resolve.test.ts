@@ -30,12 +30,13 @@ describe("cross-major conflicts", () => {
     }
   });
 
-  // `--conflicts ignore` used to drop the report entirely.
-  test("--conflicts ignore no longer suppresses the report", async () => {
+  // Reported by default now — `mops sources` used to be the only caller that
+  // opted in, and every other command took the silent default.
+  test("names both dependents, the winner and the remedy", async () => {
     const cwd = path.join(import.meta.dirname, "resolve/cross-major");
     cleanup(cwd);
     try {
-      const result = await cli(["sources", "--conflicts", "ignore"], { cwd });
+      const result = await cli(["sources"], { cwd });
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toMatch(
         /Conflicting major versions of dependency "test"/,
@@ -44,6 +45,55 @@ describe("cross-major conflicts", () => {
       expect(result.stderr).toMatch(/test 2\.1\.2 is a dependency of/);
       expect(result.stderr).toMatch(/Resolved to test 2\.1\.2/);
       expect(result.stderr).toMatch(/pin it in your root mops\.toml/);
+      // one report, not one per resolution pass
+      expect(result.stderr.match(/Conflicting major versions/g)).toHaveLength(
+        1,
+      );
+    } finally {
+      cleanup(cwd);
+    }
+  });
+
+  // `mops sources` runs on every `dfx build`, so a conflict the project has
+  // reviewed and accepted needs an explicit way to go quiet.
+  test("--conflicts ignore suppresses the report", async () => {
+    const cwd = path.join(import.meta.dirname, "resolve/cross-major");
+    cleanup(cwd);
+    try {
+      const result = await cli(["sources", "--conflicts", "ignore"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toMatch(/Conflicting/);
+      // resolution is unaffected by silencing the report
+      expect(result.stdout).toMatch(/--package test .*test@2\.1\.2\/src/);
+    } finally {
+      cleanup(cwd);
+    }
+  });
+
+  // The root can win a cross-major conflict with a local path or a git repo,
+  // in which case there is no version to name — but the user still needs to be
+  // told what won and what to do about it.
+  test("reports the winner when the root overrides with a path dep", async () => {
+    const cwd = path.join(import.meta.dirname, "resolve/root-path-override");
+    cleanup(cwd);
+    try {
+      const result = await cli(["sources"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toMatch(
+        /Conflicting major versions of dependency "test"/,
+      );
+      expect(result.stderr).toMatch(
+        /test 1\.2\.0 is a dependency of a@1\.0\.0/,
+      );
+      expect(result.stderr).toMatch(
+        /test 2\.1\.2 is a dependency of b@1\.0\.0/,
+      );
+      // the resolution line must still be there, naming the override
+      expect(result.stderr).toMatch(
+        /Resolved to the root override test = "vendor\/test"/,
+      );
+      expect(result.stderr).toMatch(/pin it in your root mops\.toml/);
+      expect(result.stdout).toMatch(/--package test vendor\/test/);
     } finally {
       cleanup(cwd);
     }

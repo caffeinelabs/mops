@@ -6,8 +6,8 @@ exports[`cross-major conflicts reports a cross-major diamond and still resolves 
   "stderr": "Warning! Conflicting major versions of dependency "test"
   test 1.2.0 is a dependency of legacy@1.0.0
   test 2.1.2 is a dependency of cross-major@1.0.0
-  Resolved to test 2.1.2, so every dependent on another major compiles against an API it did not ask for.
-  To pick the version yourself, pin it in your root mops.toml: test = "1.2.0"",
+  Resolved to test 2.1.2 — dependents on another major compile against an API they did not ask for.
+  If you want a different version, pin it in your root mops.toml — a root dependency always wins.",
   "stdout": "--package test .mops/test@2.1.2/src
 --package core .mops/core@2.0.0/src
 --package legacy legacy

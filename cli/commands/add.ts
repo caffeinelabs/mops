@@ -148,6 +148,6 @@ export async function add(
       `${pkgDetails.name} = "${pkgDetails.repo || pkgDetails.path || pkgDetails.version}"`,
   );
 
-  // check conflicts
-  await resolvePackages({ conflicts: "warning" });
+  // Re-resolve so a conflict introduced by the package just added is reported.
+  await resolvePackages();
 }
