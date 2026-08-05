@@ -23,7 +23,7 @@ import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 import { warnIfDfxReplica } from "../helpers/deprecate-dfx-replica.js";
-import { getMocPath } from "../helpers/get-moc-path.js";
+import { toolchain } from "./toolchain/index.js";
 import {
   formatOptimizePipeline,
   optimizeWasm,
@@ -366,7 +366,7 @@ async function deployBenchFile(
   fs.writeFileSync(path.join(tempDir, "canister.mo"), benchCanisterData);
 
   // build canister
-  let mocPath = getMocPath();
+  let mocPath = await toolchain.bin("moc", { fallback: true });
   let mocArgsList = getMocArgs(options);
   let buildArgs = [
     "-c",
