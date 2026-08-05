@@ -8,9 +8,7 @@ import prompts from "prompts";
 import { decodeFile } from "./pem.js";
 import { cliError } from "./error.js";
 import { Config, Dependency } from "./types.js";
-import { mainActor, storageActor } from "./api/actors.js";
-import { getNetwork } from "./api/network.js";
-import { getHighestVersion } from "./api/getHighestVersion.js";
+import { mainActor } from "./api/actors.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { FILE_PATH_REGEX } from "./constants.js";
 
@@ -320,6 +318,3 @@ export function version() {
   );
   return packageJson.version;
 }
-
-// compatibility with older versions
-export { getNetwork, mainActor, storageActor, getHighestVersion };

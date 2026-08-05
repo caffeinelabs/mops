@@ -3,7 +3,8 @@
 ## Next
 
 ## 3.0.0 (unreleased)
-
+- **Breaking**: Node.js >= 20 is required (`engines` bump from >= 18); installs on Node 18 fail with an engines error. (#288)
+- Removed legacy `mocv` detection: `mops toolchain init` no longer refuses to run when `mocv` is installed (and no longer strips mocv-era `DFX_MOC_PATH` lines from shell configs), and `mops docs` no longer resolves `mo-doc` from a mocv-managed `DFX_MOC_PATH`. Use `mops toolchain use moc <version>` to pin the compiler.
 - **Breaking**: unknown flags before `--` are now rejected with an error instead of being silently swallowed as arguments (a mistyped flag like `mops check --nope` used to be treated as an ordinary argument, with confusing downstream errors or none at all). Applies to `build`, `check`, `check-stable`, `test`, `bench`, `generate candid` and `lint`. The `-- <tool flags>` passthrough is unaffected: `mops check -- -Werror`, `mops test -- -Werror`, `mops lint -- --severity warning` keep working. Migration: if a script passes a flag mops doesn't recognize, either drop it or move it after `--` if it was meant for the underlying tool.
 - Fix `mops lint -- <lintoko flags>` failing with `too many arguments` (regression from the Commander 13 upgrade). `mops lint <filter> -- <lintoko flags>` works too.
 - **Breaking**: `mops info <pkg> --versions` now lists versions newest-first (it was oldest-first), matching `mops toolchain info --versions`. Migration: scripts that took the last line to get the latest version (`... | tail -1`) should take the first (`... | head -1`).

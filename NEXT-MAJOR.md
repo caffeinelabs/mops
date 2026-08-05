@@ -60,7 +60,7 @@ Compromise (2026-07): we have not migrated our own dev loop to `icp` yet, so v3 
 
 ### Toolchain & runtime
 
-- Drop Node.js < 20 (`cli/package.json` engines currently `>=18.0.0`). (GH #288)
+- ~~Drop Node.js < 20 (`cli/package.json` engines currently `>=18.0.0`)~~ — **done on `v3`** (engines now `>=20.0.0`). (GH #288)
 - **Drop the legacy PocketIC client** (decision 2026-07; **deprecated in 2.x, drop here** — decision 2026-08-03 to split rather than hold the whole switch for v3, matching the dfx-replica/vessel deprecate-then-drop pattern): delete the `pic-ic` 0.5.4 dep and the `< 9.0.0` switch in `cli/helpers/pocket-ic-client.ts`; upstream `@dfinity/pic` (switched to in 2.x, see below) becomes the only client, killing the `AnyPocketIcServer`/`AnyPocketIc`/`AnySetupCanister` union types that leak into `test`/`bench`/`replica`/`bench-replica`/`watch` signatures. Breaks only explicit `[toolchain] pocket-ic < 9.0.0` pins — error with the verbatim fix (`mops toolchain use pocket-ic 12.0.0`). Unpinned projects never hit it (they get `DEFAULT_POCKET_IC_VERSION`). Subsumes the old "PocketIC v9 → v10" item (GH #288): with one client, enforce a **supported server range** (floor 9.0.0, ceiling = shipped client's max) at `toolchain use` time — fixes the `latest`-resolves-to-incompatible-server footgun (see AGENTS.md caution); future ceiling raises are routine client updates, not majors. Keep the range as a maintained constant pair next to `DEFAULT_POCKET_IC_VERSION`.
 - ~~**Eliminate the `pic-js-mops` fork**~~ — **done, shipped in 2.x** (caffeinelabs/mops#642, merged 2026-08-03; closed GH #561). The fork had no public source repo; the two patches mops needed went upstream as dfinity/pic-js#276 (`binPath` + `POCKET_IC_BIN`) and #278 (`ttl`), released in `@dfinity/pic` 0.23.0. `pocket-ic` >= 9.0.0 now runs on upstream pic; `pic-ic` remains only for the deprecated `< 9.0.0` pins removed by the item above. `pic-js-mops` cannot be deprecated on npm — nobody has publish access (GH #657, closed).
 
@@ -86,8 +86,8 @@ Carried over from that work, all tracked as issues:
 
 - `mops install` semantics change (drop CI env auto-detection, drop implicit `.mops/` re-hash).
 - Bump `apiVersion` (CLI ↔ backend) only if schema-affecting changes land — nothing in this scope requires it.
-- Remove `// compatibility with older versions` re-exports (`cli/mops.ts:324-325`).
-- Drop legacy mocv detection in `cli/commands/docs.ts:44-49` and `cli/commands/toolchain/index.ts:80-95,132-138`.
+- ~~Remove `// compatibility with older versions` re-exports (`cli/mops.ts:324-325`)~~ — **done on `v3`** (the one in-repo user, `cli/cache.ts`, now imports `getNetwork` from `cli/api/network.ts`).
+- ~~Drop legacy mocv detection in `cli/commands/docs.ts:44-49` and `cli/commands/toolchain/index.ts:80-95,132-138`~~ — **done on `v3`**.
 
 ### Decide before release
 
