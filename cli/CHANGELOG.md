@@ -2,6 +2,10 @@
 
 ## Next
 
+## 3.0.0 (unreleased)
+- **Breaking**: Node.js >= 20 is required (`engines` bump from >= 18); installs on Node 18 fail with an engines error. (#288)
+- Removed legacy `mocv` detection: `mops toolchain init` no longer refuses to run when `mocv` is installed (and no longer strips mocv-era `DFX_MOC_PATH` lines from shell configs), and `mops docs` no longer resolves `mo-doc` from a mocv-managed `DFX_MOC_PATH`. Use `mops toolchain use moc <version>` to pin the compiler.
+
 ## 2.20.0
 - Fix `mops bench` (and `mops sync`, `mops watch`) ignoring `[toolchain] moc` and always resolving the compiler via `DFX_MOC_PATH` / `dfx cache show`, unlike `mops build`/`test`/`check`/`check-stable`/`generate`/`docs`. A pinned `[toolchain] moc` is now the compiler these commands invoke, regardless of `DFX_MOC_PATH`.
 - `.tar.xz` toolchain archives (`lintoko`, `wasmtime`) are now unpacked with `tar` plus a standalone xz decompressor instead of `decompress` and its `decomp-tarxz` plugin. Extraction output is unchanged — same files, same permissions — but `decompress` is unmaintained, with two open critical advisories and no fixed version, so the toolchain download path no longer depends on it. Failures during unpacking now surface as errors instead of being swallowed and reported later as a missing-directory copy error, and the temporary download directory is always cleaned up. `decomp-tarxz` is no longer a runtime dependency of the published CLI.

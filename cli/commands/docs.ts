@@ -11,8 +11,6 @@ import streamToPromise from "stream-to-promise";
 import { getRootDir } from "../mops.js";
 import { toolchain } from "./toolchain/index.js";
 
-let moDocPath: string;
-
 type DocsOptions = {
   source: string;
   output: string;
@@ -41,17 +39,9 @@ export async function docs(options: Partial<DocsOptions> = {}) {
 
   deleteSync([docsDir], { force: true });
 
-  // detect mocv (legacy)
-  if (
-    process.env.DFX_MOC_PATH &&
-    process.env.DFX_MOC_PATH.includes("mocv/versions")
-  ) {
-    moDocPath = process.env.DFX_MOC_PATH.replace(/\/moc$/, "/mo-doc");
-  } else {
-    // fallbacks to dfx moc if not specified in config
-    let mocPath = await toolchain.bin("moc", { fallback: true });
-    moDocPath = mocPath.replace(/\/moc$/, "/mo-doc");
-  }
+  // fallbacks to dfx moc if not specified in config
+  let mocPath = await toolchain.bin("moc", { fallback: true });
+  let moDocPath = mocPath.replace(/\/moc$/, "/mo-doc");
 
   // generate docs
   await new Promise<void>((resolve) => {
