@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 import os from "node:os";
 import chalk from "chalk";
 
-import { getMocPath } from "../../helpers/get-moc-path.js";
+import { toolchain } from "../toolchain/index.js";
 import { getGlobalMocArgs, getRootDir, readConfig } from "../../mops.js";
 import { sourcesArgs } from "../sources.js";
 import { ErrorChecker } from "./error-checker.js";
@@ -68,7 +68,7 @@ export class WarningChecker {
     onProgress();
 
     let rootDir = getRootDir();
-    let mocPath = getMocPath();
+    let mocPath = await toolchain.bin("moc", { fallback: true });
     let deps = (await sourcesArgs({ cwd: rootDir })).flat();
     let globalMocArgs = getGlobalMocArgs(readConfig());
     let paths = globMoFiles(rootDir);
