@@ -17,6 +17,8 @@ The lockfile is considered **up to date** when the `[dependencies]` and `[dev-de
 - **Lockfile up to date** — installs the exact versions recorded in the lockfile, skipping dependency resolution.
 - **Lockfile missing or out of date** — runs full dependency resolution, installs resolved versions, then creates/updates the lockfile.
 
+`mops install` is self-healing: a missing, unparseable, legacy-format or `mops.toml`-inconsistent lockfile is regenerated rather than treated as an error. There is no flag to opt out of the lockfile — it is always maintained.
+
 See [mops.lock](/mops.lock) for details on lockfile contents and when to commit it.
 
 ## Version conflicts
@@ -37,14 +39,26 @@ Since resolution is skipped when the lockfile is up to date, the report appears 
 
 ## Options
 
-### `--lock`
+### `--locked`
 
-What to do with the [lockfile](/mops.lock).
+Require an up-to-date [lockfile](/mops.lock) and never write it. This is the flag for CI.
 
-Possible values:
-- `update` — keep the lockfile in sync with current dependencies and verify file integrity (default outside CI). Pass explicitly to force regeneration if the lockfile is stale or corrupt.
-- `check` — verify file integrity against an existing lockfile; fail if the lockfile is missing or out of date
-- `ignore` — skip the lockfile entirely
+`mops install --locked` fails when:
+- `mops.lock` is missing
+- `mops.lock` cannot be parsed, or is not the current format version
+- `mops.toml` declares dependencies that `mops.lock` does not pin to the same values
+- a file hash in `mops.lock` does not match the Mops registry
+
+On success, `mops.lock` is left byte-for-byte untouched.
+
+`--locked` is also available on every command that installs dependencies implicitly — `mops build`, `mops check`, `mops check-candid`, `mops check-stable`, `mops test`, `mops bench` and `mops generate candid` — so a CI job can run `mops test --locked` without a preceding install step.
+
+```bash
+mops install --locked   # CI: fail rather than update the lockfile
+mops install            # dev: keep the lockfile in sync
+```
+
+`mops sources` deliberately has no `--locked`: it is invoked by the dfx packtool in the middle of a build, and its stdout is machine-parsed. Enforce the lockfile with a preceding `mops install --locked` step instead.
 
 ### `--no-toolchain`
 
@@ -56,10 +70,17 @@ Verbose output.
 
 ## CI
 
-**Deprecated:** when the `CI` environment variable is set and `--lock` is omitted, `mops install` still defaults to `--lock check` and prints a deprecation warning. This auto-detection will be removed in a future release — pass `--lock check` explicitly (and commit `mops.lock`) to keep failing on a stale lockfile.
+Pass `--locked` explicitly and commit `mops.lock`:
 
-Note: explicit `--lock check` also errors when the lock is missing; the deprecated CI auto-path skips a missing lock. If the lockfile is stale, install fails and suggests `mops install --lock update`.
+```yaml
+- run: mops install --locked
+- run: mops test --locked
+```
 
-`mops add`, `mops remove`, `mops update`, and `mops sync` are unaffected — they always default to updating the lockfile.
+The `CI` environment variable no longer changes lockfile behavior. Earlier releases silently switched `mops install` to check mode when `CI` was set (deprecated since 2.18); that auto-detection was removed in 3.0.
 
-See [CI environments](/mops.lock#ci-environments) on the mops.lock page for full details.
+## Verifying installed files
+
+`mops install` verifies each downloaded file against the registry's published hash *as it arrives*, before it is committed to the cache — so a corrupted or tampered download never reaches your project. It does not re-hash the contents of `.mops/` on every run.
+
+To audit what is currently on disk, run [`mops verify`](/cli/mops-verify).

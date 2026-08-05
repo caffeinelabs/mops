@@ -99,6 +99,10 @@ Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limi
 mops check --fix --no-check-limit
 ```
 
+### `--locked`
+
+Require an up-to-date [`mops.lock`](/mops.lock) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](/cli/mops-install#--locked).
+
 ## Passing flags to the Motoko compiler
 
 Any arguments after `--` are forwarded directly to `moc`. For example, to treat all warnings as errors:

@@ -26,9 +26,9 @@ Rationale: `=`/range syntax in *published* packages needs backend validator chan
 
 ### Trust & lockfile model (move closer to npm/cargo)
 
-- Verify integrity at **download time**, stop re-hashing `.mops/` on every install; move on-disk verification behind `mops verify`. (GH #517)
-- Add `--locked` (decision 2026-07: **no `mops ci` command** — npm's separate command is the ecosystem outlier; cargo `--locked`, pnpm `--frozen-lockfile`, yarn `--immutable` all use a flag). Semantics: fail loudly if `mops.lock` is missing or resolution would change it; never write the lock. Available on `mops install` **and** every implicitly-resolving command (`build`/`check`/`check-candid`/`check-stable`/`test`/`bench` — composes with the lock-policy fix in Hidden-state cleanup), since CI pipelines often run `mops test` directly without a prior install. Drop the `CI` env-var auto-detection in `mops install`. (GH #516). Deprecated with warnings since 2.18 via `cli/helpers/deprecate-ci-lock.ts`.
-- **Drop `--lock <check|update|ignore>` entirely** (decision 2026-07). End state: two modes, no flag — plain commands are the dev flow, `--locked` is the CI flow. Per value: `check` → `--locked` (strictly stronger: also guarantees byte-stability); `ignore` → no opt-out, cargo model — the lock is always maintained (its only consumers were the internal `lock: "ignore"` calls removed in Hidden-state cleanup, and libraries, which gitignore it); `update` → plain `mops install` becomes **self-healing**: a corrupt, unparseable, or manifest-inconsistent lock is regenerated instead of erroring (npm/cargo behavior — a broken lock is only a dead end under `--locked`). Replace every "run `mops install --lock update`" recovery message (`cli/integrity.ts:157,258` and friends) with plain `mops install`. Cheap once verification moves to download time — lock validation is then parse + deps-hash compare, not a `.mops/` rehash.
+- ~~Verify integrity at **download time**, stop re-hashing `.mops/` on every install; move on-disk verification behind `mops verify`~~ — **done on `v3`**. Files are hashed as they arrive and compared against the registry before the package is committed to the cache; `mops verify` is the on-demand on-disk audit. (GH #517)
+- ~~Add `--locked`; drop the `CI` env-var auto-detection~~ — **done on `v3`** (GH #516). Available on `mops install` and every implicitly-resolving command; `mops sources` deliberately has none (dfx packtool parses its stdout mid-build). **Design correction:** `--locked` does *not* re-walk the dependency graph to byte-compare a freshly computed lock. It cannot: a lock-driven install skips the versions that lost a conflict, so their manifests are never cached and `resolvePackages({skipLock: true})` throws ENOENT on a fresh clone (reproduced). Instead it checks that the lock is present, parseable, current-format, pins every dependency declared in `mops.toml`, and agrees with the registry on every file hash. Same structural limitation the resolver-correctness work hit (GH #679); closing it needs a per-candidate manifest fetch, which is a new feature, not a lockfile change.
+- ~~**Drop `--lock <check|update|ignore>` entirely**~~ — **done on `v3`**. `check` → `--locked`; `ignore` → no successor; `update` → plain `mops install`, now self-healing (also migrates locks carrying absolute local `path` entries, which previously required an explicit `--lock update`).
 - `mops install` becomes purely additive (`npm install` semantics) — no implicit "switch to check mode".
 - `mops.lock` enabled by default (already done in 2.8); remove opt-in/legacy paths — and with `--lock ignore` gone, no opt-out at all (cargo model; ties into the commit-guidance question under Decide before release). (GH #288)
 
@@ -84,14 +84,14 @@ Carried over from that work, all tracked as issues:
 
 ### Cleanup that affects users
 
-- `mops install` semantics change (drop CI env auto-detection, drop implicit `.mops/` re-hash).
+- ~~`mops install` semantics change (drop CI env auto-detection, drop implicit `.mops/` re-hash)~~ — **done on `v3`**.
 - Bump `apiVersion` (CLI ↔ backend) only if schema-affecting changes land — nothing in this scope requires it.
 - ~~Remove `// compatibility with older versions` re-exports (`cli/mops.ts:324-325`)~~ — **done on `v3`** (the one in-repo user, `cli/cache.ts`, now imports `getNetwork` from `cli/api/network.ts`).
 - ~~Drop legacy mocv detection in `cli/commands/docs.ts:44-49` and `cli/commands/toolchain/index.ts:80-95,132-138`~~ — **done on `v3`**.
 
 ### Decide before release
 
-- Lockfile commit guidance: `cli/integrity.ts:223` tells library authors to gitignore `mops.lock`. Cargo and (increasingly) npm lean toward committing locks for libraries too. Pick a side before v3 docs are written, then make tooling and docs consistent.
+- ~~Lockfile commit guidance~~ — **decided and done on `v3`**: everyone commits `mops.lock`, libraries included. A library's lock has no effect on consumers (they resolve their own graph) and it makes the library's own CI reproducible. The `mops.lock created.` message, `docs/docs/10-mops.lock.md` and the CLI skill all say so now.
 - Custom registry endpoints — ship as supported feature or drop the env-var? Removal is only free in a major. (LIN, PR #425)
 
 ---

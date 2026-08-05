@@ -89,6 +89,10 @@ Show detailed output including the `moc` commands being run and the intermediate
 
 Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming). Also suppresses the pending-migration warning that runs when `check-limit` is set.
 
+### `--locked`
+
+Require an up-to-date [`mops.lock`](/mops.lock) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](/cli/mops-install#--locked).
+
 ## Pending migration diagnostic
 
 When `[canisters.<name>.migrations].check-limit` is set, `mops check-stable` compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error (trimming started from the wrong state). If compat passed anyway, it is shown as a warning.
