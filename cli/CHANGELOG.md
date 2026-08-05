@@ -2,6 +2,10 @@
 
 ## Next
 
+## 3.0.0 (unreleased)
+
+- Remove vessel/dhall support (deprecated since 2.14). `mops init` no longer migrates `vessel.dhall` — copy your dependencies into `mops.toml` manually and delete `vessel.dhall` / `package-set.dhall`. GitHub dependencies (`repo = "..."`) are unaffected, but their transitive dependencies declared via `vessel.dhall` / `package-set.dhall` are no longer resolved or installed — add them to your own `mops.toml` if you need them. `.vessel` directories are no longer excluded from `mops test`/`watch` file scans, and the `dhall-to-json-cli` dependency is gone from the CLI.
+
 ## 2.20.0
 - Fix `mops bench` (and `mops sync`, `mops watch`) ignoring `[toolchain] moc` and always resolving the compiler via `DFX_MOC_PATH` / `dfx cache show`, unlike `mops build`/`test`/`check`/`check-stable`/`generate`/`docs`. A pinned `[toolchain] moc` is now the compiler these commands invoke, regardless of `DFX_MOC_PATH`.
 - `.tar.xz` toolchain archives (`lintoko`, `wasmtime`) are now unpacked with `tar` plus a standalone xz decompressor instead of `decompress` and its `decomp-tarxz` plugin. Extraction output is unchanged — same files, same permissions — but `decompress` is unmaintained, with two open critical advisories and no fixed version, so the toolchain download path no longer depends on it. Failures during unpacking now surface as errors instead of being swallowed and reported later as a missing-directory copy error, and the temporary download directory is always cleaned up. `decomp-tarxz` is no longer a runtime dependency of the published CLI.

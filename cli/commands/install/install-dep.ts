@@ -23,7 +23,6 @@ export async function installDep(
     return installFromGithub(dep.name, dep.repo, {
       silent,
       verbose,
-      ignoreTransitive,
     });
   } else if (dep.path) {
     let depPath = dep.path;

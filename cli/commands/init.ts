@@ -8,8 +8,7 @@ import prompts from "prompts";
 import { checkApiCompatibility, writeConfig } from "../mops.js";
 import { mainActor } from "../api/actors.js";
 import { installAll } from "./install/install-all.js";
-import { VesselConfig, readVesselConfig } from "../vessel.js";
-import { Config, Dependencies } from "../types.js";
+import { Config } from "../types.js";
 import { template } from "./template.js";
 import { kebabCase } from "change-case";
 
@@ -25,20 +24,6 @@ export async function init({ yes = false } = {}) {
 
   let config: Config = {};
 
-  let vesselFile = path.join(process.cwd(), "vessel.dhall");
-  let vesselExists = existsSync(vesselFile);
-
-  // Warn before the --yes early-return so scripted/CI users get the heads-up
-  // even though `mops init --yes` skips the vessel migration entirely.
-  if (vesselExists) {
-    console.warn(
-      chalk.yellow(
-        "WARN: vessel.dhall auto-migration is deprecated and will be removed in mops v3. " +
-          "Before then, copy your dependencies into mops.toml manually and delete vessel.dhall / package-set.dhall.",
-      ),
-    );
-  }
-
   if (yes) {
     await applyInit({
       type: "project",
@@ -48,30 +33,6 @@ export async function init({ yes = false } = {}) {
       copyrightOwner: "",
     });
     return;
-  }
-
-  // migrate from vessel
-  let vesselConfig: VesselConfig = { dependencies: [], "dev-dependencies": [] };
-
-  if (vesselExists) {
-    console.log("Reading vessel.dhall file");
-    let res = await readVesselConfig(process.cwd(), { cache: false });
-    if (res) {
-      vesselConfig = { ...res };
-    }
-  }
-
-  if (vesselConfig.dependencies) {
-    let deps: Dependencies = {};
-    deps = {};
-
-    for (const dep of vesselConfig.dependencies || []) {
-      deps[dep.name] = dep;
-    }
-
-    if (Object.keys(deps).length) {
-      config.dependencies = deps;
-    }
   }
 
   let promptsConfig = {

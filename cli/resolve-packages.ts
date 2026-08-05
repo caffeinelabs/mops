@@ -8,7 +8,6 @@ import {
   parseGithubURL,
   readConfig,
 } from "./mops.js";
-import { VesselConfig, readVesselConfig } from "./vessel.js";
 import { Config, Dependency } from "./types.js";
 import { getDepCacheDir, getDepCacheName } from "./cache.js";
 import { getPackageId } from "./helpers/get-package-id.js";
@@ -82,7 +81,7 @@ export async function resolvePackages({
   };
 
   let collectDeps = async (
-    config: Config | VesselConfig,
+    config: Config,
     configDir: string,
     isRoot = false,
   ) => {
@@ -124,14 +123,8 @@ export async function resolvePackages({
       let nestedConfig;
       let localNestedDir = "";
 
-      // read nested config
-      if (repo) {
-        let cacheDir = getDepCacheName(name, repo);
-        nestedConfig =
-          (await readVesselConfig(getDepCacheDir(cacheDir), {
-            silent: true,
-          })) || {};
-      } else if (pkgDetails.path) {
+      // read nested config (github deps have none)
+      if (pkgDetails.path) {
         localNestedDir = path
           .resolve(configDir, pkgDetails.path)
           .replaceAll("{MOPS_ENV}", process.env.MOPS_ENV || "local");

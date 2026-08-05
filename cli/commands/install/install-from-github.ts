@@ -15,7 +15,6 @@ import {
   isDepCached,
   sweepStaleStagingDirs,
 } from "../../cache.js";
-import { readVesselConfig } from "../../vessel.js";
 
 export const downloadFromGithub = async (
   repo: string,
@@ -100,12 +99,7 @@ export const downloadFromGithub = async (
 export const installFromGithub = async (
   name: string,
   repo: string,
-  {
-    verbose = false,
-    dep = false,
-    silent = false,
-    ignoreTransitive = false,
-  } = {},
+  { verbose = false, silent = false } = {},
 ): Promise<boolean> => {
   sweepStaleStagingDirs();
 
@@ -115,13 +109,10 @@ export const installFromGithub = async (
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
   if (isDepCached(cacheName)) {
-    silent || logUpdate(`${dep ? "Dependency" : "Installing"} ${repo} (cache)`);
+    silent || logUpdate(`Installing ${repo} (cache)`);
   } else {
     let progress = (step: number, total: number) => {
-      silent ||
-        logUpdate(
-          `${dep ? "Dependency" : "Installing"} ${repo} ${progressBar(step, total)}`,
-        );
+      silent || logUpdate(`Installing ${repo} ${progressBar(step, total)}`);
     };
 
     progress(0, 1024 * 500);
@@ -142,20 +133,6 @@ export const installFromGithub = async (
     silent || logUpdate.done();
   } else {
     logUpdate.clear();
-  }
-
-  if (ignoreTransitive) {
-    return true;
-  }
-
-  const config = await readVesselConfig(cacheDir, { silent });
-
-  if (config) {
-    for (const { name, repo } of config.dependencies) {
-      if (repo) {
-        await installFromGithub(name, repo, { verbose, silent, dep: true });
-      }
-    }
   }
 
   return true;

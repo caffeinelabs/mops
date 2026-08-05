@@ -5,7 +5,6 @@ let globConfig = {
   ignore: [
     "**/node_modules/**",
     "**/.mops/**",
-    "**/.vessel/**",
     "**/.git/**",
     "**/.dfx/**",
     "**/{build,bundle,dist}/**",
