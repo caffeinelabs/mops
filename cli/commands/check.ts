@@ -35,6 +35,8 @@ export interface CheckOptions {
   verbose: boolean;
   fix: boolean;
   extraArgs: string[];
+  /** Commander `--no-lint`: false skips linting even when lintoko is pinned. */
+  lint: boolean;
   /** Commander `--no-check-limit`: false ignores [migrations].check-limit. */
   checkLimit: boolean;
 }
@@ -128,7 +130,7 @@ async function checkImpl(
     await checkCanisters(config, filtered, options);
   }
 
-  if (config.toolchain?.lintoko) {
+  if (config.toolchain?.lintoko && options.lint !== false) {
     const rootDir = getRootDir();
     const lintRules = await collectLintRules(config, rootDir);
     const lintFiles = isFileMode ? fileArgs : undefined;

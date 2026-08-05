@@ -158,6 +158,20 @@ describe("check", () => {
     expect(result.stderr).toMatch(/no-bool-switch/);
   });
 
+  test("--no-lint skips lint even when lintoko is configured", async () => {
+    const cwd = path.join(import.meta.dirname, "check/with-lint-pass");
+    const result = await cli(["check", "--no-lint"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).not.toMatch(/Lint/);
+  });
+
+  test("unknown flag before -- is rejected", async () => {
+    const cwd = path.join(import.meta.dirname, "check/success");
+    const result = await cli(["check", "--nope"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/unknown option '--nope'/);
+  });
+
   test("lint is skipped when lintoko not configured and no rules exist", async () => {
     const cwd = path.join(import.meta.dirname, "check/canisters");
     const result = await cli(["check"], { cwd });

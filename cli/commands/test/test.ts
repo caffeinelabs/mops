@@ -238,7 +238,7 @@ export async function testWithReporter(
 
   if (!reporterName || typeof reporterName === "string") {
     if (!reporterName) {
-      reporterName = files.length > 1 ? "files" : "verbose";
+      reporterName = "verbose";
     }
 
     if (reporterName == "compact") {

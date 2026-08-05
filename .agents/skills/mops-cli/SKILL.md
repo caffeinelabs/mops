@@ -9,7 +9,7 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 
 ## Key Principles
 
-1. **No dfx** — always pin `moc` in `[toolchain]`. Use the newest `moc` version. Pin `pocket-ic` too if you have replica tests or benchmarks (otherwise `mops test --mode replica`, `mops bench`, and `mops watch` fall back to the deprecated dfx replica and print a warning).
+1. **No dfx** — always pin `moc` in `[toolchain]`. Use the newest `moc` version. Pin `pocket-ic` too if you have replica tests or benchmarks (otherwise `mops test --mode replica`, `mops bench`, and `mops watch --test/--deploy` fall back to the deprecated dfx replica and print a warning).
 2. **No `mo:base`** — it is deprecated. Always use `mo:core` (`import Array "mo:core/Array"`).
 3. **All config in `mops.toml`** — canisters, moc flags, toolchain versions, build settings.
 4. **Canister-centric workflow** — define all canisters in `[canisters]`; never pass file paths to `mops check`. Exception: library packages (no `[canisters]`) use file paths directly: `mops check src/**/*.mo`.
@@ -103,6 +103,7 @@ Primary correctness command — runs moc check, then check-stable (if configured
 mops check                # all canisters
 mops check backend        # single canister
 mops check --fix          # autofix + check + stable + lint
+mops check --no-lint      # skip the lint step for one run
 mops check --verbose      # show moc invocations
 mops check -- -Werror     # treat warnings as errors
 ```
@@ -218,7 +219,7 @@ Tests live in `test/*.test.mo`:
 mops test                         # run all tests
 mops test my-test                 # filter by name
 mops test --mode wasi             # use wasmtime (for to_candid/from_candid)
-mops test --reporter verbose      # show Debug.print output
+mops test --reporter files        # one line per file (default is verbose)
 mops test --watch                 # re-run on file changes
 mops test -- -Werror              # pass extra moc flags
 ```

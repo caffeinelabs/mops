@@ -339,7 +339,6 @@ program
       "  [migrations].check-limit is set, re-run with mops check --no-check-limit to\n" +
       "  surface the issue (check trims the chain; build compiles all of it).",
   )
-  .allowUnknownOption(true) // TODO: restrict unknown before "--"
   .action(async (canisters, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(canisters);
@@ -355,13 +354,19 @@ program
 program
   .command("check [args...]")
   .description(
-    "Check Motoko canisters or files for syntax errors and type issues. Arguments can be canister names or file paths. If no arguments are given, checks all canisters from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured, and runs linting if lintoko is configured in [toolchain]",
+    "Check Motoko canisters or files for syntax errors and type issues. Arguments can be canister names or file paths. If no arguments are given, checks all canisters from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured, and runs linting if lintoko is configured in [toolchain] (pass --no-lint to skip)",
   )
   .option("--verbose", "Verbose console output")
   .addOption(
     new Option(
       "--fix",
       "Apply autofixes to all files, including transitively imported ones",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--no-lint",
+      "Skip linting even when lintoko is pinned in [toolchain]",
     ),
   )
   .addOption(
@@ -378,7 +383,6 @@ program
     "after",
     enhancedMigrationHelp({ withFix: true, withPendingWarning: true }),
   )
-  .allowUnknownOption(true)
   .action(async (args, options) => {
     checkConfigFile(true);
     const { extraArgs, args: argList } = parseExtraArgs(args);
@@ -417,7 +421,6 @@ program
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check-stable -- -Werror",
   )
   .addHelpText("after", enhancedMigrationHelp({ withPendingWarning: true }))
-  .allowUnknownOption(true)
   .action(async (args, options) => {
     checkConfigFile(true);
     const { extraArgs, args: argList } = parseExtraArgs(args);
@@ -474,12 +477,9 @@ program
   .command("test [filter...]")
   .description("Run tests")
   .addOption(
-    new Option("-r, --reporter <reporter>", "Test reporter").choices([
-      "verbose",
-      "compact",
-      "files",
-      "silent",
-    ]),
+    new Option("-r, --reporter <reporter>", "Test reporter")
+      .choices(["verbose", "compact", "files", "silent"])
+      .default("verbose"),
   )
   .addOption(
     new Option("--mode <mode>", "Test mode")
@@ -498,7 +498,6 @@ program
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops test -- -Werror",
   )
-  .allowUnknownOption(true)
   .action(async (filterArr, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(filterArr);
@@ -563,7 +562,6 @@ program
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops bench -- -Werror",
   )
-  .allowUnknownOption(true)
   .action(async (filterArr, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(filterArr);
@@ -925,7 +923,6 @@ generateCommand
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops generate candid -- -Werror",
   )
-  .allowUnknownOption(true)
   .action(async (canisters, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(canisters);
@@ -961,17 +958,31 @@ program.addCommand(selfCommand);
 program
   .command("watch")
   .description(
-    "Watch *.mo files and check for syntax errors, warnings, run tests, generate declarations and deploy canisters",
+    "Watch *.mo files and check for syntax errors and warnings and format code. Pass flags to run only the selected tasks; --test, --generate and --deploy are opt-in only",
   )
   .option(
     "-e, --error",
-    "Check Motoko canisters or *.mo files for syntax errors",
+    "Check Motoko canisters or *.mo files for syntax errors (on by default)",
   )
-  .option("-w, --warning", "Check Motoko canisters or *.mo files for warnings")
-  .option("-f, --format", "Format Motoko code")
-  .option("-t, --test", "Run tests")
-  .option("-g, --generate", "Generate declarations for Motoko canisters")
-  .option("-d, --deploy", "Deploy Motoko canisters")
+  .option(
+    "-w, --warning",
+    "Check Motoko canisters or *.mo files for warnings (on by default)",
+  )
+  .option("-f, --format", "Format Motoko code (on by default)")
+  .option("-t, --test", "Run tests (opt-in)")
+  .option(
+    "-g, --generate",
+    "Generate declarations for Motoko canisters (opt-in)",
+  )
+  .option("-d, --deploy", "Deploy Motoko canisters (opt-in)")
+  .addHelpText(
+    "after",
+    "\nWith no flags, runs the default set: errors, warnings and formatting.\n" +
+      "Passing any flag runs only the selected tasks (error checking is always on).\n" +
+      "Tests, declaration generation and deploys never run unless requested:\n" +
+      "  $ mops watch -t     # errors + tests\n" +
+      "  $ mops watch -tgd   # errors + tests + generate + deploy",
+  )
   .action(async (options) => {
     checkConfigFile(true);
     await watch(options);
@@ -995,7 +1006,7 @@ program
 
 // lint
 program
-  .command("lint [filter]")
+  .command("lint [filter...]")
   .description("Lint Motoko code")
   .addOption(new Option("--verbose", "Verbose output"))
   .addOption(new Option("--fix", "Apply fixes"))
@@ -1016,11 +1027,12 @@ program
     "\nArguments after -- are forwarded directly to lintoko, e.g.:\n  $ mops lint -- --severity warning",
   )
   .addHelpText("after", enhancedMigrationHelp({ withFix: true }))
-  .allowUnknownOption(true)
-  .action(async (filter, options) => {
+  .action(async (filterArr, options) => {
     checkConfigFile(true);
-    const { extraArgs } = parseExtraArgs();
-    await lint(filter, {
+    // Variadic filter only to absorb the `--` passthrough operands (Commander
+    // counts them against the declared arity); a single filter is supported.
+    const { extraArgs, args } = parseExtraArgs(filterArr);
+    await lint(args[0], {
       ...options,
       extraArgs,
       noCheckLimit: options.checkLimit === false,
