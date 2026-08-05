@@ -1,4 +1,5 @@
 import path from "node:path";
+import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError, cliExit } from "../error.js";
@@ -17,9 +18,18 @@ import {
   resolveCanisterConfigs,
   validateCanisterArgs,
 } from "../helpers/resolve-canisters.js";
-import { prepareMigrationArgs } from "../helpers/migrations.js";
+import {
+  getCheckLimitPendingIssue,
+  prepareMigrationArgs,
+  reportCheckLimitPendingIssue,
+} from "../helpers/migrations.js";
 import { CanisterConfig, Config } from "../types.js";
-import { resolveStablePath, runStableCheck } from "./check-stable.js";
+import {
+  canUseStableBaselineCheck,
+  reportStableCheckOutcome,
+  resolveStablePath,
+  runStableCheck,
+} from "./check-stable.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 import { collectLintRules, lint } from "./lint.js";
@@ -170,13 +180,29 @@ async function checkCanisters(
       options.checkLimit === false,
     );
     try {
+      const canisterArgs = [
+        ...migration.migrationArgs,
+        ...(canister.args ?? []),
+      ];
+      // Soft-resolve only for the fold decision — don't fatal on a missing
+      // baseline before moc --check (preserves compile-error precedence).
+      const configuredMost =
+        canister["check-stable"]?.path &&
+        resolveConfigPath(canister["check-stable"].path);
+      const foldStableBaseline =
+        !!configuredMost &&
+        configuredMost.endsWith(".most") &&
+        existsSync(configuredMost) &&
+        canUseStableBaselineCheck(canisterArgs);
+      const foldedBaseline = foldStableBaseline ? configuredMost : null;
+
       const mocArgs = [
         "--check",
         ...(allLibs ? ["--all-libs"] : []),
+        ...(foldedBaseline ? ["--stable-baseline", foldedBaseline] : []),
         ...sources,
         ...globalMocArgs,
-        ...migration.migrationArgs,
-        ...(canister.args ?? []),
+        ...canisterArgs,
         ...(options.extraArgs ?? []),
       ];
 
@@ -188,7 +214,12 @@ async function checkCanisters(
           );
         }
 
-        const fixResult = await autofixMotoko(mocPath, [motokoPath], mocArgs);
+        // Autofix shouldn't see --stable-baseline (compat noise, not fixable).
+        const fixArgs = mocArgs.filter(
+          (a, i, arr) =>
+            a !== "--stable-baseline" && arr[i - 1] !== "--stable-baseline",
+        );
+        const fixResult = await autofixMotoko(mocPath, [motokoPath], fixArgs);
         logAutofixResult(fixResult, options.verbose);
       }
 
@@ -203,41 +234,83 @@ async function checkCanisters(
         }
 
         const result = await execa(mocPath, args, {
-          stdio: "inherit",
+          stdio: foldStableBaseline ? "pipe" : "inherit",
           reject: false,
         });
 
         if (result.exitCode !== 0) {
+          if (foldedBaseline) {
+            const issue = getCheckLimitPendingIssue(
+              canister.migrations,
+              canisterName,
+              foldedBaseline,
+              options.checkLimit === false,
+              true,
+            );
+            // Trimming started from the wrong state, so moc's compat output is
+            // misleading — replace it with the actionable hint, same as the
+            // 3-step path does.
+            if (issue) {
+              reportCheckLimitPendingIssue(issue, true);
+            }
+            if (result.stdout) {
+              console.log(result.stdout);
+            }
+            if (result.stderr) {
+              console.error(result.stderr);
+            }
+          }
           cliExit(
             result.exitCode ?? 1,
             `✗ Check failed for canister ${canisterName} (exit code: ${result.exitCode})`,
           );
         }
 
+        if (foldStableBaseline) {
+          if (result.stdout) {
+            console.log(result.stdout);
+          }
+          if (result.stderr) {
+            console.error(result.stderr);
+          }
+        }
+
         console.log(chalk.green(`✓ ${canisterName}`));
+
+        if (foldedBaseline) {
+          reportStableCheckOutcome(canisterName, {
+            migrations: canister.migrations,
+            oldMostPath: foldedBaseline,
+            baselineIsMostFile: true,
+            checkLimit: options.checkLimit,
+            exitCode: 0,
+          });
+        }
       } catch (err: any) {
         cliError(
           `Error while checking canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
         );
       }
 
-      const stablePath = resolveStablePath(canister, canisterName);
-      if (stablePath) {
-        await runStableCheck({
-          oldFile: stablePath,
-          canisterMain: motokoPath,
-          canisterName,
-          mocPath,
-          globalMocArgs,
-          canisterArgs: [...migration.migrationArgs, ...(canister.args ?? [])],
-          sources,
-          migrations: canister.migrations,
-          options: {
-            verbose: options.verbose,
-            extraArgs: options.extraArgs,
-            checkLimit: options.checkLimit,
-          },
-        });
+      if (!foldStableBaseline) {
+        const stablePath = resolveStablePath(canister, canisterName);
+        if (stablePath) {
+          await runStableCheck({
+            oldFile: stablePath,
+            canisterMain: motokoPath,
+            canisterName,
+            mocPath,
+            globalMocArgs,
+            canisterArgs,
+            sources,
+            migrations: canister.migrations,
+            options: {
+              verbose: options.verbose,
+              extraArgs: options.extraArgs,
+              checkLimit: options.checkLimit,
+            },
+          });
+        }
       }
     } finally {
       await migration.cleanup();

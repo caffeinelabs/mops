@@ -2,6 +2,7 @@
 
 ## Next
 
+- On moc 1.12.0+, `mops check` and `mops check-stable` check upgrade compatibility faster and report it better for canisters with `[migrations]` and a committed `.most` baseline: compatibility errors now point at your source (`src/main.mo:3.1-11.2`) instead of `(unknown location)`, and a field the initial actor requires that no migration produces now fails as an `M0267` error rather than only warning (`M0254`) — a forgotten migration that previously slipped through as a warning will now fail the check. Older moc pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
 - `mops publish --dry-run` runs the same local publish steps as a real publish (packaging checks, docs, changelog, tests, benchmarks) and prints the final file list, without contacting the registry or uploading. Honors `--no-docs` / `--no-test` / `--no-bench`. Does not run canister config validation or prove registry acceptance.
 - Fix `mops publish` exiting 0 on keyword-length and invalid `package.files` path errors (now exit 1, same as other preflight failures).
 - The PocketIC client used by `mops test --mode replica`, `mops bench`, and `mops watch` for `pocket-ic` `9.0.0` and newer is now upstream `@dfinity/pic` (`0.23.0`) instead of the `pic-js-mops` fork. The two patches mops needed — passing an explicit binary path and a server `--ttl` — landed upstream, so the fork no longer has a reason to exist and mops tracks PocketIC releases directly. No behavior change: the same toolchain-managed binary is started with the same `--ttl`. `@dfinity/pic` is a devDependency pre-bundled into the published CLI, because its postinstall downloads a ~94 MB pocket-ic binary and fails without network, and mops manages that binary itself via `[toolchain] pocket-ic`. That bundle carries pic's own `@icp-sdk/core` (`5.x`), so mops itself stays on `4.0.2`: `5.x` drops the IC HTTP API `v2` endpoints, which are the only ones the `dfx` and `dfx-pocket-ic` replicas serve, and projects with no `pocket-ic` pin still use those.
@@ -20,7 +21,6 @@
 
 - `[optimize]` runs Binaryen `wasm-opt` after `mops build` / `mops bench` (opt-in). Empty `[optimize]` defaults to `-O3 -g`. Pin via `[toolchain] wasm-opt` (Binaryen version, e.g. `131`); auto-pins latest if missing. Soft-fails to unoptimized Wasm on error.
 - `mops build` and `mops bench` accept `--no-optimize` to skip the `[optimize]` `wasm-opt` post-pass for a single run without editing `mops.toml` (no-op when `[optimize]` is not set).
-
 ## 2.18.0
 
 - `mops toolchain info <tool> --versions` lists stable GitHub release versions for a toolchain tool (moc, lintoko, wasmtime, pocket-ic), one per line, newest first. Defaults to the first releases page; pass `--all` for the full history (cache warming).
