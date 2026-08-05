@@ -1,5 +1,5 @@
 import path from "node:path";
-import { installFromGithub } from "../../vessel.js";
+import { installFromGithub } from "./install-from-github.js";
 import { installMopsDep } from "./install-mops-dep.js";
 import { Dependency } from "../../types.js";
 import { installLocalDep } from "./install-local-dep.js";
