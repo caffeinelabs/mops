@@ -1,5 +1,16 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`build [build].test-deploy installs the built Wasm on PocketIC 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "build canister main
+test deploy canister main
+
+✓ Built 1 canister successfully",
+}
+`;
+
 exports[`build --test-deploy installs the built Wasm on PocketIC 1`] = `
 {
   "exitCode": 0,

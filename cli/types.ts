@@ -26,6 +26,7 @@ export type Config = {
   build?: {
     outputDir?: string;
     args?: string[];
+    "test-deploy"?: boolean;
   };
   deployed?: {
     dir?: string;

@@ -352,7 +352,7 @@ program
   .addOption(
     new Option(
       "--test-deploy",
-      "Install the built Wasm on PocketIC to detect deployment failures",
+      "Install the built Wasm on PocketIC to detect deployment failures (also enabled by [build].test-deploy)",
     ),
   )
   .addOption(

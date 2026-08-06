@@ -173,6 +173,15 @@ describe("build", () => {
     }
   });
 
+  test("[build].test-deploy installs the built Wasm on PocketIC", async () => {
+    const cwd = path.join(import.meta.dirname, "build/test-deploy");
+    try {
+      await cliSnapshot(["build"], { cwd }, 0);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
   test("--test-deploy installs the built Wasm on PocketIC", async () => {
     const cwd = path.join(import.meta.dirname, "build/test-deploy");
     try {

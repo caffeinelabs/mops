@@ -43,6 +43,7 @@ path = "deployed/backend.most"
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
+test-deploy = true  # optional: verify fresh PocketIC installation after build
 
 # Opt-in Wasm optimization (Binaryen wasm-opt) for build + bench
 [optimize]
@@ -174,7 +175,7 @@ Create migration files directly in the `chain` directory.
 
 After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run `mops build` to produce the wasm artifact.
 
-Use `mops build --test-deploy` to install each built Wasm on a fresh PocketIC canister and catch module validation, initialization, and installation failures. Pin pocket-ic 9.0.0 or newer in `[toolchain]` first. The command uses each canister's `initArg`, or `()` when omitted. Set `wasmMemoryLimit` to a positive integer byte limit on a canister to test deployment under that limit. PocketIC error names include canonical IC error codes in the output.
+Use `mops build --test-deploy`, or set `[build].test-deploy = true` for every build, to install each built Wasm on a fresh PocketIC canister and catch module validation, initialization, and installation failures. Pin pocket-ic 9.0.0 or newer in `[toolchain]` first. The command uses each canister's `initArg`, or `()` when omitted. Set `wasmMemoryLimit` to a positive integer byte limit on a canister to test deployment under that limit. PocketIC error names include canonical IC error codes in the output. Do not enable fresh-install validation when the current Wasm requires an earlier legacy Wasm to establish migration state.
 
 `check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 

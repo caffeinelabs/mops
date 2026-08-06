@@ -55,7 +55,9 @@ export async function build(
   }
 
   let config = readConfig();
-  if (options.testDeploy) {
+  const testDeployEnabled =
+    options.testDeploy ?? config.build?.["test-deploy"] ?? false;
+  if (testDeployEnabled) {
     const pocketIcVersion = config.toolchain?.["pocket-ic"];
     if (!pocketIcVersion) {
       cliError(
@@ -254,7 +256,7 @@ export async function build(
     }
   }
 
-  if (options.testDeploy) {
+  if (testDeployEnabled) {
     try {
       const { testDeploy } = await import("../helpers/test-deploy.js");
       await testDeploy(testDeployArtifacts, { verbose: options.verbose });

@@ -85,6 +85,12 @@ mops build --no-optimize
 
 Install each built Wasm on a fresh PocketIC canister after compilation, metadata embedding, and optimization. The build fails if PocketIC rejects the Wasm or the canister initialization traps. Initialization uses the canister's configured `initArg`, or `()` when it is omitted.
 
+Enable the same validation for every plain `mops build` invocation:
+```toml
+[build]
+test-deploy = true
+```
+
 PocketIC 9.0.0 or newer must be pinned in `[toolchain]`:
 ```toml
 [toolchain]
@@ -99,9 +105,13 @@ main = "src/backend/main.mo"
 wasmMemoryLimit = 16777216
 ```
 
-The PocketIC client and binary are only loaded when this flag is used.
+The PocketIC client and binary are only loaded when `--test-deploy` or
+`[build].test-deploy` enables this validation.
 PocketIC error names are reported with their canonical IC error codes,
 for example `IC0539 (CanisterWasmMemoryLimitExceeded)`.
+
+This validation performs a fresh install. Do not enable it for a canister whose
+current Wasm requires an earlier legacy Wasm to establish its migration state.
 
 ## Configuration
 
@@ -124,6 +134,7 @@ You can also set global build settings:
 [build]
 outputDir = "dist"
 args = ["--release", "--ai-errors"]
+test-deploy = true
 ```
 
 ### `[build].outputDir`
