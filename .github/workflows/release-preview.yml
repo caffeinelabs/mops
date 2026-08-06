@@ -1,0 +1,242 @@
+name: Release CLI preview
+
+# Publishes a 3.x prerelease from the v3 branch to the npm `next` dist-tag.
+#
+# Deliberately separate from release.yml rather than a set of conditionals in
+# it: the stable 2.x path must stay impossible to break from here.
+#
+# Two things this does NOT do, both on purpose:
+#   - it never touches the `latest` dist-tag (see "Verify npm dist-tags"),
+#   - it never uploads to the cli-releases canister, so `mops self update`
+#     keeps serving 2.x to preview users. That is stated in the release notes.
+
+on:
+  push:
+    tags:
+      - "cli-v3.*-beta.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-cli-preview
+  cancel-in-progress: false
+
+jobs:
+  release-preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Abort if tag is not on v3
+        run: |
+          set -euo pipefail
+          git fetch origin v3
+          if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/v3"; then
+            echo "Tag commit ${GITHUB_SHA} is reachable from v3."
+          else
+            echo "::error::Tag commit ${GITHUB_SHA} is not on v3. Aborting."
+            exit 1
+          fi
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#cli-v}"
+          # Narrower than release.yml on purpose: this workflow may only ever
+          # publish a 3.x beta, so a mistyped tag cannot reach npm from here.
+          if ! echo "$VERSION" | grep -qE '^3\.[0-9]+\.[0-9]+-beta\.[0-9]+$'; then
+            echo "::error::Tag '${GITHUB_REF_NAME}' is not a 3.x beta (expected cli-v3.Y.Z-beta.N)"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
+      # The version comes from the tag rather than a committed bump, so v3
+      # does not need a churn commit per beta and the CLI version assertions
+      # in the test suite keep matching the 2.20.0 in cli/package.json.
+      - name: Set package version from tag
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          echo "cli/package.json version is now $(node -p "require('./package.json').version")"
+
+      # --- Docker build ---
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@efe9e3891a4f7307e689f2100b33a155b900a608 # v4.5.0
+
+      - name: Build CLI tarball using Docker
+        working-directory: cli
+        env:
+          COMMIT_HASH: ${{ github.sha }}
+          MOPS_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker build . \
+            --build-arg COMMIT_HASH="$COMMIT_HASH" \
+            --build-arg MOPS_VERSION="$MOPS_VERSION" \
+            -t mops
+
+      - name: Extract tarball from container
+        working-directory: cli
+        run: |
+          cid=$(docker create mops)
+          mkdir -p bundle
+          docker cp "$cid:/mops/cli/bundle/cli.tgz" ./bundle/cli.tgz
+          docker rm "$cid"
+
+      - name: Compute SHA256
+        id: hash
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          HASH=$(sha256sum bundle/cli.tgz | awk '{print $1}')
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "### CLI preview v${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**SHA256:** \`$HASH\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # --- npm publish ---
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+
+      - uses: ./.github/actions/cache-rust-wasm
+
+      - name: Install dependencies
+        working-directory: cli
+        run: npm ci
+
+      # Betas have no changelog heading of their own — v3 work accumulates
+      # under `## Next` and `## 3.0.0 (unreleased)`. So this takes everything
+      # above the first released heading rather than requiring a per-beta
+      # entry the way release.yml does.
+      - name: Build release notes
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_HASH: ${{ steps.hash.outputs.hash }}
+          COMMIT_HASH: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          {
+            echo "Preview build of the 3.x line. Not published to the \`latest\` dist-tag."
+            echo ""
+            echo '```bash'
+            echo "npm i -g ic-mops@${VERSION}   # or: npm i -g ic-mops@next"
+            echo '```'
+            echo ""
+            echo "> \`mops self update\` still serves the latest 2.x release — preview builds are"
+            echo "> published to npm only and are not uploaded to the cli-releases canister."
+            echo "> Use the npm command above to move between betas."
+            echo ""
+            echo "Docs for this line: https://docs.mops.one/next/"
+            echo ""
+          } > /tmp/release-notes.md
+
+          # Everything above the first released `## X.Y.Z` heading. The
+          # `(unreleased)` suffix on the 3.0.0 heading keeps it out of that
+          # pattern, so both it and `## Next` are included.
+          awk 'NR>1 && /^## [0-9]+\.[0-9]+\.[0-9]+$/{exit} NR>1' \
+            CHANGELOG.md >> /tmp/release-notes.md
+
+          if ! grep -q '[^[:space:]]' /tmp/release-notes.md; then
+            echo "::warning::No unreleased changelog entries found — publishing with minimal notes."
+          fi
+
+          {
+            echo ""
+            echo "---"
+            echo "**SHA256:** \`${BUILD_HASH}\`"
+            echo ""
+            echo "**Verify build:**"
+            echo '```bash'
+            echo "cd cli"
+            echo "docker build . --build-arg COMMIT_HASH=${COMMIT_HASH} --build-arg MOPS_VERSION=${VERSION} -t mops"
+            echo "docker run --rm --env SHASUM=${BUILD_HASH} mops"
+            echo '```'
+          } >> /tmp/release-notes.md
+
+      # --tag next is load-bearing. release.yml publishes with no --tag, which
+      # npm resolves to `latest`; doing that here would start serving a beta to
+      # everyone running `npm i -g ic-mops` on 2.x.
+      #
+      # Auth is npm trusted publishing (OIDC) via `id-token: write`, same as
+      # release.yml — no NODE_AUTH_TOKEN. Trusted publishers are configured per
+      # workflow file path, so ic-mops needs a publisher entry for THIS file
+      # before the first preview tag or the publish is rejected. See the PR.
+      - name: Publish to npm
+        working-directory: cli
+        run: npm publish --provenance --ignore-scripts --tag next
+
+      - name: Verify npm dist-tags
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -uo pipefail
+          # The registry can lag a moment behind a publish.
+          sleep 15
+          echo "Current dist-tags for ic-mops:"
+          npm dist-tag ls ic-mops
+
+          LATEST=$(npm view ic-mops dist-tags.latest 2>/dev/null || echo "")
+          NEXT=$(npm view ic-mops dist-tags.next 2>/dev/null || echo "")
+          fail=0
+
+          # Single-quoted throughout: backticks inside double quotes would run
+          # as command substitution.
+          if [ "$LATEST" = "$VERSION" ]; then
+            echo '::error::The latest dist-tag now points at this preview. Every "npm i -g ic-mops" would install a beta.'
+            echo '::error::Fix immediately: npm dist-tag add ic-mops@<last 2.x version> latest'
+            fail=1
+          fi
+
+          case "$LATEST" in
+            2.*) echo "ok    latest is still on the 2.x line ($LATEST)" ;;
+            "")  echo '::error::Could not read the latest dist-tag — verify it by hand.'; fail=1 ;;
+            *)   echo "::error::latest is ${LATEST}, which is not a 2.x release. Verify it by hand."; fail=1 ;;
+          esac
+
+          if [ "$NEXT" = "$VERSION" ]; then
+            echo "ok    next points at $NEXT"
+          else
+            echo "::error::The next dist-tag is '${NEXT}', expected '${VERSION}'."
+            fail=1
+          fi
+
+          exit $fail
+
+      # --- GitHub prerelease ---
+
+      - name: Create GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$TAG" \
+            cli/bundle/cli.tgz#cli.tgz \
+            --title "CLI v${VERSION} (preview)" \
+            --prerelease \
+            --notes-file /tmp/release-notes.md
+
+      # --- Docs ---
+      #
+      # No cli-releases canister deploy here on purpose: previews are npm-only.
+      # This does mean the docs canister tracks v3 for as long as previews are
+      # being cut.
+      - name: Deploy docs canister
+        uses: ./.github/actions/deploy-docs
+        with:
+          identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
