@@ -281,3 +281,7 @@ mops add core
 Then configure `[moc].args`, `[canisters]`, and `[build]` in `mops.toml`.
 
 To update tools later: `mops toolchain update moc` or `mops toolchain update` (all tools).
+
+## Editing the mops docs site
+
+Edits go to `docs/docs/` — the in-development line, served at the root of docs.mops.one. `docs/versioned_docs/version-2.x/` is a frozen snapshot; back-port only correctness fixes for behavior that also exists in 2.x.
