@@ -10,9 +10,8 @@ name: Release CLI preview
 #   - it never uploads to the cli-releases canister, so `mops self update`
 #     keeps serving 2.x to preview users. That is stated in the release notes.
 #
-# Prerequisite: the NPM_PREVIEW_TOKEN secret. npm allows one trusted publisher
-# per package and ic-mops spends it on release.yml, so previews authenticate
-# with a token instead. See the "Publish to npm" step.
+# Prerequisite: an npm trusted publisher entry for this workflow filename, with
+# no environment set, on the ic-mops package. See the "Publish to npm" step.
 
 on:
   push:
@@ -178,32 +177,17 @@ jobs:
       # npm resolves to `latest`; doing that here would start serving a beta to
       # everyone running `npm i -g ic-mops` on 2.x.
       #
-      # Auth differs from release.yml on purpose. release.yml uses npm trusted
-      # publishing (OIDC, no token), but npm allows exactly one trusted
-      # publisher per package and pins it to a single workflow filename, so
-      # this workflow cannot use OIDC without taking that slot away from
-      # release.yml and breaking stable releases. A granular token scoped to
-      # ic-mops is the only option that leaves the stable path untouched.
-      # Provenance is unaffected: --provenance works with token auth as long as
-      # the job has `id-token: write`, which it does.
-      - name: Check the preview publish token is configured
-        env:
-          NPM_PREVIEW_TOKEN: ${{ secrets.NPM_PREVIEW_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${NPM_PREVIEW_TOKEN}" ]; then
-            echo "::error::Secret NPM_PREVIEW_TOKEN is not set, so this preview cannot be published."
-            echo "::error::Create a granular npm access token scoped to read/write on ic-mops and add it"
-            echo "::error::as the NPM_PREVIEW_TOKEN repository secret. Do not repoint the ic-mops trusted"
-            echo "::error::publisher at this workflow — that slot belongs to release.yml and moving it"
-            echo "::error::would break stable 2.x releases."
-            exit 1
-          fi
-
+      # Auth is npm trusted publishing (OIDC) via `id-token: write`, exactly as
+      # release.yml does it — no token env var. Trusted publishers are matched
+      # on repo + workflow filename + environment, so ic-mops needs a publisher
+      # entry for THIS filename before the first preview tag.
+      #
+      # Deliberately no `environment:` key on this job: release.yml declares
+      # none, so its entry carries no environment. Adding one here would make
+      # the OIDC claim mismatch an entry configured without it, and the publish
+      # fails with an auth error that looks nothing like a config problem.
       - name: Publish to npm
         working-directory: cli
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PREVIEW_TOKEN }}
         run: npm publish --provenance --ignore-scripts --tag next
 
       - name: Verify npm dist-tags
