@@ -36,8 +36,10 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-      # No dfx here on purpose — this job runs entirely on icp-cli and mops.
-      # dfx remains only in the production deploy path (release.yml).
+      # No setup-dfx on purpose — this job runs entirely on icp-cli and mops.
+      # dfx is still installed by release.yml and by the old-CLI matrices in
+      # mops-test.yml / setup-mops.yml.
+
       # Pinned on purpose. icp-cli is still changing its manifest schema
       # between minor versions, so an unpinned install breaks icp.yaml
       # without a commit touching it.
