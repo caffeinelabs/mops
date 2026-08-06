@@ -1,0 +1,19 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`publish --dry-run success 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "Dry-run dry-run-fixture@0.1.0
+Parsing CHANGELOG.md...
+Changelog:
+* Initial release
+
+Files:
+  LICENSE
+  README.md
+  mops.toml
+  src/lib.mo
+Dry-run OK — local publish steps passed (4 files). Nothing was published.",
+}
+`;

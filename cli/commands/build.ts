@@ -4,13 +4,14 @@ import { exists } from "fs-extra";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { lock, unlockSync } from "proper-lockfile";
-import { cliError } from "../error.js";
+import { cliError, cliExit } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import {
   filterCanisters,
   resolveCanisterConfigs,
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
+import { optimizeWasm } from "../helpers/optimize-wasm.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
 import { Config } from "../types.js";
@@ -19,6 +20,8 @@ import { toolchain } from "./toolchain/index.js";
 export interface BuildOptions {
   outputDir: string;
   verbose: boolean;
+  /** `false` skips the `[optimize]` wasm-opt pass (`--no-optimize`). */
+  optimize: boolean;
   extraArgs: string[];
 }
 
@@ -136,7 +139,8 @@ export async function build(
               console.error(result.stdout);
             }
           }
-          cliError(
+          cliExit(
+            result.exitCode ?? 1,
             `Build failed for canister ${canisterName} (exit code: ${result.exitCode})`,
           );
         }
@@ -199,6 +203,10 @@ export async function build(
           customSections,
         );
         await writeFile(wasmPath, newWasm);
+        await optimizeWasm(wasmPath, config, {
+          verbose: options.verbose,
+          optimize: options.optimize,
+        });
       } catch (err: any) {
         if (err.message?.includes("Build failed for canister")) {
           throw err;

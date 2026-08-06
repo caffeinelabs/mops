@@ -68,18 +68,22 @@ export function pipeStderrToMMF(stderr: Readable, mmf: MMF1, dir = "") {
   });
 }
 
-export function pipeMMF(proc: ChildProcessWithoutNullStreams, mmf: MMF1) {
+export function pipeMMF(
+  proc: ChildProcessWithoutNullStreams,
+  mmf: MMF1,
+  onClose?: (code: number | null) => void,
+) {
   return new Promise<void>((resolve) => {
     pipeStdoutToMMF(proc.stdout, mmf);
     pipeStderrToMMF(proc.stderr, mmf);
 
-    // exit
     proc.on("close", (code) => {
       if (code === 0) {
         mmf.strategy !== "print" && mmf.pass();
       } else if (code !== 1) {
         mmf.fail(`unknown exit code: ${code}`);
       }
+      onClose?.(code ?? null);
       resolve();
     });
   });

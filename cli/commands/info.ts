@@ -34,7 +34,7 @@ export async function info(pkgArg: string, options: InfoOptions = {}) {
   let d: PackageDetails = res.ok;
   let c = d.config;
 
-  // d.versions is in ascending order (oldest first)
+  // Oldest-first; v3 flips to newest-first (NEXT-MAJOR.md). toolchain info --versions already is.
   if (options.versions) {
     for (let ver of d.versions) {
       console.log(ver);

@@ -63,8 +63,9 @@ See [toolchain management](/cli/toolchain) page for more details.
 | -------------------- | ------------------------------------------------ |
 | moc                  | Motoko compiler version (e.g. `1.0.0`) or file path (e.g. `./tools/moc`, `/usr/local/bin/moc`)   |
 | wasmtime             | WASM runtime version (e.g. `41.0.0`) or file path used to run [tests](/cli/mops-test#--mode) in `wasi` mode   |
-| pocket-ic            | Local IC replica version (e.g. `12.0.0`) or file path used to run [benchmarks](/cli/mops-bench#--replica)   |
+| pocket-ic            | Local IC replica version (e.g. `12.0.0`) or file path used to run [benchmarks](/cli/mops-bench#--replica). Versions below `9.0.0` are deprecated and will no longer be supported in mops v3   |
 | lintoko              | Linter version (e.g. `0.7.0`) or file path for Motoko linting   |
+| wasm-opt             | Binaryen version (e.g. `131`) or file path used for `[optimize]` post-build Wasm optimization   |
 
 File paths must start with `/`, `./`, or `../`.
 
@@ -194,6 +195,40 @@ args = ["--release", "--ai-errors"]
 ```
 
 These flags are applied after `[moc].args` and before per-canister `[canisters.<name>].args`.
+
+
+## [optimize]
+
+Opt-in post-build Wasm optimization via Binaryen's `wasm-opt`. When this section is present (even empty), `mops build` and `mops bench` run `wasm-opt` on the compiled module after candid metadata is attached.
+
+| Field       | Description |
+| ----------- | ----------- |
+| level       | Optimization level: `O0`, `O1`, `O2`, `O3` (default), `O4`, `Os`, or `Oz` |
+| keep-names  | Keep the Wasm name section for readable backtraces (default `true`, maps to `wasm-opt -g`) |
+| args        | Extra flags passed to `wasm-opt` (optional) |
+
+Example — enable with defaults (`O3`, keep names):
+```toml
+[optimize]
+```
+
+Example — size-oriented, strip names, extra flag:
+```toml
+[optimize]
+level = "Oz"
+keep-names = false
+args = ["--enable-bulk-memory"]
+```
+
+Pin Binaryen via `[toolchain] wasm-opt` (e.g. `"131"`). If `[optimize]` is set and `wasm-opt` is not pinned, mops auto-pins the latest Binaryen release into `mops.toml` on the next build/bench (rewrites the file like `mops add` — prefer pinning explicitly in CI).
+
+If `wasm-opt` fails, mops warns and keeps the unoptimized Wasm (same soft-fail behavior as dfx). Use `--verbose` for full `wasm-opt` output.
+
+Pass `--no-optimize` to [`mops build`](/cli/mops-build#--no-optimize) or [`mops bench`](/cli/mops-bench#--no-optimize) to skip this pass for a single run without editing `mops.toml`.
+
+:::note
+Deploy recipes (e.g. icp-cli) that also run `wasm-opt` should skip that step when mops already optimized the artifact — avoid stacking passes. Actor-class Wasm embedded inside Motoko modules is not recursively optimized.
+:::
 
 
 ## [deployed]

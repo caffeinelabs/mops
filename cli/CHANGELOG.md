@@ -2,6 +2,45 @@
 
 ## Next
 
+## 2.20.0
+- Fix `mops bench` (and `mops sync`, `mops watch`) ignoring `[toolchain] moc` and always resolving the compiler via `DFX_MOC_PATH` / `dfx cache show`, unlike `mops build`/`test`/`check`/`check-stable`/`generate`/`docs`. A pinned `[toolchain] moc` is now the compiler these commands invoke, regardless of `DFX_MOC_PATH`.
+- `.tar.xz` toolchain archives (`lintoko`, `wasmtime`) are now unpacked with `tar` plus a standalone xz decompressor instead of `decompress` and its `decomp-tarxz` plugin. Extraction output is unchanged — same files, same permissions — but `decompress` is unmaintained, with two open critical advisories and no fixed version, so the toolchain download path no longer depends on it. Failures during unpacking now surface as errors instead of being swallowed and reported later as a missing-directory copy error, and the temporary download directory is always cleaned up. `decomp-tarxz` is no longer a runtime dependency of the published CLI.
+- `mops publish --dry-run` runs the same local publish steps as a real publish (packaging checks, docs, changelog, tests, benchmarks) and prints the final file list, without contacting the registry or uploading. Honors `--no-docs` / `--no-test` / `--no-bench`. Does not run canister config validation or prove registry acceptance.
+- Fix `mops publish` exiting 0 on keyword-length and invalid `package.files` path errors (now exit 1, same as other preflight failures).
+- The PocketIC client used by `mops test --mode replica`, `mops bench`, and `mops watch` for `pocket-ic` `9.0.0` and newer is now upstream `@dfinity/pic` (`0.23.0`) instead of the `pic-js-mops` fork. The two patches mops needed — passing an explicit binary path and a server `--ttl` — landed upstream, so the fork no longer has a reason to exist and mops tracks PocketIC releases directly. No behavior change: the same toolchain-managed binary is started with the same `--ttl`. `@dfinity/pic` is a devDependency pre-bundled into the published CLI, because its postinstall downloads a ~94 MB pocket-ic binary and fails without network, and mops manages that binary itself via `[toolchain] pocket-ic`. That bundle carries pic's own `@icp-sdk/core` (`5.x`), so mops itself stays on `4.0.2`: `5.x` drops the IC HTTP API `v2` endpoints, which are the only ones the `dfx` and `dfx-pocket-ic` replicas serve, and projects with no `pocket-ic` pin still use those.
+- `npm i -g ic-mops` downloads 1.4 MiB instead of 5.0 MiB. The published tarball used to ship the whole `cli/` directory, which meant two copies of the CLI: the `dist/` tree that the `mops` binary actually runs, and the 2.3 MiB bun single-file bundle that only `curl -fsSL cli.mops.one/install.sh | sh` uses. It also carried the TypeScript sources, the test suite and a second copy of `templates/`, `declarations/` and the Wasm helper that `dist/` already contains. Now only `dist/`, `bin/moc-wrapper.sh` and the changelog are published. Nothing changes for `cli.mops.one/install.sh`, which downloads the bundle from the releases canister, or for `mops self update`, which uses the same source.
+- Deprecated `[toolchain] pocket-ic` pins below `9.0.0`. They still work — the legacy `pic-ic` client is unchanged and still handles them — but now print a warning, and support will be removed in mops v3. Run `mops toolchain use pocket-ic 12.0.0` to move to a supported version.
+
+## 2.19.2
+
+- Fix local path dependencies being written into `mops.lock` as absolute filesystem paths, which made committed lockfiles non-portable across machines. Local deps are now stored root-relative (e.g. `./packages/shared`, `../lib`). Regenerate an existing absolute lock with `mops install --lock update` (a plain `mops install` will not rewrite it). After regenerating, all environments need a CLI that includes this fix — older CLIs treat relative lock paths as cwd-relative and break from subdirectories.
+
+## 2.19.1
+
+- `mops user import` accepts identities in PKCS#8 format (`-----BEGIN PRIVATE KEY-----`, e.g. exported by icp-cli) in addition to the dfx-style SEC1 format, and validates the pem data at import time
+
+## 2.19.0
+
+- `[optimize]` runs Binaryen `wasm-opt` after `mops build` / `mops bench` (opt-in). Empty `[optimize]` defaults to `-O3 -g`. Pin via `[toolchain] wasm-opt` (Binaryen version, e.g. `131`); auto-pins latest if missing. Soft-fails to unoptimized Wasm on error.
+- `mops build` and `mops bench` accept `--no-optimize` to skip the `[optimize]` `wasm-opt` post-pass for a single run without editing `mops.toml` (no-op when `[optimize]` is not set).
+
+## 2.18.0
+
+- `mops toolchain info <tool> --versions` lists stable GitHub release versions for a toolchain tool (moc, lintoko, wasmtime, pocket-ic), one per line, newest first. Defaults to the first releases page; pass `--all` for the full history (cache warming).
+- `mops toolchain info <tool>` shows latest stable release, pinned version, and recent version history (first page only).
+- Fix `mops install` under `CI=1` aborting on a stale `mops.lock` with no recovery path (AGE-291). The deps-hash mismatch error now suggests `mops install --lock update`. `mops add` / `remove` / `update` / `sync` always default to updating the lockfile even when `CI` is set (they never supported `--lock check`). Using `CI` to auto-select `--lock check` on `mops install` is deprecated and warns; pass `--lock check` explicitly. Removal tracked in `NEXT-MAJOR.md` (GH #516).
+
+## 2.17.0
+
+- `mops test` no longer passes `-S preview2=n` to wasmtime. The flag was deprecated in wasmtime 46 (printing a warning to stderr that was misread as a test failure) and became a hard error in wasmtime 47.0.0 (2026-07-20). moc emits WASI-preview1 modules, which wasmtime runs correctly without the flag.
+- Fix `mops bench` accepting a `[moc] args` entry with an embedded space (e.g. `["-E=M0154 --legacy-persistence"]`) when it should reject it. `mops bench` now invokes `moc` with a proper argument array (same as `mops test`), so a mis-formatted entry produces the same error: `moc: invalid warning code: M0154 --legacy-persistence`.
+- `mops test` and `mops bench` now support `-- <moc flags>` to pass extra flags directly to the Motoko compiler for that invocation (e.g. `mops test -- -Werror`), consistent with `mops build`, `mops check`, `mops check-stable`, `mops generate`, and `mops migrate`.
+
+## 2.16.1
+
+- Fix `mops bench` crashing on moc 0.15+ with the default `--gc copying`: `--copying-gc` is rejected under enhanced orthogonal persistence, which became the default persistence mode in 2.16.0. The default GC is now `incremental` (moc's default and the only collector available under EOP). Selecting a legacy collector (`copying`, `compacting`, `generational`) now implies `--legacy-persistence`, since moc only accepts them there.
+- `mops build`, `mops check`, `mops generate`, and `mops check-stable` now tunnel `moc`'s exit code instead of always exiting `1`. moc exits `2` on a compiler crash (uncaught internal error) versus `1` for normal user errors (type/compile errors, stable-compat mismatch, bad args), so CI and scripts can now distinguish "file a Motoko bug" from "fix your code" via `$?`. `mops test` likewise exits `2` when a `moc` process crashes during a test run, instead of reporting it as an ordinary test failure.
+
 ## 2.16.0
 
 - `mops bench` now compiles benchmark canisters under **enhanced orthogonal persistence** (moc's default) instead of forcing `--legacy-persistence` — measuring the persistence mode real canisters run. Pass `--legacy-persistence` to opt back into legacy persistence.

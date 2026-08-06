@@ -30,7 +30,15 @@
     "webpack": "*"
   },
   "overrides": {
-    "webpackbar": "^7.0.0"
+    "webpackbar": "^7.0.0",
+    "brace-expansion": "1.1.18",
+    "postcss": "8.5.25",
+    "js-yaml": "4.3.1",
+    "gray-matter": {
+      "js-yaml": "3.15.1"
+    },
+    "serialize-javascript": "7.0.7",
+    "uuid": "11.1.1"
   },
   "browserslist": {
     "production": [

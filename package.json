@@ -1,4 +1,5 @@
 {
+  "name": "mops",
   "type": "module",
   "scripts": {
     "mops": "npx --no tsx --prefix cli ./cli/environments/nodejs/cli",

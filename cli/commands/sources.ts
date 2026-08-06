@@ -6,6 +6,7 @@ import {
   formatDir,
   formatGithubDir,
   getDependencyType,
+  getRootDir,
   readConfig,
 } from "../mops.js";
 import { resolvePackages } from "../resolve-packages.js";
@@ -18,6 +19,7 @@ export async function sourcesArgs({
     return [];
   }
 
+  let rootDir = getRootDir();
   let resolvedPackages = await resolvePackages({ conflicts });
 
   // sources
@@ -27,7 +29,7 @@ export async function sourcesArgs({
 
       let pkgDir;
       if (depType === "local") {
-        pkgDir = path.relative(cwd, version);
+        pkgDir = path.relative(cwd, path.resolve(rootDir, version));
       } else if (depType === "github") {
         pkgDir = path.relative(cwd, formatGithubDir(name, version));
       } else if (depType === "mops") {

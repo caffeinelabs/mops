@@ -6,7 +6,7 @@ import { checkConfigFile, getRootDir, readConfig } from "../mops.js";
 import { add } from "./add.js";
 import { remove } from "./remove.js";
 import { checkIntegrity } from "../integrity.js";
-import { getMocPath } from "../helpers/get-moc-path.js";
+import { toolchain } from "./toolchain/index.js";
 import { MOTOKO_IGNORE_PATTERNS } from "../constants.js";
 import { getDepName } from "../helpers/get-dep-name.js";
 
@@ -42,12 +42,12 @@ export async function sync({ lock }: SyncOptions = {}) {
     await remove(pkg, { dev, lock: "ignore" });
   }
 
-  await checkIntegrity(lock);
+  await checkIntegrity(lock, { defaultLock: "update" });
 }
 
 async function getUsedPackages(): Promise<string[]> {
   let rootDir = getRootDir();
-  let mocPath = getMocPath();
+  let mocPath = await toolchain.bin("moc", { fallback: true });
 
   let files = globSync("**/*.mo", {
     cwd: rootDir,

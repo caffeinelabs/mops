@@ -44,6 +44,7 @@ type TestOptions = {
   mode: TestMode;
   replica: ReplicaName;
   verbose: boolean;
+  extraArgs: string[];
 };
 
 let replica = new Replica();
@@ -84,6 +85,8 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
 
   replica.type = replicaType;
   replica.verbose = !!options.verbose;
+
+  let extraArgs = options.extraArgs ?? [];
 
   if (options.watch) {
     replica.ttl = 60 * 15; // 15 minutes
@@ -128,6 +131,7 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
         true,
         controller.signal,
         explicitReplica,
+        extraArgs,
       );
       await curRun;
 
@@ -157,15 +161,23 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       false,
       undefined,
       explicitReplica,
+      extraArgs,
     );
     if (!passed) {
-      process.exit(1);
+      process.exit(maxMocExit >= 2 ? 2 : 1);
     }
   }
 }
 
 let mocPath = "";
 let wasmtimePath = "";
+
+let maxMocExit = 0;
+const trackMocExit = (code: number | null) => {
+  if (code && code >= 2) {
+    maxMocExit = Math.max(maxMocExit, code);
+  }
+};
 
 async function runAll(
   reporterName: ReporterName | undefined,
@@ -175,6 +187,7 @@ async function runAll(
   watch = false,
   signal?: AbortSignal,
   explicitReplica = false,
+  extraArgs: string[] = [],
 ): Promise<boolean> {
   let done = await testWithReporter(
     reporterName,
@@ -184,6 +197,7 @@ async function runAll(
     watch,
     signal,
     explicitReplica,
+    extraArgs,
   );
   return done;
 }
@@ -196,7 +210,9 @@ export async function testWithReporter(
   watch = false,
   signal?: AbortSignal,
   explicitReplica = false,
+  extraArgs: string[] = [],
 ): Promise<boolean> {
+  maxMocExit = 0;
   let rootDir = getRootDir();
   let files: string[] = [];
   let libFiles = globSync("**/test?(s)/lib.mo", MOTOKO_GLOB_CONFIG);
@@ -314,6 +330,7 @@ export async function testWithReporter(
         "--error-detail=2",
         ...sourcesArr,
         ...globalMocArgs,
+        ...extraArgs,
         file,
       ].filter((x) => x);
 
@@ -328,7 +345,7 @@ export async function testWithReporter(
           }
           throw error;
         });
-        pipeMMF(proc, mmf).then(resolve);
+        pipeMMF(proc, mmf, trackMocExit).then(resolve);
       }
       // build and run wasm
       else if (mode === "wasi") {
@@ -346,7 +363,7 @@ export async function testWithReporter(
           }
           throw error;
         });
-        pipeMMF(buildProc, mmf)
+        pipeMMF(buildProc, mmf, trackMocExit)
           .then(async () => {
             if (mmf.failed > 0) {
               return;
@@ -358,8 +375,6 @@ export async function testWithReporter(
               config.toolchain?.wasmtime >= "14.0.0"
             ) {
               wasmtimeArgs = [
-                "-S",
-                "preview2=n",
                 "-C",
                 "cache=n",
                 "-W",
@@ -413,7 +428,7 @@ export async function testWithReporter(
           throw error;
         });
 
-        pipeMMF(buildProc, mmf)
+        pipeMMF(buildProc, mmf, trackMocExit)
           .then(async () => {
             if (mmf.failed > 0) {
               return;

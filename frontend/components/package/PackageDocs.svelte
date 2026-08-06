@@ -8,6 +8,7 @@
 	import markdownIt from "markdown-it";
 	import "@wooorm/starry-night/style/light";
 	import {getStarryNight} from "/logic/get-starry-night";
+	import DOMPurify from "dompurify";
 
 	type DefinitionKind = "module" | "class" | "type" | "func" | "value" | "type-actor";
 	type Definition = {
@@ -136,7 +137,7 @@
 			};
 		});
 
-		div.innerHTML = doc.convert();
+		div.innerHTML = DOMPurify.sanitize(doc.convert());
 
 		// nested fields
 		div.querySelectorAll("h3").forEach((el) => {

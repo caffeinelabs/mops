@@ -30,12 +30,14 @@ Under the hood, Mops will:
 
 The number you get is for the exact wasm the chosen replica runs, and the two replicas install it differently:
 
-- **`pocket-ic`** runs the raw `moc` output — **no optimization**.
-- **`dfx`** post-optimizes the module before installing it (`optimize: "cycles"`, via `ic-wasm`), so its instruction counts can be meaningfully lower.
+- **With [`[optimize]`](/mops.toml#optimize)** — `mops bench` runs `wasm-opt` on the module before deploy (same pass as `mops build`). Prefer this when you want bench numbers to match an optimized deploy artifact. When that pass **succeeds**, the deprecated `dfx` replica path does **not** apply a second `optimize: "cycles"` pass (on soft-fail, dfx still may). Pass [`--no-optimize`](#--no-optimize) to skip the `wasm-opt` pass for a single run without editing `mops.toml`.
+- **Without `[optimize]`**:
+  - **`pocket-ic`** runs the raw `moc` output — **no optimization**.
+  - **`dfx`** post-optimizes before install (`optimize: "cycles"`, via `ic-wasm`), so instruction counts can be lower — and that path fails on EOP Motoko (Table64), falling back to unoptimized Wasm.
 
-The same benchmark can therefore report different numbers across replicas. Always compare runs made with the **same replica**.
+Always compare runs made with the **same replica** and the same `[optimize]` settings.
 
-Also note that `dfx`'s optimization is best-effort: if it fails (for example, on wasm modules using features the bundled `ic-wasm` can't process, such as multi-value), `dfx` prints `WARNING: Failed to optimize the Wasm module` and falls back to the **unoptimized** module. Run with [`--verbose`](#--verbose) to see this warning.
+If `wasm-opt` fails, mops warns and keeps the unoptimized module. Run with [`--verbose`](#--verbose) for details.
 
 :::
 
@@ -56,10 +58,12 @@ Possible values:
 Select garbage collector.
 
 Possible values:
-- `copying` (default)
+- `incremental` (default)
+- `copying`
 - `compacting`
 - `generational`
-- `incremental`
+
+Under enhanced orthogonal persistence (the default persistence mode), moc fixes the GC to `incremental` and the collector cannot be chosen — the other collectors only exist under legacy persistence. Selecting `copying`, `compacting`, or `generational` therefore implies [`--legacy-persistence`](#--legacy-persistence).
 
 ### `--save`
 
@@ -83,6 +87,22 @@ Compile benchmark canisters under legacy persistence instead of enhanced orthogo
 
 Use it to measure a canister that still uses legacy persistence. Has no effect with `moc < 0.15`, where legacy persistence is already the default.
 
+### `--no-optimize`
+
+Skip the [`[optimize]`](/mops.toml#optimize) `wasm-opt` pass for this run, even when it is configured in `mops.toml`. Has no effect when `[optimize]` is not set. The `dfx` replica may still apply its own `optimize: "cycles"` pass on deploy — only the `pocket-ic` replica then runs the raw `moc` output.
+
+```
+mops bench --no-optimize
+```
+
 ### `--verbose`
 
-Print the benchmark pipeline up front — compiler version, replica + version, GC, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and `dfx` output (including any deploy/optimization warnings) instead of hiding it.
+Print the benchmark pipeline up front — compiler version, replica + version, GC, context (query/update), persistence, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and `dfx` output (including any deploy/optimization warnings) instead of hiding it.
+
+### `-- <moc flags>`
+
+Pass extra flags directly to the Motoko compiler for this invocation. Appended after `[moc].args` from `mops.toml`.
+
+```
+mops bench -- -Werror
+```

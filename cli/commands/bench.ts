@@ -6,7 +6,7 @@ import chalk from "chalk";
 import { globSync } from "glob";
 import { markdownTable } from "markdown-table";
 import { createLogUpdate } from "log-update";
-import { execaCommand } from "execa";
+import { execa } from "execa";
 import stringWidth from "string-width";
 import { filesize } from "filesize";
 import terminalSize from "terminal-size";
@@ -23,8 +23,12 @@ import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 import { warnIfDfxReplica } from "../helpers/deprecate-dfx-replica.js";
-import { getMocPath } from "../helpers/get-moc-path.js";
-import { sources } from "./sources.js";
+import { toolchain } from "./toolchain/index.js";
+import {
+  formatOptimizePipeline,
+  optimizeWasm,
+} from "../helpers/optimize-wasm.js";
+import { sourcesArgs } from "./sources.js";
 import { MOTOKO_GLOB_CONFIG } from "../constants.js";
 
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
@@ -47,6 +51,9 @@ type BenchOptions = {
   verbose: boolean;
   silent: boolean;
   profile: "Debug" | "Release";
+  /** `false` skips the `[optimize]` wasm-opt pass (`--no-optimize`). */
+  optimize: boolean;
+  extraArgs: string[];
 };
 
 export async function bench(
@@ -61,7 +68,7 @@ export async function bench(
     replicaVersion: "",
     compiler: "moc",
     compilerVersion: getMocVersion(true),
-    gc: "copying",
+    gc: "incremental",
     forceGc: true,
     query: false,
     legacyPersistence: false,
@@ -70,6 +77,8 @@ export async function bench(
     verbose: false,
     silent: false,
     profile: dfxJson?.profile || "Release",
+    optimize: true,
+    extraArgs: [],
   };
 
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
@@ -106,12 +115,19 @@ export async function bench(
   warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");
 
   if (options.verbose) {
-    // `dfx` post-optimizes the wasm on deploy (`optimize: "cycles"`, via ic-wasm);
-    // `pocket-ic` runs the raw moc output. This changes instruction counts, so surface it.
-    let optimize =
-      replicaType === "dfx" || replicaType === "dfx-pocket-ic"
-        ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
-        : "none (raw moc output)";
+    // With no mops pass (no [optimize] or --no-optimize), dfx still post-optimizes
+    // on deploy; pocket-ic runs raw moc output.
+    let optimize = formatOptimizePipeline(config, {
+      optimize: options.optimize,
+    });
+    if (optimize.startsWith("none")) {
+      optimize =
+        replicaType === "dfx" || replicaType === "dfx-pocket-ic"
+          ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
+          : optimize;
+    }
+    let legacyGc = isLegacyGc(options.gc);
+    let effectiveLegacyPersistence = options.legacyPersistence || legacyGc;
     console.log(chalk.gray("Benchmark pipeline:"));
     console.log(chalk.gray(`  compiler:  moc ${options.compilerVersion}`));
     console.log(
@@ -129,9 +145,16 @@ export async function bench(
     );
     console.log(
       chalk.gray(
-        `  persistence: ${options.legacyPersistence ? "legacy" : "enhanced"}`,
+        `  persistence: ${effectiveLegacyPersistence ? "legacy" : "enhanced"}`,
       ),
     );
+    if (legacyGc && !options.legacyPersistence) {
+      console.log(
+        chalk.gray(
+          `  (gc '${options.gc}' only exists under legacy persistence; enabling --legacy-persistence)`,
+        ),
+      );
+    }
     console.log(chalk.gray(`  profile:   ${options.profile}`));
     console.log(chalk.gray(`  optimize:  ${optimize}`));
   }
@@ -279,33 +302,41 @@ function computeDiffAll(
   return diff;
 }
 
-function getMocArgs(options: BenchOptions): string {
-  let args = "";
+// Collectors that only exist under legacy persistence. moc 0.15+ fixes the GC to
+// incremental under enhanced orthogonal persistence and rejects these there.
+function isLegacyGc(gc: BenchOptions["gc"]): boolean {
+  return gc === "copying" || gc === "compacting" || gc === "generational";
+}
 
-  // Benchmarks compile under enhanced orthogonal persistence (moc's default
-  // since 0.15) — the mode real canisters run. Pass `--legacy-persistence`
-  // only when the user opts in, and only where moc supports the flag (>= 0.15;
-  // legacy is already the default below it).
-  if (
-    options.legacyPersistence &&
-    options.compilerVersion &&
-    new SemVer(options.compilerVersion).compare("0.15.0") >= 0
-  ) {
-    args += " --legacy-persistence";
+function getMocArgs(options: BenchOptions): string[] {
+  const args: string[] = [];
+
+  const mocAtLeast015 =
+    !!options.compilerVersion &&
+    new SemVer(options.compilerVersion).compare("0.15.0") >= 0;
+
+  // Legacy collectors require legacy persistence; moc < 0.15 is already legacy
+  // and has no --legacy-persistence flag.
+  const useLegacyPersistence =
+    options.legacyPersistence || isLegacyGc(options.gc);
+
+  if (useLegacyPersistence && mocAtLeast015) {
+    args.push("--legacy-persistence");
   }
 
   if (options.forceGc) {
-    args += " --force-gc";
+    args.push("--force-gc");
   }
 
-  if (options.gc) {
-    args += ` --${options.gc}-gc`;
+  // Under EOP the GC is fixed; only pass a collector flag where it's selectable.
+  if (options.gc && (useLegacyPersistence || !mocAtLeast015)) {
+    args.push(`--${options.gc}-gc`);
   }
 
   if (options.profile === "Debug") {
-    args += " --debug";
+    args.push("--debug");
   } else if (options.profile === "Release") {
-    args += " --release";
+    args.push("--release");
   }
 
   return args;
@@ -323,10 +354,6 @@ async function deployBenchFile(
 
   // prepare temp files
   fs.mkdirSync(tempDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(tempDir, "dfx.json"),
-    JSON.stringify(replica.dfxJson(canisterName), null, 2),
-  );
 
   let benchCanisterData = fs.readFileSync(
     new URL("./bench/bench-canister.mo", import.meta.url),
@@ -339,14 +366,24 @@ async function deployBenchFile(
   fs.writeFileSync(path.join(tempDir, "canister.mo"), benchCanisterData);
 
   // build canister
-  let mocPath = getMocPath();
-  let mocArgs = getMocArgs(options);
-  let buildCmd = `${mocPath} -c --idl canister.mo ${globalMocArgs.join(" ")} ${mocArgs} ${(await sources({ cwd: tempDir })).join(" ")}`;
+  let mocPath = await toolchain.bin("moc", { fallback: true });
+  let mocArgsList = getMocArgs(options);
+  let buildArgs = [
+    "-c",
+    "--idl",
+    "canister.mo",
+    ...(await sourcesArgs({ cwd: tempDir })).flat(),
+    ...globalMocArgs,
+    ...mocArgsList,
+    ...options.extraArgs,
+  ];
   if (options.verbose) {
-    console.log(chalk.gray(`[${canisterName}] ${buildCmd}`));
+    console.log(
+      chalk.gray(`[${canisterName}] ${mocPath} ${buildArgs.join(" ")}`),
+    );
     console.time(`build ${canisterName}`);
   }
-  await execaCommand(buildCmd, {
+  await execa(mocPath, buildArgs, {
     cwd: tempDir,
     // `inherit` so the compiler output (warnings/errors) is streamed under --verbose
     stdio: options.verbose ? "inherit" : ["pipe", "ignore", "pipe"],
@@ -355,6 +392,18 @@ async function deployBenchFile(
 
   // deploy canister
   let wasm = path.join(tempDir, "canister.wasm");
+  let optimized = await optimizeWasm(wasm, readConfig(), {
+    verbose: options.verbose,
+    optimize: options.optimize,
+  });
+  fs.writeFileSync(
+    path.join(tempDir, "dfx.json"),
+    JSON.stringify(
+      replica.dfxJson(canisterName, { skipDfxOptimize: optimized }),
+      null,
+      2,
+    ),
+  );
   options.verbose && console.time(`deploy ${canisterName}`);
   // await execaCommand(`dfx deploy ${canisterName} --mode reinstall --yes --identity anonymous`, {cwd: tempDir, stdio: options.verbose ? 'pipe' : ['pipe', 'ignore', 'pipe']});
   await replica.deploy(canisterName, wasm, tempDir);

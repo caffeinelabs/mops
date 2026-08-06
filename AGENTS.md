@@ -74,7 +74,7 @@ The CLI and frontend both communicate with the **main canister** (`backend/main/
 ### Backend (`backend/`)
 - `backend/main/main-canister.mo` — Motoko actor; manages the package registry using TrieMap-based state. Key sub-modules: `PackagePublisher.mo`, `DownloadLog.mo`, `Users.mo`, `registry/`.
 - `backend/storage/` — Separate storage canisters for file chunks.
-- Canister IDs are in `dfx.json`. Production main canister: `oknww-riaaa-aaaam-qaf6a-cai`.
+- Canister IDs are in `canister_ids.json` (`dfx.json` holds `specified_id`s for staging/local). Production main canister: `oknww-riaaa-aaaam-qaf6a-cai`.
 
 ### CLI (`cli/`)
 - Entry: `cli/environments/nodejs/cli.ts` (Node adapter, sets up WASM bindings) re-exports `cli/cli.ts` (Commander.js setup)
@@ -91,3 +91,13 @@ Svelte 5 + Vite 8, queries the main canister. Staging canister: `ogp6e-diaaa-aaa
 - **dfx version**: pinned in `dfx.json` via `dfxvm`. Do not run `dfxvm update/install/default` to change it.
 - **Declarations must be regenerated** after backend changes: `npm run decl` (uses `dfx generate`, no replica needed).
 - **API version** in `cli/mops.ts` (`apiVersion`) and `backend/main/main-canister.mo` (`API_VERSION`) must match.
+
+## High-risk areas (extra scrutiny)
+
+Changes here can corrupt live registry state, break published packages, or silently affect every user's build even when all tests pass, because coverage is necessarily incomplete:
+
+- `backend/main/**` — the production registry canister holds live state; a bad state-shape change or upgrade path can corrupt or strand data. Publish protocol lives in `PackagePublisher.mo`; published versions are immutable, so a defect there is permanent.
+- Authn/authz — owner/maintainer/admin checks in `backend/main/main-canister.mo` and `Users.mo`, identity handling in `cli/mops.ts` and `cli/pem.ts`. A wrongly-accepted caller is worse than a wrongly-rejected one.
+- `backend/storage/**` — package file chunks; integrity of everything already published.
+- Install/resolution paths — `cli/commands/install/**`, `cli/resolve-packages.ts`, `cli/integrity.ts` (lockfile), `cli/cache.ts`, `cli/api/**`. Wrong version resolution or a corrupted cache/lockfile silently affects every downstream build.
+- Release/deploy pipeline — `.github/workflows/release*.yml`, canister IDs in `canister_ids.json` / `dfx.json`.

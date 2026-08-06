@@ -23,6 +23,8 @@ For each canister, three files are written to the output directory (default `.mo
 
 If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against it.
 
+When [`[optimize]`](/mops.toml#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Failures warn and leave the unoptimized module. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
+
 ### Examples
 
 Build all canisters defined in `mops.toml`
@@ -64,6 +66,14 @@ Default `.mops/.build`
 
 ```
 mops build --output ./dist
+```
+
+### `--no-optimize`
+
+Skip the [`[optimize]`](/mops.toml#optimize) `wasm-opt` post-pass for this run, even when it is configured in `mops.toml`. Has no effect when `[optimize]` is not set. Useful for a faster build or to produce an unoptimized module for debugging without editing `mops.toml`.
+
+```
+mops build --no-optimize
 ```
 
 ## Configuration

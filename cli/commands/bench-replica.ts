@@ -5,8 +5,8 @@ import fs from "node:fs";
 import { execaCommand } from "execa";
 import { getRootDir } from "../mops.js";
 import {
-  type AnyPocketIcServer,
   type AnyPocketIc,
+  type AnyPocketIcServer,
   type AnySetupCanister,
   startPocketIc,
 } from "../helpers/pocket-ic-client.js";
@@ -51,7 +51,10 @@ export class BenchReplica {
     } else {
       let pocketIcBin = await toolchain.bin("pocket-ic");
 
-      let pic = await startPocketIc({ binPath: pocketIcBin });
+      // `@dfinity/pic` omits the flag when `ttl` is unset and lets the server
+      // default apply. Passed explicitly so the lifetime of an orphaned server
+      // doesn't depend on the pocket-ic default.
+      let pic = await startPocketIc({ binPath: pocketIcBin, ttl: 60 });
       this.pocketIcServer = pic.server;
       this.pocketIc = pic.client;
     }
@@ -89,7 +92,10 @@ export class BenchReplica {
     } else if (this.pocketIc) {
       let { canisterId, actor } = await (
         this.pocketIc.setupCanister as AnySetupCanister
-      )({ idlFactory, wasm });
+      )({
+        idlFactory,
+        wasm,
+      });
       this.canisters[name] = {
         cwd,
         canisterId: canisterId.toText(),
@@ -106,15 +112,22 @@ export class BenchReplica {
     return this.canisters[name]?.canisterId || "";
   }
 
-  dfxJson(canisterName: string) {
+  dfxJson(
+    canisterName: string,
+    { skipDfxOptimize = false }: { skipDfxOptimize?: boolean } = {},
+  ) {
     let canisters: Record<string, any> = {};
     if (canisterName) {
-      canisters[canisterName] = {
+      let canister: Record<string, unknown> = {
         type: "custom",
         wasm: "canister.wasm",
         candid: "canister.did",
-        optimize: "cycles",
       };
+      // Only skip dfx's pass when mops already optimized successfully
+      if (!skipDfxOptimize) {
+        canister.optimize = "cycles";
+      }
+      canisters[canisterName] = canister;
     }
 
     return {

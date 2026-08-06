@@ -10,21 +10,21 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    timeout-minutes: 45
     strategy:
       max-parallel: 4
       fail-fast: false
       matrix:
         mops-version:
-          [
-            ./cli/dist,
-            ic-mops,
-            ic-mops@1.0.0,
-            "https://cli.mops.one/versions/latest.tgz",
-          ]
+          [./cli/dist, ic-mops, "https://cli.mops.one/versions/latest.tgz"]
         moc-version: [0.14.13]
-        node-version: [22, 24]
+        node-version: [22, 24, 26]
         runner: [ubuntu-latest]
 
     runs-on: ${{ matrix.runner }}
@@ -72,6 +72,7 @@ jobs:
         run: mops test
 
   ci-ok-mops:
+    timeout-minutes: 5
     if: always()
     needs: [test]
     runs-on: ubuntu-latest

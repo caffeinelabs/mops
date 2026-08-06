@@ -227,10 +227,19 @@ program
   .option("--no-docs", "Do not generate docs")
   .option("--no-test", "Do not run tests")
   .option("--no-bench", "Do not run benchmarks")
+  .option(
+    "--dry-run",
+    "Run local publish steps without contacting the registry or uploading",
+  )
   .option("--verbose", "Show more information")
   .action(async (options) => {
     if (!checkConfigFile()) {
       process.exit(1);
+    }
+    // dry-run is local-only — skip registry API compatibility check
+    if (options.dryRun) {
+      await publish(options);
+      return;
     }
     let compatible = await checkApiCompatibility();
     if (compatible) {
@@ -340,6 +349,12 @@ program
   .description("Build a canister")
   .addOption(new Option("--verbose", "Verbose console output"))
   .addOption(new Option("--output, -o <output>", "Output directory"))
+  .addOption(
+    new Option(
+      "--no-optimize",
+      "Skip the [optimize] wasm-opt post-pass even when it is configured in mops.toml",
+    ),
+  )
   .addHelpText(
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops build -- -Werror",
@@ -500,7 +515,7 @@ program.addCommand(deployedCommand);
 
 // test
 program
-  .command("test [filter]")
+  .command("test [filter...]")
   .description("Run tests")
   .addOption(
     new Option("-r, --reporter <reporter>", "Test reporter").choices([
@@ -523,19 +538,26 @@ program
   )
   .option("-w, --watch", "Enable watch mode")
   .option("--verbose", "Verbose output")
-  .action(async (filter, options) => {
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops test -- -Werror",
+  )
+  .allowUnknownOption(true)
+  .action(async (filterArr, options) => {
     checkConfigFile(true);
+    const { extraArgs, args } = parseExtraArgs(filterArr);
+    const filter = args[0] ?? "";
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await test(filter, options);
+    await test(filter, { ...options, extraArgs });
   });
 
 // bench
 program
-  .command("bench [filter]")
+  .command("bench [filter...]")
   .description("Run benchmarks")
   .addOption(
     new Option(
@@ -544,9 +566,12 @@ program
     ).choices(["dfx", "pocket-ic"]),
   )
   .addOption(
-    new Option("--gc <gc>", "Garbage collector")
+    new Option(
+      "--gc <gc>",
+      "Garbage collector. Under enhanced orthogonal persistence (the default) the GC is fixed to `incremental`; selecting `copying`, `compacting`, or `generational` implies `--legacy-persistence`",
+    )
       .choices(["copying", "compacting", "generational", "incremental"])
-      .default("copying"),
+      .default("incremental"),
   )
   .addOption(
     new Option("--save", "Save benchmark results to .bench/<filename>.json"),
@@ -573,17 +598,30 @@ program
   .addOption(
     new Option(
       "--verbose",
-      "Print the benchmark pipeline (compiler, replica, GC, optimization) and stream compiler/replica output, including dfx optimization warnings",
+      "Print the benchmark pipeline (compiler, replica, GC, context, persistence, profile, optimization) and stream compiler/replica output, including dfx optimization warnings",
     ),
   )
-  .action(async (filter, options) => {
+  .addOption(
+    new Option(
+      "--no-optimize",
+      "Skip the [optimize] wasm-opt post-pass even when it is configured in mops.toml",
+    ),
+  )
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops bench -- -Werror",
+  )
+  .allowUnknownOption(true)
+  .action(async (filterArr, options) => {
     checkConfigFile(true);
+    const { extraArgs, args } = parseExtraArgs(filterArr);
+    const filter = args[0] ?? "";
     await installAll({
       silent: true,
       lock: "ignore",
       installFromLockFile: true,
     });
-    await bench(filter, options);
+    await bench(filter, { ...options, extraArgs });
   });
 
 // template
@@ -616,8 +654,9 @@ userCommand
     new Option("--no-encrypt", "Do not ask for a password to encrypt identity"),
   )
   .action(async (data, options) => {
-    await importPem(data, options);
-    await getPrincipal();
+    if (await importPem(data, options)) {
+      await getPrincipal();
+    }
   });
 
 // user set <prop> <value>
@@ -849,6 +888,22 @@ toolchainCommand
       process.exit(1);
     }
     await toolchain.update(tool);
+  });
+
+toolchainCommand
+  .command("info")
+  .description("Show release information about a toolchain tool")
+  .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
+  .option(
+    "--versions",
+    "List stable release versions, one per line (newest first; first GitHub page by default)",
+  )
+  .option(
+    "--all",
+    "With --versions, fetch every release page instead of the first page only",
+  )
+  .action(async (tool: Tool, options) => {
+    await toolchain.info(tool, options);
   });
 
 toolchainCommand

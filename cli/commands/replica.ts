@@ -6,7 +6,7 @@ import {
 } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
-import { PassThrough } from "node:stream";
+import { PassThrough, type Readable } from "node:stream";
 import { spawn as spawnAsync } from "promisify-child-process";
 
 import { IDL } from "@icp-sdk/core/candid";
@@ -14,10 +14,12 @@ import { Actor, HttpAgent } from "@icp-sdk/core/agent";
 import chalk from "chalk";
 
 import {
-  type AnyPocketIcServer,
   type AnyPocketIc,
+  type AnyPocketIcServer,
   type AnySetupCanister,
   startPocketIc,
+  serverStderr,
+  addCycles,
 } from "../helpers/pocket-ic-client.js";
 import { toolchain } from "./toolchain/index.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
@@ -78,7 +80,7 @@ export class Replica {
       );
 
       // process canister logs
-      this._attachCanisterLogHandler(this.dfxProcess);
+      this._attachCanisterLogHandler(this.dfxProcess.stderr);
 
       this.dfxProcess.stdout.on("data", (data) => {
         if (this.verbose) {
@@ -124,15 +126,16 @@ export class Replica {
       this.pocketIc = pic.client;
 
       // process canister logs
-      this._attachCanisterLogHandler(
-        this.pocketIcServer.serverProcess as ChildProcessWithoutNullStreams,
-      );
+      this._attachCanisterLogHandler(serverStderr(this.pocketIcServer));
     }
   }
 
-  _attachCanisterLogHandler(proc: ChildProcessWithoutNullStreams) {
+  _attachCanisterLogHandler(stderr: Readable | null) {
+    if (!stderr) {
+      return;
+    }
     let curData = "";
-    proc.stderr.on("data", (data) => {
+    stderr.on("data", (data) => {
       curData = curData + data.toString();
 
       if (curData.includes("\n")) {
@@ -293,7 +296,7 @@ export class Replica {
         return;
       }
 
-      await this.pocketIc.addCycles(canisterId as any, 1_000_000_000_000);
+      await addCycles(this.pocketIc, canisterId, 1_000_000_000_000n);
 
       if (signal?.aborted) {
         return;

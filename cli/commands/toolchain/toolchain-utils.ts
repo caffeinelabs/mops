@@ -2,17 +2,27 @@ import process from "node:process";
 import path from "node:path";
 import { Buffer } from "node:buffer";
 import { unzipSync } from "node:zlib";
-import { chmodSync } from "node:fs";
+import { chmodSync, createReadStream } from "node:fs";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import fs from "fs-extra";
-import decompress from "decompress";
-// import decompressTarxz from 'decomp-tarxz';
 import { deleteSync } from "del";
 import { Octokit } from "octokit";
 import { extract as extractTar } from "tar";
 
 import { getRootDir } from "../../mops.js";
+import { stableReleaseTags, type ReleaseInfo } from "./release-tags.js";
 
-export const TOOLCHAINS = ["moc", "wasmtime", "pocket-ic", "lintoko"];
+export type { ReleaseInfo } from "./release-tags.js";
+export { sortReleaseTags, stableReleaseTags } from "./release-tags.js";
+
+export const TOOLCHAINS = [
+  "moc",
+  "wasmtime",
+  "pocket-ic",
+  "lintoko",
+  "wasm-opt",
+];
 
 export let tryDownloadFile = async (url: string): Promise<Buffer | null> => {
   let res = await fetch(url);
@@ -49,45 +59,152 @@ export let downloadAndExtract = async (
 
   fs.mkdirSync(destDir, { recursive: true });
 
-  if (archive.endsWith(".xz")) {
-    let decompressTarxz = await import("decomp-tarxz");
-    await decompress(archive, tmpDir, {
-      plugins: [decompressTarxz.default()],
-    }).catch(() => {
-      deleteSync([tmpDir]);
+  try {
+    if (archive.endsWith(".xz")) {
+      // Imported lazily so the xz WASM blob only loads for .xz archives.
+      let xz = await import("xz-decompress");
+      // xz-decompress is CJS: tsx exposes the class as a named export, plain
+      // node ESM nests it under `default`.
+      let XzReadableStream = xz.XzReadableStream ?? xz.default.XzReadableStream;
+      // Toolchain .tar.xz archives wrap everything in one top-level directory,
+      // so `strip: 1` lands their contents directly in destDir.
+      await pipeline(
+        Readable.fromWeb(
+          new XzReadableStream(Readable.toWeb(createReadStream(archive))),
+        ),
+        extractTar({ cwd: destDir, strip: 1 }),
+      );
+    } else if (archive.endsWith("tar.gz")) {
+      await extractTar({
+        file: archive,
+        cwd: destDir,
+      });
+    } else if (archive.endsWith(".gz")) {
+      let destFile = path.join(
+        destDir,
+        destFileName || path.parse(archive).name,
+      );
+      fs.writeFileSync(destFile, unzipSync(buffer));
+      chmodSync(destFile, 0o700);
+    }
+  } finally {
+    deleteSync([tmpDir], { force: true });
+  }
+};
+
+export type StableReleaseTagsResult = {
+  tags: string[];
+  /** True when only the first page was fetched and GitHub may have more. */
+  truncated: boolean;
+  /** First stable tag in GitHub publish order from the fetched pages, if any. */
+  publishedLatest?: string;
+};
+
+let mapRelease = (release: {
+  tag_name: string;
+  published_at: string | null;
+  prerelease: boolean;
+  draft: boolean;
+}): ReleaseInfo => ({
+  tag_name: release.tag_name.replace(/^v/, ""),
+  published_at: release.published_at,
+  prerelease: release.prerelease,
+  draft: release.draft,
+});
+
+let fetchReleasePages = async (
+  repo: string,
+  { maxPages }: { maxPages?: number } = {},
+): Promise<{ releases: ReleaseInfo[]; truncated: boolean }> => {
+  let octokit = new Octokit();
+  let releases: ReleaseInfo[] = [];
+  let truncated = false;
+
+  for (let page = 1; ; page++) {
+    if (maxPages !== undefined && page > maxPages) {
+      truncated = true;
+      break;
+    }
+
+    let res = await octokit.request(`GET /repos/${repo}/releases`, {
+      per_page: 100,
+      page,
+      headers: {
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
     });
-    fs.cpSync(
-      path.join(tmpDir, path.parse(archive).name.replace(".tar", "")),
-      destDir,
-      { recursive: true },
-    );
-  } else if (archive.endsWith("tar.gz")) {
-    await extractTar({
-      file: archive,
-      cwd: destDir,
-    });
-  } else if (archive.endsWith(".gz")) {
-    let destFile = path.join(destDir, destFileName || path.parse(archive).name);
-    fs.writeFileSync(destFile, unzipSync(buffer));
-    chmodSync(destFile, 0o700);
+    if (res.status !== 200) {
+      console.error("Releases fetch error");
+      process.exit(1);
+    }
+    if (res.data.length === 0) {
+      break;
+    }
+    for (let release of res.data) {
+      releases.push(mapRelease(release));
+    }
+    if (res.data.length < 100) {
+      break;
+    }
+    if (maxPages !== undefined && page >= maxPages) {
+      truncated = true;
+      break;
+    }
   }
 
-  deleteSync([tmpDir], { force: true });
+  return { releases, truncated };
+};
+
+/** Stable release tags, newest first. Default: first GitHub page only. */
+export let getStableReleaseTags = async (
+  repo: string,
+  { all = false } = {},
+): Promise<StableReleaseTagsResult> => {
+  let { releases, truncated } = await fetchReleasePages(repo, {
+    maxPages: all ? undefined : 1,
+  });
+  return {
+    tags: stableReleaseTags(releases),
+    truncated: all ? false : truncated,
+    publishedLatest: releases.find(
+      (release) => !release.draft && !release.prerelease,
+    )?.tag_name,
+  };
 };
 
 export let getLatestReleaseTag = async (repo: string): Promise<string> => {
-  let releases = await getReleases(repo);
-  let release = releases.find(
-    (release: any) => !release.prerelease && !release.draft,
-  );
-  if (!release?.tag_name) {
-    console.error(`Failed to fetch latest release tag for ${repo}`);
-    process.exit(1);
+  let octokit = new Octokit();
+
+  for (let page = 1; ; page++) {
+    let res = await octokit.request(`GET /repos/${repo}/releases`, {
+      per_page: 100,
+      page,
+      headers: {
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+    if (res.status !== 200) {
+      console.error("Releases fetch error");
+      process.exit(1);
+    }
+    if (res.data.length === 0) {
+      break;
+    }
+    for (let release of res.data) {
+      if (!release.draft && !release.prerelease) {
+        return release.tag_name.replace(/^v/, "");
+      }
+    }
+    if (res.data.length < 100) {
+      break;
+    }
   }
-  return release.tag_name.replace(/^v/, "");
+
+  console.error(`Failed to fetch latest release tag for ${repo}`);
+  process.exit(1);
 };
 
-export let getReleases = async (repo: string) => {
+export let getReleases = async (repo: string): Promise<ReleaseInfo[]> => {
   let octokit = new Octokit();
   let res = await octokit.request(`GET /repos/${repo}/releases`, {
     per_page: 10,
@@ -96,13 +213,8 @@ export let getReleases = async (repo: string) => {
     },
   });
   if (res.status !== 200) {
-    console.log("Releases fetch error");
+    console.error("Releases fetch error");
     process.exit(1);
   }
-  return res.data.map((release: any) => {
-    return {
-      ...release,
-      tag_name: release.tag_name.replace(/^v/, ""),
-    };
-  });
+  return res.data.map(mapRelease);
 };
