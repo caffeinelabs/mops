@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - "cli-v*"
+      # Prereleases are release-preview.yml's job. Without this, a beta tag
+      # starts this workflow too and it fails on the "not on main" check —
+      # harmless but a red run on every beta. That check stays as the backstop.
+      - "!cli-v*-beta.*"
 
 permissions:
   contents: write
