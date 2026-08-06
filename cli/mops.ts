@@ -40,20 +40,6 @@ if (process.env.XDG_CACHE_HOME) {
   globalCacheDir = path.join(process.env.XDG_CACHE_HOME, "mops");
 }
 
-export function getNetworkFile(): string | URL {
-  let networkFile: string | URL = "";
-  try {
-    networkFile = new URL("./network.txt", import.meta.url);
-  } catch {
-    networkFile = path.join(__dirname, "network.txt");
-  }
-  return networkFile;
-}
-
-export function setNetwork(network: string) {
-  fs.writeFileSync(getNetworkFile(), network);
-}
-
 export let getIdentity = async (): Promise<Identity | undefined> => {
   let identityPem = path.resolve(globalConfigDir, "identity.pem");
   let identityPemEncrypted = path.resolve(

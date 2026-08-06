@@ -34,11 +34,11 @@ Rationale: `=`/range syntax in *published* packages needs backend validator chan
 
 ### Hidden-state cleanup (silent-wrong-behavior — high priority)
 
-- Move `network.txt` out of the installed CLI directory (`new URL("./network.txt", import.meta.url)` in `cli/mops.ts:48`) into project-local + XDG global. Today `mops set-network local` in one project leaks into every project sharing the same `ic-mops` install.
-- Stop invisible `installAll({ lock: "ignore" })` in `build`/`check`/`check-candid`/`check-stable`/`test`/`bench` (six sites in `cli/cli.ts`, ~365–612). Should respect the project's lock policy like `mops install` does.
-- `mops toolchain init`: opt-in per shell instead of writing every detected init file plus `$GITHUB_ENV` (`cli/commands/toolchain/index.ts:98-164`).
+- ~~Move `network.txt` out of the installed CLI directory into project-local + XDG global~~ — **superseded and done on `v3`**: the file and the `set-network`/`get-network` commands are **deleted** instead of relocated. `MOPS_NETWORK` (added in #437 precisely because writing inside the install dir fails in CI and Docker) is the only mechanism; it is what the docs recommend and what this repo's own dev loop and CI already use, and nothing in the repo called `set-network`. Relocating it would have meant maintaining durable config inside `.mops/`, which needed a special case to survive `mops cache clean`.
+- ~~Stop invisible `installAll({ lock: "ignore" })` in `build`/`check`/`check-candid`/`check-stable`/`test`/`bench`~~ — **done on `v3`** (plus `generate candid`, a seventh site). They pass `defaultLock: "update"`, so they maintain the lock like `mops install` without tripping the deprecated `CI` auto-`check` path. `mops sources` intentionally keeps `lock: "ignore"` — its stdout is machine-parsed by the dfx packtool.
+- ~~`mops toolchain init`: opt-in per shell instead of writing every detected init file plus `$GITHUB_ENV`~~ — **done on `v3`**: writes only the shell from `$SHELL`, `--shell <bash|zsh>` targets others, `$GITHUB_ENV` still written in GitHub Actions, and `toolchain reset` still cleans all known files.
 - ~~Align `--lock` flag values across all commands~~ — superseded: `--lock` is dropped entirely (see Trust & lockfile model); remove the flag from `add`/`remove`/`install`/`sync`/`update` in `cli/cli.ts`.
-- Exit codes: install SIGINT already exits `130` (standard — `cli/commands/install/install-mops-dep.ts:108-112`), so only the replica bind-failure exit `11` (`cli/commands/replica.ts:96`) remains to decide: keep as a documented distinct code or normalize to `1`.
+- ~~Exit codes: the replica bind-failure exit `11` (`cli/commands/replica.ts:96`) remains to decide~~ — **done on `v3`**: normalized to `1`. Install SIGINT keeps the standard `130` (`cli/commands/install/install-mops-dep.ts:108-112`).
 
 ### dfx — remove implicit rules, keep explicit opt-in
 

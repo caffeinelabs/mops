@@ -20,6 +20,26 @@ describe("cli", () => {
   test("--help", async () => {
     expect((await cli(["--help"])).stdout).toMatch(/^Usage: mops/m);
   });
+
+  // Network selection is `MOPS_NETWORK` only. The removed commands persisted
+  // it inside the install directory, which is often read-only and shared
+  // between projects.
+  test.each(["set-network", "sn", "get-network", "gn"])(
+    "`%s` is not a command",
+    async (name) => {
+      const result = await cli([name, "local"]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/unknown command/);
+    },
+  );
+
+  test("MOPS_NETWORK selects the network", async () => {
+    const result = await cli(["cache", "show"], {
+      env: { MOPS_NETWORK: "staging" },
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toMatch(/mops\/staging$/);
+  });
 });
 
 describe("install", () => {

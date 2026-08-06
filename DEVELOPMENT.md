@@ -38,17 +38,17 @@ alias mops-local="bun /<path-to-local-mops>/cli/environments/nodejs/cli.ts"
 
 
 3. Switch network to local
-```
-mops-local set-network local
+```bash
+export MOPS_NETWORK=local
 ```
 
 Now you can install/publish packages locally like this `mops-local add <pkg>`
 
-Also you can switch network to staging to work with staging registry like this `mops-local set-network staging`
+Also you can set `MOPS_NETWORK=staging` to work with the staging registry, or set it per command: `MOPS_NETWORK=staging mops-local add <pkg>`
 
-### Alternative: Using Environment Variables
+### Alternative: Overriding the registry endpoint
 
-You can also override the registry endpoint without switching networks using environment variables:
+You can also point at an arbitrary registry canister instead of selecting a network:
 
 ```bash
 export MOPS_REGISTRY_HOST="http://127.0.0.1:4943"

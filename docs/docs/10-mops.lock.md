@@ -14,6 +14,7 @@ sidebar_label: mops.lock
 - `mops update`
 - `mops sync`
 - `mops init` (when it installs dependencies)
+- commands that install dependencies implicitly: `mops build`, `mops check`, `mops check-stable`, `mops check-candid`, `mops test`, `mops bench`, `mops generate candid`
 
 `mops.lock` is maintained by Mops and should not be manually edited.
 
@@ -52,7 +53,7 @@ Local path dependencies are stored relative to the project root (e.g. `./package
 
 Note: explicit `--lock check` errors when the lock is missing; the deprecated CI auto-path skips a missing lock. If the lock is stale, regenerate with `mops install --lock update`.
 
-Dependency-mutating commands (`mops add`, `mops remove`, `mops update`, `mops sync`) always default to updating the lockfile, even when `CI` is set.
+Dependency-mutating commands (`mops add`, `mops remove`, `mops update`, `mops sync`) and implicitly-installing commands (`mops build`, `mops check`, `mops check-stable`, `mops check-candid`, `mops test`, `mops bench`, `mops generate candid`) always default to updating the lockfile, even when `CI` is set.
 
 ## Opting out
 

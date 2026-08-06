@@ -1,10 +1,8 @@
 import { Argument, Command, Option } from "commander";
 import events from "node:events";
-import fs from "node:fs";
 import process from "node:process";
 
 import { resolve } from "node:path";
-import { getNetwork } from "./api/network.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
 import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
@@ -37,7 +35,7 @@ import { sources } from "./commands/sources.js";
 import { sync } from "./commands/sync.js";
 import { template } from "./commands/template.js";
 import { test } from "./commands/test/test.js";
-import { toolchain } from "./commands/toolchain/index.js";
+import { SHELLS, toolchain } from "./commands/toolchain/index.js";
 import { update } from "./commands/update.js";
 import {
   getPrincipal,
@@ -52,9 +50,7 @@ import {
   checkApiCompatibility,
   checkConfigFile,
   getGlobalMocArgs,
-  getNetworkFile,
   readConfig,
-  setNetwork,
   version,
 } from "./mops.js";
 import { setConflictPolicy } from "./resolve-packages.js";
@@ -62,8 +58,6 @@ import { Tool } from "./types.js";
 import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
 
 declare global {
-  // eslint-disable-next-line no-var
-  var MOPS_NETWORK: string;
   // eslint-disable-next-line no-var
   var mopsReplicaTestRunning: boolean;
 }
@@ -74,11 +68,6 @@ events.setMaxListeners(20);
 let cwd = process.env["MOPS_CWD"];
 if (cwd) {
   process.chdir(resolve(cwd));
-}
-
-let networkFile = getNetworkFile();
-if (fs.existsSync(networkFile)) {
-  globalThis.MOPS_NETWORK = fs.readFileSync(networkFile).toString() || "ic";
 }
 
 let program = new Command();
@@ -247,25 +236,6 @@ program
     }
   });
 
-// set-network
-program
-  .command("set-network <network>")
-  .alias("sn")
-  .description("Set network local|staging|ic")
-  .action(async (network) => {
-    await setNetwork(network);
-    console.log(`Selected '${network}' network`);
-  });
-
-// get-network
-program
-  .command("get-network")
-  .alias("gn")
-  .description("Get network")
-  .action(async () => {
-    console.log(getNetwork());
-  });
-
 // sources
 program
   .command("sources")
@@ -287,6 +257,8 @@ program
     // command, not just the final resolve that produces the sources.
     setConflictPolicy(options.conflicts);
     if (options.install) {
+      // `mops sources` is machine-parsed by the dfx packtool, so it must not
+      // write the lock or print integrity output — hence `lock: "ignore"`.
       await installAll({
         silent: true,
         lock: "ignore",
@@ -373,11 +345,7 @@ program
   .action(async (canisters, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(canisters);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAll({ silent: true, defaultLock: "update" });
     await build(args.length ? args : undefined, {
       ...options,
       outputDir: options.output,
@@ -421,11 +389,7 @@ program
   .action(async (args, options) => {
     checkConfigFile(true);
     const { extraArgs, args: argList } = parseExtraArgs(args);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAll({ silent: true, defaultLock: "update" });
     await check(argList, {
       ...options,
       extraArgs,
@@ -438,11 +402,7 @@ program
   .description("Check Candid interface compatibility between two Candid files")
   .action(async (newCandid, originalCandid) => {
     checkConfigFile(true);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAll({ silent: true, defaultLock: "update" });
     await checkCandid(newCandid, originalCandid);
   });
 
@@ -467,11 +427,7 @@ program
   .action(async (args, options) => {
     checkConfigFile(true);
     const { extraArgs, args: argList } = parseExtraArgs(args);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAll({ silent: true, defaultLock: "update" });
     await checkStable(argList, {
       ...options,
       extraArgs,
@@ -549,11 +505,7 @@ program
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAll({ silent: true, defaultLock: "update" });
     await test(filter, { ...options, extraArgs });
   });
 
@@ -617,11 +569,7 @@ program
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAll({ silent: true, defaultLock: "update" });
     await bench(filter, { ...options, extraArgs });
   });
 
@@ -844,14 +792,24 @@ const toolchainCommand = new Command("toolchain")
 
 toolchainCommand
   .command("init")
-  .description("One-time initialization of toolchain management")
-  .action(async () => {
-    await toolchain.init();
+  .description(
+    "One-time initialization of toolchain management (updates the current shell's config file)",
+  )
+  .addOption(
+    new Option(
+      "--shell <shell>",
+      "Shell config file to update (defaults to the shell from $SHELL)",
+    ).choices(SHELLS),
+  )
+  .action(async (options) => {
+    await toolchain.init(options);
   });
 
 toolchainCommand
   .command("reset")
-  .description("Uninstall toolchain management")
+  .description(
+    "Uninstall toolchain management (cleans all known shell config files)",
+  )
   .action(async () => {
     await toolchain.init({ reset: true });
   });
@@ -971,11 +929,7 @@ generateCommand
   .action(async (canisters, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(canisters);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAll({ silent: true, defaultLock: "update" });
     await generateCandid(args.length ? args : undefined, {
       ...options,
       extraArgs,

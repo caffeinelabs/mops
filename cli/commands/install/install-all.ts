@@ -16,6 +16,10 @@ type InstallAllOptions = {
   verbose?: boolean;
   silent?: boolean;
   lock?: "check" | "update" | "ignore";
+  // Commands without a `--lock` flag (build/check/test/...) pass "update"
+  // so the CI auto-`check` path (which recommends passing `--lock check`)
+  // never triggers for them.
+  defaultLock?: "update";
   threads?: number;
   installFromLockFile?: boolean;
 };
@@ -25,6 +29,7 @@ export async function installAll({
   silent = false,
   threads,
   lock,
+  defaultLock,
   installFromLockFile,
 }: InstallAllOptions = {}): Promise<boolean> {
   if (!checkConfigFile()) {
@@ -76,7 +81,10 @@ export async function installAll({
 
   let installedPackages = await syncLocalCache({ verbose });
 
-  await Promise.all([notifyInstalls(installedPackages), checkIntegrity(lock)]);
+  await Promise.all([
+    notifyInstalls(installedPackages),
+    checkIntegrity(lock, { defaultLock, silent }),
+  ]);
 
   if (!silent) {
     logUpdate.clear();

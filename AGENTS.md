@@ -78,7 +78,7 @@ The CLI and frontend both communicate with the **main canister** (`backend/main/
 
 ### CLI (`cli/`)
 - Entry: `cli/environments/nodejs/cli.ts` (Node adapter, sets up WASM bindings) re-exports `cli/cli.ts` (Commander.js setup)
-- Core config/identity: `cli/mops.ts` — reads `mops.toml` up the directory tree, identity from OS-specific config dir (`~/Library/Application Support/mops/` on macOS, `~/.config/mops/` on Linux, with XDG overrides), network from `network.txt`
+- Core config/identity: `cli/mops.ts` — reads `mops.toml` up the directory tree, identity from OS-specific config dir (`~/Library/Application Support/mops/` on macOS, `~/.config/mops/` on Linux, with XDG overrides). Network selection is not persisted: `cli/api/network.ts` reads the `MOPS_NETWORK` env var and defaults to `ic`
 - `cli/commands/` — command modules + subdirectories: `install/`, `test/`, `watch/`, `toolchain/` (moc, lintoko, wasmtime, pocket-ic)
 - `cli/api/` — IC actor creation, network selection (ic/staging/local), package file downloads, version resolution
 
