@@ -77,7 +77,7 @@ export async function checkStable(
   options: Partial<CheckStableOptions> = {},
 ): Promise<void> {
   const config = readConfig();
-  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const mocPath = await toolchain.bin("moc");
   const globalMocArgs = getGlobalMocArgs(config);
 
   const firstArg = args[0];

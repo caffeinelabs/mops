@@ -1,33 +1,13 @@
-import { execFileSync } from "node:child_process";
 import { type SemVer, parse } from "semver";
 import { readConfig } from "../mops.js";
-import { getMocPath } from "./get-moc-path.js";
 
 export function getMocSemVer(): SemVer | null {
-  return parse(getMocVersion(false));
+  return parse(getMocVersion());
 }
 
-export function getMocVersion(throwOnError = false): string {
-  let configVersion = readConfig().toolchain?.moc;
-  if (configVersion) {
-    return configVersion;
-  }
-
-  const mocPath = getMocPath(false);
-  if (!mocPath) {
-    return "";
-  }
-  try {
-    let match = execFileSync(mocPath, ["--version"])
-      .toString()
-      .trim()
-      .match(/Motoko compiler ([^\s]+) .*/);
-    return match?.[1] || "";
-  } catch (e) {
-    if (throwOnError) {
-      console.error(e);
-      throw new Error("moc not found");
-    }
-    return "";
-  }
+// The `[toolchain] moc` pin, or "" when moc is unpinned or pinned to a path.
+// There is nothing else to consult: every command that compiles resolves moc
+// through `toolchain.bin("moc")`, which requires the pin.
+export function getMocVersion(): string {
+  return readConfig().toolchain?.moc || "";
 }

@@ -9,7 +9,6 @@ import chalk from "chalk";
 import { globSync } from "glob";
 import chokidar from "chokidar";
 import debounce from "debounce";
-import { SemVer } from "semver";
 import { ActorMethod } from "@icp-sdk/core/agent";
 
 import { sourcesArgs } from "../sources.js";
@@ -31,18 +30,14 @@ import { SilentReporter } from "./reporters/silent-reporter.js";
 import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
-import { getDfxVersion } from "../../helpers/get-dfx-version.js";
-import { warnIfDfxReplica } from "../../helpers/deprecate-dfx-replica.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
-type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
 
 type TestOptions = {
   watch: boolean;
   reporter: ReporterName;
   mode: TestMode;
-  replica: ReplicaName;
   verbose: boolean;
   extraArgs: string[];
 };
@@ -50,40 +45,18 @@ type TestOptions = {
 let replica = new Replica();
 let replicaStartPromise: Promise<void> | undefined;
 
-async function startReplicaOnce(replica: Replica, type: ReplicaName) {
+async function startReplicaOnce(replica: Replica) {
   if (!replicaStartPromise) {
     replicaStartPromise = new Promise((resolve) => {
-      replica.start({ type, silent: true }).then(resolve);
+      replica.start({ silent: true }).then(resolve);
     });
   }
   return replicaStartPromise;
 }
 
 export async function test(filter = "", options: Partial<TestOptions> = {}) {
-  let config = readConfig();
   let rootDir = getRootDir();
 
-  let replicaType =
-    options.replica ??
-    (config.toolchain?.["pocket-ic"] ? "pocket-ic" : ("dfx" as ReplicaName));
-
-  if (replicaType === "pocket-ic" && !config.toolchain?.["pocket-ic"]) {
-    let dfxVersion = getDfxVersion();
-    if (!dfxVersion || new SemVer(dfxVersion).compare("0.24.1") < 0) {
-      console.log(
-        chalk.red(
-          "Please update dfx to the version >=0.24.1 or specify pocket-ic version in mops.toml",
-        ),
-      );
-      process.exit(1);
-    } else {
-      replicaType = "dfx-pocket-ic";
-    }
-  }
-
-  let explicitReplica = options.replica === "dfx";
-
-  replica.type = replicaType;
   replica.verbose = !!options.verbose;
 
   let extraArgs = options.extraArgs ?? [];
@@ -127,10 +100,8 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
         options.reporter,
         filter,
         options.mode,
-        replicaType,
         true,
         controller.signal,
-        explicitReplica,
         extraArgs,
       );
       await curRun;
@@ -157,10 +128,8 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       options.reporter,
       filter,
       options.mode,
-      replicaType,
       false,
       undefined,
-      explicitReplica,
       extraArgs,
     );
     if (!passed) {
@@ -183,20 +152,16 @@ async function runAll(
   reporterName: ReporterName | undefined,
   filter = "",
   mode: TestMode = "interpreter",
-  replicaType: ReplicaName,
   watch = false,
   signal?: AbortSignal,
-  explicitReplica = false,
   extraArgs: string[] = [],
 ): Promise<boolean> {
   let done = await testWithReporter(
     reporterName,
     filter,
     mode,
-    replicaType,
     watch,
     signal,
-    explicitReplica,
     extraArgs,
   );
   return done;
@@ -206,10 +171,8 @@ export async function testWithReporter(
   reporterName: ReporterName | Reporter | undefined,
   filter = "",
   defaultMode: TestMode = "interpreter",
-  replicaType: ReplicaName,
   watch = false,
   signal?: AbortSignal,
-  explicitReplica = false,
   extraArgs: string[] = [],
 ): Promise<boolean> {
   maxMocExit = 0;
@@ -261,7 +224,7 @@ export async function testWithReporter(
   let globalMocArgs = getGlobalMocArgs(config);
 
   if (!mocPath) {
-    mocPath = await toolchain.bin("moc", { fallback: true });
+    mocPath = await toolchain.bin("moc");
   }
 
   let testTempDir = path.join(getRootDir(), ".mops/.test/");
@@ -286,10 +249,6 @@ export async function testWithReporter(
 
   let hasWasiTests = filesWithMode.some(({ mode }) => mode === "wasi");
   let hasReplicaTests = filesWithMode.some(({ mode }) => mode === "replica");
-
-  if (hasReplicaTests) {
-    warnIfDfxReplica(replicaType, explicitReplica);
-  }
 
   // prepare wasmtime path
   if (hasWasiTests && !wasmtimePath) {
@@ -434,7 +393,7 @@ export async function testWithReporter(
               return;
             }
 
-            await startReplicaOnce(replica, replicaType);
+            await startReplicaOnce(replica);
 
             if (signal?.aborted) {
               return;

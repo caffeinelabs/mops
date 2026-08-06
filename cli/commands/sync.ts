@@ -43,7 +43,7 @@ export async function sync() {
 
 async function getUsedPackages(): Promise<string[]> {
   let rootDir = getRootDir();
-  let mocPath = await toolchain.bin("moc", { fallback: true });
+  let mocPath = await toolchain.bin("moc");
 
   let files = globSync("**/*.mo", {
     cwd: rootDir,

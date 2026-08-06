@@ -42,7 +42,7 @@ export class ErrorChecker {
     onProgress();
 
     let rootDir = getRootDir();
-    let mocPath = await toolchain.bin("moc", { fallback: true });
+    let mocPath = await toolchain.bin("moc");
     let deps = (await sourcesArgs({ cwd: rootDir })).flat();
     let globalMocArgs = getGlobalMocArgs(readConfig());
 

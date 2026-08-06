@@ -53,7 +53,7 @@ export async function build(
 
   let config = readConfig();
   let outputDir = resolveBuildOutputDir(config, options.outputDir);
-  let mocPath = await toolchain.bin("moc", { fallback: true });
+  let mocPath = await toolchain.bin("moc");
   let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {
     cliError(`No Motoko canisters found in mops.toml configuration`);

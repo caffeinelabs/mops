@@ -14,7 +14,7 @@ rootDir=$(findRootDir)
 mopsToml="$rootDir/mops.toml"
 
 if [[ $rootDir == "" ]] || [[ ! -f $mopsToml ]]; then
-  mocPath="$(mops toolchain bin moc --fallback)"
+  mocPath="$(mops toolchain bin moc)"
 else
   if command -v openssl >/dev/null 2>&1; then
     mopsTomlHash=$(openssl sha256 $mopsToml | awk -F'= ' '{print $2}')
@@ -29,7 +29,7 @@ else
   fi;
 
   if [[ "$mocPath" != *"/moc" ]] ; then
-    mocPath="$(mops toolchain bin moc --fallback)"
+    mocPath="$(mops toolchain bin moc)"
     # Only cache a real path. Caching a failed lookup leaves a zero-byte file
     # that every later run reads back as an empty command.
     if [[ "$mocPath" == *"/moc" ]] ; then

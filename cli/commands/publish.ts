@@ -92,8 +92,15 @@ export async function publish(
     }
   }
 
-  // disabled fields
-  for (let key of ["dfx", "moc", "homepage", "documentation", "donation"]) {
+  // `dfx` is gone for good; the rest are reserved but never shipped
+  if ((config.package as any).dfx) {
+    console.log(
+      chalk.red("Error: ") +
+        "package.dfx is no longer supported. Remove it from [package] in mops.toml.",
+    );
+    process.exit(1);
+  }
+  for (let key of ["moc", "homepage", "documentation", "donation"]) {
     if ((config.package as any)[key]) {
       console.log(chalk.red("Error: ") + `package.${key} is not supported yet`);
       process.exit(1);
@@ -112,7 +119,6 @@ export async function publish(
     readme: 100,
     license: 40,
     files: 20,
-    dfx: 10,
     moc: 10,
     donation: 64,
     root: 50,
@@ -218,7 +224,8 @@ export async function publish(
     baseDir: "src",
     readme: "README.md",
     license: config.package.license || "",
-    dfx: config.package.dfx || "",
+    // Registry field kept for wire compatibility; mops no longer accepts a value.
+    dfx: "",
     moc: config.package.moc || "",
     donation: config.package.donation || "",
     dependencies: Object.values(config.dependencies || {}).map(toBackendDep),
@@ -329,12 +336,7 @@ export async function publish(
   let reporter = new SilentReporter();
   if (options.test) {
     console.log("Running tests...");
-    await testWithReporter(
-      reporter,
-      "",
-      "interpreter",
-      config.toolchain?.["pocket-ic"] ? "pocket-ic" : "dfx",
-    );
+    await testWithReporter(reporter, "", "interpreter");
     if (reporter.failed > 0) {
       console.log(chalk.red("Error: ") + "tests failed");
       process.exit(1);

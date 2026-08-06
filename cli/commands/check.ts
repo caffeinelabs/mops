@@ -149,7 +149,7 @@ async function checkCanisters(
   canisters: Record<string, CanisterConfig>,
   options: Partial<CheckOptions>,
 ): Promise<void> {
-  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const mocPath = await toolchain.bin("moc");
   const sources = (await sourcesArgs()).flat();
   const globalMocArgs = getGlobalMocArgs(config);
   const allLibs = checkAllLibsSupport(options.verbose);
@@ -252,7 +252,7 @@ async function checkFiles(
   files: string[],
   options: Partial<CheckOptions>,
 ): Promise<void> {
-  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const mocPath = await toolchain.bin("moc");
   const sources = (await sourcesArgs()).flat();
   const globalMocArgs = getGlobalMocArgs(config);
   const allLibs = checkAllLibsSupport(options.verbose);

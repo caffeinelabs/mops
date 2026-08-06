@@ -68,7 +68,7 @@ export class WarningChecker {
     onProgress();
 
     let rootDir = getRootDir();
-    let mocPath = await toolchain.bin("moc", { fallback: true });
+    let mocPath = await toolchain.bin("moc");
     let deps = (await sourcesArgs({ cwd: rootDir })).flat();
     let globalMocArgs = getGlobalMocArgs(readConfig());
     let paths = globMoFiles(rootDir);
