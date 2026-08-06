@@ -19,8 +19,10 @@ export const createActor = (canisterId, options = {}) => {
     );
   }
 
-  // Fetch root key for certificate validation during development
-  if (process.env.DFX_NETWORK !== "ic") {
+  // Only a local replica. Fetching it from a remote boundary node means
+  // trusting the endpoint we are trying to verify. Matches storage/index.js;
+  // vite sets NODE_ENV=production for every non-local network.
+  if (process.env.NODE_ENV !== "production") {
     agent.fetchRootKey().catch((err) => {
       console.warn(
         "Unable to fetch root key. Check to ensure that your local replica is running"
