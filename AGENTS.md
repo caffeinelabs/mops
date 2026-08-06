@@ -87,10 +87,10 @@ Svelte 5 + Vite 8, queries the main canister. Staging canister: `ogp6e-diaaa-aaa
 
 ## Key constraints
 
-- **Local pipeline uses icp-cli**: `npm run replica` and `npm run deploy-local` use `icp` (config in `icp.yaml`). `dfx.json` is still kept around — production deploys (`deploy-staging`, `deploy-ic`, `release.yml`) and `npm run decl:cli` (`dfx generate`) still go through dfx.
+- **dfx is not needed for local development or CI.** `npm run replica` and `npm run deploy-local` use `icp` (config in `icp.yaml`), and `npm run decl` uses `mops` + `icp-bindgen`. `dfx.json` is still kept around for the production deploy path (`deploy-staging`, `deploy-ic`, `release.yml`).
 - **dfx version**: pinned in `dfx.json` via `dfxvm`. Do not run `dfxvm update/install/default` to change it.
 - **icp-cli version**: pinned in `.github/workflows/ci.yml`; the `icp.yaml` recipes are pinned by version and sha256. icp-cli still makes breaking manifest changes between minor versions, so do not unpin a recipe and do not run `icp network update` — it upgrades the network launcher out from under the pin. To move versions, bump the CI pin and the recipes together and re-run the local pipeline.
-- **Declarations must be regenerated** after backend changes: `npm run decl` (uses `dfx generate`, no replica needed). Needs `DFX_MOC_PATH=moc-wrapper` in the environment (`mops toolchain init` sets it) so dfx compiles with the pinned `[toolchain] moc` instead of its own bundled one.
+- **Declarations must be regenerated** after backend changes: `npm run decl` (no replica needed). Two steps per canister: `mops generate candid` writes the `.did` from Motoko source with the pinned `[toolchain] moc`, then [`icp-bindgen`](https://www.npmjs.com/package/@icp-sdk/bindgen) turns it into `*.did.js` / `*.did.d.ts`. The `index.js` / `index.d.ts` actor factories next to them are hand-maintained — nothing regenerates those; add them by hand when adding a canister.
 - **API version** in `cli/mops.ts` (`apiVersion`) and `backend/main/main-canister.mo` (`API_VERSION`) must match.
 
 ## High-risk areas (extra scrutiny)

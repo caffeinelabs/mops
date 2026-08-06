@@ -13,7 +13,9 @@
     "decl": "npm run decl:cli && npm run decl:frontend",
     "lint": "eslint .",
     "fix": "prettier --write . && eslint --fix .",
-    "decl:cli": "dfx generate main && dfx generate bench",
+    "decl:cli": "npm run decl:cli:main && npm run decl:cli:bench",
+    "decl:cli:main": "mops generate candid main -o cli/declarations/main/main.did && icp-bindgen --did-file cli/declarations/main/main.did --out-dir cli/declarations/main --declarations-flat --actor-disabled --force",
+    "decl:cli:bench": "mops generate candid bench -o cli/declarations/bench/bench.did && icp-bindgen --did-file cli/declarations/bench/bench.did --out-dir cli/declarations/bench --declarations-flat --actor-disabled --force",
     "decl:frontend": "cp -r cli/declarations frontend",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -48,6 +50,7 @@
     ]
   },
   "devDependencies": {
+    "@icp-sdk/bindgen": "0.4.0",
     "@typescript-eslint/eslint-plugin": "7.18.0",
     "@typescript-eslint/parser": "7.18.0",
     "eslint": "8.57.0",
