@@ -176,8 +176,10 @@ impl ComplexityBreakdown {
     }
 }
 
-// Mirrors the IC's per-instruction Wasm validation weights. Keep these weights
-// synchronized with the replica validator when its complexity rules change.
+// Mirrors the replica validator at commit
+// 03b28a2753593fe08e7db1aa5ad664ab03ed0c26:
+// https://github.com/dfinity/ic/blob/03b28a2753593fe08e7db1aa5ad664ab03ed0c26/rs/embedders/src/wasm_utils/validation.rs
+// That validator rejects complexity strictly greater than 1,000,000.
 fn instruction_complexity(instr: &Instr) -> usize {
     match instr {
         Instr::Block(_)
