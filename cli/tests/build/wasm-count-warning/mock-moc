@@ -1,0 +1,49 @@
+#!/usr/bin/env node
+
+import fs from "node:fs";
+
+const args = process.argv.slice(2);
+const outputFlag = args.indexOf("-o");
+if (outputFlag === -1 || !args[outputFlag + 1]) {
+  console.error("mock-moc: missing -o");
+  process.exit(1);
+}
+
+const output = args[outputFlag + 1];
+const encodeU32 = (value) => {
+  const bytes = [];
+  do {
+    let byte = value & 0x7f;
+    value >>>= 7;
+    if (value) byte |= 0x80;
+    bytes.push(byte);
+  } while (value);
+  return bytes;
+};
+const section = (id, payload) => [id, ...encodeU32(payload.length), ...payload];
+const functionCount = 650;
+const functionSection = [
+  ...encodeU32(functionCount),
+  ...Array(functionCount).fill(0),
+];
+const codeSection = [
+  ...encodeU32(functionCount),
+  ...Array.from({ length: functionCount }, () => [0x02, 0x00, 0x0b]).flat(),
+];
+const wasm = Uint8Array.from([
+  0x00,
+  0x61,
+  0x73,
+  0x6d,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  ...section(1, [0x01, 0x60, 0x00, 0x00]),
+  ...section(3, functionSection),
+  ...section(10, codeSection),
+]);
+
+fs.writeFileSync(output, wasm);
+fs.writeFileSync(output.replace(/\.wasm$/, ".did"), "service : {}\n");
+fs.writeFileSync(output.replace(/\.wasm$/, ".most"), "");

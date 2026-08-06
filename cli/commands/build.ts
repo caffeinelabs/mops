@@ -15,6 +15,7 @@ import { optimizeWasm } from "../helpers/optimize-wasm.js";
 import { mostRequiresPreexistingState } from "../helpers/parse-most.js";
 import { assertDfinityClientSupportsPocketIc } from "../helpers/pocket-ic-startup.js";
 import type { TestDeployArtifact } from "../helpers/test-deploy.js";
+import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
 import { Config } from "../types.js";
@@ -227,6 +228,15 @@ export async function build(
           verbose: options.verbose,
           optimize: options.optimize,
         });
+        const wasmPreflight = runWasmComplexityPreflight(
+          canisterName,
+          await readFile(wasmPath),
+        );
+        if (wasmPreflight.fatal) {
+          cliError(
+            `Wasm complexity preflight failed for canister ${canisterName}`,
+          );
+        }
         if (testDeployEnabled) {
           // Init args must be encoded against the Motoko-generated init
           // signature. A declared candid file is typically service-only and

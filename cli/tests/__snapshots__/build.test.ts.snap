@@ -22,6 +22,26 @@ test deploy canister main
 }
 `;
 
+exports[`build count warnings still allow PocketIC deployment 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "Warning [MOPS-WASM-SIZE]:
+Severity: Early
+Canister: main
+Generated Wasm functions: 650
+Local functions: 650
+Imported functions: 0
+Generated Wasm locals: 0
+Risk: These counts correlate with increased IC0539 risk but do not prove a memory-limit failure.
+Suggested correction: Reduce generated actor fields and eager initialization, use compact collections, or move large initialization work into bounded post-install calls.
+Next step: Run PocketIC test deployment for authoritative memory validation.",
+  "stdout": "build canister main
+test deploy canister main
+
+✓ Built 1 canister successfully",
+}
+`;
+
 exports[`build error 1`] = `
 {
   "exitCode": 0,

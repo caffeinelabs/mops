@@ -1,0 +1,9 @@
+[toolchain]
+moc = "./mock-moc"
+pocket-ic = "./mock-pocket-ic"
+
+[build]
+test-deploy = true
+
+[canisters.main]
+main = "src/Main.mo"

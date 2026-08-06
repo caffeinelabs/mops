@@ -127,6 +127,10 @@ Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mo
 
 With `[optimize]` in `mops.toml`, runs `wasm-opt` after candid metadata (default `-O3 -g`). Pin Binaryen with `mops toolchain use wasm-opt 131` (or let auto-pin write latest on first build). Soft-fails to unoptimized Wasm on error. Pass `--no-optimize` (on `build` or `bench`) to skip the pass for a single run without editing `mops.toml`.
 
+Every build runs a fast Walrus preflight on the final Wasm. Per-function IC0505 complexity below 750,000 is quiet, 750,000 through 899,999 emits an early warning, 900,000 through 1,000,000 emits a critical warning, and anything above 1,000,000 fails before PocketIC starts. `MOPS-WASM-COMPLEXITY` output includes actionable function metrics, the three largest complexity contributors, and Motoko correction guidance.
+
+`MOPS-WASM-SIZE` warnings are advisory correlations only: early at 650 total Wasm functions or 3,800 Walrus locals, strong at 674 functions or 4,000 locals. They never fail or skip deployment. Use `--test-deploy` for authoritative IC0539 memory validation.
+
 ### `mops deployed`
 
 Post-deploy hook — keeps the on-disk `.most` baseline used by `check-stable` in sync with what's actually deployed.

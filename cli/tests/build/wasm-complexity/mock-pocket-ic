@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+touch pocket-ic-started
+exit 1

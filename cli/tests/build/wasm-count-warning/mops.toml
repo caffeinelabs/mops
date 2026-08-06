@@ -1,0 +1,6 @@
+[toolchain]
+moc = "./mock-moc"
+pocket-ic = "12.0.0"
+
+[canisters.main]
+main = "src/Main.mo"

@@ -9,7 +9,7 @@ use candid_parser::{
 };
 use wasm_bindgen::prelude::*;
 
-use crate::utils::{js_value, JsResult};
+use crate::utils::{js_return, js_value, JsResult};
 
 #[wasm_bindgen]
 pub fn is_candid_compatible(new_interface: &str, original_interface: &str) -> bool {
@@ -44,6 +44,13 @@ fn encode_candid_args_inner(args: &str, interface: &str) -> Result<Vec<u8>, Stri
 pub fn add_custom_sections(bytes: &[u8], custom_sections: JsValue) -> JsResult<Vec<u8>> {
     wasm_utils::add_custom_sections(bytes, js_value(custom_sections)?)
         .map_err(|e| JsError::new(&e.to_string()))
+}
+
+#[wasm_bindgen]
+pub fn analyze_wasm_function_complexity(bytes: &[u8]) -> JsResult {
+    let analysis =
+        wasm_utils::analyze_function_complexity(bytes).map_err(|e| JsError::new(&e.to_string()))?;
+    js_return(&analysis)
 }
 
 #[cfg(test)]
