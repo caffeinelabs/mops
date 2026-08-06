@@ -1,21 +1,12 @@
 import process from "node:process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  createWriteStream,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, createWriteStream } from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream";
-import { execaCommand } from "execa";
 import chalk from "chalk";
 import { createLogUpdate } from "log-update";
 import got from "got";
 import decompress from "decompress";
-import { getRootDir, parseGithubURL, progressBar } from "./mops.js";
+import { getRootDir, parseGithubURL, progressBar } from "../../mops.js";
 import {
   commitStagingDir,
   createStagingDir,
@@ -23,87 +14,7 @@ import {
   getGithubDepCacheName,
   isDepCached,
   sweepStaleStagingDirs,
-} from "./cache.js";
-
-const dhallFileToJson = async (filePath: string, silent: boolean) => {
-  if (existsSync(filePath)) {
-    let cwd = new URL(path.dirname(import.meta.url)).pathname;
-    let res;
-    try {
-      res = await execaCommand(`dhall-to-json --file ${filePath}`, {
-        preferLocal: true,
-        cwd,
-      });
-    } catch (err: any) {
-      silent ||
-        console.error(
-          "dhall-to-json error:",
-          err.message?.split("Message:")[0],
-        );
-      return null;
-    }
-
-    if (res.exitCode === 0) {
-      return JSON.parse(res.stdout);
-    } else {
-      return res;
-    }
-  }
-
-  return null;
-};
-
-export type VesselConfig = {
-  dependencies: VesselDependencies;
-  "dev-dependencies": VesselDependencies;
-};
-
-export type VesselDependencies = Array<{
-  name: string;
-  version?: string; // mops package
-  repo?: string; // github package
-  path?: string; // local package
-}>;
-
-export const readVesselConfig = async (
-  dir: string,
-  { cache = true, silent = false } = {},
-): Promise<VesselConfig | null> => {
-  const cachedFile = (dir || process.cwd()) + "/vessel.json";
-
-  if (existsSync(cachedFile)) {
-    let cachedConfig = readFileSync(cachedFile).toString();
-    return JSON.parse(cachedConfig);
-  }
-
-  const [vessel, packageSetArray] = await Promise.all([
-    dhallFileToJson((dir || process.cwd()) + "/vessel.dhall", silent),
-    dhallFileToJson((dir || process.cwd()) + "/package-set.dhall", silent),
-  ]);
-
-  if (!vessel || !packageSetArray) {
-    return null;
-  }
-
-  let repos: Record<string, string> = {};
-  for (const { name, repo, version } of packageSetArray) {
-    const { org, gitName } = parseGithubURL(repo);
-    repos[name] = `https://github.com/${org}/${gitName}#${version}`;
-  }
-
-  let config: VesselConfig = {
-    dependencies: vessel.dependencies.map((name: string) => {
-      return { name, repo: repos[name], version: "" };
-    }),
-    "dev-dependencies": [],
-  };
-
-  if (cache === true) {
-    writeFileSync(cachedFile, JSON.stringify(config), "utf-8");
-  }
-
-  return config;
-};
+} from "../../cache.js";
 
 export const downloadFromGithub = async (
   repo: string,
@@ -188,12 +99,7 @@ export const downloadFromGithub = async (
 export const installFromGithub = async (
   name: string,
   repo: string,
-  {
-    verbose = false,
-    dep = false,
-    silent = false,
-    ignoreTransitive = false,
-  } = {},
+  { verbose = false, silent = false } = {},
 ): Promise<boolean> => {
   sweepStaleStagingDirs();
 
@@ -203,13 +109,10 @@ export const installFromGithub = async (
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
   if (isDepCached(cacheName)) {
-    silent || logUpdate(`${dep ? "Dependency" : "Installing"} ${repo} (cache)`);
+    silent || logUpdate(`Installing ${repo} (cache)`);
   } else {
     let progress = (step: number, total: number) => {
-      silent ||
-        logUpdate(
-          `${dep ? "Dependency" : "Installing"} ${repo} ${progressBar(step, total)}`,
-        );
+      silent || logUpdate(`Installing ${repo} ${progressBar(step, total)}`);
     };
 
     progress(0, 1024 * 500);
@@ -230,20 +133,6 @@ export const installFromGithub = async (
     silent || logUpdate.done();
   } else {
     logUpdate.clear();
-  }
-
-  if (ignoreTransitive) {
-    return true;
-  }
-
-  const config = await readVesselConfig(cacheDir, { silent });
-
-  if (config) {
-    for (const { name, repo } of config.dependencies) {
-      if (repo) {
-        await installFromGithub(name, repo, { verbose, silent, dep: true });
-      }
-    }
   }
 
   return true;

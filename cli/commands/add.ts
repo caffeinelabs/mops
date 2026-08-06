@@ -11,7 +11,7 @@ import {
 } from "../mops.js";
 import { getHighestVersion } from "../api/getHighestVersion.js";
 import { installMopsDep } from "./install/install-mops-dep.js";
-import { installFromGithub } from "../vessel.js";
+import { installFromGithub } from "./install/install-from-github.js";
 import { checkIntegrity } from "../integrity.js";
 import { checkRequirements } from "../check-requirements.js";
 import { syncLocalCache } from "./install/sync-local-cache.js";

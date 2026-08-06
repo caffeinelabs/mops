@@ -1,0 +1,2 @@
+[dependencies]
+test = "https://github.com/ZenVoich/test#master@06d7c77accb9fb08830643aa8f0e346295f6b263"

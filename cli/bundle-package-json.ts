@@ -13,7 +13,6 @@ delete packageJson.overrides;
 // almost nothing when bundle/ is installed directly (`npm i -g ./bundle`).
 delete packageJson.files;
 packageJson.dependencies = {
-  "dhall-to-json-cli": packageJson.dependencies["dhall-to-json-cli"],
   buffer: packageJson.dependencies["buffer"],
 };
 

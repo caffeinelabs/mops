@@ -4,7 +4,6 @@
 export const MOTOKO_IGNORE_PATTERNS = [
   "**/node_modules/**",
   "**/.mops/**",
-  "**/.vessel/**",
   "**/.git/**",
   "**/dist/**",
 ];
