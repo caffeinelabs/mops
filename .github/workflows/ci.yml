@@ -106,6 +106,9 @@ jobs:
           (cd cli/tests/check/fix-utf8 && mops install)
           (cd cli/tests/build/success && mops install)
           (cd cli/tests/build/error && mops install)
+          (cd cli/tests/build/custom-output && mops install)
+          (cd cli/tests/build/optimize && mops install)
+          (cd cli/tests/build/optimize-fail && mops install)
 
       - name: Run CLI tests
         if: ${{ !matrix.test-global }}
