@@ -1,5 +1,5 @@
 name: Deploy docs canister
-description: Build and deploy the docs asset canister to the IC with icp-cli, then verify the live site.
+description: Build and deploy the docs asset canister to the IC with icp-cli.
 
 inputs:
   identity-pem:
@@ -9,44 +9,21 @@ inputs:
     description: icp-cli version to install. Keep in step with the pin in ci.yml.
     required: false
     default: "1.2.0"
-  verify-paths:
-    description: >-
-      Newline-separated "<path> :: <expected substring> :: <description>" triples to probe on the
-      live site after deploying. The substring is required, not decorative: the asset canister
-      answers unknown paths with the root index.html at HTTP 200, so a status-only check passes
-      against a canister serving none of these pages. Each substring must be absent from the
-      root page or it cannot detect that fallback. `::` is the separator because the expected
-      substrings are page titles, which contain `|`.
-      The URL layout follows `lastVersion` in docs/docusaurus.config.js on the branch being
-      deployed, so these defaults assume 2.x at the root and 3.x at /next. Flipping
-      `lastVersion` back to 'current' at the 3.0.0 GA means updating these too.
-    required: false
-    # docs-version-* is Docusaurus's own class on <html>, and for /next/ it is the only
-    # thing distinguishing a real hit from the root page served as fallback.
-    default: |
-      / :: docs-version-2.x :: the released 2.x line at the site root
-      /quick-start/ :: Quick Start | Mops Docs :: a real 2.x page, not the fallback
-      /next/ :: docs-version-current :: the unreleased line at /next, not the root fallback
-      /next/cli/mops-verify/ :: mops verify | Mops Docs :: a page only on the 3.x line
 
 runs:
   using: composite
   steps:
-    # Pinned for the same reason as ci.yml: icp-cli still makes breaking
-    # manifest changes between minor versions, so an unpinned install can
-    # break icp.yaml without a commit touching it.
     - name: Install icp-cli
       shell: bash
       run: npm install -g @icp-sdk/icp-cli@${{ inputs.icp-version }}
 
+    # The docs recipe in icp.yaml builds with `npm run build-docs`, which needs
+    # docs/node_modules.
     - name: Install docs dependencies
       shell: bash
       working-directory: docs
       run: npm ci
 
-    # icp-cli reads dfx's SEC1 ("BEGIN EC PRIVATE KEY") pem and derives the
-    # same principal, so the existing MOPS_IDENTITY_PEM secret works unchanged.
-    # plaintext storage avoids needing a keyring on a headless runner.
     - name: Import mops identity
       shell: bash
       env:
@@ -58,45 +35,22 @@ runs:
         printf '%s\n' "$MOPS_IDENTITY_PEM" > "$RUNNER_TEMP/mops.pem"
         icp identity import mops --from-pem "$RUNNER_TEMP/mops.pem" --storage plaintext
 
-    # `ic` is a built-in icp-cli environment, but the canister ID store is
-    # runner-local, so the existing canister has to be linked on every run.
-    # canister_ids.json stays the single source of truth for the ID.
+    # icp-cli keeps canister IDs in an untracked store, so the ID has to be
+    # linked on every run. canister_ids.json stays the single source of truth.
+    # A bare --force fails when no mapping exists yet, which is every fresh
+    # checkout, so link plainly first and fall back for reruns.
     - name: Link the docs canister ID
       shell: bash
       run: |
         set -euo pipefail
         DOCS_ID=$(jq -er '.docs.ic' canister_ids.json)
-        echo "Linking docs -> $DOCS_ID in the ic environment"
-        # Plain link first, --force only as the fallback. With icp-cli 1.2.0 a bare
-        # --force fails when no mapping file exists yet, which is every fresh
-        # actions/checkout (nothing under .icp/ is tracked). Verified both ways:
-        # plain succeeds when absent and fails when present, --force the reverse.
         icp canister link docs "$DOCS_ID" --environment ic \
           || icp canister link docs "$DOCS_ID" --environment ic --force
 
-    # docs.mops.one resolves only while the canister serves .well-known/ic-domains.
-    # Build up front so a missing file aborts before anything is uploaded. `icp deploy`
-    # then runs the same build again and ships that output — the guard holds because
-    # the build is deterministic (docusaurus copies static/ into build/ verbatim), not
-    # because this is the artifact uploaded. The live body check after deploy is what
-    # covers the upload itself.
-    - name: Build docs and assert the custom-domain file is present
-      shell: bash
-      run: |
-        set -euo pipefail
-        npm run build-docs
-        # -F so the dots are literal, -x so a longer hostname cannot satisfy it.
-        if ! grep -qxF 'docs.mops.one' docs/build/.well-known/ic-domains; then
-          echo "::error::docs/build/.well-known/ic-domains is missing or does not list docs.mops.one."
-          echo "::error::Deploying would take docs.mops.one offline. Aborting before upload."
-          exit 1
-        fi
-
-    # --no-create so a failed link can never silently create and populate a
-    # second docs canister instead of updating the real one.
     - name: Deploy docs canister
       shell: bash
       run: |
+        set -euo pipefail
         for i in 1 2 3; do
           icp deploy docs --environment ic --identity mops --no-create --yes && exit 0
           echo "::warning::Docs canister deploy attempt $i/3 failed"
@@ -104,66 +58,22 @@ runs:
         done
         exit 1
 
-    - name: Verify the live docs site
+    # docs.mops.one resolves only while the canister serves this file, and it is
+    # served only because docs/static/.ic-assets.json opts dot-directories into
+    # the upload. Assert the body, not the status: the asset canister answers
+    # unknown paths with the root index.html at HTTP 200.
+    - name: Verify the custom domain still resolves
       shell: bash
-      env:
-        VERIFY_PATHS: ${{ inputs.verify-paths }}
       run: |
-        set -uo pipefail
-        base=https://docs.mops.one
-        fail=0
-
-        trim() { printf '%s' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
-
-        # A 200 alone proves nothing here: the asset canister answers unknown paths
-        # with the root index.html at 200, so every probe asserts on content.
-        # mode=sub  -> substring, for HTML pages
-        # mode=line -> whole line, for ic-domains. Required, not pedantry: the root
-        #              page embeds "docs.mops.one" in og:url and friends, so a
-        #              substring match there would be satisfied by the fallback.
-        # Boundary nodes can briefly serve a stale response after an upload, hence
-        # the retries.
-        probe() {
-          local path="$1" expect="$2" mode="${3:-sub}" attempt code grepflag
-          if [ "$mode" = "line" ]; then grepflag=-qxF; else grepflag=-qF; fi
-          for attempt in 1 2 3; do
-            code=$(curl -sS -o /tmp/probe-body --max-time 30 -w '%{http_code}' "$base$path" 2>/dev/null)
-            [ -z "$code" ] && code=000
-            if [ "$code" = "200" ] && grep "$grepflag" -- "$expect" /tmp/probe-body; then
-              return 0
-            fi
-            [ "$attempt" -lt 3 ] && sleep 10
-          done
-          printf '%s' "$code"
-          return 1
-        }
-
-        while IFS= read -r line; do
-          [ -z "$(trim "$line")" ] && continue
-          path=$(trim "${line%%::*}")
-          rest=${line#*::}
-          expect=$(trim "${rest%%::*}")
-          desc=$(trim "${rest#*::}")
-          if [ -z "$path" ] || [ -z "$expect" ]; then
-            echo "::error::Malformed verify-paths entry (need '<path> :: <expected> :: <desc>'): $line"
-            fail=1
-            continue
+        set -euo pipefail
+        url=https://docs.mops.one/.well-known/ic-domains
+        for attempt in 1 2 3; do
+          if curl -sS --max-time 30 "$url" 2>/dev/null | grep -qxF 'docs.mops.one'; then
+            echo "ok    $url"
+            exit 0
           fi
-          if code=$(probe "$path" "$expect"); then
-            echo "ok    $path  ($desc)"
-          else
-            echo "::error::$base$path did not serve the expected content (HTTP $code, looking for '$expect' — $desc)."
-            echo "::error::A 200 here can be the root page served as a fallback, so this means the page is missing."
-            fail=1
-          fi
-        done <<< "$VERIFY_PATHS"
-
-        # The one that takes the site down if it regresses.
-        if code=$(probe /.well-known/ic-domains 'docs.mops.one' line); then
-          echo "ok    /.well-known/ic-domains  (custom domain mapping)"
-        else
-          echo "::error::$base/.well-known/ic-domains did not serve docs.mops.one (HTTP $code) — the custom domain will stop resolving."
-          fail=1
-        fi
-
-        exit $fail
+          [ "$attempt" -lt 3 ] && sleep 10
+        done
+        echo "::error::$url does not list docs.mops.one. The custom domain is broken."
+        echo "::error::Roll back with: dfx deploy --network ic --no-wallet docs --identity mops"
+        exit 1

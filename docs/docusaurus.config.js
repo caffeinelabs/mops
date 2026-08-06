@@ -46,10 +46,10 @@ const config = {
 				docs: {
 					routeBasePath: '/',
 					sidebarPath: './sidebars.js',
-					// The released line is served at the root; the in-development line lives
-					// under /next. Flip `lastVersion` back to 'current' at the 3.0.0 GA —
-					// and update `verify-paths` in .github/actions/deploy-docs when you do,
-					// since it probes these URLs after every docs deploy.
+					// The released line is served at the root; the in-development line
+					// lives under /next. Flip back to 'current' at the 3.0.0 GA.
+					// `main` carries 'current', so whichever branch released most
+					// recently decides the layout until the two converge at GA.
 					lastVersion: '2.x',
 					versions: {
 						current: {label: '3.x (unreleased)', path: 'next'},
