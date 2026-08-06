@@ -61,6 +61,10 @@ Write the generated `.did` to the given path. Single-canister only. Does not upd
 
 Show the `moc` invocation.
 
+### `--locked`
+
+Require an up-to-date [`mops.lock`](/mops.lock) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](/cli/mops-install#--locked).
+
 ## How it works
 
 `mops generate candid` invokes `moc --idl` with the same packages, `[moc].args`, `[build].args`, per-canister `args`, and migration flags as `mops build` — keeping the generated interface in lockstep with what `mops build` would produce. No `.wasm` or `.most` files are emitted; the deployed canister's metadata is unaffected.

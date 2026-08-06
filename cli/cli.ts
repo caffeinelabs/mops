@@ -1,4 +1,5 @@
 import { Argument, Command, Option } from "commander";
+import chalk from "chalk";
 import events from "node:events";
 import process from "node:process";
 
@@ -54,6 +55,7 @@ import {
   version,
 } from "./mops.js";
 import { setConflictPolicy } from "./resolve-packages.js";
+import { verifyIntegrity } from "./integrity.js";
 import { Tool } from "./types.js";
 import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
 
@@ -86,6 +88,19 @@ function parseExtraArgs(variadicArgs?: string[]): {
       : variadicArgs
     : [];
   return { extraArgs, args };
+}
+
+// Implicit install for build/check/test/bench/generate. Exits on failure:
+// a download that fails its integrity check, or any other install error, must
+// not let the command carry on against a half-populated `.mops/`.
+async function installAllOrExit(options: { locked?: boolean }): Promise<void> {
+  let ok = await installAll({
+    silent: true,
+    lock: options.locked ? "locked" : "maintain",
+  });
+  if (!ok) {
+    process.exit(1);
+  }
 }
 
 // Shared `--help` section describing the enhanced migration `check-limit`
@@ -133,12 +148,6 @@ program
   .description("Install the package and save it to mops.toml")
   .option("--dev", "Add to [dev-dependencies] section")
   .option("--verbose", "Show more information")
-  .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "update",
-      "ignore",
-    ]),
-  )
   .action(async (pkg, options) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -154,12 +163,6 @@ program
   .option("--dev", "Remove from dev-dependencies instead of dependencies")
   .option("--verbose", "Show more information")
   .option("--dry-run", "Do not actually remove anything")
-  .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "update",
-      "ignore",
-    ]),
-  )
   .action(async (pkg, options) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -175,11 +178,10 @@ program
   .option("--no-toolchain", "Do not install toolchain")
   .option("--verbose", "Show more information")
   .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "check",
-      "update",
-      "ignore",
-    ]),
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
   )
   .action(async (options) => {
     if (!checkConfigFile()) {
@@ -195,7 +197,16 @@ program
       await toolchain.checkToolchainInited({ strict: false });
     }
 
-    let ok = await installAll(options);
+    let ok = await installAll({
+      ...options,
+      lock: options.locked ? "locked" : "maintain",
+    });
+
+    // Bail before the conflicts check: it re-resolves, which reads dependency
+    // manifests that a failed install may never have written.
+    if (!ok) {
+      process.exit(1);
+    }
 
     if (options.toolchain) {
       await toolchain.installAll(options);
@@ -203,10 +214,28 @@ program
 
     // No explicit conflict check: installAll resolves, and resolution reports
     // conflicts on its own now instead of waiting for a caller to opt in.
+  });
 
-    if (!ok) {
+// verify
+program
+  .command("verify")
+  .description(
+    "Audit installed dependencies against mops.lock: re-hash every file under .mops/ and confirm the lock still matches mops.toml and the registry",
+  )
+  .action(async () => {
+    checkConfigFile(true);
+    let result = await verifyIntegrity();
+    if (result.errors.length) {
+      console.error(chalk.red("Integrity check failed"));
+      for (let line of result.errors) {
+        console.error(line);
+      }
       process.exit(1);
     }
+    console.log(
+      chalk.green("Integrity verified ") +
+        `${result.packages} package(s), ${result.files} file(s)`,
+    );
   });
 
 // publish
@@ -258,13 +287,10 @@ program
     setConflictPolicy(options.conflicts);
     if (options.install) {
       // `mops sources` is machine-parsed by the dfx packtool, so it must not
-      // write the lock or print integrity output — hence `lock: "ignore"`.
-      await installAll({
-        silent: true,
-        lock: "ignore",
-        threads: 6,
-        installFromLockFile: true,
-      });
+      // write the lock or print integrity output — hence `lock: "skip"`.
+      // It has no `--locked`: enforce the lock with a preceding
+      // `mops install --locked` step instead of failing mid-`dfx build`.
+      await installAll({ silent: true, lock: "skip", threads: 6 });
     }
     await toolchain.checkToolchainInited({ strict: false });
     let sourcesArr = await sources(options);
@@ -342,10 +368,16 @@ program
       "  [migrations].check-limit is set, re-run with mops check --no-check-limit to\n" +
       "  surface the issue (check trims the chain; build compiles all of it).",
   )
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (canisters, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(canisters);
-    await installAll({ silent: true, defaultLock: "update" });
+    await installAllOrExit(options);
     await build(args.length ? args : undefined, {
       ...options,
       outputDir: options.output,
@@ -386,10 +418,16 @@ program
     "after",
     enhancedMigrationHelp({ withFix: true, withPendingWarning: true }),
   )
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (args, options) => {
     checkConfigFile(true);
     const { extraArgs, args: argList } = parseExtraArgs(args);
-    await installAll({ silent: true, defaultLock: "update" });
+    await installAllOrExit(options);
     await check(argList, {
       ...options,
       extraArgs,
@@ -400,9 +438,15 @@ program
 program
   .command("check-candid <new-candid> <original-candid>")
   .description("Check Candid interface compatibility between two Candid files")
-  .action(async (newCandid, originalCandid) => {
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
+  .action(async (newCandid, originalCandid, options) => {
     checkConfigFile(true);
-    await installAll({ silent: true, defaultLock: "update" });
+    await installAllOrExit(options);
     await checkCandid(newCandid, originalCandid);
   });
 
@@ -424,10 +468,16 @@ program
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check-stable -- -Werror",
   )
   .addHelpText("after", enhancedMigrationHelp({ withPendingWarning: true }))
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (args, options) => {
     checkConfigFile(true);
     const { extraArgs, args: argList } = parseExtraArgs(args);
-    await installAll({ silent: true, defaultLock: "update" });
+    await installAllOrExit(options);
     await checkStable(argList, {
       ...options,
       extraArgs,
@@ -501,11 +551,17 @@ program
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops test -- -Werror",
   )
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (filterArr, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
-    await installAll({ silent: true, defaultLock: "update" });
+    await installAllOrExit(options);
     await test(filter, { ...options, extraArgs });
   });
 
@@ -565,11 +621,17 @@ program
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops bench -- -Werror",
   )
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (filterArr, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
-    await installAll({ silent: true, defaultLock: "update" });
+    await installAllOrExit(options);
     await bench(filter, { ...options, extraArgs });
   });
 
@@ -723,14 +785,8 @@ program
 program
   .command("sync")
   .description("Add missing packages and remove unused packages")
-  .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "update",
-      "ignore",
-    ]),
-  )
-  .action(async (options) => {
-    await sync(options);
+  .action(async () => {
+    await sync();
   });
 
 // outdated
@@ -772,12 +828,6 @@ program
       "--patch",
       "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
-  )
-  .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "update",
-      "ignore",
-    ]),
   )
   .action(async (pkg, options) => {
     await update(pkg, options);
@@ -926,10 +976,16 @@ generateCommand
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops generate candid -- -Werror",
   )
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (canisters, options) => {
     checkConfigFile(true);
     const { extraArgs, args } = parseExtraArgs(canisters);
-    await installAll({ silent: true, defaultLock: "update" });
+    await installAllOrExit(options);
     await generateCandid(args.length ? args : undefined, {
       ...options,
       extraArgs,

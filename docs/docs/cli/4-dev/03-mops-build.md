@@ -76,6 +76,10 @@ Skip the [`[optimize]`](/mops.toml#optimize) `wasm-opt` post-pass for this run, 
 mops build --no-optimize
 ```
 
+### `--locked`
+
+Require an up-to-date [`mops.lock`](/mops.lock) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](/cli/mops-install#--locked).
+
 ## Configuration
 
 Canisters are defined in your `mops.toml` file:

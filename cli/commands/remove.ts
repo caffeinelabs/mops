@@ -8,7 +8,7 @@ import {
   writeConfig,
 } from "../mops.js";
 import { Config, Dependency } from "../types.js";
-import { checkIntegrity } from "../integrity.js";
+import { checkIntegrity, LockPolicy } from "../integrity.js";
 import { getDepCacheDir, getDepCacheName } from "../cache.js";
 import path from "node:path";
 import { syncLocalCache } from "./install/sync-local-cache.js";
@@ -18,12 +18,18 @@ type RemoveOptions = {
   verbose?: boolean;
   dev?: boolean;
   dryRun?: boolean;
-  lock?: "update" | "ignore";
+  // Internal: see `AddOptions.lock`.
+  lock?: LockPolicy;
 };
 
 export async function remove(
   name: string,
-  { dev = false, verbose = false, dryRun = false, lock }: RemoveOptions = {},
+  {
+    dev = false,
+    verbose = false,
+    dryRun = false,
+    lock = "maintain",
+  }: RemoveOptions = {},
 ) {
   if (!checkConfigFile()) {
     return;
@@ -131,7 +137,7 @@ export async function remove(
   dryRun || writeConfig(config);
 
   await syncLocalCache();
-  await checkIntegrity(lock, { defaultLock: "update" });
+  await checkIntegrity(lock);
 
   console.log(chalk.green("Package removed ") + `${name} = "${version}"`);
 }

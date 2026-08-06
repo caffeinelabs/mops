@@ -36,7 +36,8 @@ export function setConflictPolicy(policy: ConflictPolicy) {
 }
 
 export async function resolvePackages({
-  // Bypass a valid lock so `--lock update` can rewrite absolute local paths.
+  // Bypass a valid lock so lock regeneration re-reads mops.toml (this is how
+  // absolute local paths from older CLIs get rewritten root-relative).
   skipLock = false,
 } = {}): Promise<Record<string, string>> {
   if (!checkConfigFile()) {

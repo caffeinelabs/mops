@@ -10,11 +10,7 @@ import { toolchain } from "./toolchain/index.js";
 import { MOTOKO_IGNORE_PATTERNS } from "../constants.js";
 import { getDepName } from "../helpers/get-dep-name.js";
 
-type SyncOptions = {
-  lock?: "update" | "ignore";
-};
-
-export async function sync({ lock }: SyncOptions = {}) {
+export async function sync() {
   if (!checkConfigFile()) {
     return;
   }
@@ -33,16 +29,16 @@ export async function sync({ lock }: SyncOptions = {}) {
 
   // add missing packages
   for (let pkg of missing) {
-    await add(pkg, { lock: "ignore" });
+    await add(pkg, { lock: "skip" });
   }
 
   // remove unused packages
   for (let pkg of unused) {
     let dev = devDeps.has(pkg) && !deps.has(pkg);
-    await remove(pkg, { dev, lock: "ignore" });
+    await remove(pkg, { dev, lock: "skip" });
   }
 
-  await checkIntegrity(lock, { defaultLock: "update" });
+  await checkIntegrity();
 }
 
 async function getUsedPackages(): Promise<string[]> {

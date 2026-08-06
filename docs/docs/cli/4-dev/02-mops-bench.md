@@ -106,3 +106,8 @@ Pass extra flags directly to the Motoko compiler for this invocation. Appended a
 ```
 mops bench -- -Werror
 ```
+
+### `--locked`
+
+Require an up-to-date [`mops.lock`](/mops.lock) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](/cli/mops-install#--locked).
+

@@ -22,6 +22,7 @@ import {
 } from "../../api/downloadPackageFiles.js";
 import { installDeps } from "./install-deps.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
+import { verifyDownloadedPackageFiles } from "../../integrity.js";
 
 type InstallMopsDepOptions = {
   verbose?: boolean;
@@ -103,6 +104,31 @@ export async function installMopsDep(
         filesData.set(path, data);
         progress();
       });
+
+      // Integrity is checked here, once, on the bytes that just arrived —
+      // nothing reaches the cache unless it matches the registry's hashes.
+      let verification = await verifyDownloadedPackageFiles(
+        cacheName,
+        filesData,
+      );
+      if (verification.errors.length) {
+        logUpdate.clear();
+        console.error(
+          chalk.red("Error: ") +
+            `integrity check failed for ${depName}@${version}`,
+        );
+        for (let error of verification.errors) {
+          console.error("  " + error);
+        }
+        return false;
+      }
+      if (verification.unverified && !silent) {
+        logUpdate.clear();
+        console.warn(
+          chalk.yellow("Warning: ") +
+            `${depName}@${version} publishes no file hashes, so its contents could not be verified`,
+        );
+      }
 
       let stagingDir = createStagingDir(cacheDir);
       let onSigInt = () => {

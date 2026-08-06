@@ -4,7 +4,9 @@ import { createLogUpdate } from "log-update";
 import { checkConfigFile, parseDepValue, readConfig } from "../../mops.js";
 import {
   checkIntegrity,
+  checkLockedPrerequisites,
   checkLockFileLight,
+  LockPolicy,
   readLockFile,
 } from "../../integrity.js";
 import { installDeps } from "./install-deps.js";
@@ -15,25 +17,35 @@ import { notifyInstalls } from "../../notify-installs.js";
 type InstallAllOptions = {
   verbose?: boolean;
   silent?: boolean;
-  lock?: "check" | "update" | "ignore";
-  // Commands without a `--lock` flag (build/check/test/...) pass "update"
-  // so the CI auto-`check` path (which recommends passing `--lock check`)
-  // never triggers for them.
-  defaultLock?: "update";
+  lock?: LockPolicy;
   threads?: number;
-  installFromLockFile?: boolean;
 };
 
 export async function installAll({
   verbose = false,
   silent = false,
   threads,
-  lock,
-  defaultLock,
-  installFromLockFile,
+  lock = "maintain",
 }: InstallAllOptions = {}): Promise<boolean> {
   if (!checkConfigFile()) {
     return false;
+  }
+
+  // Fail before downloading anything: a missing or stale lock under `--locked`
+  // is not going to become valid by installing.
+  if (lock === "locked") {
+    checkLockedPrerequisites();
+    // Belt and braces for the invariant documented on checkLockFileLight: if
+    // the prerequisites ever accept a lock the light check rejects, we would
+    // install by re-resolving mops.toml instead of from the lock, which is
+    // exactly what `--locked` exists to prevent. Fail loudly instead.
+    if (!checkLockFileLight()) {
+      console.error(
+        "Error: mops.lock passed the --locked checks but is not usable for installation.",
+      );
+      console.error("This is a bug in mops; please report it.");
+      process.exit(1);
+    }
   }
 
   let config = readConfig();
@@ -43,7 +55,7 @@ export async function installAll({
   let installedFromLockFile = false;
 
   // install from lock file to avoid installing intermediate dependencies
-  if ((lock !== "ignore" || installFromLockFile) && checkLockFileLight()) {
+  if (checkLockFileLight()) {
     let lockFileJson = readLockFile();
 
     if (lockFileJson && lockFileJson.version === 3) {
@@ -75,7 +87,7 @@ export async function installAll({
 
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
-  if (!silent && lock !== "ignore") {
+  if (!silent && lock !== "skip") {
     logUpdate("Checking integrity...");
   }
 
@@ -83,7 +95,7 @@ export async function installAll({
 
   await Promise.all([
     notifyInstalls(installedPackages),
-    checkIntegrity(lock, { defaultLock, silent }),
+    checkIntegrity(lock, { silent }),
   ]);
 
   if (!silent) {

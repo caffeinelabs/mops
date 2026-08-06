@@ -60,3 +60,9 @@ If you have reviewed a cross-major conflict and decided to keep it, use `--confl
 ```
 
 Other commands resolve dependencies too (`mops install`, `mops build`, `mops test`), and they report cross-major conflicts with no way to turn it off.
+
+## Lockfile
+
+`mops sources` installs from [`mops.lock`](/mops.lock) when it is valid, but never writes it and never prints integrity output — its stdout is machine-parsed by the dfx packtool.
+
+It has no `--locked` flag: failing in the middle of a `dfx build` is a poor place to report a stale lockfile. Enforce it with a preceding `mops install --locked` step instead.

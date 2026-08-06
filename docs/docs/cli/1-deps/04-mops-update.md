@@ -42,12 +42,4 @@ For `0.x.y` packages this matches the default — caret already restricts pre-1.
 
 Mutually exclusive with [`--major`](#--major).
 
-### `--lock`
-
-What to do with the [lockfile](/mops.lock).
-
-Default: `update` (create or refresh the lockfile, then verify). Unaffected by the `CI` environment variable — dependency-mutating commands always update the lock by default.
-
-Possible values:
-- `update` - update lockfile (create if not exists). Always checks after update
-- `ignore` - ignore lockfile
+The [lockfile](/mops.lock) is always kept in sync — there is no flag to opt out.
