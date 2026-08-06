@@ -39,18 +39,19 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#cli-v}"
 
-          SEMVER_DIR="$RUNNER_TEMP/semver-check"
-          mkdir -p "$SEMVER_DIR"
-          npm install --prefix "$SEMVER_DIR" --no-audit --no-fund --silent semver@7 >/dev/null
-
-          PRERELEASE=$(SEMVER_DIR="$SEMVER_DIR" VERSION="$VERSION" node -e '
-            const semver = require(process.env.SEMVER_DIR + "/node_modules/semver");
-            const v = semver.valid(process.env.VERSION);
-            if (!v) {
-              console.error("::error::Could not extract a valid version from tag " + process.env.GITHUB_REF_NAME);
+          # The official semver.org regex, applied strictly and with no dependency.
+          # Strictness is the point: a lax parser accepts "v3.0.0" or " 3.0.0 " and
+          # normalises it, so the published version stops matching the tag and the
+          # mismatch only surfaces after the publish has happened. Rejecting here
+          # means $VERSION is the version, verbatim, everywhere downstream.
+          PRERELEASE=$(VERSION="$VERSION" node -e '
+            const re = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
+            const m = re.exec(process.env.VERSION);
+            if (!m) {
+              console.error("::error::Tag " + process.env.GITHUB_REF_NAME + " does not contain a valid semver version");
               process.exit(1);
             }
-            process.stdout.write(semver.prerelease(v) === null ? "false" : "true");
+            process.stdout.write(m[4] === undefined ? "false" : "true");
           ')
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -256,7 +257,7 @@ jobs:
           # The registry can lag a moment behind a publish.
           sleep 15
           echo "Current dist-tags for ic-mops:"
-          npm dist-tag ls ic-mops
+          npm dist-tag ls ic-mops || true
 
           LATEST=$(npm view ic-mops dist-tags.latest 2>/dev/null || echo "")
           NEXT=$(npm view ic-mops dist-tags.next 2>/dev/null || echo "")
@@ -270,11 +271,19 @@ jobs:
             fail=1
           fi
 
-          case "$LATEST" in
-            2.*) echo "ok    latest is still on the 2.x line ($LATEST)" ;;
-            "")  echo '::error::Could not read the latest dist-tag — verify it by hand.'; fail=1 ;;
-            *)   echo "::error::latest is ${LATEST}, which is not a 2.x release. Verify it by hand."; fail=1 ;;
-          esac
+          # Deliberately not "latest is on the 2.x line": that would start failing
+          # every preview after the 3.0.0 GA, and only after publishing. The property
+          # that actually matters is version-agnostic — latest must never be a
+          # prerelease, which also catches a stale beta left there by an earlier run.
+          if [ -z "$LATEST" ]; then
+            echo '::error::Could not read the latest dist-tag — verify it by hand.'
+            fail=1
+          elif printf '%s' "$LATEST" | grep -q -- '-'; then
+            echo "::error::latest is ${LATEST}, which is a prerelease. Fix: npm dist-tag add ic-mops@<last stable> latest"
+            fail=1
+          else
+            echo "ok    latest is a stable release ($LATEST)"
+          fi
 
           if [ "$NEXT" = "$VERSION" ]; then
             echo "ok    next points at $NEXT"

@@ -11,17 +11,23 @@ inputs:
     default: "1.2.0"
   verify-paths:
     description: >-
-      Newline-separated "<path> <description>" pairs to probe on the live site after deploying.
+      Newline-separated "<path> :: <expected substring> :: <description>" triples to probe on the
+      live site after deploying. The substring is required, not decorative: the asset canister
+      answers unknown paths with the root index.html at HTTP 200, so a status-only check passes
+      against a canister serving none of these pages. Each substring must be absent from the
+      root page or it cannot detect that fallback. `::` is the separator because the expected
+      substrings are page titles, which contain `|`.
       The URL layout follows `lastVersion` in docs/docusaurus.config.js on the branch being
       deployed, so these defaults assume 2.x at the root and 3.x at /next. Flipping
-      `lastVersion` back to 'current' at the 3.0.0 GA means updating these too, or the
-      release job fails on paths that no longer exist.
+      `lastVersion` back to 'current' at the 3.0.0 GA means updating these too.
     required: false
+    # docs-version-* is Docusaurus's own class on <html>, and for /next/ it is the only
+    # thing distinguishing a real hit from the root page served as fallback.
     default: |
-      / 2.x docs at the site root
-      /quick-start/ a 2.x page
-      /next/ the unreleased 3.x line
-      /next/cli/mops-verify/ a page that exists only on the 3.x line
+      / :: docs-version-2.x :: the released 2.x line at the site root
+      /quick-start/ :: Quick Start | Mops Docs :: a real 2.x page, not the fallback
+      /next/ :: docs-version-current :: the unreleased line at /next, not the root fallback
+      /next/cli/mops-verify/ :: mops verify | Mops Docs :: a page only on the 3.x line
 
 runs:
   using: composite
@@ -61,17 +67,26 @@ runs:
         set -euo pipefail
         DOCS_ID=$(jq -er '.docs.ic' canister_ids.json)
         echo "Linking docs -> $DOCS_ID in the ic environment"
-        icp canister link docs "$DOCS_ID" --environment ic --force
+        # Plain link first, --force only as the fallback. With icp-cli 1.2.0 a bare
+        # --force fails when no mapping file exists yet, which is every fresh
+        # actions/checkout (nothing under .icp/ is tracked). Verified both ways:
+        # plain succeeds when absent and fails when present, --force the reverse.
+        icp canister link docs "$DOCS_ID" --environment ic \
+          || icp canister link docs "$DOCS_ID" --environment ic --force
 
     # docs.mops.one resolves only while the canister serves .well-known/ic-domains.
-    # Build up front so a missing file fails before anything is uploaded;
-    # `icp deploy` rebuilds, which costs a minute and keeps the check honest.
+    # Build up front so a missing file aborts before anything is uploaded. `icp deploy`
+    # then runs the same build again and ships that output — the guard holds because
+    # the build is deterministic (docusaurus copies static/ into build/ verbatim), not
+    # because this is the artifact uploaded. The live body check after deploy is what
+    # covers the upload itself.
     - name: Build docs and assert the custom-domain file is present
       shell: bash
       run: |
         set -euo pipefail
         npm run build-docs
-        if ! grep -qx 'docs.mops.one' docs/build/.well-known/ic-domains; then
+        # -F so the dots are literal, -x so a longer hostname cannot satisfy it.
+        if ! grep -qxF 'docs.mops.one' docs/build/.well-known/ic-domains; then
           echo "::error::docs/build/.well-known/ic-domains is missing or does not list docs.mops.one."
           echo "::error::Deploying would take docs.mops.one offline. Aborting before upload."
           exit 1
@@ -98,40 +113,56 @@ runs:
         base=https://docs.mops.one
         fail=0
 
-        # Boundary nodes can serve a stale response briefly after an upload,
-        # so give each path a few attempts before calling it a regression.
+        trim() { printf '%s' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
+
+        # A 200 alone proves nothing here: the asset canister answers unknown paths
+        # with the root index.html at 200, so every probe asserts on content.
+        # mode=sub  -> substring, for HTML pages
+        # mode=line -> whole line, for ic-domains. Required, not pedantry: the root
+        #              page embeds "docs.mops.one" in og:url and friends, so a
+        #              substring match there would be satisfied by the fallback.
+        # Boundary nodes can briefly serve a stale response after an upload, hence
+        # the retries.
         probe() {
-          path="$1"
+          local path="$1" expect="$2" mode="${3:-sub}" attempt code grepflag
+          if [ "$mode" = "line" ]; then grepflag=-qxF; else grepflag=-qF; fi
           for attempt in 1 2 3; do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$base$path" 2>/dev/null || echo 000)
-            [ "$code" = "200" ] && return 0
+            code=$(curl -sS -o /tmp/probe-body --max-time 30 -w '%{http_code}' "$base$path" 2>/dev/null)
+            [ -z "$code" ] && code=000
+            if [ "$code" = "200" ] && grep "$grepflag" -- "$expect" /tmp/probe-body; then
+              return 0
+            fi
             [ "$attempt" -lt 3 ] && sleep 10
           done
-          echo "$code"
+          printf '%s' "$code"
           return 1
         }
 
-        while read -r path desc; do
-          [ -z "$path" ] && continue
-          if code=$(probe "$path"); then
+        while IFS= read -r line; do
+          [ -z "$(trim "$line")" ] && continue
+          path=$(trim "${line%%::*}")
+          rest=${line#*::}
+          expect=$(trim "${rest%%::*}")
+          desc=$(trim "${rest#*::}")
+          if [ -z "$path" ] || [ -z "$expect" ]; then
+            echo "::error::Malformed verify-paths entry (need '<path> :: <expected> :: <desc>'): $line"
+            fail=1
+            continue
+          fi
+          if code=$(probe "$path" "$expect"); then
             echo "ok    $path  ($desc)"
           else
-            echo "::error::$base$path returned HTTP $code, expected 200 ($desc)"
+            echo "::error::$base$path did not serve the expected content (HTTP $code, looking for '$expect' — $desc)."
+            echo "::error::A 200 here can be the root page served as a fallback, so this means the page is missing."
             fail=1
           fi
         done <<< "$VERIFY_PATHS"
 
-        # Checked separately: a 200 is not enough, the body has to name the domain.
-        if code=$(probe /.well-known/ic-domains); then
-          body=$(curl -sS --max-time 30 "$base/.well-known/ic-domains" 2>/dev/null || true)
-          if printf '%s' "$body" | grep -qx 'docs.mops.one'; then
-            echo "ok    /.well-known/ic-domains  (custom domain mapping)"
-          else
-            echo "::error::/.well-known/ic-domains does not list docs.mops.one — docs.mops.one will stop resolving."
-            fail=1
-          fi
+        # The one that takes the site down if it regresses.
+        if code=$(probe /.well-known/ic-domains 'docs.mops.one' line); then
+          echo "ok    /.well-known/ic-domains  (custom domain mapping)"
         else
-          echo "::error::$base/.well-known/ic-domains returned HTTP $code, expected 200 — docs.mops.one will stop resolving."
+          echo "::error::$base/.well-known/ic-domains did not serve docs.mops.one (HTTP $code) — the custom domain will stop resolving."
           fail=1
         fi
 
