@@ -1,3 +1,6 @@
+// Split out of `pocket-ic.ts` so the tests can assert against the constants:
+// that module reaches `mops.js` for the cache dir, and jest's ESM resolver
+// cannot follow its `.js` specifiers.
 import process from "node:process";
 import chalk from "chalk";
 import semver from "semver";
