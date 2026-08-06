@@ -2,7 +2,7 @@
 
 ## Next
 
-- Add `mops build --test-deploy` and `[build].test-deploy = true` to install built Wasm files on fresh PocketIC canisters and fail on deployment or initialization errors. PocketIC 9.0.0 or newer is required. Per-canister `wasmMemoryLimit` settings are applied during test deployment, and every command that resolves canisters rejects non-positive or non-integer limits. All current PocketIC error names include their canonical IC error codes. The PocketIC client is loaded only when test deployment is enabled.
+- Add `mops build --test-deploy` and `[build].test-deploy = true` to install built Wasm files on fresh PocketIC canisters and fail on deployment or initialization errors. PocketIC 9.0.0 or newer is required. Per-canister `wasmMemoryLimit` settings are applied during test deployment, and every command that resolves canisters rejects non-positive or non-integer limits. All current PocketIC error names include their canonical IC error codes. The PocketIC client is loaded only when test deployment is enabled. Canisters whose generated `.most` shows an enhanced migration chain requiring pre-existing state are skipped with a warning because they cannot be fresh-installed without a baseline Wasm.
 - Mark `dist/bin/mops.js` as executable in the published package, so the `mops` binary works with package managers that preserve file modes from the tarball.
 
 ## 2.20.0

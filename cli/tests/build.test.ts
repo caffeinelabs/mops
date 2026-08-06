@@ -218,6 +218,27 @@ describe("build", () => {
     }
   });
 
+  test("skips test deployment when the migration chain requires existing state", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "build/test-deploy-incomplete-migrations",
+    );
+    try {
+      const result = await cli(["build"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toMatch(
+        "Warning: skipped test deployment for main",
+      );
+      expect(result.stderr).toMatch(
+        "enhanced migration chain requires pre-existing state",
+      );
+      expect(result.stdout).not.toMatch("test deploy canister main");
+      expect(result.stdout).toMatch("Built 1 canister successfully");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
   test("--test-deploy requires a pinned PocketIC version", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
     try {

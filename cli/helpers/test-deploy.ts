@@ -11,13 +11,29 @@ export interface TestDeployArtifact {
   initCandid: string;
   initArg?: string;
   wasmMemoryLimit?: number;
+  requiresPreexistingState: boolean;
 }
 
 export async function testDeploy(
   artifacts: TestDeployArtifact[],
   { verbose = false } = {},
 ): Promise<void> {
-  const preparedArtifacts = artifacts.map((artifact) => {
+  const deployableArtifacts = artifacts.filter((artifact) => {
+    if (!artifact.requiresPreexistingState) {
+      return true;
+    }
+    console.warn(
+      chalk.yellow(
+        `Warning: skipped test deployment for ${artifact.name}. Its enhanced migration chain requires pre-existing state, and no baseline Wasm is available.`,
+      ),
+    );
+    return false;
+  });
+  if (!deployableArtifacts.length) {
+    return;
+  }
+
+  const preparedArtifacts = deployableArtifacts.map((artifact) => {
     try {
       return {
         ...artifact,

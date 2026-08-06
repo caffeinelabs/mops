@@ -12,6 +12,7 @@ import {
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { optimizeWasm } from "../helpers/optimize-wasm.js";
+import { mostRequiresPreexistingState } from "../helpers/parse-most.js";
 import { assertDfinityClientSupportsPocketIc } from "../helpers/pocket-ic-startup.js";
 import type { TestDeployArtifact } from "../helpers/test-deploy.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
@@ -232,13 +233,18 @@ export async function build(
           verbose: options.verbose,
           optimize: options.optimize,
         });
-        testDeployArtifacts.push({
-          name: canisterName,
-          wasmPath,
-          initCandid: initCandidText,
-          initArg: canister.initArg,
-          wasmMemoryLimit: canister.wasmMemoryLimit,
-        });
+        if (testDeployEnabled) {
+          testDeployArtifacts.push({
+            name: canisterName,
+            wasmPath,
+            initCandid: initCandidText,
+            initArg: canister.initArg,
+            wasmMemoryLimit: canister.wasmMemoryLimit,
+            requiresPreexistingState: mostRequiresPreexistingState(
+              await readFile(mostPath, "utf-8"),
+            ),
+          });
+        }
       } catch (err: any) {
         if (err.message?.includes("Build failed for canister")) {
           throw err;
