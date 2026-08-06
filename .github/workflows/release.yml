@@ -188,7 +188,8 @@ jobs:
 
       - uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
 
-      - name: Import mops identity
+      # For the cli canister only — the docs deploy imports the same pem into icp-cli.
+      - name: Import mops identity into dfx
         env:
           MOPS_IDENTITY_PEM: ${{ secrets.MOPS_IDENTITY_PEM }}
         run: |
@@ -211,20 +212,12 @@ jobs:
           done
           exit 1
 
-      - name: Install docs dependencies
-        working-directory: docs
-        run: npm ci
-
+      # docs runs on icp-cli; the cli canister above stays on dfx on purpose,
+      # so only one production deploy path moves at a time.
       - name: Deploy docs canister
-        env:
-          DFX_WARNING: -mainnet_plaintext_identity
-        run: |
-          for i in 1 2 3; do
-            dfx deploy --network ic --no-wallet docs --identity mops && exit 0
-            echo "::warning::Docs canister deploy attempt $i/3 failed"
-            [ "$i" -lt 3 ] && sleep 30
-          done
-          exit 1
+        uses: ./.github/actions/deploy-docs
+        with:
+          identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
 
       # --- Commit release artifacts ---
 
