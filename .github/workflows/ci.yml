@@ -41,8 +41,11 @@ jobs:
       # Local network + deploy now go through icp-cli (see deploy-local
       # and replica scripts in package.json).
       - uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
+      # Pinned on purpose. icp-cli is still changing its manifest schema
+      # between minor versions, so an unpinned install breaks icp.yaml
+      # without a commit touching it.
       - name: Install icp-cli
-        run: npm install -g @icp-sdk/icp-cli @icp-sdk/ic-wasm
+        run: npm install -g @icp-sdk/icp-cli@1.2.0 @icp-sdk/ic-wasm@0.11.1
 
       - uses: ./.github/actions/cache-rust-wasm
 
@@ -78,6 +81,10 @@ jobs:
         run: npm run deploy-local
 
       - name: Generate declarations
+        # `dfx generate` otherwise compiles with dfx's own bundled moc, which
+        # is newer than the pinned [toolchain] moc and rejects our deps.
+        env:
+          DFX_MOC_PATH: moc-wrapper
         run: npm run decl
 
       - name: Build frontend

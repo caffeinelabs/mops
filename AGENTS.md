@@ -89,7 +89,8 @@ Svelte 5 + Vite 8, queries the main canister. Staging canister: `ogp6e-diaaa-aaa
 
 - **Local pipeline uses icp-cli**: `npm run replica` and `npm run deploy-local` use `icp` (config in `icp.yaml`). `dfx.json` is still kept around — production deploys (`deploy-staging`, `deploy-ic`, `release.yml`) and `npm run decl:cli` (`dfx generate`) still go through dfx.
 - **dfx version**: pinned in `dfx.json` via `dfxvm`. Do not run `dfxvm update/install/default` to change it.
-- **Declarations must be regenerated** after backend changes: `npm run decl` (uses `dfx generate`, no replica needed).
+- **icp-cli version**: pinned in `.github/workflows/ci.yml`; the `icp.yaml` recipes are pinned by version and sha256. icp-cli still makes breaking manifest changes between minor versions, so do not unpin a recipe and do not run `icp network update` — it upgrades the network launcher out from under the pin. To move versions, bump the CI pin and the recipes together and re-run the local pipeline.
+- **Declarations must be regenerated** after backend changes: `npm run decl` (uses `dfx generate`, no replica needed). Needs `DFX_MOC_PATH=moc-wrapper` in the environment (`mops toolchain init` sets it) so dfx compiles with the pinned `[toolchain] moc` instead of its own bundled one.
 - **API version** in `cli/mops.ts` (`apiVersion`) and `backend/main/main-canister.mo` (`API_VERSION`) must match.
 
 ## High-risk areas (extra scrutiny)
