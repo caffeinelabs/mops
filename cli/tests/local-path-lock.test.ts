@@ -75,7 +75,10 @@ describe("portable local path deps in mops.lock", () => {
     }
   });
 
-  test("--lock update rewrites absolute local paths to relative", async () => {
+  // Locks written by older CLIs stored machine-specific absolute paths. This
+  // used to require an explicit `mops install --lock update`; plain install now
+  // treats such a lock as stale and migrates it.
+  test("plain install rewrites absolute local paths to relative", async () => {
     cleanup();
     try {
       const first = await cli(["install"], { cwd, env: { CI: undefined } });
@@ -86,10 +89,7 @@ describe("portable local path deps in mops.lock", () => {
       lock.deps.sibling = path.resolve(cwd, "../local-path-sibling");
       writeFileSync(lockFile, JSON.stringify(lock, null, 2));
 
-      const result = await cli(["install", "--lock", "update"], {
-        cwd,
-        env: { CI: undefined },
-      });
+      const result = await cli(["install"], { cwd, env: { CI: undefined } });
       expect(result.exitCode).toBe(0);
 
       const deps = readLockDeps();

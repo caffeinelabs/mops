@@ -12,7 +12,7 @@ import {
 import { getHighestVersion } from "../api/getHighestVersion.js";
 import { installMopsDep } from "./install/install-mops-dep.js";
 import { installFromGithub } from "./install/install-from-github.js";
-import { checkIntegrity } from "../integrity.js";
+import { checkIntegrity, LockPolicy } from "../integrity.js";
 import { checkRequirements } from "../check-requirements.js";
 import { syncLocalCache } from "./install/sync-local-cache.js";
 import { notifyInstalls } from "../notify-installs.js";
@@ -20,13 +20,15 @@ import { notifyInstalls } from "../notify-installs.js";
 type AddOptions = {
   verbose?: boolean;
   dev?: boolean;
-  lock?: "update" | "ignore";
+  // Internal: `mops sync`/`mops update` pass "skip" to batch many add/remove
+  // calls into a single lock update at the end. Not exposed as a flag.
+  lock?: LockPolicy;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function add(
   name: string,
-  { verbose = false, dev = false, lock }: AddOptions = {},
+  { verbose = false, dev = false, lock = "maintain" }: AddOptions = {},
   asName?: string,
 ) {
   if (!checkConfigFile()) {
@@ -127,16 +129,13 @@ export async function add(
 
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
-  if (lock !== "ignore") {
+  if (lock !== "skip") {
     logUpdate("Checking integrity...");
   }
 
   let installedPackages = await syncLocalCache();
 
-  await Promise.all([
-    notifyInstalls(installedPackages),
-    checkIntegrity(lock, { defaultLock: "update" }),
-  ]);
+  await Promise.all([notifyInstalls(installedPackages), checkIntegrity(lock)]);
 
   logUpdate.clear();
 

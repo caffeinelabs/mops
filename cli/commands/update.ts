@@ -13,14 +13,13 @@ import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 type UpdateOptions = {
   verbose?: boolean;
   dev?: boolean;
-  lock?: "update" | "ignore";
   major?: boolean;
   patch?: boolean;
 };
 
 export async function update(
   pkg?: string,
-  { lock, major, patch }: UpdateOptions = {},
+  { major, patch }: UpdateOptions = {},
 ) {
   if (!checkConfigFile()) {
     return;
@@ -52,7 +51,7 @@ export async function update(
       if (commit.sha !== commitHash) {
         await add(
           `https://github.com/${org}/${gitName}#${branch}@${commit.sha}`,
-          { dev, lock },
+          { dev, lock: "skip" },
           dep.name,
         );
       }
@@ -102,9 +101,9 @@ export async function update(
           );
         }) || dep[0];
 
-      await add(`${dep[0]}@${dep[2]}`, { dev, lock }, asName);
+      await add(`${dep[0]}@${dep[2]}`, { dev, lock: "skip" }, asName);
     }
   }
 
-  await checkIntegrity(lock, { defaultLock: "update" });
+  await checkIntegrity();
 }

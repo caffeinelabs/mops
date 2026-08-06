@@ -208,7 +208,10 @@ describe("build", () => {
       }
     });
 
-    test("fails on a locally modified .mops/ file", async () => {
+    // Integrity is verified at download time now, so builds no longer re-hash
+    // `.mops/` — editing a dependency in place is tolerated (and is how some
+    // debugging workflows operate). `mops verify` is the on-demand audit.
+    test("tolerates a locally modified .mops/ file that mops verify rejects", async () => {
       rmSync(lockFile, { force: true });
       try {
         const first = await cli(["build", "foo"], {
@@ -226,10 +229,13 @@ describe("build", () => {
           cwd,
           env: { CI: undefined },
         });
-        expect(result.exitCode).toBe(1);
-        expect(result.stderr).toMatch(/Integrity check failed/);
-        expect(result.stderr).toMatch(
-          /Mismatched hash for core@1\.0\.0\/src\/Array\.mo/,
+        expect(result.exitCode).toBe(0);
+        expect(result.stderr).not.toMatch(/Integrity check failed/);
+
+        const verify = await cli(["verify"], { cwd, env: { CI: undefined } });
+        expect(verify.exitCode).toBe(1);
+        expect(verify.stderr).toMatch(
+          /\.mops\/core@1\.0\.0\/src\/Array\.mo does not match mops\.lock/,
         );
       } finally {
         cleanFixture(cwd, lockFile);
