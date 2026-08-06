@@ -12,8 +12,10 @@ inputs:
   verify-paths:
     description: >-
       Newline-separated "<path> <description>" pairs to probe on the live site after deploying.
-      Version-specific paths belong here because the URL layout follows
-      docs/docusaurus.config.js on the branch being deployed.
+      The URL layout follows `lastVersion` in docs/docusaurus.config.js on the branch being
+      deployed, so these defaults assume 2.x at the root and 3.x at /next. Flipping
+      `lastVersion` back to 'current' at the 3.0.0 GA means updating these too, or the
+      release job fails on paths that no longer exist.
     required: false
     default: |
       / 2.x docs at the site root
