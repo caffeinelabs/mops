@@ -63,6 +63,6 @@ Other commands resolve dependencies too (`mops install`, `mops build`, `mops tes
 
 ## Lockfile
 
-`mops sources` installs from [`mops.lock`](/mops.lock) when it is valid, but never writes it and never prints integrity output — its stdout is machine-parsed by the dfx packtool.
+`mops sources` installs from [`mops.lock`](../../10-mops.lock.md) when it is valid, but never writes it and never prints integrity output — its stdout is machine-parsed by the dfx packtool.
 
 It has no `--locked` flag: failing in the middle of a `dfx build` is a poor place to report a stale lockfile. Enforce it with a preceding `mops install --locked` step instead.

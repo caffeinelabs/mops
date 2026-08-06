@@ -5,7 +5,7 @@ sidebar_label: mops verify
 
 # `mops verify`
 
-Audit the installed dependencies against [`mops.lock`](/mops.lock).
+Audit the installed dependencies against [`mops.lock`](../../10-mops.lock.md).
 
 ```
 mops verify

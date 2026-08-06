@@ -75,7 +75,7 @@ The `CI` environment variable does not affect lockfile behavior. Releases before
 
 File integrity is verified **at download time**: each file is hashed as it arrives and compared against the hash published in the Mops registry, and the package is only committed to the cache if every file matches. A corrupted or tampered download therefore never reaches your project.
 
-`mops install` does not re-hash the contents of `.mops/` on every run. Editing a file under `.mops/` will not fail your next install — run [`mops verify`](/cli/mops-verify) for the full on-disk audit.
+`mops install` does not re-hash the contents of `.mops/` on every run. Editing a file under `.mops/` will not fail your next install — run [`mops verify`](./cli/1-deps/06-mops-verify.md) for the full on-disk audit.
 
 ## Performance
 

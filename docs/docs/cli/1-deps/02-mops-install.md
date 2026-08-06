@@ -35,7 +35,7 @@ Warning! Conflicting major versions of dependency "test"
 
 Resolution still succeeds: the highest major wins, unless your own `mops.toml` pins the dependency, in which case yours wins. Packages differing only in minor or patch version are not conflicts and are not reported. Neither are `repo` or `path` dependencies, which carry no comparable major version.
 
-Since resolution is skipped when the lockfile is up to date, the report appears on the run that creates or updates `mops.lock`. If you have reviewed a conflict and decided to keep it, [`mops sources --conflicts ignore`](/cli/mops-sources#--conflicts) silences it for `dfx` builds.
+Since resolution is skipped when the lockfile is up to date, the report appears on the run that creates or updates `mops.lock`. If you have reviewed a conflict and decided to keep it, [`mops sources --conflicts ignore`](../7-misc/04-mops-sources.md#--conflicts-action) silences it for `dfx` builds.
 
 ## Options
 
@@ -83,4 +83,4 @@ The `CI` environment variable no longer changes lockfile behavior. Earlier relea
 
 `mops install` verifies each downloaded file against the registry's published hash *as it arrives*, before it is committed to the cache — so a corrupted or tampered download never reaches your project. It does not re-hash the contents of `.mops/` on every run.
 
-To audit what is currently on disk, run [`mops verify`](/cli/mops-verify).
+To audit what is currently on disk, run [`mops verify`](./06-mops-verify.md).
