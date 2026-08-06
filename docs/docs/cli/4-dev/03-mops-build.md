@@ -119,10 +119,10 @@ The PocketIC client and binary are only loaded when `--test-deploy` or
 PocketIC error names are reported with their canonical IC error codes,
 for example `IC0539 (CanisterWasmMemoryLimitExceeded)`.
 
-This validation performs a fresh install. If the generated `.most` shows that
-an enhanced migration chain starts from pre-existing state instead of `{}`,
-Mops skips that canister with a warning because no baseline Wasm is available.
-Other canisters are still tested normally.
+This validation performs a fresh install. If installation fails for a canister
+whose generated `.most` contains an enhanced migration chain, Mops adds a hint
+that a chain converted from legacy migrations may require baseline state that a
+fresh canister cannot reproduce. The PocketIC failure remains authoritative.
 
 ### `--no-test-deploy`
 

@@ -278,6 +278,7 @@ describe("build", () => {
       expect(result.stderr).toMatch(
         "Error code: IC0539 (CanisterWasmMemoryLimitExceeded)",
       );
+      expect(result.stderr).not.toMatch("has an enhanced migration chain");
     } finally {
       cleanFixture(cwd);
     }
@@ -295,23 +296,24 @@ describe("build", () => {
     }
   });
 
-  test("test-deploy skips a migration chain requiring existing state and deploys its sibling", async () => {
+  test("test-deploy annotates an install failure for a migration chain", async () => {
     const cwd = path.join(
       import.meta.dirname,
       "build/test-deploy-incomplete-migrations",
     );
     try {
       const result = await cli(["build"], { cwd });
-      expect(result.exitCode).toBe(0);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("PocketIC test deployment failed");
       expect(result.stderr).toMatch(
-        "Warning: skipped test deployment for problematic",
+        "Canister problematic has an enhanced migration chain",
       );
       expect(result.stderr).toMatch(
-        "enhanced migration chain requires pre-existing state",
+        "a fresh install cannot reproduce its baseline",
       );
-      expect(result.stdout).not.toMatch("test deploy canister problematic");
-      expect(result.stdout).toMatch("test deploy canister healthy");
-      expect(result.stdout).toMatch("Built 2 canisters successfully");
+      expect(result.stderr).toMatch("`--no-test-deploy`");
+      expect(result.stdout).toMatch("test deploy canister problematic");
+      expect(result.stdout).not.toMatch("test deploy canister healthy");
     } finally {
       cleanFixture(cwd);
     }

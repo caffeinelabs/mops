@@ -11,29 +11,14 @@ export interface TestDeployArtifact {
   initCandid: string;
   initArg?: string;
   wasmMemoryLimit?: number;
-  requiresPreexistingState: boolean;
+  hasMigrationChain: boolean;
 }
 
 export async function testDeploy(
   artifacts: TestDeployArtifact[],
   { verbose = false } = {},
 ): Promise<void> {
-  const deployableArtifacts = artifacts.filter((artifact) => {
-    if (!artifact.requiresPreexistingState) {
-      return true;
-    }
-    console.warn(
-      chalk.yellow(
-        `Warning: skipped test deployment for ${artifact.name}. Its enhanced migration chain requires pre-existing state, and no baseline Wasm is available.`,
-      ),
-    );
-    return false;
-  });
-  if (!deployableArtifacts.length) {
-    return;
-  }
-
-  const preparedArtifacts = deployableArtifacts.map((artifact) => {
+  const preparedArtifacts = artifacts.map((artifact) => {
     try {
       return {
         ...artifact,
@@ -56,6 +41,7 @@ export async function testDeploy(
   const pocketIcBin = await toolchain.bin("pocket-ic");
   let server: AnyPocketIcServer | undefined;
   let client: PocketIc | undefined;
+  let installingArtifact: TestDeployArtifact | undefined;
 
   try {
     const pocketIc = await startPocketIc(
@@ -80,17 +66,25 @@ export async function testDeploy(
           ? undefined
           : { wasmMemoryLimit: BigInt(artifact.wasmMemoryLimit) },
       );
+      installingArtifact = artifact;
       await client.installCode({
         canisterId,
         wasm: artifact.wasmPath,
         arg: artifact.arg,
       });
+      installingArtifact = undefined;
     }
   } catch (error) {
     const mappedError = mapPocketIcError(error);
-    throw new Error(`PocketIC test deployment failed\n${mappedError.message}`, {
-      cause: error,
-    });
+    const hint = installingArtifact?.hasMigrationChain
+      ? `\nCanister ${installingArtifact.name} has an enhanced migration chain. If it was converted from legacy migrations, a fresh install cannot reproduce its baseline. Use \`--no-test-deploy\` to skip deployment validation for this build.`
+      : "";
+    throw new Error(
+      `PocketIC test deployment failed\n${mappedError.message}${hint}`,
+      {
+        cause: error,
+      },
+    );
   } finally {
     await client?.tearDown().catch(() => {});
     await server?.stop().catch(() => {});
