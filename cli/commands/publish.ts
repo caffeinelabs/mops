@@ -432,7 +432,7 @@ export async function publish(
     let chunkSize = 1024 * 1024 + 512 * 1024; // 1.5mb
     let content = fs.readFileSync(file);
     let chunkCount = Math.ceil(content.length / chunkSize);
-    let firstChunk = Array.from(content.slice(0, chunkSize));
+    let firstChunk = content.subarray(0, chunkSize);
 
     // remove path from docs file
     if (file === docsFile) {
@@ -453,7 +453,7 @@ export async function publish(
 
     for (let i = 1; i < chunkCount; i++) {
       let start = i * chunkSize;
-      let chunk = Array.from(content.slice(start, start + chunkSize));
+      let chunk = content.subarray(start, start + chunkSize);
       let res = await actor.uploadFileChunk(
         publishingId,
         fileId,

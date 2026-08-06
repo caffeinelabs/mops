@@ -1,14 +1,12 @@
+// Hand-maintained. `npm run decl` regenerates only the sibling *.did* files.
+
 import { Actor, HttpAgent } from "@icp-sdk/core/agent";
 
 // Imports and re-exports candid interface
 import { idlFactory } from "./main.did.js";
 export { idlFactory } from "./main.did.js";
 
-/* CANISTER_ID is replaced by webpack based on node environment
- * Note: canister environment variable will be standardized as
- * process.env.CANISTER_ID_<CANISTER_NAME_UPPERCASE>
- * beginning in dfx 0.15.0
- */
+// Substituted at build time by the frontend bundler (see frontend/vite.config.ts).
 export const canisterId =
   process.env.CANISTER_ID_MAIN;
 
@@ -22,7 +20,7 @@ export const createActor = (canisterId, options = {}) => {
   }
 
   // Fetch root key for certificate validation during development
-  if (process.env.DFX_NETWORK === "local") {
+  if (process.env.DFX_NETWORK !== "ic") {
     agent.fetchRootKey().catch((err) => {
       console.warn(
         "Unable to fetch root key. Check to ensure that your local replica is running"

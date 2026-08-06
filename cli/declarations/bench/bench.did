@@ -1,4 +1,4 @@
-type _anon_class_13_1 = 
+type _anon_class_10_1 = 
  service {
    getSchema: () -> (BenchSchema) query;
    getStats: () -> (BenchResult) query;
@@ -27,4 +27,4 @@ type BenchResult =
    rts_total_allocation: int;
    stable_memory_size: int;
  };
-service : () -> _anon_class_13_1
+service : () -> _anon_class_10_1
