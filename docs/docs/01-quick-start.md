@@ -43,7 +43,7 @@ Add `mops` as a packtool to your `dfx.json`
 ```
 
 ## 5. Install Motoko Packages
-Use [`mops add`](/cli/mops-add) to install a specific package and save it to `mops.toml`
+Use [`mops add`](./cli/1-deps/01-mops-add.md) to install a specific package and save it to `mops.toml`
 
 ```
 mops add base

@@ -48,5 +48,5 @@ Breaking changes:
 - Make optional parameters required
 
 :::info
-The [`mops build`](/cli/mops-build) command automatically runs Candid compatibility checks when a `candid` field is specified in the canister configuration.
+The [`mops build`](./03-mops-build.md) command automatically runs Candid compatibility checks when a `candid` field is specified in the canister configuration.
 :::

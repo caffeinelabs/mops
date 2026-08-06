@@ -6,7 +6,7 @@ sidebar_label: mops migrate
 # `mops migrate`
 
 :::warning Experimental
-`mops migrate` is **experimental** and not recommended for general use yet — its commands and configuration may change. The recommended workflow is to create migration files directly in your `chain` directory; see [`[canisters.<name>.migrations]`](/mops.toml#canistersnamemigrations).
+`mops migrate` is **experimental** and not recommended for general use yet — its commands and configuration may change. The recommended workflow is to create migration files directly in your `chain` directory; see [`[canisters.<name>.migrations]`](../../09-mops.toml.md#canistersnamemigrations).
 :::
 
 Manage enhanced migration chains.
@@ -67,7 +67,7 @@ build-limit = 100
 
 `moc` diagnostics may point to a staged path under `.migrations-<canister>/`, which mops removes when the command finishes.
 
-See [`mops.toml` reference](/mops.toml#canistersnamemigrations) for all fields.
+See [`mops.toml` reference](../../09-mops.toml.md#canistersnamemigrations) for all fields.
 
 ## Typical workflow
 

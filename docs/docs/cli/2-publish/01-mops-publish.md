@@ -10,7 +10,7 @@ Publish package to the mops registry
 mops publish
 ```
 
-You need to [import identity](/cli/mops-user-import) before publishing a package.
+You need to [import identity](../3-user/01-mops-user-import.md) before publishing a package.
 
 Tests will be run before publishing to ensure the package works correctly.
 

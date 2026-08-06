@@ -11,4 +11,4 @@ Uninstall toolchain management.
 mops toolchain reset
 ```
 
-This command will undo changes made by [`mops toolchain init`](/cli/mops-toolchain-init) command.
+This command will undo changes made by [`mops toolchain init`](./02-mops-toolchain-init.md) command.

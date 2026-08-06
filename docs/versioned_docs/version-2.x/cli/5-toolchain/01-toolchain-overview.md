@@ -14,13 +14,13 @@ When you run `mops install` command, Mops will install the specified version of 
 - `wasmtime` - Wasmtime runtime (used by `mops test --mode wasi`)
 - `pocket-ic` - PocketIC replica (used by `mops bench --replica pocket-ic`). Versions below `9.0.0` are deprecated and will no longer be supported in mops v3.
 - `lintoko` - Extensible linter for Motoko ([https://github.com/caffeinelabs/lintoko](https://github.com/caffeinelabs/lintoko))
-- `wasm-opt` - Binaryen Wasm optimizer (used when [`[optimize]`](/mops.toml#optimize) is set)
+- `wasm-opt` - Binaryen Wasm optimizer (used when [`[optimize]`](../../09-mops.toml.md#optimize) is set)
 
 ## Specifying tool versions
 
 ### Option 1: Use `mops toolchain use` command
 
-You can use [`mops toolchain use`](/cli/mops-toolchain-use) command to install specific tool version and update `mops.toml` file.
+You can use [`mops toolchain use`](./03-mops-toolchain-use.md) command to install specific tool version and update `mops.toml` file.
 ```
 mops toolchain use moc 0.10.3
 mops toolchain use wasmtime 16.0.0
@@ -65,9 +65,9 @@ lintoko = "../custom-lintoko/bin/lintoko"
 
 ## Toolchain management commands
 
-- [`mops toolchain init`](/cli/mops-toolchain-init)
-- [`mops toolchain use`](/cli/mops-toolchain-use)
-- [`mops toolchain update`](/cli/mops-toolchain-update)
-- [`mops toolchain info`](/cli/mops-toolchain-info)
-- [`mops toolchain bin`](/cli/mops-toolchain-bin)
-- [`mops toolchain reset`](/cli/mops-toolchain-reset)
+- [`mops toolchain init`](./02-mops-toolchain-init.md)
+- [`mops toolchain use`](./03-mops-toolchain-use.md)
+- [`mops toolchain update`](./04-mops-toolchain-update.md)
+- [`mops toolchain info`](./07-mops-toolchain-info.md)
+- [`mops toolchain bin`](./05-mops-toolchain-bin.md)
+- [`mops toolchain reset`](./06-mops-toolchain-rest.md)
