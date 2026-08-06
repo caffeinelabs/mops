@@ -22,7 +22,6 @@ install_with_pnpm() {
 
 install_with_bun() {
 	# bug with `mops self update`
-	# bug with `dhall-to-json` on `mops init`
 	echo "Bun is not recommended for installing mops. Please use npm or pnpm."
 	exit 1
 }

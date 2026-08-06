@@ -53,7 +53,7 @@ import {
   readConfig,
   version,
 } from "./mops.js";
-import { resolvePackages } from "./resolve-packages.js";
+import { setConflictPolicy } from "./resolve-packages.js";
 import { Tool } from "./types.js";
 import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
 
@@ -201,8 +201,8 @@ program
       await toolchain.installAll(options);
     }
 
-    // check conflicts
-    await resolvePackages({ conflicts: "warning" });
+    // No explicit conflict check: installAll resolves, and resolution reports
+    // conflicts on its own now instead of waiting for a caller to opt in.
 
     if (!ok) {
       process.exit(1);
@@ -244,7 +244,7 @@ program
   .addOption(
     new Option(
       "--conflicts <action>",
-      "What to do with dependency version conflicts",
+      "What to do with cross-major dependency version conflicts (reported on stderr)",
     )
       .choices(["ignore", "warning", "error"])
       .default("warning"),
@@ -253,6 +253,9 @@ program
     if (!checkConfigFile()) {
       process.exit(1);
     }
+    // Before installAll: that resolves too, and --conflicts governs the whole
+    // command, not just the final resolve that produces the sources.
+    setConflictPolicy(options.conflicts);
     if (options.install) {
       // `mops sources` is machine-parsed by the dfx packtool, so it must not
       // write the lock or print integrity output — hence `lock: "ignore"`.

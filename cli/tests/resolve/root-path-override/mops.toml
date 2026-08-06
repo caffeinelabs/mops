@@ -1,0 +1,10 @@
+[package]
+name = "root-path-override"
+version = "1.0.0"
+
+# The root wins the `test` conflict with a local path, so resolution has no
+# version to report — see the W4 case in resolve.test.ts.
+[dependencies]
+test = "./vendor/test"
+a = "./a"
+b = "./b"

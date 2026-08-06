@@ -11,12 +11,11 @@ import {
 } from "../mops.js";
 import { getHighestVersion } from "../api/getHighestVersion.js";
 import { installMopsDep } from "./install/install-mops-dep.js";
-import { installFromGithub } from "../vessel.js";
+import { installFromGithub } from "./install/install-from-github.js";
 import { checkIntegrity } from "../integrity.js";
 import { checkRequirements } from "../check-requirements.js";
 import { syncLocalCache } from "./install/sync-local-cache.js";
 import { notifyInstalls } from "../notify-installs.js";
-import { resolvePackages } from "../resolve-packages.js";
 
 type AddOptions = {
   verbose?: boolean;
@@ -147,7 +146,4 @@ export async function add(
     chalk.green("Package installed ") +
       `${pkgDetails.name} = "${pkgDetails.repo || pkgDetails.path || pkgDetails.version}"`,
   );
-
-  // check conflicts
-  await resolvePackages({ conflicts: "warning" });
 }

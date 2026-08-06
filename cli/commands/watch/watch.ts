@@ -14,12 +14,7 @@ import { Generator } from "./generator.js";
 import { Deployer } from "./deployer.js";
 import { Formatter } from "./formatter.js";
 
-let ignore = [
-  "**/node_modules/**",
-  "**/.mops/**",
-  "**/.vessel/**",
-  "**/.git/**",
-];
+let ignore = ["**/node_modules/**", "**/.mops/**", "**/.git/**"];
 
 export async function watch(options: {
   error: boolean;
