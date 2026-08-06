@@ -153,9 +153,11 @@ jobs:
           # `(unreleased)` suffix on the 3.0.0 heading keeps it out of that
           # pattern, so both it and `## Next` are included.
           awk 'NR>1 && /^## [0-9]+\.[0-9]+\.[0-9]+$/{exit} NR>1' \
-            CHANGELOG.md >> /tmp/release-notes.md
+            CHANGELOG.md > /tmp/changelog-section.md
 
-          if ! grep -q '[^[:space:]]' /tmp/release-notes.md; then
+          if grep -q '[^[:space:]]' /tmp/changelog-section.md; then
+            cat /tmp/changelog-section.md >> /tmp/release-notes.md
+          else
             echo "::warning::No unreleased changelog entries found — publishing with minimal notes."
           fi
 
