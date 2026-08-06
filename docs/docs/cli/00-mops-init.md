@@ -49,7 +49,7 @@ When accepted, adds `.github/workflows/mops-test.yml` that runs `mops test` on p
 ## What it creates
 
 1. **`dfx.json`** — sets `defaults.build.packtool = "mops sources"` if `dfx.json` is present. Existing indentation is preserved.
-2. **`mops.toml`** — `[package]` metadata for packages. For projects, `[dependencies]` is populated with the default package set keyed on your `dfx` version (from `dfx.json` or `dfx --version` on `PATH`). Older `dfx` versions `0.9.0`–`0.27.0` resolve to the `base` release bundled with that `dfx`. For any other version, or when `dfx` cannot be detected, the latest `core` is used.
+2. **`mops.toml`** — `[package]` metadata for packages. No dependencies are added; use [`mops add`](./1-deps/01-mops-add.md) to install the packages you need.
 3. **`src/lib.mo`** — starter module (package only, when `src/` doesn't exist).
 4. **`test/lib.test.mo`** — starter test (package only, when you opted in and `test/` doesn't exist).
 5. **`LICENSE`** (and `NOTICE` for Apache-2.0) — package only, filled with the current year and copyright owner.
@@ -59,7 +59,9 @@ When accepted, adds `.github/workflows/mops-test.yml` that runs `mops test` on p
 
 Existing `LICENSE`, `README.md`, and workflow files are not overwritten.
 
-For projects, `mops install` runs at the end to fetch the default packages.
+:::note
+`mops init` does not contact the registry and does not add any dependencies. Up to mops v3 it fetched a "default package set" keyed on the detected `dfx` version; that is gone. Add what you need with [`mops add`](./1-deps/01-mops-add.md), and pin a compiler with [`mops toolchain use moc <version>`](./5-toolchain/03-mops-toolchain-use.md) — every command that compiles requires a pinned `moc`.
+:::
 
 ### Migrating from Vessel
 
@@ -69,7 +71,7 @@ Vessel auto-migration was removed in mops v3 (it had been deprecated since 2.14)
 
 ### `--yes`, `-y`
 
-Skip prompts and initialize as a **project** with defaults: no `[package]` section, no starter files, GitHub workflow enabled, default packages installed per the rules in [What it creates](#what-it-creates). Useful for CI and scripted scaffolding.
+Skip prompts and initialize as a **project** with defaults: no `[package]` section, no starter files, GitHub workflow enabled. Useful for CI and scripted scaffolding.
 
 ```
 mops init --yes

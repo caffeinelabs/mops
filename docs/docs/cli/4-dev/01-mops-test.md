@@ -67,20 +67,6 @@ You can also specify `wasi` mode for a specific test file by adding the line bel
 // @testmode wasi
 ```
 
-### `--replica`
-
-Which replica to use to run actor tests.
-
-Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section, otherwise `dfx` (deprecated, see below).
-
-Possible values:
-- `pocket-ic` - use [PocketIC](https://github.com/dfinity/pocketic) light replica via [pic.js](https://github.com/dfinity/pic-js). Recommended.
-- `dfx` - **deprecated**. Uses `dfx` local replica. Will be removed in a future release. Run `mops toolchain use pocket-ic 12.0.0` to pin a PocketIC version and `mops test` will use it directly.
-
-:::info
-If you run `mops test --replica pocket-ic` AND `pocket-ic` is not specified in `mops.toml` in `[toolchain]` section, Mops will use pocket-ic replica that comes with dfx (`dfx start --pocketic`). This fallback path is also deprecated.
-:::
-
 ### `--verbose`
 
 Show replica logs
@@ -139,7 +125,9 @@ Make sure your actor has `runTests` method.
 
 See example [here](https://github.com/caffeinelabs/mops/blob/main/test/storage-actor.test.mo).
 
+Replica tests run on [PocketIC](https://github.com/dfinity/pocketic), which Mops downloads and manages itself — `dfx` is not involved and does not need to be installed. Pin a version with [`mops toolchain use pocket-ic <version>`](../5-toolchain/03-mops-toolchain-use.md); with no pin, Mops uses the default version it ships with. See [supported versions](../5-toolchain/01-toolchain-overview.md#pocket-ic-versions).
+
 Under the hood, Mops will:
-- Start a local replica on port `4945`
+- Start a PocketIC server on an ephemeral port
 - Compile test files and deploy them
 - Call `runTests` method of the deployed canister

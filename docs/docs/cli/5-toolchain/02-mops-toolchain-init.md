@@ -16,7 +16,11 @@ This command should be run only once.
 This command is only needed to make `dfx` use `moc` version specified in `mops.toml` file.
 
 It will update your current shell's config file (detected from `$SHELL`, e.g. `~/.zshrc` for zsh or `~/.bashrc` for bash) to set `DFX_MOC_PATH` to the `moc-wrapper`.
-So when you build your project with `dfx`, it will use `moc` version specified in `mops.toml` file. If `moc` version is not specified, it will use default `moc` version that comes with `dfx`.
+So when you build your project with `dfx`, it will use `moc` version specified in `mops.toml` file — the same compiler `mops build` and `mops check` use, instead of the one bundled with `dfx`.
+
+:::note
+`moc-wrapper` requires `moc` to be pinned in `[toolchain]`; it no longer falls back to the `dfx`-bundled compiler. Run [`mops toolchain use moc <version>`](./03-mops-toolchain-use.md) first.
+:::
 
 ## Options
 

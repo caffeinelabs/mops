@@ -62,7 +62,7 @@ mops watch --test
 ```
 
 :::info
-Replica tests use `pocket-ic` if it's pinned in `mops.toml` under `[toolchain]`, otherwise they fall back to the `dfx` replica, which is **deprecated** and will be removed in a future release. Run `mops toolchain use pocket-ic 12.0.0` to pin a PocketIC version and silence the warning.
+Replica tests run on [PocketIC](https://github.com/dfinity/pocketic), using the `pocket-ic` version pinned in `mops.toml` under `[toolchain]` or the [default](../5-toolchain/01-toolchain-overview.md#pocket-ic-versions) when there is no pin.
 :::
 
 ### `--generate`

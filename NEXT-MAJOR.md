@@ -20,9 +20,11 @@ Rationale: `=`/range syntax in *published* packages needs backend validator chan
 
 ### Resolver — keep semantics, fix correctness
 
-- Replace the naive `parseInt` semver compare in `cli/resolve-packages.ts:43-119` with a proper semver comparator throughout. Same semantics, fewer wrong answers on edges — backend `Semver` and CLI `compareVersions` disagree today.
-- **Cross-major conflicts warn loudly, always** (today the "Conflicting versions" warning at `cli/resolve-packages.ts:189-210` is gated behind the `conflicts` option). Silently handing a dep a different major is the resolver's instance of silent-wrong-behavior. Not an error — the user resolves it by pinning the version they want in their own `mops.toml` (max-wins makes root able to win).
-- Document the official transitive-bump override: to pick up a transitive dep's bugfix release before the intermediate library republishes, pin the higher version at root.
+All three shipped in GH #679 (`fix(cli): use real semver in the resolver and always report cross-major conflicts`).
+
+- ~~Replace the naive `parseInt` semver compare in `cli/resolve-packages.ts` with a proper semver comparator throughout~~ — **done on `v3`**.
+- ~~**Cross-major conflicts warn loudly, always**~~ — **done on `v3`**: reported by default on every resolving command, on stderr so `mops sources` stays parseable. `mops sources --conflicts ignore` is the reviewed-and-accepted opt-out.
+- ~~Document the official transitive-bump override~~ — **done on `v3`**: the conflict report itself names root pinning as the way to choose.
 
 ### Trust & lockfile model (move closer to npm/cargo)
 
@@ -40,17 +42,19 @@ Rationale: `=`/range syntax in *published* packages needs backend validator chan
 - ~~Align `--lock` flag values across all commands~~ — superseded: `--lock` is dropped entirely (see Trust & lockfile model); remove the flag from `add`/`remove`/`install`/`sync`/`update` in `cli/cli.ts`.
 - ~~Exit codes: the replica bind-failure exit `11` (`cli/commands/replica.ts:96`) remains to decide~~ — **done on `v3`**: normalized to `1`. Install SIGINT keeps the standard `130` (`cli/commands/install/install-mops-dep.ts:108-112`).
 
-### dfx — remove implicit rules, keep explicit opt-in
+### dfx — full removal
 
-Compromise (2026-07): we have not migrated our own dev loop to `icp` yet, so v3 removes every *implicit* dfx dependency but keeps `--replica dfx` as an explicit, documented opt-in. Full removal happens in a later major once icp-cli is the norm.
+~~Compromise (2026-07): keep `--replica dfx` as an explicit opt-in because our own dev loop still runs on dfx.~~ — **superseded**. PR #550 took dfx out of the local pipeline and `ci.yml`, which removed the only reason to keep the explicit path, so v3 removes dfx from the CLI outright rather than in a later major. The "dfx — full removal (later major)" item under Deferred is folded in here and done.
 
-- Remove `dfx`-bundled `moc` fallback in `toolchain bin --fallback`, `test`, `bench`, `bench-replica`, `docs`. (`cli/helpers/get-moc-path.ts:9`, `cli/helpers/get-dfx-version.ts`, `cli/commands/toolchain/index.ts:359,387`, `cli/commands/docs.ts:44-54`)
-- Remove the **implicit** `dfx`/`dfx-pocket-ic` fallback when `[toolchain.pocket-ic]` is unset (`cli/commands/test/test.ts:66-82`, `cli/commands/bench.ts:88-99`). Keep explicit `--replica dfx` working. Deprecated with warnings since 2.14 via `cli/helpers/deprecate-dfx-replica.ts`.
-- Flip the default so an unpinned `pocket-ic` auto-resolves to a mops-controlled `DEFAULT_POCKET_IC_VERSION` (download-on-demand via `toolchain.download("pocket-ic", ...)`) — **this constant does not exist yet**; required work before the default can flip. Document the version bump policy. **Offline-runtime guarantee (Caffeine requirement, 2026-07)**: the default must be a fixed constant baked into the CLI — never a runtime "latest" lookup — so a cache warmed at Docker-image build time (`mops toolchain use pocket-ic <ver>` or downloading the default) means runtime never touches the network; this must hold for every toolchain tool, not just pocket-ic.
-- **User-visible break**: implicit-dfx benchmark baselines drift on first run because PocketIC and dfx-replica report different instruction/heap counts; call out in release notes and recommend re-recording with `--save`.
-- `mops init` stops fetching "default packages for dfx" (`cli/commands/init.ts:255-257`) — mops manages its own toolchain. (LIN: Doctor overhaul)
-- Drop `mops toolchain init` requirement; env-var setup becomes a hint when `dfx.json` is present. (LIN)
-- Reject `dfx` field in `[package]` at publish (client-side; note: deprecation since 2.7 was docs-only — no runtime warning exists in the code today, `cli/types.ts:14`, `cli/commands/publish.ts:85,210`).
+- ~~Remove `dfx`-bundled `moc` fallback in `toolchain bin --fallback`, `test`, `bench`, `bench-replica`, `docs`~~ — **done on `v3`**. `cli/helpers/get-moc-path.ts` and `cli/helpers/get-dfx-version.ts` are deleted; `toolchain.bin("moc")` errors naming `mops toolchain use moc <version>` when the pin is missing. `getMocVersion` is now the `[toolchain] moc` pin and nothing else.
+- ~~Remove the **implicit** `dfx`/`dfx-pocket-ic` fallback when `[toolchain.pocket-ic]` is unset~~ — **done on `v3`**, and the explicit path went with it: `--replica` is gone from `mops test` and `mops bench`, `BenchReplica`/`Replica` are PocketIC-only, and `cli/helpers/deprecate-dfx-replica.ts` is deleted.
+- ~~Flip the default so an unpinned `pocket-ic` auto-resolves to a mops-controlled `DEFAULT_POCKET_IC_VERSION`~~ — **done on `v3`**. The constant lives in `cli/commands/toolchain/pocket-ic-versions.ts` next to `MIN_POCKET_IC_VERSION`, with the bump policy in a comment there (track whatever `@dfinity/pic` pins for itself) and in `docs/docs/cli/5-toolchain/01-toolchain-overview.md`. **Offline-runtime guarantee (Caffeine requirement, 2026-07) holds**: the default is a fixed constant, `toolchain.bin("pocket-ic")` goes through the cached-check in `download()`, and a warmed cache was verified to make a full `mops test --mode replica` run with all non-loopback network blocked.
+- ~~**User-visible break**: implicit-dfx benchmark baselines drift~~ — **done on `v3`**: called out in `cli/CHANGELOG.md` and in the `mops bench` docs, recommending `--save`.
+- ~~`mops init` stops fetching "default packages for dfx"~~ — **done on `v3`**. `mops init` no longer contacts the registry at all; a fresh `mops.toml` has no `[dependencies]`. (LIN: Doctor overhaul)
+- Drop `mops toolchain init` requirement; env-var setup becomes a hint when `dfx.json` is present. (LIN) — **not done, and deliberately out of scope**: `mops toolchain init` and the `DFX_MOC_PATH=moc-wrapper` bridge exist so that a project which *deploys* with dfx still type-checks and builds with the pinned `moc`. Removing it would mean checking with one compiler and deploying with another.
+- ~~Reject `dfx` field in `[package]` at publish~~ — **done on `v3`**: rejected with a dedicated error and dropped from `cli/types.ts`. Note the preflight list already rejected it as "not supported yet"; the change is the type removal and an accurate message. The backend `PackageConfigV3_Publishing.dfx` field is still sent as `""` for wire compatibility (dropping it needs the registry-data-model cleanup below).
+
+Still dfx-facing on purpose, all for projects that deploy with dfx: `mops sources` as a packtool, `mops toolchain init` / `moc-wrapper`, `mops init` writing `defaults.build.packtool`, and `mops watch --deploy` / `--generate`.
 
 ### Drop vessel / dhall
 
@@ -61,26 +65,29 @@ Compromise (2026-07): we have not migrated our own dev loop to `icp` yet, so v3 
 ### Toolchain & runtime
 
 - ~~Drop Node.js < 20 (`cli/package.json` engines currently `>=18.0.0`)~~ — **done on `v3`** (engines now `>=20.0.0`). (GH #288)
-- **Drop the legacy PocketIC client** (decision 2026-07; **deprecated in 2.x, drop here** — decision 2026-08-03 to split rather than hold the whole switch for v3, matching the dfx-replica/vessel deprecate-then-drop pattern): delete the `pic-ic` 0.5.4 dep and the `< 9.0.0` switch in `cli/helpers/pocket-ic-client.ts`; upstream `@dfinity/pic` (switched to in 2.x, see below) becomes the only client, killing the `AnyPocketIcServer`/`AnyPocketIc`/`AnySetupCanister` union types that leak into `test`/`bench`/`replica`/`bench-replica`/`watch` signatures. Breaks only explicit `[toolchain] pocket-ic < 9.0.0` pins — error with the verbatim fix (`mops toolchain use pocket-ic 12.0.0`). Unpinned projects never hit it (they get `DEFAULT_POCKET_IC_VERSION`). Subsumes the old "PocketIC v9 → v10" item (GH #288): with one client, enforce a **supported server range** (floor 9.0.0, ceiling = shipped client's max) at `toolchain use` time — fixes the `latest`-resolves-to-incompatible-server footgun (see AGENTS.md caution); future ceiling raises are routine client updates, not majors. Keep the range as a maintained constant pair next to `DEFAULT_POCKET_IC_VERSION`.
+- ~~**Drop the legacy PocketIC client**~~ — **done on `v3`**. The `pic-ic` 0.5.4 dep, the `< 9.0.0` switch, the `AnyPocketIcServer`/`AnyPocketIc`/`AnySetupCanister` unions and the `addCycles` `number`/`bigint` wrapper are all gone; upstream `@dfinity/pic` is the only client. Subsumes the old "PocketIC v9 → v10" item (GH #288). Real blast radius was smaller than "everything below 9.0.0": `pic-ic@0.5.4` only speaks the 4.0.0 protocol, so 5.x–8.x pins already failed with `BinTimeoutError`.
+  - **Design correction — the planned "supported server range" was not built, deliberately.** Only the floor exists (`MIN_POCKET_IC_VERSION` 9.0.0, in `cli/commands/toolchain/pocket-ic-versions.ts`), and it is framed as a *migration guard*, not a compatibility policy: `< 9.0.0` pins genuinely worked in 2.x via `pic-ic`, so without it an upgrade turns into an inscrutable `BinTimeoutError` instead of "run `mops toolchain use pocket-ic 14.0.0`". There is **no ceiling** and no clamping of `latest`. mops applies no version gating to `moc`, `wasmtime` or `lintoko` — the only version check in the CLI is `[requirements]`, which surfaces a *dependency-declared* minimum — so a mops-maintained list of blessed pocket-ic versions would be a new and inconsistent policy, and it would make our release cadence a gate on DFINITY's. A pin newer than anything we have tried is simply used; if the protocol has moved, the client's own error says so. The AGENTS.md `latest` caution stays accurate as a caution and needs no code behind it.
 - ~~**Eliminate the `pic-js-mops` fork**~~ — **done, shipped in 2.x** (caffeinelabs/mops#642, merged 2026-08-03; closed GH #561). The fork had no public source repo; the two patches mops needed went upstream as dfinity/pic-js#276 (`binPath` + `POCKET_IC_BIN`) and #278 (`ttl`), released in `@dfinity/pic` 0.23.0. `pocket-ic` >= 9.0.0 now runs on upstream pic; `pic-ic` remains only for the deprecated `< 9.0.0` pins removed by the item above. `pic-js-mops` cannot be deprecated on npm — nobody has publish access (GH #657, closed).
 
 Carried over from that work, all tracked as issues:
 
 - **GH #651** — `@dfinity/pic` is a devDependency pre-bundled into `dist/vendor/pic.mjs`, because its `postinstall` downloads a ~94 MB pocket-ic binary and throws when it cannot (a plain `dependencies` entry makes `npm i -g ic-mops` fail with no network). If upstream makes that download lazy, the vendor entry, the `vendor:pic` step, the `fix-dist` rewrite and `cli/tests/vendor-pic.test.ts` all get deleted, and dev/CI installs stop paying the 94 MB.
-- **GH #652** — `@icp-sdk/core` 5.x, see the corrected note above: it belongs with the dfx-replica removal.
+- ~~**GH #652** — `@icp-sdk/core` 5.x~~ — **done on `v3`**, together with the dfx-replica removal as predicted. `cli` is on `5.4.0`, the same major `@dfinity/pic` 0.23.0 depends on, so `npm ls @icp-sdk/core` shows one deduped copy. `vendor:pic` now passes `--external:@icp-sdk/core --external:@icp-sdk/core/*`: `dist/vendor/pic.mjs` went from 1,172,937 to 614,603 bytes.
 - **GH #655** — upstream stderr / `onCanisterLog` hook would delete the `serverProcess` cast in `cli/helpers/pocket-ic-client.ts`.
 
 **Provenance, for the record**: `pic-js-mops` was published from a local checkout of `dfinity/pic-js` with four patches and no public repo — the only audit path was diffing the published tarball (done 2026-07: the diff was exactly those patches). `pic-ic`'s source is `github.com/ZenVoich/pic-js`, a personal repo whose history shows upstream once had `POCKET_IC_BIN`.
 
 ### Defaults & UX
 
-- Run `lintoko` automatically when pinned (already partial in 2.6) — make it the default. (LIN: `lint` subcommand)
-- Strict unknown-flag handling before `--` (remove `allowUnknownOption(true)` workarounds — now seven sites in `cli/cli.ts`: 361, 404, 451, 536, 605, 961, 1056).
-- Expose replica/PocketIC canister id to tests. (GH #274) Additive — don't gate the release on it.
-- Revert default test reporter to `verbose` (or auto-pick by file count). (GH #288)
-- Enable `--format` by default in `mops watch`. (GH #288)
-- `mops watch` defaults: today no flags = "do almost everything" (`cli/commands/watch/watch.ts:32-42`). Make conservative; require explicit opt-in for `deploy`/`test`.
-- Flip `mops info <pkg> --versions` to newest-first (`cli/commands/info.ts:37-39` already carries the v3 comment); `mops toolchain info --versions` established newest-first as the standard.
+Everything here except the canister-id item shipped in GH #676 (`feat(cli)!: stricter flags and safer defaults for v3`).
+
+- ~~Run `lintoko` automatically when pinned — make it the default~~ — **done on `v3`**, with `mops check --no-lint` to opt out for a run.
+- ~~Strict unknown-flag handling before `--`~~ — **done on `v3`**: unknown flags before `--` are an error on `build`, `check`, `check-stable`, `test`, `bench`, `generate candid` and `lint`; the `-- <tool flags>` passthrough is unaffected.
+- Expose replica/PocketIC canister id to tests. (GH #274) Additive — don't gate the release on it. **Still open.**
+- ~~Revert default test reporter to `verbose`~~ — **done on `v3`**: `verbose` for any number of files.
+- ~~Enable `--format` by default in `mops watch`~~ — **done on `v3`**, as part of the new default set.
+- ~~`mops watch` defaults: make conservative~~ — **done on `v3`**: no flags = error check, warning check, format. `--test` / `--generate` / `--deploy` are opt-in.
+- ~~Flip `mops info <pkg> --versions` to newest-first~~ — **done on `v3`**.
 
 ### Cleanup that affects users
 
@@ -129,11 +136,6 @@ Content: pin git deps to a **resolved commit SHA**. Today the `deps` map (`cli/i
 
 - True Node-less binary distribution (single executable, no `node_modules`). Today `npm i -g ic-mops` and the `cli-releases` `install.sh` both end up shelling to `npm add -g <tgz>`, so any Node-runtime / native-module bug hits both. Node SEA, `bun build --compile`, or Rust rewrite (GH #237) eliminates this whole class of install failures. (LIN: investigate publishing standalone binary)
 - Rust CLI rewrite — defer or commit. (GH #237)
-
-### dfx — full removal (later major)
-
-- Delete the explicit `--replica dfx` path kept in v3, plus `dfx-pocket-ic`.
-- Reject `dfx.json`-adjacent hints entirely.
 
 ### Internal repo migration `dfx` → `icp` (dev/CI loop, not user-facing — non-blocking for v3)
 

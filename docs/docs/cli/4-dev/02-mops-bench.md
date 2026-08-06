@@ -19,39 +19,29 @@ The output format is a markdown table, so you can copy-paste it into your `READM
 
 ### How it works
 
+Benchmarks run on [PocketIC](https://github.com/dfinity/pocketic), which Mops downloads and manages itself — `dfx` is not involved and does not need to be installed. Pin a version with [`mops toolchain use pocket-ic <version>`](../5-toolchain/03-mops-toolchain-use.md); with no pin, Mops uses the default version it ships with.
+
 Under the hood, Mops will:
-- Start a local replica on port `4944`
+- Start a PocketIC server on an ephemeral port
 - Wrap each `*.bench.mo` file in a canister
 - Compile canisters under enhanced orthogonal persistence (moc's default) with the `--force-gc` flag and deploy them
 - Run each cell of the benchmark file as an update call (or a query call with [`--query`](#--query))
 - For each call measure usage of wasm instructions(`performance_counter`) and heap size(`rts_heap_size`)
 
-:::caution Instruction counts depend on the replica
+:::caution Instruction counts depend on how the wasm was built
 
-The number you get is for the exact wasm the chosen replica runs, and the two replicas install it differently:
+The number you get is for the exact wasm PocketIC runs, and nothing post-optimizes it on deploy:
 
-- **With [`[optimize]`](../../09-mops.toml.md#optimize)** — `mops bench` runs `wasm-opt` on the module before deploy (same pass as `mops build`). Prefer this when you want bench numbers to match an optimized deploy artifact. When that pass **succeeds**, the deprecated `dfx` replica path does **not** apply a second `optimize: "cycles"` pass (on soft-fail, dfx still may). Pass [`--no-optimize`](#--no-optimize) to skip the `wasm-opt` pass for a single run without editing `mops.toml`.
-- **Without `[optimize]`**:
-  - **`pocket-ic`** runs the raw `moc` output — **no optimization**.
-  - **`dfx`** post-optimizes before install (`optimize: "cycles"`, via `ic-wasm`), so instruction counts can be lower — and that path fails on EOP Motoko (Table64), falling back to unoptimized Wasm.
+- **With [`[optimize]`](../../09-mops.toml.md#optimize)** — `mops bench` runs `wasm-opt` on the module before deploy (same pass as `mops build`). Prefer this when you want bench numbers to match an optimized deploy artifact. Pass [`--no-optimize`](#--no-optimize) to skip the pass for a single run without editing `mops.toml`.
+- **Without `[optimize]`** — PocketIC runs the raw `moc` output, with **no optimization**.
 
-Always compare runs made with the **same replica** and the same `[optimize]` settings.
+Always compare runs made with the same `moc` version, the same PocketIC version, and the same `[optimize]` settings. Different replicas report different instruction and heap counts, so baselines recorded before mops 3.0.0 on the `dfx` replica are not comparable — re-record them with [`--save`](#--save).
 
 If `wasm-opt` fails, mops warns and keeps the unoptimized module. Run with [`--verbose`](#--verbose) for details.
 
 :::
 
 ## Options
-
-### `--replica`
-
-Which replica to use.
-
-Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section, otherwise `dfx` (deprecated, see below).
-
-Possible values:
-- `pocket-ic` - use [PocketIC](https://github.com/dfinity/pocketic) light replica via [pic.js](https://github.com/dfinity/pic-js). Recommended.
-- `dfx` - **deprecated**. Uses `dfx` local replica. Will be removed in a future release. Run `mops toolchain use pocket-ic 12.0.0` to pin a PocketIC version and `mops bench` will use it directly.
 
 ### `--gc`
 
@@ -89,7 +79,7 @@ Use it to measure a canister that still uses legacy persistence. Has no effect w
 
 ### `--no-optimize`
 
-Skip the [`[optimize]`](../../09-mops.toml.md#optimize) `wasm-opt` pass for this run, even when it is configured in `mops.toml`. Has no effect when `[optimize]` is not set. The `dfx` replica may still apply its own `optimize: "cycles"` pass on deploy — only the `pocket-ic` replica then runs the raw `moc` output.
+Skip the [`[optimize]`](../../09-mops.toml.md#optimize) `wasm-opt` pass for this run, even when it is configured in `mops.toml`. Has no effect when `[optimize]` is not set. PocketIC then runs the raw `moc` output.
 
 ```
 mops bench --no-optimize
@@ -97,7 +87,7 @@ mops bench --no-optimize
 
 ### `--verbose`
 
-Print the benchmark pipeline up front — compiler version, replica + version, GC, context (query/update), persistence, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and `dfx` output (including any deploy/optimization warnings) instead of hiding it.
+Print the benchmark pipeline up front — compiler version, replica + version, GC, context (query/update), persistence, profile, and whether the wasm is optimized — then log the full `moc` build command and stream the compiler and replica output instead of hiding it.
 
 ### `-- <moc flags>`
 
