@@ -193,6 +193,22 @@ describe("build", () => {
     }
   });
 
+  test("--no-test-deploy disables the Wasm preflight", async () => {
+    const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
+    const startupMarker = path.join(cwd, "pocket-ic-started");
+    try {
+      const result = await cli(["build", "--no-test-deploy"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toMatch("MOPS-WASM-COMPLEXITY");
+      expect(result.stderr).not.toMatch("MOPS-WASM-SIZE");
+      expect(result.stdout).not.toMatch("test deploy canister");
+      expect(result.stdout).toMatch("Built 1 canister successfully");
+      expect(existsSync(startupMarker)).toBe(false);
+    } finally {
+      cleanFixture(cwd, startupMarker);
+    }
+  });
+
   test("count warnings still allow PocketIC deployment", async () => {
     const cwd = path.join(import.meta.dirname, "build/wasm-count-warning");
     try {

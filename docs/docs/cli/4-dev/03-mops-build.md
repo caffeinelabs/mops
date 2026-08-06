@@ -25,7 +25,7 @@ If the canister config sets a `candid` field, the generated `.did` is also check
 
 When [`[optimize]`](/mops.toml#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Failures warn and leave the unoptimized module. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
 
-After producing the final Wasm, Mops uses Walrus to estimate each Wasm function's IC0505 compilation complexity:
+When `--test-deploy` or `[build].test-deploy = true` enables deployment validation, Mops first uses Walrus to estimate each function's IC0505 compilation complexity in the final Wasm:
 
 - Below 750,000: no warning
 - 750,000 through 899,999: early warning
@@ -34,7 +34,7 @@ After producing the final Wasm, Mops uses Walrus to estimate each Wasm function'
 
 Warnings and errors use stable `MOPS-WASM-COMPLEXITY` messages with the canister, function index, optional Wasm name, estimated complexity, limit usage, instruction count, and suggested Motoko correction. They also report the three largest complexity contributors, such as calls, branches, control-flow blocks, memory operations, or variable access, so generated Motoko can target the next correction. A fatal result stops the build before PocketIC starts because the final Wasm already exceeds the IC0505 limit.
 
-The preflight also emits advisory `MOPS-WASM-SIZE` warnings at 650 total functions or 3,800 Walrus locals, and stronger warnings at 674 functions or 4,000 locals. These counts correlate with IC0539 risk but are not replica limits, never fail the build, and never skip PocketIC. Use [`--test-deploy`](#--test-deploy) for authoritative memory validation.
+The preflight also emits advisory `MOPS-WASM-SIZE` warnings at 650 total functions or 3,800 Walrus locals, and stronger warnings at 674 functions or 4,000 locals. These counts correlate with IC0539 risk but are not replica limits, never fail the build, and never skip PocketIC. `--no-test-deploy` disables both the preflight and PocketIC validation.
 
 ### Examples
 
