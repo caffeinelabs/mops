@@ -218,7 +218,7 @@ describe("build", () => {
     }
   });
 
-  test("skips test deployment when the migration chain requires existing state", async () => {
+  test("test-deploy skips a migration chain requiring existing state and deploys its sibling", async () => {
     const cwd = path.join(
       import.meta.dirname,
       "build/test-deploy-incomplete-migrations",
@@ -227,13 +227,14 @@ describe("build", () => {
       const result = await cli(["build"], { cwd });
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toMatch(
-        "Warning: skipped test deployment for main",
+        "Warning: skipped test deployment for problematic",
       );
       expect(result.stderr).toMatch(
         "enhanced migration chain requires pre-existing state",
       );
-      expect(result.stdout).not.toMatch("test deploy canister main");
-      expect(result.stdout).toMatch("Built 1 canister successfully");
+      expect(result.stdout).not.toMatch("test deploy canister problematic");
+      expect(result.stdout).toMatch("test deploy canister healthy");
+      expect(result.stdout).toMatch("Built 2 canisters successfully");
     } finally {
       cleanFixture(cwd);
     }

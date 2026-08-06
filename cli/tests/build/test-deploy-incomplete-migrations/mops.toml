@@ -8,8 +8,11 @@ args = ["--default-persistent-actors"]
 [build]
 test-deploy = true
 
-[canisters.main]
+[canisters.problematic]
 main = "src/Main.mo"
 
-[canisters.main.migrations]
+[canisters.problematic.migrations]
 chain = "migrations"
+
+[canisters.healthy]
+main = "src/Healthy.mo"
