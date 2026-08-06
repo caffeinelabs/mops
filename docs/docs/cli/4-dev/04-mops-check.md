@@ -93,7 +93,7 @@ mops check --no-lint
 
 ### `--no-check-limit`
 
-Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. Useful with `--fix` to autofix issues in older migrations that the limit would normally skip. Also suppresses the pending-migration warning that runs when `check-limit` is set. See [chain trimming](/cli/mops-migrate#chain-trimming).
+Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. Useful with `--fix` to autofix issues in older migrations that the limit would normally skip. Also suppresses the pending-migration warning that runs when `check-limit` is set. See [chain trimming](./08-mops-migrate.md#chain-trimming).
 
 ```
 mops check --fix --no-check-limit
@@ -112,7 +112,7 @@ mops check -- -Werror
 ```
 
 :::tip
-Global `moc` flags can be configured in `mops.toml` under `[moc].args` so they don't need to be passed on every invocation. See [`mops.toml` reference](/mops.toml#moc).
+Global `moc` flags can be configured in `mops.toml` under `[moc].args` so they don't need to be passed on every invocation. See [`mops.toml` reference](../../09-mops.toml.md#moc).
 :::
 
 ## Stable compatibility checking
@@ -134,9 +134,9 @@ If the file at `path` doesn't exist, the check fails with an error. For initial 
 actor { };
 ```
 
-For more details, see [`mops check-stable`](/cli/mops-check-stable).
+For more details, see [`mops check-stable`](./05-mops-check-stable.md).
 
-When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. Only applies when the baseline is a committed `.most` file configured via `[check-stable].path` (not a `.mo` source passed on the command line). See [chain trimming](/cli/mops-migrate#chain-trimming).
+When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. Only applies when the baseline is a committed `.most` file configured via `[check-stable].path` (not a `.mo` source passed on the command line). See [chain trimming](./08-mops-migrate.md#chain-trimming).
 
 ## Enhanced migration support
 
@@ -146,7 +146,7 @@ If a stable compatibility check fails and `[migrations]` is configured, a hint i
 
 ## Lint integration
 
-After type-checking succeeds, `mops check` automatically runs [`mops lint`](/cli/mops-lint) when `lintoko` is pinned in `[toolchain]`.
+After type-checking succeeds, `mops check` automatically runs [`mops lint`](./07-mops-lint.md) when `lintoko` is pinned in `[toolchain]`.
 
 This means `mops check` is the single command for all correctness checks — type errors and lint violations are both caught in one pass. Pass `--no-lint` to skip the lint step for a single run. Projects without a `lintoko` pin are unaffected.
 
@@ -161,5 +161,5 @@ When file paths are passed explicitly (e.g. `mops check src/Main.mo`), linting i
 :::
 
 :::info
-`mops check` only type-checks files — it does not produce any compiled output. To compile canisters, use [`mops build`](/cli/mops-build).
+`mops check` only type-checks files — it does not produce any compiled output. To compile canisters, use [`mops build`](./03-mops-build.md).
 :::

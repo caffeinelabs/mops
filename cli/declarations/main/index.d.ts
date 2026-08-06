@@ -1,3 +1,5 @@
+// Hand-maintained. `npm run decl` regenerates only the sibling *.did* files.
+
 import type {
   ActorSubclass,
   HttpAgentOptions,

@@ -42,4 +42,4 @@ For `0.x.y` packages this matches the default — caret already restricts pre-1.
 
 Mutually exclusive with [`--major`](#--major).
 
-The [lockfile](/mops.lock) is always kept in sync — there is no flag to opt out.
+The [lockfile](../../10-mops.lock.md) is always kept in sync — there is no flag to opt out.

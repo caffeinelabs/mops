@@ -13,4 +13,4 @@ Analyze source code and:
 mops sync
 ```
 
-The [lockfile](/mops.lock) is always kept in sync — there is no flag to opt out.
+The [lockfile](../../10-mops.lock.md) is always kept in sync — there is no flag to opt out.

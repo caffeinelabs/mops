@@ -23,7 +23,7 @@ For each canister, three files are written to the output directory (default `.mo
 
 If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against it.
 
-When [`[optimize]`](/mops.toml#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Failures warn and leave the unoptimized module. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
+When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Failures warn and leave the unoptimized module. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
 
 ### Examples
 
@@ -70,7 +70,7 @@ mops build --output ./dist
 
 ### `--no-optimize`
 
-Skip the [`[optimize]`](/mops.toml#optimize) `wasm-opt` post-pass for this run, even when it is configured in `mops.toml`. Has no effect when `[optimize]` is not set. Useful for a faster build or to produce an unoptimized module for debugging without editing `mops.toml`.
+Skip the [`[optimize]`](../../09-mops.toml.md#optimize) `wasm-opt` post-pass for this run, even when it is configured in `mops.toml`. Has no effect when `[optimize]` is not set. Useful for a faster build or to produce an unoptimized module for debugging without editing `mops.toml`.
 
 ```
 mops build --no-optimize
@@ -115,7 +115,7 @@ The `--output` CLI flag takes precedence over this config value.
 
 When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops build` automatically injects the `--enhanced-migration` flag. The full migration chain is compiled into the WASM.
 
-If `mops check` passes but `mops build` fails while [`check-limit`](/cli/mops-migrate#chain-trimming) is set, re-run `mops check --no-check-limit` to surface the issue — `check` trims the chain, while `build` compiles all of it.
+If `mops check` passes but `mops build` fails while [`check-limit`](./08-mops-migrate.md#chain-trimming) is set, re-run `mops check --no-check-limit` to surface the issue — `check` trims the chain, while `build` compiles all of it.
 
 ## Candid Compatibility
 
@@ -123,7 +123,7 @@ If a `candid` field is specified in the canister configuration, the build comman
 
 If the compatibility check fails, the build will fail with an error message.
 
-For manual compatibility checking, see [`mops check-candid`](/cli/mops-check-candid).
+For manual compatibility checking, see [`mops check-candid`](./06-mops-check-candid.md).
 
 ## Stable Types
 
@@ -138,4 +138,4 @@ path = ".deployed/backend.most"
 
 With this in place, `mops check` automatically verifies upgrade compatibility on every run.
 
-See [`mops check`](/cli/mops-check#stable-compatibility-checking) for full configuration details.
+See [`mops check`](./04-mops-check.md#stable-compatibility-checking) for full configuration details.

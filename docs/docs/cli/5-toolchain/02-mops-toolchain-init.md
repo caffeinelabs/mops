@@ -34,4 +34,4 @@ In CI environment, this command runs automatically when you run `mops install` o
 So no need to run it manually in GitHub Actions.
 :::
 
-To undo changes made by this command, run [`mops toolchain reset`](/cli/mops-toolchain-reset) command — it cleans all known shell config files, no matter which shell was initialized.
+To undo changes made by this command, run [`mops toolchain reset`](./06-mops-toolchain-rest.md) command — it cleans all known shell config files, no matter which shell was initialized.

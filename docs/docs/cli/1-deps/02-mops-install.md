@@ -19,7 +19,7 @@ The lockfile is considered **up to date** when the `[dependencies]` and `[dev-de
 
 `mops install` is self-healing: a missing, unparseable, legacy-format or `mops.toml`-inconsistent lockfile is regenerated rather than treated as an error. There is no flag to opt out of the lockfile — it is always maintained.
 
-See [mops.lock](/mops.lock) for details on lockfile contents and when to commit it.
+See [mops.lock](../../10-mops.lock.md) for details on lockfile contents and when to commit it.
 
 ## Version conflicts
 
@@ -41,7 +41,7 @@ Since resolution is skipped when the lockfile is up to date, the report appears 
 
 ### `--locked`
 
-Require an up-to-date [lockfile](/mops.lock) and never write it. This is the flag for CI.
+Require an up-to-date [lockfile](../../10-mops.lock.md) and never write it. This is the flag for CI.
 
 `mops install --locked` fails when:
 - `mops.lock` is missing

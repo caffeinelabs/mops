@@ -11,7 +11,7 @@ When you run `mops install`, `mops add <pkg>` or `mops toolchain use/update`, Mo
 
 Local cache directory is created in the project root in the `.mops` directory.
 
-Files are verified against the hashes published in the Mops registry as they are downloaded, before they enter the cache. To audit what is already on disk against [mops.lock](/mops.lock), run [`mops verify`](/cli/mops-verify).
+Files are verified against the hashes published in the Mops registry as they are downloaded, before they enter the cache. To audit what is already on disk against [mops.lock](../../10-mops.lock.md), run [`mops verify`](../1-deps/06-mops-verify.md).
 
 ### `mops cache show`
 

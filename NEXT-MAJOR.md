@@ -139,8 +139,8 @@ Content: pin git deps to a **resolved commit SHA**. Today the `deps` map (`cli/i
 
 We can't credibly tell users to drop `dfx` while our own dev loop runs on it, but v3 keeps explicit dfx support anyway, so this proceeds in parallel:
 
-- `package.json` scripts (`replica`, `decl:cli`, `deploy*`) → `icp` equivalents.
-- `.github/workflows/{ci,release,mops-test,setup-mops}.yml`: replace `dfinity/setup-dfx` + `dfx cache install` with the `icp` setup action.
+- `package.json` `deploy*` scripts → `icp` equivalents. (`replica` and `decl:cli` are done.)
+- `.github/workflows/{release,mops-test,setup-mops}.yml`: replace `dfinity/setup-dfx` + `dfx cache install` with the `icp` setup action. (`ci.yml` is done.)
 - `dfx.json` → `icp` project config (decide whether to keep `dfx.json` for back-compat).
 - `cli/tests/build/no-dfx/` + `build-no-dfx.test.ts` — keep as a regression test that mops works with neither `dfx` nor `icp` on PATH.
 - `backend/DEVELOPMENT.md`, `cli/{DEVELOPMENT,README,RELEASE}.md`, `docs/docs/01-quick-start.md`, blog posts — rewrite in `icp` terms; add a "migrating from dfx" note.

@@ -30,7 +30,7 @@ Under the hood, Mops will:
 
 The number you get is for the exact wasm the chosen replica runs, and the two replicas install it differently:
 
-- **With [`[optimize]`](/mops.toml#optimize)** — `mops bench` runs `wasm-opt` on the module before deploy (same pass as `mops build`). Prefer this when you want bench numbers to match an optimized deploy artifact. When that pass **succeeds**, the deprecated `dfx` replica path does **not** apply a second `optimize: "cycles"` pass (on soft-fail, dfx still may). Pass [`--no-optimize`](#--no-optimize) to skip the `wasm-opt` pass for a single run without editing `mops.toml`.
+- **With [`[optimize]`](../../09-mops.toml.md#optimize)** — `mops bench` runs `wasm-opt` on the module before deploy (same pass as `mops build`). Prefer this when you want bench numbers to match an optimized deploy artifact. When that pass **succeeds**, the deprecated `dfx` replica path does **not** apply a second `optimize: "cycles"` pass (on soft-fail, dfx still may). Pass [`--no-optimize`](#--no-optimize) to skip the `wasm-opt` pass for a single run without editing `mops.toml`.
 - **Without `[optimize]`**:
   - **`pocket-ic`** runs the raw `moc` output — **no optimization**.
   - **`dfx`** post-optimizes before install (`optimize: "cycles"`, via `ic-wasm`), so instruction counts can be lower — and that path fails on EOP Motoko (Table64), falling back to unoptimized Wasm.
@@ -89,7 +89,7 @@ Use it to measure a canister that still uses legacy persistence. Has no effect w
 
 ### `--no-optimize`
 
-Skip the [`[optimize]`](/mops.toml#optimize) `wasm-opt` pass for this run, even when it is configured in `mops.toml`. Has no effect when `[optimize]` is not set. The `dfx` replica may still apply its own `optimize: "cycles"` pass on deploy — only the `pocket-ic` replica then runs the raw `moc` output.
+Skip the [`[optimize]`](../../09-mops.toml.md#optimize) `wasm-opt` pass for this run, even when it is configured in `mops.toml`. Has no effect when `[optimize]` is not set. The `dfx` replica may still apply its own `optimize: "cycles"` pass on deploy — only the `pocket-ic` replica then runs the raw `moc` output.
 
 ```
 mops bench --no-optimize

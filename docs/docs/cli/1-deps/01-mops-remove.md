@@ -27,4 +27,4 @@ Do not actually remove anything
 
 Verbose output.
 
-The [lockfile](/mops.lock) is always kept in sync — there is no flag to opt out.
+The [lockfile](../../10-mops.lock.md) is always kept in sync — there is no flag to opt out.

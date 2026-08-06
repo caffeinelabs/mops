@@ -26,15 +26,23 @@ else
 
   if [ -f $cached ]; then
     mocPath=$(cat $cached)
-    if [[ "$mocPath" != *"/moc" ]] ; then
-      mocPath="$(mops toolchain bin moc --fallback)"
+  fi;
+
+  if [[ "$mocPath" != *"/moc" ]] ; then
+    mocPath="$(mops toolchain bin moc --fallback)"
+    # Only cache a real path. Caching a failed lookup leaves a zero-byte file
+    # that every later run reads back as an empty command.
+    if [[ "$mocPath" == *"/moc" ]] ; then
+      mkdir -p "$(dirname $cached)"
       echo -n $mocPath > "$cached"
     fi;
-  else
-    mkdir -p "$(dirname $cached)"
-    mocPath="$(mops toolchain bin moc --fallback)"
-    echo -n $mocPath > "$cached"
   fi;
+fi;
+
+if [[ "$mocPath" == "" ]]; then
+  echo "moc-wrapper: could not resolve moc." >&2
+  echo "Pin one with 'mops toolchain use moc <version>'." >&2
+  exit 1
 fi;
 
 $mocPath "$@"
