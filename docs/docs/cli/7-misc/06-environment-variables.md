@@ -15,6 +15,10 @@ Select the network (`local`, `staging`, or `ic`). This is the only way to change
 
 When set to `local`, the agent fetches the root key from the replica (required for local replicas) and defaults to `http://127.0.0.1:4943`.
 
+:::note
+Since mops 3.0.0 the agent makes update calls over the IC HTTP API `v3` synchronous-call endpoint. A local replica has to serve it — [`icp`](https://js.icp.build/) and recent `dfx` do; a pre-`v3` replica does not.
+:::
+
 ```bash
 export MOPS_NETWORK="local"
 mops install
