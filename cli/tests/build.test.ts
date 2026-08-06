@@ -173,21 +173,20 @@ describe("build", () => {
     }
   });
 
-  test("fatal IC0505 preflight skips PocketIC startup", async () => {
+  test("over-limit IC0505 estimate continues to PocketIC", async () => {
     const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
     const startupMarker = path.join(cwd, "pocket-ic-started");
     try {
       const result = await cli(["build"], { cwd });
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("Error [MOPS-WASM-COMPLEXITY]");
+      expect(result.stderr).toMatch("Warning [MOPS-WASM-COMPLEXITY]");
       expect(result.stderr).toMatch(
         /Function: 0[\s\S]*Estimated complexity: 1,000,050[\s\S]*IC0505 limit: 1,000,000[\s\S]*Limit usage: 100\.0%[\s\S]*Instruction count: 20,001/,
       );
       expect(result.stderr).toMatch(
-        "Build failed and PocketIC test deployment was skipped",
+        "PocketIC test deployment will verify the authoritative result",
       );
-      expect(result.stdout).not.toMatch("test deploy canister");
-      expect(existsSync(startupMarker)).toBe(false);
+      expect(existsSync(startupMarker)).toBe(true);
     } finally {
       cleanFixture(cwd, startupMarker);
     }
@@ -200,26 +199,11 @@ describe("build", () => {
       const result = await cli(["build", "--no-test-deploy"], { cwd });
       expect(result.exitCode).toBe(0);
       expect(result.stderr).not.toMatch("MOPS-WASM-COMPLEXITY");
-      expect(result.stderr).not.toMatch("MOPS-WASM-SIZE");
       expect(result.stdout).not.toMatch("test deploy canister");
       expect(result.stdout).toMatch("Built 1 canister successfully");
       expect(existsSync(startupMarker)).toBe(false);
     } finally {
       cleanFixture(cwd, startupMarker);
-    }
-  });
-
-  test("count warnings still allow PocketIC deployment", async () => {
-    const cwd = path.join(import.meta.dirname, "build/wasm-count-warning");
-    try {
-      const result = await cliSnapshot(["build", "--test-deploy"], { cwd }, 0);
-      expect(result.stderr).toMatch("Warning [MOPS-WASM-SIZE]");
-      expect(result.stderr).toMatch("Generated Wasm functions: 650");
-      expect(result.stderr).toMatch("do not prove a memory-limit failure");
-      expect(result.stdout).toMatch("test deploy canister main");
-      expect(result.stdout).toMatch("Built 1 canister successfully");
-    } finally {
-      cleanFixture(cwd);
     }
   });
 

@@ -10,52 +10,23 @@ const DISPLAYED_FUNCTION_LIMIT = 3;
 export const IC_FUNCTION_COMPLEXITY_LIMIT = 1_000_000;
 export const EARLY_COMPLEXITY_THRESHOLD = 750_000;
 export const CRITICAL_COMPLEXITY_THRESHOLD = 900_000;
-export const EARLY_FUNCTION_COUNT_THRESHOLD = 650;
-export const STRONG_FUNCTION_COUNT_THRESHOLD = 674;
-export const EARLY_LOCALS_THRESHOLD = 3_800;
-export const STRONG_LOCALS_THRESHOLD = 4_000;
 const numberFormat = new Intl.NumberFormat("en-US");
 
-export type ComplexitySeverity = "none" | "early" | "critical" | "fatal";
-export type SizeSeverity = "none" | "early" | "strong";
+export type ComplexitySeverity = "none" | "early" | "critical";
 
 export interface WasmPreflightDiagnostic {
-  level: "warning" | "error";
   message: string;
 }
 
 export interface WasmPreflightReport {
   diagnostics: WasmPreflightDiagnostic[];
-  fatal: boolean;
 }
 
 export function classifyComplexity(complexity: number): ComplexitySeverity {
-  if (complexity > IC_FUNCTION_COMPLEXITY_LIMIT) {
-    return "fatal";
-  }
   if (complexity >= CRITICAL_COMPLEXITY_THRESHOLD) {
     return "critical";
   }
   if (complexity >= EARLY_COMPLEXITY_THRESHOLD) {
-    return "early";
-  }
-  return "none";
-}
-
-export function classifySizeRisk(
-  totalFunctions: number,
-  locals: number,
-): SizeSeverity {
-  if (
-    totalFunctions >= STRONG_FUNCTION_COUNT_THRESHOLD ||
-    locals >= STRONG_LOCALS_THRESHOLD
-  ) {
-    return "strong";
-  }
-  if (
-    totalFunctions >= EARLY_FUNCTION_COUNT_THRESHOLD ||
-    locals >= EARLY_LOCALS_THRESHOLD
-  ) {
     return "early";
   }
   return "none";
@@ -66,16 +37,6 @@ export function formatWasmPreflightReport(
   analysis: WasmComplexityAnalysis,
 ): WasmPreflightReport {
   const diagnostics: WasmPreflightDiagnostic[] = [];
-  const sizeSeverity = classifySizeRisk(
-    analysis.totalFunctions,
-    analysis.locals,
-  );
-  if (sizeSeverity !== "none") {
-    diagnostics.push({
-      level: "warning",
-      message: formatSizeWarning(canisterName, analysis, sizeSeverity),
-    });
-  }
 
   const riskyFunctions = [...analysis.riskyFunctions]
     .filter((func) => classifyComplexity(func.complexity) !== "none")
@@ -88,16 +49,10 @@ export function formatWasmPreflightReport(
       continue;
     }
     const message = formatComplexityMessage(canisterName, func, severity);
-    diagnostics.push({
-      level: severity === "fatal" ? "error" : "warning",
-      message,
-    });
+    diagnostics.push({ message });
   }
 
-  return {
-    diagnostics,
-    fatal: diagnostics.some(({ level }) => level === "error"),
-  };
+  return { diagnostics };
 }
 
 export function runWasmComplexityPreflight(
@@ -108,11 +63,7 @@ export function runWasmComplexityPreflight(
     const analysis = getWasmBindings().analyze_wasm_function_complexity(wasm);
     const report = formatWasmPreflightReport(canisterName, analysis);
     for (const diagnostic of report.diagnostics) {
-      if (diagnostic.level === "error") {
-        console.error(chalk.red(diagnostic.message));
-      } else {
-        console.warn(chalk.yellow(diagnostic.message));
-      }
+      console.warn(chalk.yellow(diagnostic.message));
     }
     return report;
   } catch (error) {
@@ -122,7 +73,7 @@ export function runWasmComplexityPreflight(
         `Warning: unable to run Wasm complexity preflight for canister ${canisterName}: ${message}`,
       ),
     );
-    return { diagnostics: [], fatal: false };
+    return { diagnostics: [] };
   }
 }
 
@@ -131,10 +82,10 @@ function formatComplexityMessage(
   func: FunctionComplexity,
   severity: Exclude<ComplexitySeverity, "none">,
 ): string {
-  const fatal = severity === "fatal";
+  const exceedsLimit = func.complexity > IC_FUNCTION_COMPLEXITY_LIMIT;
   const name = func.name ? ` (${func.name})` : "";
   return [
-    `${fatal ? "Error" : "Warning"} [MOPS-WASM-COMPLEXITY]:`,
+    "Warning [MOPS-WASM-COMPLEXITY]:",
     `Severity: ${capitalize(severity)}`,
     `Canister: ${canisterName}`,
     `Function: ${numberFormat.format(func.index)}${name}`,
@@ -143,9 +94,9 @@ function formatComplexityMessage(
     `Limit usage: ${formatPercentage(func.complexity)}`,
     `Instruction count: ${numberFormat.format(func.instructionCount)}`,
     ...formatPrimaryContributors(func),
-    ...(fatal
+    ...(exceedsLimit
       ? [
-          "Result: Build failed and PocketIC test deployment was skipped because this function already exceeds the IC0505 limit.",
+          "Result: This estimate exceeds the IC0505 limit. PocketIC test deployment will verify the authoritative result.",
           "Suggested correction: Split this Motoko function into smaller independently compiled functions, reduce generated statements or branches, then rebuild.",
         ]
       : [
@@ -190,25 +141,6 @@ function formatPrimaryContributors(func: FunctionComplexity): string[] {
         `${labels[key]}: ${numberFormat.format(contribution.instructionCount)} instructions, ${numberFormat.format(contribution.complexity)} complexity`,
     ),
   ];
-}
-
-function formatSizeWarning(
-  canisterName: string,
-  analysis: WasmComplexityAnalysis,
-  severity: Exclude<SizeSeverity, "none">,
-): string {
-  return [
-    "Warning [MOPS-WASM-SIZE]:",
-    `Severity: ${capitalize(severity)}`,
-    `Canister: ${canisterName}`,
-    `Generated Wasm functions: ${numberFormat.format(analysis.totalFunctions)}`,
-    `Local functions: ${numberFormat.format(analysis.localFunctions)}`,
-    `Imported functions: ${numberFormat.format(analysis.importedFunctions)}`,
-    `Generated Wasm locals: ${numberFormat.format(analysis.locals)}`,
-    "Risk: These counts correlate with increased IC0539 risk but do not prove a memory-limit failure.",
-    "Suggested correction: Reduce generated actor fields and eager initialization, use compact collections, or move large initialization work into bounded post-install calls.",
-    "Next step: Run PocketIC test deployment for authoritative memory validation.",
-  ].join("\n");
 }
 
 function formatPercentage(complexity: number): string {

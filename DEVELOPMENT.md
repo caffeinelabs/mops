@@ -18,6 +18,13 @@
 - `test/` - Dogfood for `mops test` command
 
 ## Local Development
+
+The local pipeline runs on [icp-cli](https://github.com/dfinity/icp-cli) (config in `icp.yaml`). Install the same versions CI pins:
+
+```bash
+npm install -g @icp-sdk/icp-cli@1.2.0 @icp-sdk/ic-wasm@0.11.1
+```
+
 `npm start` - starts local replica and dev server
 
 To be able to install/publish packages locally:
@@ -37,23 +44,17 @@ alias mops-local="bun /<path-to-local-mops>/cli/environments/nodejs/cli.ts"
 ```
 
 
-3. Switch network to local
-```
-mops-local set-network local
+3. Point the CLI at your local registry
+
+`mops-local set-network local` alone is not enough: the built-in `local` endpoint assumes the fixed canister id dfx used to pin via `specified_id`, and icp-cli has no equivalent — the local replica allocates the id at create time. Pass the deployed one explicitly:
+
+```bash
+export MOPS_REGISTRY_HOST="http://127.0.0.1:4943"
+export MOPS_REGISTRY_CANISTER_ID="$(jq -r .main .icp/cache/mappings/local.ids.json)"
 ```
 
 Now you can install/publish packages locally like this `mops-local add <pkg>`
 
-Also you can switch network to staging to work with staging registry like this `mops-local set-network staging`
-
-### Alternative: Using Environment Variables
-
-You can also override the registry endpoint without switching networks using environment variables:
-
-```bash
-export MOPS_REGISTRY_HOST="http://127.0.0.1:4943"
-export MOPS_REGISTRY_CANISTER_ID="your-local-canister-id"
-mops-local add <pkg>
-```
+To work against the staging registry instead, `mops-local set-network staging` (no overrides needed).
 
 See [Environment Variables](/cli/environment-variables) in the documentation for details.

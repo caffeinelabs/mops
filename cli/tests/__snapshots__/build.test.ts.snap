@@ -22,32 +22,12 @@ test deploy canister main
 }
 `;
 
-exports[`build count warnings still allow PocketIC deployment 1`] = `
-{
-  "exitCode": 0,
-  "stderr": "Warning [MOPS-WASM-SIZE]:
-Severity: Early
-Canister: main
-Generated Wasm functions: 650
-Local functions: 650
-Imported functions: 0
-Generated Wasm locals: 0
-Risk: These counts correlate with increased IC0539 risk but do not prove a memory-limit failure.
-Suggested correction: Reduce generated actor fields and eager initialization, use compact collections, or move large initialization work into bounded post-install calls.
-Next step: Run PocketIC test deployment for authoritative memory validation.",
-  "stdout": "build canister main
-test deploy canister main
-
-✓ Built 1 canister successfully",
-}
-`;
-
 exports[`build error 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
   "stdout": "build canister foo
-moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+<CACHE>moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/foo.most
 Adding metadata to .mops/.build/foo.wasm
 
@@ -77,11 +57,11 @@ exports[`build ok 1`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "build canister foo
-moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+<CACHE>moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/foo.most
 Adding metadata to .mops/.build/foo.wasm
 build canister bar
-moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
+<CACHE>moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/bar.most
 Candid compatibility check passed for canister bar
 Adding metadata to .mops/.build/bar.wasm

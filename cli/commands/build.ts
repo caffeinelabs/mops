@@ -229,15 +229,7 @@ export async function build(
           optimize: options.optimize,
         });
         if (testDeployEnabled) {
-          const wasmPreflight = runWasmComplexityPreflight(
-            canisterName,
-            await readFile(wasmPath),
-          );
-          if (wasmPreflight.fatal) {
-            cliError(
-              `Wasm complexity preflight failed for canister ${canisterName}`,
-            );
-          }
+          runWasmComplexityPreflight(canisterName, await readFile(wasmPath));
           // Init args must be encoded against the Motoko-generated init
           // signature. A declared candid file is typically service-only and
           // has no init types.

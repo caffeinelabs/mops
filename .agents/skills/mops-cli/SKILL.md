@@ -127,9 +127,7 @@ Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mo
 
 With `[optimize]` in `mops.toml`, runs `wasm-opt` after candid metadata (default `-O3 -g`). Pin Binaryen with `mops toolchain use wasm-opt 131` (or let auto-pin write latest on first build). Soft-fails to unoptimized Wasm on error. Pass `--no-optimize` (on `build` or `bench`) to skip the pass for a single run without editing `mops.toml`.
 
-When `--test-deploy` or `[build].test-deploy = true` is enabled, Mops runs a fast Walrus preflight on the final Wasm before PocketIC. Per-function IC0505 complexity below 750,000 is quiet, 750,000 through 899,999 emits an early warning, 900,000 through 1,000,000 emits a critical warning, and anything above 1,000,000 fails before PocketIC starts. `MOPS-WASM-COMPLEXITY` output includes actionable function metrics, the three largest complexity contributors, and Motoko correction guidance.
-
-`MOPS-WASM-SIZE` warnings are advisory correlations only: early at 650 total Wasm functions or 3,800 Walrus locals, strong at 674 functions or 4,000 locals. They never fail or skip deployment. `--no-test-deploy` disables the preflight and PocketIC validation.
+When `--test-deploy` or `[build].test-deploy = true` is enabled, Mops runs a fast Walrus preflight on the final Wasm before PocketIC. Per-function IC0505 complexity below 750,000 is quiet, 750,000 through 899,999 emits an early warning, and 900,000 or more emits a critical warning. `MOPS-WASM-COMPLEXITY` output includes actionable function metrics, the three largest complexity contributors, and Motoko correction guidance. The estimate never fails or skips deployment; PocketIC remains authoritative.
 
 ### `mops deployed`
 
@@ -290,3 +288,7 @@ mops add core
 Then configure `[moc].args`, `[canisters]`, and `[build]` in `mops.toml`.
 
 To update tools later: `mops toolchain update moc` or `mops toolchain update` (all tools).
+
+## Editing the mops docs site
+
+Edits go to `docs/docs/` — the in-development line, served at the root of docs.mops.one. `docs/versioned_docs/version-2.x/` is a frozen snapshot; back-port only correctness fixes for behavior that also exists in 2.x.

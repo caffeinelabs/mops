@@ -64,10 +64,6 @@ pub struct ComplexityBreakdown {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WasmComplexityAnalysis {
-    pub total_functions: usize,
-    pub local_functions: usize,
-    pub imported_functions: usize,
-    pub locals: usize,
     pub max_complexity: usize,
     pub risky_functions: Vec<FunctionComplexity>,
 }
@@ -100,8 +96,6 @@ pub fn analyze_function_complexity(bytes: &[u8]) -> Result<WasmComplexityAnalysi
 fn analyze_module_function_complexity(module: &Module, limit: usize) -> WasmComplexityAnalysis {
     let mut max_complexity = 0;
     let mut risky_functions = Vec::new();
-    let total_functions = module.funcs.iter().count();
-    let local_functions = module.funcs.iter_local().count();
 
     for (id, function) in module.funcs.iter_local() {
         let mut visitor = ComplexityVisitor::default();
@@ -126,10 +120,6 @@ fn analyze_module_function_complexity(module: &Module, limit: usize) -> WasmComp
     });
 
     WasmComplexityAnalysis {
-        total_functions,
-        local_functions,
-        imported_functions: total_functions - local_functions,
-        locals: module.locals.iter().count(),
         max_complexity,
         risky_functions,
     }
@@ -294,13 +284,6 @@ mod tests {
         0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x04, 0x01, 0x60, 0x00, 0x00, 0x03,
         0x02, 0x01, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x02, 0x40, 0x0c, 0x00, 0x0b, 0x0b,
     ];
-    // One imported function and one local function with two i32 locals.
-    const IMPORT_AND_LOCALS_WASM: &[u8] = &[
-        0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x04, 0x01, 0x60, 0x00, 0x00, 0x02,
-        0x07, 0x01, 0x01, 0x6d, 0x01, 0x66, 0x00, 0x00, 0x03, 0x02, 0x01, 0x00, 0x0a, 0x06, 0x01,
-        0x04, 0x01, 0x02, 0x7f, 0x0b,
-    ];
-
     #[test]
     fn uses_ic_instruction_weights() {
         assert_eq!(
@@ -346,10 +329,6 @@ mod tests {
         let module = parse_wasm(BLOCK_AND_BRANCH_WASM, true).unwrap();
         let analysis = analyze_module_function_complexity(&module, 99);
 
-        assert_eq!(analysis.total_functions, 1);
-        assert_eq!(analysis.local_functions, 1);
-        assert_eq!(analysis.imported_functions, 0);
-        assert_eq!(analysis.locals, 0);
         assert_eq!(analysis.max_complexity, 100);
         assert_eq!(
             analysis.risky_functions,
@@ -384,16 +363,5 @@ mod tests {
         let analysis = analyze_module_function_complexity(&module, 100);
 
         assert_eq!(analysis.risky_functions.len(), 1);
-    }
-
-    #[test]
-    fn reports_function_and_local_counts() {
-        let module = parse_wasm(IMPORT_AND_LOCALS_WASM, true).unwrap();
-        let analysis = analyze_module_function_complexity(&module, usize::MAX);
-
-        assert_eq!(analysis.total_functions, 2);
-        assert_eq!(analysis.local_functions, 1);
-        assert_eq!(analysis.imported_functions, 1);
-        assert_eq!(analysis.locals, 2);
     }
 }

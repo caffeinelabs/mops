@@ -28,10 +28,6 @@ export interface ComplexityBreakdown {
 }
 
 export interface WasmComplexityAnalysis {
-  totalFunctions: number;
-  localFunctions: number;
-  importedFunctions: number;
-  locals: number;
   maxComplexity: number;
   riskyFunctions: FunctionComplexity[];
 }

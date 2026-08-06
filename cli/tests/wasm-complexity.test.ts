@@ -1,10 +1,8 @@
 import { describe, expect, test } from "@jest/globals";
 import {
   classifyComplexity,
-  classifySizeRisk,
   formatWasmPreflightReport,
   type ComplexitySeverity,
-  type SizeSeverity,
 } from "../helpers/wasm-complexity";
 import type {
   ComplexityBreakdown,
@@ -48,10 +46,6 @@ function analysis(
   overrides: Partial<WasmComplexityAnalysis> = {},
 ): WasmComplexityAnalysis {
   return {
-    totalFunctions: 100,
-    localFunctions: 90,
-    importedFunctions: 10,
-    locals: 500,
     maxComplexity: 0,
     riskyFunctions: [],
     ...overrides,
@@ -64,12 +58,12 @@ describe("Wasm complexity thresholds", () => {
     [750_000, "early"],
     [900_000, "critical"],
     [1_000_000, "critical"],
-    [1_000_001, "fatal"],
+    [1_000_001, "critical"],
   ])("classifies %i as %s", (complexity, expected) => {
     expect(classifyComplexity(complexity)).toBe(expected);
   });
 
-  test("fatal report contains structured fields and correction guidance", () => {
+  test("over-limit report warns and leaves PocketIC authoritative", () => {
     const report = formatWasmPreflightReport(
       "backend",
       analysis({
@@ -90,12 +84,10 @@ describe("Wasm complexity thresholds", () => {
       }),
     );
 
-    expect(report.fatal).toBe(true);
     expect(report.diagnostics).toHaveLength(1);
-    expect(report.diagnostics[0]?.level).toBe("error");
     const output = report.diagnostics[0]?.message ?? "";
     expect(output).toContain(
-      "Error [MOPS-WASM-COMPLEXITY]:\nSeverity: Fatal\nCanister: backend\nFunction: 42 (initialize_data)",
+      "Warning [MOPS-WASM-COMPLEXITY]:\nSeverity: Critical\nCanister: backend\nFunction: 42 (initialize_data)",
     );
     expect(output).toContain("Estimated complexity: 1,120,000");
     expect(output).toContain("IC0505 limit: 1,000,000");
@@ -111,7 +103,7 @@ describe("Wasm complexity thresholds", () => {
     );
     expect(output).not.toContain("Blocks/loops/conditionals:");
     expect(output).toContain(
-      "Build failed and PocketIC test deployment was skipped",
+      "PocketIC test deployment will verify the authoritative result",
     );
     expect(output).toContain("Suggested correction: Split this Motoko");
   });
@@ -122,7 +114,6 @@ describe("Wasm complexity thresholds", () => {
       analysis({ riskyFunctions: [func(925_000)] }),
     );
 
-    expect(report.fatal).toBe(false);
     expect(report.diagnostics[0]?.message).toContain("Severity: Critical");
     expect(report.diagnostics[0]?.message).toContain("Limit usage: 92.5%");
     expect(report.diagnostics[0]?.message).toContain(
@@ -151,51 +142,5 @@ describe("Wasm complexity thresholds", () => {
       output.indexOf("Function: 3"),
     );
     expect(output).not.toContain("Function: 4");
-  });
-});
-
-describe("Wasm size thresholds", () => {
-  test.each<[number, SizeSeverity]>([
-    [649, "none"],
-    [650, "early"],
-    [673, "early"],
-    [674, "strong"],
-  ])("classifies %i total functions as %s", (totalFunctions, expected) => {
-    expect(classifySizeRisk(totalFunctions, 0)).toBe(expected);
-  });
-
-  test.each<[number, SizeSeverity]>([
-    [3_799, "none"],
-    [3_800, "early"],
-    [3_999, "early"],
-    [4_000, "strong"],
-  ])("classifies %i locals as %s", (locals, expected) => {
-    expect(classifySizeRisk(0, locals)).toBe(expected);
-  });
-
-  test("count warning contains metrics and remains nonfatal", () => {
-    const report = formatWasmPreflightReport(
-      "backend",
-      analysis({
-        totalFunctions: 690,
-        localFunctions: 660,
-        importedFunctions: 30,
-        locals: 4_120,
-      }),
-    );
-
-    expect(report.fatal).toBe(false);
-    expect(report.diagnostics).toHaveLength(1);
-    expect(report.diagnostics[0]?.level).toBe("warning");
-    const output = report.diagnostics[0]?.message ?? "";
-    expect(output).toContain(
-      "Warning [MOPS-WASM-SIZE]:\nSeverity: Strong\nCanister: backend",
-    );
-    expect(output).toContain("Generated Wasm functions: 690");
-    expect(output).toContain("Local functions: 660");
-    expect(output).toContain("Imported functions: 30");
-    expect(output).toContain("Generated Wasm locals: 4,120");
-    expect(output).toContain("do not prove a memory-limit failure");
-    expect(output).toContain("Next step: Run PocketIC");
   });
 });

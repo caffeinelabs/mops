@@ -46,6 +46,12 @@ const config = {
 				docs: {
 					routeBasePath: '/',
 					sidebarPath: './sidebars.js',
+					// The in-development line is served at the root; older lines live under /<version>.
+					lastVersion: 'current',
+					versions: {
+						current: {label: '3.x (unreleased)', path: ''},
+						'2.x': {label: '2.x', path: '2.x'},
+					},
 					// Please change this to your repo.
 					// Remove this to remove the "edit this page" links.
 					editUrl: 'https://github.com/caffeinelabs/mops/edit/main/docs/',
@@ -70,6 +76,10 @@ const config = {
 					{
 						type: 'html',
 						value: '<mops-navbar></mops-navbar>',
+					},
+					{
+						type: 'docsVersionDropdown',
+						position: 'right',
 					},
 				],
 			},
