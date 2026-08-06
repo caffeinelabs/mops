@@ -54,7 +54,8 @@ export async function bench(
   let config = readConfig();
 
   let defaultOptions: BenchOptions = {
-    replicaVersion: "",
+    replicaVersion:
+      config.toolchain?.["pocket-ic"] || DEFAULT_POCKET_IC_VERSION,
     compiler: "moc",
     compilerVersion: getMocVersion(),
     gc: "incremental",
@@ -71,9 +72,6 @@ export async function bench(
   };
 
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
-
-  options.replicaVersion =
-    config.toolchain?.["pocket-ic"] || DEFAULT_POCKET_IC_VERSION;
 
   if (process.env.CI) {
     console.log("# Benchmark Results\n\n");
