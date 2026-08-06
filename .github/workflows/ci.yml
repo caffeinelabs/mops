@@ -102,6 +102,10 @@ jobs:
       - name: Pre-cache moc 1.3.0 and test fixture dependencies
         run: |
           mops toolchain use moc 1.3.0 && mops toolchain use moc ${{ matrix.moc-version }}
+          # pocket-ic 12.0.0 is shared by the pocket-ic and bench fixtures; the
+          # unpinned fixture pulls whatever DEFAULT_POCKET_IC_VERSION is.
+          (cd cli/tests/pocket-ic && mops install)
+          (cd cli/tests/pocket-ic-default && mops toolchain bin pocket-ic > /dev/null)
           (cd cli/tests/check/fix && mops install)
           (cd cli/tests/check/fix-utf8 && mops install)
           (cd cli/tests/build/success && mops install)

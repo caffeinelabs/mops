@@ -12,7 +12,6 @@ import {
 import { toolchain } from "./toolchain/index.js";
 
 type StartOptions = {
-  dir?: string;
   verbose?: boolean;
   silent?: boolean;
 };
@@ -25,12 +24,10 @@ export class Replica {
   > = {};
   pocketIcServer?: PocketIcServer;
   pocketIc?: PocketIc;
-  dir: string = ""; // absolute path (/.../.mops/.test/)
   ttl = 60;
 
-  async start({ dir, verbose, silent }: StartOptions = {}) {
+  async start({ verbose, silent }: StartOptions = {}) {
     this.verbose = verbose ?? this.verbose;
-    this.dir = dir ?? this.dir;
 
     silent || console.log("Starting pocket-ic replica...");
 

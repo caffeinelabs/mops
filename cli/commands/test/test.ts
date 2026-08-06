@@ -228,7 +228,6 @@ export async function testWithReporter(
   }
 
   let testTempDir = path.join(getRootDir(), ".mops/.test/");
-  replica.dir = testTempDir;
 
   fs.rmSync(testTempDir, { recursive: true, force: true });
   fs.mkdirSync(testTempDir, { recursive: true });
