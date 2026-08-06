@@ -22,8 +22,6 @@ jobs:
         moc-version: [0.14.13]
         node-version: [22]
         include:
-          - mops-version: ic-mops@1.0.0
-            test-global: false
           - mops-version: ./cli/dist
             test-global: false
           - mops-version: ./cli/dist

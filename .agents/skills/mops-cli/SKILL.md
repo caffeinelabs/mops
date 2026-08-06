@@ -152,7 +152,7 @@ mops generate candid backend -o <path>   # single canister, ad-hoc path
 mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.10.0    # pin specific version
-mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the bundled pic-js client doesn't support)
+mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the vendored `@dfinity/pic` client doesn't support)
 mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
@@ -161,6 +161,8 @@ mops toolchain info <tool> --versions # list recent stable releases, newest firs
 mops toolchain info <tool> --versions --all # full stable history (cache warming)
 mops toolchain bin moc               # print path to binary
 ```
+
+**`pocket-ic` versions**: `9.0.0` and newer run on the vendored `@dfinity/pic` client. Pins below `9.0.0` still work on the legacy `pic-ic` client but print a deprecation warning and are removed in mops v3 — pin `9.0.0` or newer.
 
 **Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
 
@@ -198,6 +200,17 @@ mops sync                 # add missing / remove unused packages
 ```
 
 ## Other Commands
+
+### `mops publish`
+
+```bash
+mops publish              # publish to the registry (runs tests/docs/bench by default)
+mops publish --dry-run    # same local steps as publish; no registry contact / identity
+mops publish --dry-run --no-test --no-docs --no-bench   # packaging checks only
+mops publish --no-test --no-docs --no-bench
+```
+
+`--dry-run` runs the same local publish pipeline (packaging checks, docs, changelog, tests, benchmarks) and prints the final file list, then stops before identity/upload. `--no-*` flags work as usual. It does **not** run canister config validation (SPDX/semver/name rules) or prove registry acceptance (already published, permissions, missing deps).
 
 ### `mops test`
 

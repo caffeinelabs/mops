@@ -22,12 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         mops-version:
-          [
-            ./cli/dist,
-            ic-mops,
-            ic-mops@1.0.0,
-            "https://cli.mops.one/versions/latest.tgz",
-          ]
+          [./cli/dist, ic-mops, "https://cli.mops.one/versions/latest.tgz"]
         moc-version: [0.14.13]
         node-version: [22, 24, 26]
         runner: [ubuntu-latest]

@@ -1,0 +1,174 @@
+name: Prepare CLI release
+
+# Creates a release PR (changelog rollup + version bump). On merge,
+# release-pr.yml tags cli-vX.Y.Z and release.yml publishes.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semver bump
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: prepare-cli-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    permissions: {} # privileged ops use the GitHub App token, not GITHUB_TOKEN
+    steps:
+      - name: Create GitHub App Token
+        uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
+        id: app-token
+        with:
+          app-id: ${{ vars.GENERIC_CI_RW_APP_ID }}
+          private-key: ${{ secrets.GENERIC_CI_RW_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+
+      - name: Abort if open release PR exists
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          OPEN=$(gh pr list --label release --state open --json number,url --jq 'length')
+          if [[ "$OPEN" != "0" ]]; then
+            echo "::error::An open release PR already exists:"
+            gh pr list --label release --state open
+            exit 1
+          fi
+
+      - name: "Abort if ## Next has no entries"
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          NOTES=$(awk '/^## Next$/{found=1; next} found && /^## /{exit} found' CHANGELOG.md)
+          if ! echo "$NOTES" | grep -qE '^- '; then
+            echo "::error::## Next in cli/CHANGELOG.md has no changelog entries to release"
+            exit 1
+          fi
+
+      - name: Bump version
+        id: bump
+        working-directory: cli
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          VERSION=$(npm version "$BUMP" --no-git-tag-version | sed 's/^v//')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Bumped to $VERSION ($BUMP)"
+
+      - name: Abort if version already released
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          set -euo pipefail
+          ESCAPED=$(echo "$VERSION" | sed 's/\./\\./g')
+          if grep -qE "^## ${ESCAPED}$" CHANGELOG.md; then
+            echo "::error::Changelog already has a ## ${VERSION} heading"
+            exit 1
+          fi
+          if git rev-parse "refs/tags/cli-v${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag cli-v${VERSION} already exists"
+            exit 1
+          fi
+
+      - name: "Roll ## Next into version heading"
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 - "$VERSION" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          version = sys.argv[1]
+          path = Path("CHANGELOG.md")
+          raw = path.read_bytes()
+          had_trailing_newline = raw.endswith(b"\n")
+          text = raw.decode()
+
+          match = re.search(r"^## Next\n", text, re.M)
+          if not match:
+              sys.exit("::error::## Next heading not found in CHANGELOG.md")
+
+          after_next = text[match.end() :]
+          next_heading = re.search(r"^## ", after_next, re.M)
+          if not next_heading:
+              sys.exit("::error::No version heading after ## Next in CHANGELOG.md")
+
+          notes = after_next[: next_heading.start()]
+          bullets = [line for line in notes.splitlines() if line.startswith("- ")]
+          if not bullets:
+              sys.exit("::error::## Next has no changelog entries to release")
+
+          rolled = (
+              "## Next\n\n"
+              f"## {version}\n"
+              + "\n".join(bullets)
+              + "\n\n"
+              + after_next[next_heading.start() :]
+          )
+          out = text[: match.start()] + rolled
+          data = out.encode()
+          if had_trailing_newline and not data.endswith(b"\n"):
+              data += b"\n"
+          elif not had_trailing_newline and data.endswith(b"\n"):
+              data = data[:-1]
+          path.write_bytes(data)
+
+          # Sanity: version section must be non-empty (same check as release-pr.yml)
+          section = re.search(
+              rf"^## {re.escape(version)}$\n(.*?)(?=^## |\Z)",
+              path.read_text(),
+              re.M | re.S,
+          )
+          if not section or not section.group(1).strip():
+              sys.exit(f"::error::Changelog rewrite left an empty ## {version} section")
+          print(f"Changelog updated for v{version}.")
+          PY
+
+      - name: Create release PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="ci/release-${VERSION}"
+          git checkout -b "$BRANCH"
+          git add cli/CHANGELOG.md cli/package.json cli/package-lock.json
+          git commit -m "release: CLI v${VERSION}"
+          git push -u origin "$BRANCH"
+
+          printf -v BODY 'Release CLI v%s.\n\nPrepared by the [Prepare CLI release](https://github.com/%s/actions/workflows/prepare-cli-release.yml) workflow.\n\nApprove this PR when CI is green — auto-merge is enabled.' \
+            "$VERSION" "${{ github.repository }}"
+
+          gh pr create \
+            --title "release: CLI v${VERSION}" \
+            --body "$BODY" \
+            --label release \
+            --base main
+
+          gh pr merge --auto --squash

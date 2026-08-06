@@ -227,10 +227,19 @@ program
   .option("--no-docs", "Do not generate docs")
   .option("--no-test", "Do not run tests")
   .option("--no-bench", "Do not run benchmarks")
+  .option(
+    "--dry-run",
+    "Run local publish steps without contacting the registry or uploading",
+  )
   .option("--verbose", "Show more information")
   .action(async (options) => {
     if (!checkConfigFile()) {
       process.exit(1);
+    }
+    // dry-run is local-only — skip registry API compatibility check
+    if (options.dryRun) {
+      await publish(options);
+      return;
     }
     let compatible = await checkApiCompatibility();
     if (compatible) {
