@@ -1,10 +1,14 @@
 import semver from "semver";
+import { FILE_PATH_REGEX } from "../constants.js";
 
 export const MIN_DFINITY_CLIENT_POCKET_IC_VERSION = "9.0.0";
 
 export function assertDfinityClientSupportsPocketIc(
   version: string | undefined,
 ): void {
+  if (version?.match(FILE_PATH_REGEX)) {
+    return;
+  }
   if (!version || semver.valid(version) === null) {
     throw new Error(
       `PocketIC version ${JSON.stringify(version)} is invalid for test deployment. ` +

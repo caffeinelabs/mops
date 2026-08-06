@@ -118,6 +118,8 @@ mops check -- -Werror     # treat warnings as errors
 mops build                # all canisters
 mops build backend        # single canister
 mops build --verbose      # show compiler commands
+mops build --test-deploy  # verify fresh installation on PocketIC
+mops build --no-test-deploy # skip configured [build].test-deploy once
 mops build -- --ai-errors # pass extra moc flags
 ```
 
@@ -175,7 +177,7 @@ Create migration files directly in the `chain` directory.
 
 After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run `mops build` to produce the wasm artifact.
 
-Use `mops build --test-deploy`, or set `[build].test-deploy = true` for every build, to install each built Wasm on a fresh PocketIC canister and catch module validation, initialization, and installation failures. Pin pocket-ic 9.0.0 or newer in `[toolchain]` first. The command uses each canister's `initArg`, or `()` when omitted. Set `wasmMemoryLimit` to a positive integer byte limit on a canister to test deployment under that limit. PocketIC error names include canonical IC error codes in the output. If the generated `.most` shows that an enhanced migration chain requires pre-existing state, Mops skips that canister with a warning because fresh installation cannot reproduce its legacy baseline.
+Use `mops build --test-deploy`, or set `[build].test-deploy = true` for every build, to install each built Wasm on a fresh PocketIC canister and catch module validation, initialization, and installation failures. Pin pocket-ic 9.0.0 or newer, or a local PocketIC binary path, in `[toolchain]` first. Use `--no-test-deploy` to skip configured validation once. The command uses each canister's `initArg`, or `()` when omitted. Set `wasmMemoryLimit` to a positive integer byte limit on a canister to test deployment under that limit. PocketIC error names include canonical IC error codes in the output. If the generated `.most` shows that an enhanced migration chain requires pre-existing state, Mops skips that canister with a warning because fresh installation cannot reproduce its legacy baseline.
 
 `check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 

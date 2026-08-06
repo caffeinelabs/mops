@@ -91,7 +91,8 @@ Enable the same validation for every plain `mops build` invocation:
 test-deploy = true
 ```
 
-PocketIC 9.0.0 or newer must be pinned in `[toolchain]`:
+PocketIC 9.0.0 or newer, or a local PocketIC binary path, must be pinned in
+`[toolchain]`. Mops cannot verify compatibility for a path pin.
 ```toml
 [toolchain]
 pocket-ic = "12.0.0"
@@ -114,6 +115,15 @@ This validation performs a fresh install. If the generated `.most` shows that
 an enhanced migration chain starts from pre-existing state instead of `{}`,
 Mops skips that canister with a warning because no baseline Wasm is available.
 Other canisters are still tested normally.
+
+### `--no-test-deploy`
+
+Skip PocketIC deployment validation for this build, even when
+`[build].test-deploy = true`.
+
+```bash
+mops build --no-test-deploy
+```
 
 ## Configuration
 

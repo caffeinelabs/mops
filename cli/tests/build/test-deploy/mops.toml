@@ -2,9 +2,6 @@
 moc = "1.3.0"
 pocket-ic = "12.0.0"
 
-[build]
-test-deploy = true
-
 [canisters.main]
 main = "src/Main.mo"
 candid = "main.did"

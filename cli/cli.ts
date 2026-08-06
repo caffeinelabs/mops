@@ -357,6 +357,12 @@ program
   )
   .addOption(
     new Option(
+      "--no-test-deploy",
+      "Skip PocketIC deployment validation even when [build].test-deploy is enabled",
+    ),
+  )
+  .addOption(
+    new Option(
       "--no-optimize",
       "Skip the [optimize] wasm-opt post-pass even when it is configured in mops.toml",
     ),

@@ -1,6 +1,6 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { execa } from "execa";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, linkSync, rmSync } from "node:fs";
 import path from "path";
 import { cli, cliSnapshot } from "./helpers";
 
@@ -174,7 +174,7 @@ describe("build", () => {
   });
 
   test("[build].test-deploy installs the built Wasm on PocketIC", async () => {
-    const cwd = path.join(import.meta.dirname, "build/test-deploy");
+    const cwd = path.join(import.meta.dirname, "build/test-deploy-config");
     try {
       await cliSnapshot(["build"], { cwd }, 0);
     } finally {
@@ -186,6 +186,49 @@ describe("build", () => {
     const cwd = path.join(import.meta.dirname, "build/test-deploy");
     try {
       await cliSnapshot(["build", "--test-deploy"], { cwd }, 0);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--test-deploy accepts a path-pinned PocketIC binary", async () => {
+    const versionCwd = path.join(import.meta.dirname, "build/test-deploy");
+    const cwd = path.join(import.meta.dirname, "build/test-deploy-path");
+    const localBin = path.join(cwd, "pocket-ic");
+    try {
+      const binResult = await cli(["toolchain", "bin", "pocket-ic"], {
+        cwd: versionCwd,
+      });
+      expect(binResult.exitCode).toBe(0);
+      rmSync(localBin, { force: true });
+      linkSync(binResult.stdout.trim(), localBin);
+
+      const result = await cli(["build", "--test-deploy"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toMatch("test deploy canister main");
+    } finally {
+      rmSync(localBin, { force: true });
+      cleanFixture(cwd);
+    }
+  });
+
+  test("build without test-deploy config does not test deployment", async () => {
+    const cwd = path.join(import.meta.dirname, "build/test-deploy");
+    try {
+      const result = await cli(["build"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).not.toMatch("test deploy canister");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--no-test-deploy overrides [build].test-deploy", async () => {
+    const cwd = path.join(import.meta.dirname, "build/test-deploy-config");
+    try {
+      const result = await cli(["build", "--no-test-deploy"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).not.toMatch("test deploy canister");
     } finally {
       cleanFixture(cwd);
     }

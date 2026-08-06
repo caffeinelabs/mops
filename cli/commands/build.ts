@@ -208,12 +208,6 @@ export async function build(
           console.log(chalk.gray(`Adding metadata to ${wasmPath}`));
         const candidPath = resolvedCandidPath ?? generatedDidPath;
         const candidText = await readFile(candidPath, "utf-8");
-        // Init args must be encoded against the Motoko-generated init
-        // signature — a declared `candid` file is typically service-only and
-        // has no init types. The ternary only avoids re-reading the same file.
-        const initCandidText = resolvedCandidPath
-          ? await readFile(generatedDidPath, "utf-8")
-          : candidText;
         const customSections: CustomSection[] = [
           { name: `${candidVisibility} candid:service`, data: candidText },
         ];
@@ -234,6 +228,12 @@ export async function build(
           optimize: options.optimize,
         });
         if (testDeployEnabled) {
+          // Init args must be encoded against the Motoko-generated init
+          // signature. A declared candid file is typically service-only and
+          // has no init types.
+          const initCandidText = resolvedCandidPath
+            ? await readFile(generatedDidPath, "utf-8")
+            : candidText;
           testDeployArtifacts.push({
             name: canisterName,
             wasmPath,

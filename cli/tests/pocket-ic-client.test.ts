@@ -19,6 +19,13 @@ describe("PocketIC client compatibility", () => {
     },
   );
 
+  test.each(["./bin/pocket-ic", "../tools/pocket-ic", "/opt/pocket-ic"])(
+    "accepts a path-pinned PocketIC binary at %s",
+    (version) => {
+      expect(() => assertDfinityClientSupportsPocketIc(version)).not.toThrow();
+    },
+  );
+
   test.each(["8", "latest", "not-a-version"])(
     "rejects malformed PocketIC version %s",
     (version) => {
