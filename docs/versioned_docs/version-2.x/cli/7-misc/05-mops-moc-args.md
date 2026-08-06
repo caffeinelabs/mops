@@ -29,4 +29,4 @@ $ mops moc-args
 
 Each flag is printed on its own line.
 
-See also: [`[moc]` config section](/mops.toml#moc).
+See also: [`[moc]` config section](../../09-mops.toml.md#moc).

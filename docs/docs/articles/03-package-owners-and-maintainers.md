@@ -15,6 +15,6 @@ Owners have full control over the package, including the ability to publish new 
 | Add or remove owners | :heavy_check_mark: | :x: |
 | Add or remove maintainers | :heavy_check_mark: | :x: |
 
-Use [`mops owner`](/cli/mops-owner) command to manage owners of a package.
+Use [`mops owner`](../cli/2-publish/05-mops-owner.md) command to manage owners of a package.
 
-Use [`mops maintainer`](/cli/mops-maintainer) command to manage maintainers of a package.
+Use [`mops maintainer`](../cli/2-publish/06-mops-maintainer.md) command to manage maintainers of a package.

@@ -5,7 +5,7 @@ sidebar_label: mops deployed
 
 # `mops deployed`
 
-Post-deploy hook: promote the just-built `.most` stable-types file into a committed `deployed/` directory so [`mops check-stable`](/cli/mops-check-stable) compares against the deployed version on the next build.
+Post-deploy hook: promote the just-built `.most` stable-types file into a committed `deployed/` directory so [`mops check-stable`](./05-mops-check-stable.md) compares against the deployed version on the next build.
 
 ```
 mops deployed [canisters...]      # promote .most → deployed/
@@ -14,7 +14,7 @@ mops deployed init [canisters...] # one-time bootstrap: empty-actor baseline + w
 
 Run `mops deployed` after a successful deploy. It does **not** read from chain or wasm metadata — it only copies the local `.most` left by `mops build` into the project's `deployed/` directory so the on-disk stable-check baseline always matches the wasm you just deployed.
 
-For canister selection rules, see [`mops build`](/cli/mops-build).
+For canister selection rules, see [`mops build`](./03-mops-build.md).
 
 ## Lifecycle
 

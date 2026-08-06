@@ -64,7 +64,7 @@ mops lint --rules ./rules-a --rules ./rules-b
 
 ### `--no-check-limit`
 
-Lint the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming).
+Lint the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](./08-mops-migrate.md#chain-trimming).
 
 ## Configuration
 
@@ -158,4 +158,4 @@ my-package/
 
 Exits with a non-zero code if any lint errors are found.
 
-See also: [toolchain management](/cli/toolchain) to pin a `lintoko` version.
+See also: [toolchain management](../5-toolchain/01-toolchain-overview.md) to pin a `lintoko` version.

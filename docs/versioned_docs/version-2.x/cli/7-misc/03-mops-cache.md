@@ -11,7 +11,7 @@ When you run `mops install`, `mops add <pkg>` or `mops toolchain use/update`, Mo
 
 Local cache directory is created in the project root in the `.mops` directory.
 
-The integrity of cached files is verified using the [mops.lock](/mops.lock) file.
+The integrity of cached files is verified using the [mops.lock](../../10-mops.lock.md) file.
 
 ### `mops cache show`
 

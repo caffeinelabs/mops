@@ -44,7 +44,7 @@ Add package to `[dev-dependencies]` section.
 
 ### `--lock`
 
-What to do with the [lockfile](/mops.lock)
+What to do with the [lockfile](../../10-mops.lock.md)
 
 Default: `update` (create or refresh the lockfile, then verify). Unaffected by the `CI` environment variable — dependency-mutating commands always update the lock by default.
 

@@ -14,14 +14,14 @@ mops outdated
 
 ### `--major`
 
-Also report updates that cross the caret bound. Mirrors [`mops update --major`](/cli/mops-update#--major).
+Also report updates that cross the caret bound. Mirrors [`mops update --major`](./04-mops-update.md#--major).
 ```
 mops outdated --major
 ```
 
 ### `--patch`
 
-Restrict reported updates to patch versions only. Mirrors [`mops update --patch`](/cli/mops-update#--patch).
+Restrict reported updates to patch versions only. Mirrors [`mops update --patch`](./04-mops-update.md#--patch).
 ```
 mops outdated --patch
 ```

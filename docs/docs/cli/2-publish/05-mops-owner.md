@@ -8,7 +8,7 @@ sidebar_label: mops owner
 List, add or remove owners of a package.
 
 :::info
-Check the [Package owners and maintainers](/package-owners-and-maintainers) for more information.
+Check the [Package owners and maintainers](../../articles/03-package-owners-and-maintainers.md) for more information.
 :::
 
 ## `mops owner`

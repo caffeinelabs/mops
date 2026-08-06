@@ -17,13 +17,13 @@ The lockfile is considered **up to date** when the `[dependencies]` and `[dev-de
 - **Lockfile up to date** — installs the exact versions recorded in the lockfile, skipping dependency resolution.
 - **Lockfile missing or out of date** — runs full dependency resolution, installs resolved versions, then creates/updates the lockfile.
 
-See [mops.lock](/mops.lock) for details on lockfile contents and when to commit it.
+See [mops.lock](../../10-mops.lock.md) for details on lockfile contents and when to commit it.
 
 ## Options
 
 ### `--lock`
 
-What to do with the [lockfile](/mops.lock).
+What to do with the [lockfile](../../10-mops.lock.md).
 
 Possible values:
 - `update` — keep the lockfile in sync with current dependencies and verify file integrity (default outside CI). Pass explicitly to force regeneration if the lockfile is stale or corrupt.
@@ -46,4 +46,4 @@ Note: explicit `--lock check` also errors when the lock is missing; the deprecat
 
 `mops add`, `mops remove`, `mops update`, and `mops sync` are unaffected — they always default to updating the lockfile.
 
-See [CI environments](/mops.lock#ci-environments) on the mops.lock page for full details.
+See [CI environments](../../10-mops.lock.md#ci-environments) on the mops.lock page for full details.
