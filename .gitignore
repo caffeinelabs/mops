@@ -2,6 +2,7 @@ node_modules/
 target/
 dist/
 .dfx/
+.icp/cache/
 .mops/
 .migrations-*/
 mops.lock

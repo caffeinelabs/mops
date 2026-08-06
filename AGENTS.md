@@ -47,7 +47,7 @@ npm run lint            # ESLint
 npm run fix             # Prettier + ESLint fix
 npm run check           # TypeScript check for CLI + Frontend (parallel)
 npm test                # mops test (Motoko) + CLI Jest tests
-npm start               # Start local dfx replica + deploy + all frontends
+npm start               # Start local icp replica + deploy + all frontends
 ```
 
 ### CLI (`cd cli/`)
@@ -87,8 +87,10 @@ Svelte 5 + Vite 8, queries the main canister. Staging canister: `ogp6e-diaaa-aaa
 
 ## Key constraints
 
+- **dfx is not needed for local development or CI.** `npm run replica` and `npm run deploy-local` use `icp` (config in `icp.yaml`), and `npm run decl` uses `mops` + `icp-bindgen`. `dfx.json` is still kept around for the production deploy path (`deploy-staging`, `deploy-ic`, `release.yml`).
 - **dfx version**: pinned in `dfx.json` via `dfxvm`. Do not run `dfxvm update/install/default` to change it.
-- **Declarations must be regenerated** after backend changes: `npm run decl` (requires local dfx running).
+- **icp-cli version**: pinned in `.github/workflows/ci.yml`; the `icp.yaml` recipes are pinned by version and sha256. icp-cli still makes breaking manifest changes between minor versions, so do not unpin a recipe and do not run `icp network update` — it upgrades the network launcher out from under the pin. To move versions, bump the CI pin and the recipes together and re-run the local pipeline.
+- **Declarations must be regenerated** after backend changes: `npm run decl` (no replica needed). Two steps per canister: `mops generate candid` writes the `.did` from Motoko source with the pinned `[toolchain] moc`, then [`icp-bindgen`](https://www.npmjs.com/package/@icp-sdk/bindgen) turns it into `*.did.js` / `*.did.d.ts`. The `index.js` / `index.d.ts` actor factories next to them are hand-maintained — nothing regenerates those; add them by hand when adding a canister.
 - **API version** in `cli/mops.ts` (`apiVersion`) and `backend/main/main-canister.mo` (`API_VERSION`) must match.
 
 ## High-risk areas (extra scrutiny)

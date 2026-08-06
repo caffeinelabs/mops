@@ -28,6 +28,11 @@ type TestStats =
    passed: nat;
    passedNames: vec text;
  };
+type StructureStats = 
+ record {
+   bytes: nat;
+   count: nat;
+ };
 type StreamingToken = blob;
 type StreamingStrategy = variant {
                            Callback:
@@ -42,11 +47,6 @@ type StreamingCallbackResponse =
  };
 type StreamingCallback = func (StreamingToken) ->
                           (opt StreamingCallbackResponse) query;
-type StructureStats = 
- record {
-   bytes: nat;
-   count: nat;
- };
 type StorageStats = 
  record {
    cyclesBalance: nat;
@@ -289,6 +289,7 @@ type MemoryStats =
    hashByFileId: StructureStats;
    highestConfigs: StructureStats;
    maintainersByPackage: StructureStats;
+   names: StructureStats;
    ownersByPackage: StructureStats;
    packageBenchmarks: StructureStats;
    packageConfigs: StructureStats;
@@ -300,7 +301,6 @@ type MemoryStats =
    packageVersions: StructureStats;
    rtsHeapSize: nat;
    rtsMemorySize: nat;
-   names: StructureStats;
    storageByFileId: StructureStats;
    storages: StructureStats;
    users: StructureStats;
@@ -385,12 +385,13 @@ type Main =
    search: (searchText: Text, limitOpt: opt nat, pageIndexOpt: opt nat) ->
     (vec PackageSummary, PageCount) query;
    setStorageControllers: () -> ();
+   setTelegramBotToken: (token: text) -> ();
    setUserProp: (prop: text, value: text) -> (Result_3);
    startFileUpload: (publishingId: PublishingId, path: Text, chunkCount: 
     nat, firstChunk: blob) -> (Result_2);
    startPublish: (configPub: PackageConfigV3_Publishing) -> (Result_1);
    takeSnapshotsIfNeeded: () -> ();
-   transformRequest: (arg: TransformArg) -> (HttpRequestResult) query;
+   transformTelegramRequest: (arg: TransformArg) -> (HttpRequestResult) query;
    uploadBenchmarks: (publishingId: PublishingId, benchmarks: Benchmarks) ->
     (Result);
    uploadDocsCoverage: (publishingId: PublishingId, docsCoverage: float64) ->
