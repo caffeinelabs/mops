@@ -58,7 +58,9 @@ runs:
     # use, so the path CI takes is the one a maintainer can exercise locally.
     - name: Link the ${{ inputs.canister }} canister ID
       shell: bash
-      run: node scripts/link-canister-ids.mjs ic ${{ inputs.canister }}
+      env:
+        CANISTER: ${{ inputs.canister }}
+      run: node scripts/link-canister-ids.mjs ic "$CANISTER"
 
     - name: Deploy ${{ inputs.canister }} canister
       shell: bash

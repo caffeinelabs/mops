@@ -40,10 +40,13 @@ try {
   process.exit(1);
 }
 
-const ids = JSON.parse(readFileSync("canister_ids.json", "utf8"));
+const ids = JSON.parse(
+  readFileSync(new URL("../canister_ids.json", import.meta.url), "utf8"),
+);
 
-// canister_ids.json also carries IDs for canisters this project does not
-// declare (dao-*, play-backend), which are not ours to link.
+// Default to what the environment declares, not to every key in
+// canister_ids.json — that file also carries IDs for canisters this project
+// does not declare (dao-*, play-backend), which are not ours to link.
 const names = requested.length ? requested : [...declared];
 
 for (const name of names) {
