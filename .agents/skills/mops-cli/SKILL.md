@@ -43,6 +43,7 @@ path = "deployed/backend.most"
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
+check-deploy = true  # optional: verify fresh PocketIC installation after build
 
 # Opt-in Wasm optimization (Binaryen wasm-opt) for build + bench
 [optimize]
@@ -117,12 +118,16 @@ mops check -- -Werror     # treat warnings as errors
 mops build                # all canisters
 mops build backend        # single canister
 mops build --verbose      # show compiler commands
+mops build --check-deploy  # verify fresh installation on PocketIC
+mops build --no-check-deploy # skip configured [build].check-deploy once
 mops build -- --ai-errors # pass extra moc flags
 ```
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
 
 With `[optimize]` in `mops.toml`, runs `wasm-opt` after candid metadata (default `-O3 -g`). Pin Binaryen with `mops toolchain use wasm-opt 131` (or let auto-pin write latest on first build). Soft-fails to unoptimized Wasm on error. Pass `--no-optimize` (on `build` or `bench`) to skip the pass for a single run without editing `mops.toml`.
+
+When `--check-deploy` or `[build].check-deploy = true` is enabled, Mops runs a fast Walrus preflight on the final Wasm before PocketIC. Per-function IC0505 complexity below 750,000 is quiet, 750,000 through 899,999 emits an early warning, and 900,000 or more emits a critical warning. `MOPS-WASM-COMPLEXITY` output includes actionable function metrics, the three largest complexity contributors, and Motoko correction guidance. The estimate never fails or skips deployment; PocketIC remains authoritative.
 
 ### `mops deployed`
 
@@ -173,6 +178,8 @@ When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, 
 Create migration files directly in the `chain` directory.
 
 After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run `mops build` to produce the wasm artifact.
+
+Use `mops build --check-deploy`, or set `[build].check-deploy = true` for every build, to install each built Wasm on a fresh PocketIC canister and catch module validation, initialization, and installation failures. Pin pocket-ic 9.0.0 or newer, or a local PocketIC binary path, in `[toolchain]` first. Use `--no-check-deploy` to skip configured validation once. The command uses each canister's `initArg`, or `()` when omitted. Set `wasmMemoryLimit` to a positive integer byte limit on a canister to check deployment under that limit. PocketIC error names include canonical IC error codes in the output. A migration-specific missing-state trap for a canister whose generated `.most` contains an enhanced migration chain is reported as `MOPS-CHECK-DEPLOY-INCONCLUSIVE`; Mops continues with sibling canisters and exits successfully if no real deployment failures occur. IC0505, IC0539, invalid Wasm, ordinary traps, invalid Candid arguments, configuration errors, and PocketIC startup failures remain fatal.
 
 `check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 

@@ -7,11 +7,34 @@ export function resolveCanisterConfigs(
   if (!config.canisters) {
     return {};
   }
-  return Object.fromEntries(
+  const canisters = Object.fromEntries(
     Object.entries(config.canisters).map(([name, c]) =>
       typeof c === "string" ? [name, { main: c }] : [name, c],
     ),
   );
+  for (const [name, canister] of Object.entries(canisters)) {
+    try {
+      validateCanisterConfig(name, canister);
+    } catch (error) {
+      cliError(error instanceof Error ? error.message : String(error));
+    }
+  }
+  return canisters;
+}
+
+export function validateCanisterConfig(
+  canisterName: string,
+  canister: CanisterConfig,
+): void {
+  if (
+    canister.wasmMemoryLimit !== undefined &&
+    (!Number.isSafeInteger(canister.wasmMemoryLimit) ||
+      canister.wasmMemoryLimit <= 0)
+  ) {
+    throw new Error(
+      `Invalid wasmMemoryLimit for canister ${canisterName}: expected a positive integer number of bytes`,
+    );
+  }
 }
 
 export function filterCanisters(

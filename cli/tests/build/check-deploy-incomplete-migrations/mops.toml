@@ -1,0 +1,24 @@
+[toolchain]
+moc = "1.5.0"
+pocket-ic = "12.0.0"
+
+[moc]
+args = ["--default-persistent-actors"]
+
+[build]
+check-deploy = true
+
+[canisters.problematic]
+main = "src/Main.mo"
+
+[canisters.problematic.migrations]
+chain = "migrations"
+
+[canisters.problematic2]
+main = "src/Main.mo"
+
+[canisters.problematic2.migrations]
+chain = "migrations"
+
+[canisters.healthy]
+main = "src/Healthy.mo"

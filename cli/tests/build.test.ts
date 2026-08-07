@@ -1,6 +1,6 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { execa } from "execa";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, linkSync, rmSync } from "node:fs";
 import path from "path";
 import { cli, cliSnapshot } from "./helpers";
 
@@ -171,6 +171,228 @@ describe("build", () => {
       cleanFixture(cwd);
       rmSync(stamp, { force: true });
     }
+  });
+
+  test("over-limit IC0505 estimate continues to PocketIC", async () => {
+    const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
+    try {
+      const result = await cli(["build"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("Warning [MOPS-WASM-COMPLEXITY]");
+      expect(result.stderr).toMatch(
+        /Function: 0[\s\S]*Estimated complexity: 1,000,050[\s\S]*IC0505 limit: 1,000,000[\s\S]*Limit usage: 100\.0%[\s\S]*Instruction count: 20,001/,
+      );
+      expect(result.stderr).toMatch(
+        "PocketIC deployment check will verify the authoritative result",
+      );
+      expect(result.stderr).toMatch("Error code: IC0505 (CanisterInvalidWasm)");
+      expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-INCONCLUSIVE");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--no-check-deploy disables the Wasm preflight", async () => {
+    const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
+    try {
+      const result = await cli(["build", "--no-check-deploy"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toMatch("MOPS-WASM-COMPLEXITY");
+      expect(result.stdout).not.toMatch("check deploy canister");
+      expect(result.stdout).toMatch("Built 1 canister successfully");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("[build].check-deploy installs the built Wasm on PocketIC", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-deploy-config");
+    try {
+      await cliSnapshot(["build"], { cwd }, 0);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy installs the built Wasm on PocketIC", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-deploy");
+    try {
+      await cliSnapshot(["build", "--check-deploy"], { cwd }, 0);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy accepts a path-pinned PocketIC binary", async () => {
+    const versionCwd = path.join(import.meta.dirname, "build/check-deploy");
+    const cwd = path.join(import.meta.dirname, "build/check-deploy-path");
+    const localBin = path.join(cwd, "pocket-ic");
+    try {
+      const binResult = await cli(["toolchain", "bin", "pocket-ic"], {
+        cwd: versionCwd,
+      });
+      expect(binResult.exitCode).toBe(0);
+      rmSync(localBin, { force: true });
+      linkSync(binResult.stdout.trim(), localBin);
+
+      const result = await cli(["build", "--check-deploy"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toMatch("check deploy canister main");
+    } finally {
+      rmSync(localBin, { force: true });
+      cleanFixture(cwd);
+    }
+  });
+
+  test("build without check-deploy config does not check deployment", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-deploy");
+    try {
+      const result = await cli(["build"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).not.toMatch("check deploy canister");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--no-check-deploy overrides [build].check-deploy", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-deploy-config");
+    try {
+      const result = await cli(["build", "--no-check-deploy"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).not.toMatch("check deploy canister");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy reports Wasm memory limit failures", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-deploy-fail");
+    try {
+      const result = await cli(["build", "--check-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("PocketIC deployment check failed");
+      expect(result.stderr).toMatch("Wasm memory limit");
+      expect(result.stderr).toMatch(
+        "Error code: IC0539 (CanisterWasmMemoryLimitExceeded)",
+      );
+      expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-INCONCLUSIVE");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy reports Candid encoding errors without a deployment label", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "build/check-deploy-invalid-arg",
+    );
+    try {
+      const result = await cli(["build", "--check-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("Invalid initArg for canister main");
+      expect(result.stderr).not.toMatch("PocketIC deployment check failed");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy preserves an ordinary installation failure", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-deploy-trap");
+    try {
+      const result = await cli(["build", "--check-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("PocketIC deployment check failed");
+      expect(result.stderr).toMatch("assertion failed");
+      expect(result.stderr).toMatch("Error code: IC0503 (CanisterCalledTrap)");
+      expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-INCONCLUSIVE");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy preserves PocketIC startup failures", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "build/check-deploy-startup-fail",
+    );
+    try {
+      const result = await cli(["build", "--check-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("PocketIC deployment check failed");
+      expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-INCONCLUSIVE");
+      expect(result.stdout).not.toMatch("check deploy canister");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("check-deploy continues after deterministic migration inconclusive outcomes", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "build/check-deploy-incomplete-migrations",
+    );
+    try {
+      const result = await cliSnapshot(["build"], { cwd }, 0);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toMatch(
+        "Warning [MOPS-CHECK-DEPLOY-INCONCLUSIVE]:\nCanister: problematic\nResult: Fresh PocketIC installation could not be validated.",
+      );
+      expect(result.stderr).toMatch(
+        "Canister: problematic2\nResult: Fresh PocketIC installation could not be validated.",
+      );
+      expect(result.stderr).toMatch(
+        "Suggested action: Validate the upgrade against a canister containing representative baseline state.",
+      );
+      expect(
+        result.stderr.match(/MOPS-CHECK-DEPLOY-INCONCLUSIVE/g),
+      ).toHaveLength(2);
+      expect(result.stderr.indexOf("Canister: problematic")).toBeLessThan(
+        result.stderr.indexOf("Canister: problematic2"),
+      );
+      expect(result.stderr).toMatch(
+        "Deployment check summary: 1 successful, 2 inconclusive.",
+      );
+      expect(result.stderr).not.toMatch("PocketIC deployment check failed");
+      expect(result.stdout).toMatch("check deploy canister problematic");
+      expect(result.stdout).toMatch("check deploy canister problematic2");
+      expect(result.stdout).toMatch("check deploy canister healthy");
+      expect(result.stdout).toMatch("Built 3 canisters successfully");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy requires a pinned PocketIC version", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    try {
+      const result = await cli(["build", "foo", "--check-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("mops toolchain use pocket-ic 12.0.0");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy rejects a legacy PocketIC pin before building", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-deploy-legacy");
+    const result = await cli(["build", "--check-deploy"], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch("requires pocket-ic 9.0.0 or newer");
+    // The guard fires before compilation — no build output for this canister.
+    expect(result.stdout).not.toMatch("build canister");
+  });
+
+  test("rejects an invalid wasmMemoryLimit without --check-deploy", async () => {
+    const cwd = path.join(import.meta.dirname, "build/invalid-memory-limit");
+    const result = await cli(["build"], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(
+      "Invalid wasmMemoryLimit for canister main: expected a positive integer number of bytes",
+    );
+    expect(result.stderr).not.toMatch("PocketIC deployment check failed");
   });
 
   test("[optimize] soft-fails when wasm-opt errors", async () => {
