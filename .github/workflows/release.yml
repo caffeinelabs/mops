@@ -347,9 +347,12 @@ jobs:
 
       # --- On-chain release artifacts ---
       #
-      # Everything from here to the docs deploy is stable-only. Previews are
-      # npm-only: no cli-releases artifacts, no cli canister upload, so
-      # `mops self update` keeps serving the latest 2.x. Said so in the notes.
+      # Everything from here up to — but not including — the docs deploy is
+      # stable-only. Previews are npm-only: no cli-releases artifacts, no cli
+      # canister upload, so `mops self update` keeps serving the latest 2.x.
+      # Said so in the notes. The docs deploy itself is deliberately ungated:
+      # it is what publishes docs.mops.one/next/, which the preview notes
+      # point 3.x users at.
 
       - name: Generate on-chain release artifacts
         if: steps.version.outputs.prerelease == 'false'
@@ -412,7 +415,6 @@ jobs:
           exit 1
 
       - name: Deploy docs canister
-        if: steps.version.outputs.prerelease == 'false'
         uses: ./.github/actions/deploy-canister
         with:
           canister: docs

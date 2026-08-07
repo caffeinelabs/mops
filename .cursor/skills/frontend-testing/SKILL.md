@@ -13,7 +13,7 @@ Run from the repo root:
 
 ```bash
 npm run lint
-ICP_ENVIRONMENT=local npm run build-frontend
+MOPS_FRONTEND_NETWORK=local npm run build-frontend
 npm run build-cli-releases
 ```
 
@@ -30,7 +30,7 @@ lsof -ti:3000,3001 | xargs kill -9 2>/dev/null; echo "ports cleared"
 Start the main frontend dev server (from repo root):
 
 ```bash
-cd frontend && ICP_ENVIRONMENT=ic npx vite --port 3000
+cd frontend && MOPS_FRONTEND_NETWORK=ic npx vite --port 3000
 ```
 
 Start the cli-releases frontend (from repo root, in a separate terminal):

@@ -5,11 +5,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "ICP_ENVIRONMENT=${ICP_ENVIRONMENT:-local} vite --port 3000",
+    "start": "MOPS_FRONTEND_NETWORK=${MOPS_FRONTEND_NETWORK:-local} vite --port 3000",
     "vite": "vite",
     "build": "vite build && node verify-build.mjs",
     "preview": "vite preview",
-    "check": "ICP_ENVIRONMENT=${ICP_ENVIRONMENT:-local} svelte-check --threshold error"
+    "check": "MOPS_FRONTEND_NETWORK=${MOPS_FRONTEND_NETWORK:-local} svelte-check --threshold error"
   },
   "author": "Zen Voich <zen.voich@gmail.com>",
   "license": "ISC",

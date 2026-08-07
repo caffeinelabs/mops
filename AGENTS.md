@@ -62,7 +62,7 @@ CLI tests require `NODE_OPTIONS="--experimental-vm-modules"` (set automatically 
 
 ### Frontend (`cd frontend/`)
 ```bash
-ICP_ENVIRONMENT=local npm run build   # Vite build; the env var is required
+MOPS_FRONTEND_NETWORK=local npm run build   # Vite build; the env var is required
 npm run check                         # svelte-check
 ```
 

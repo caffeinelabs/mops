@@ -33,10 +33,10 @@ if (missing.length) {
 //
 // vite.config.ts rejects an unset or unknown value, but this file also runs
 // standalone, where an unset one would otherwise read `undefined.ids.json`.
-const network = process.env["ICP_ENVIRONMENT"];
+const network = process.env["MOPS_FRONTEND_NETWORK"];
 if (!network) {
   console.error(
-    "\n✗ ICP_ENVIRONMENT is not set. Run this through `npm run build`.\n",
+    "\n✗ MOPS_FRONTEND_NETWORK is not set. Run this through `npm run build`.\n",
   );
   process.exit(1);
 }
@@ -74,7 +74,7 @@ const sources = bundles.map((f) =>
 
 // 1. The id is present at all. Catches a build that read no mappings — the
 //    only signal available on `local`, where the id is replica-allocated.
-if (!sources.some((s) => s.includes(`"${expectedId}"`))) {
+if (!sources.some((s) => s.includes(expectedId))) {
   console.error(
     `\n✗ Main canister id ${expectedId} is not baked into dist/bundle/*.js.` +
       `\n  It was read from ${mappingsFile}, so the define did not reach the bundle.\n`,
@@ -95,9 +95,10 @@ const defineKeys = Object.keys(canisterIds).flatMap((name) => {
   const upper = name.toUpperCase().replace(/-/g, "_");
   return [`CANISTER_ID_${upper}`, `${upper}_CANISTER_ID`];
 });
-const unreplaced = defineKeys.filter((key) =>
-  sources.some((s) => s.includes(key)),
-);
+const unreplaced = defineKeys.filter((key) => {
+  const anchored = new RegExp(`(?<![A-Z0-9_])${key}(?![A-Z0-9_])`);
+  return sources.some((s) => anchored.test(s));
+});
 if (unreplaced.length) {
   console.error(
     `\n✗ Unreplaced canister-id defines in dist/bundle/*.js: ${[...new Set(unreplaced)].join(", ")}.` +

@@ -88,7 +88,7 @@ jobs:
         # default is how a mainnet bundle could get local ids. The local
         # mappings exist by now: Deploy backend wrote them.
         env:
-          ICP_ENVIRONMENT: local
+          MOPS_FRONTEND_NETWORK: local
         run: npm run build-frontend
 
       - name: Build docs

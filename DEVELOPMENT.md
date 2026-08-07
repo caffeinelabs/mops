@@ -77,9 +77,17 @@ canister.
 Adding a mainnet canister means `icp canister link <name> <id> -e ic` once, then
 committing the updated mapping.
 
+Always deploy through the npm scripts, not `icp deploy` directly. They set
+`MOPS_FRONTEND_NETWORK` from the same value they pass to `-e`, which is what the
+frontend build reads. Deliberately not icp-cli's own `ICP_ENVIRONMENT`: `-e`
+wins for icp but an exported `ICP_ENVIRONMENT` would still reach vite, so the
+two could silently disagree and bake local replica IDs into a mainnet bundle.
+A raw `icp deploy assets` leaves it unset and fails loudly instead.
+
 `docs` and `cli` are deployed by `release.yml` on a CLI release, through
-`.github/actions/deploy-canister`. To roll one back, check out the previous
-release commit and run what that action runs:
+`.github/actions/deploy-canister`. Neither builds the frontend, so the raw form
+is safe for them. To roll one back, check out the previous release commit and
+run what that action runs:
 
 ```bash
 icp deploy cli -e ic --identity mops --no-create --yes

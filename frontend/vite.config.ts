@@ -7,15 +7,18 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 const NETWORKS = ["ic", "local", "staging"] as const;
 type Network = (typeof NETWORKS)[number];
 
-// Required, with no default. Defaulting to `local` meant a build that forgot to
-// set it baked the local replica's ids while looking entirely successful — and
-// `icp deploy assets -e ic` run by hand sets nothing, so that was one typo away
-// from uploading a local-id bundle to mainnet. The dev server passes the value
+// Required, with no default, and deliberately not icp-cli's own
+// ICP_ENVIRONMENT. Sharing that name looks tidy but the two resolve
+// differently: `icp deploy -e ic` targets ic while an exported
+// ICP_ENVIRONMENT=local would still reach vite, baking local replica ids into
+// a bundle bound for mainnet. `npm run deploy` derives this from the same
+// value it passes to `-e`, so they cannot disagree, and a raw `icp deploy`
+// leaves it unset and fails here instead of shipping. The dev server passes it
 // explicitly (see frontend/package.json).
-const network = process.env["ICP_ENVIRONMENT"] as Network | undefined;
+const network = process.env["MOPS_FRONTEND_NETWORK"] as Network | undefined;
 if (!network || !NETWORKS.includes(network)) {
   throw new Error(
-    `ICP_ENVIRONMENT must be one of ${NETWORKS.join(", ")}` +
+    `MOPS_FRONTEND_NETWORK must be one of ${NETWORKS.join(", ")}` +
       `${network ? `, got "${network}"` : " (unset)"}.` +
       `\nDeploy with npm run deploy-local / deploy-staging / deploy-ic, which set it.`,
   );
@@ -127,7 +130,7 @@ export default defineConfig({
     ...canisterDefinitions,
     // The resolved value, not the raw env var: baking `undefined` here while
     // the ids above came from the local replica let the two disagree.
-    "process.env.ICP_ENVIRONMENT": JSON.stringify(network),
+    "process.env.MOPS_FRONTEND_NETWORK": JSON.stringify(network),
     "process.env.NODE_ENV": JSON.stringify(
       network === "local" ? "development" : "production",
     ),
