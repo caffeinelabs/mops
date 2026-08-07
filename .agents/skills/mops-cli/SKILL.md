@@ -269,6 +269,16 @@ mops format               # format all .mo files
 mops format --check       # check formatting without modifying
 ```
 
+### `mops watch`
+
+```bash
+mops watch                # errors + warnings + format (the default set)
+mops watch --warning      # errors + warnings only
+mops watch -t             # errors + tests
+```
+
+Error checking is always on. Passing any flag selects only the named tasks, so add `-w` / `-f` when you want them alongside `-t`. Those four are the whole set — there is no `--generate` or `--deploy`.
+
 ## Common Patterns
 
 ### Warning suppression for a canister
