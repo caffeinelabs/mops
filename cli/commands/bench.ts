@@ -12,18 +12,12 @@ import { filesize } from "filesize";
 import terminalSize from "terminal-size";
 import { SemVer } from "semver";
 
-import {
-  getGlobalMocArgs,
-  getRootDir,
-  readConfig,
-  readDfxJson,
-} from "../mops.js";
+import { getGlobalMocArgs, getRootDir, readConfig } from "../mops.js";
 import { parallel } from "../parallel.js";
 import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
-import { getDfxVersion } from "../helpers/get-dfx-version.js";
-import { warnIfDfxReplica } from "../helpers/deprecate-dfx-replica.js";
 import { toolchain } from "./toolchain/index.js";
+import { DEFAULT_POCKET_IC_VERSION } from "./toolchain/pocket-ic-versions.js";
 import {
   formatOptimizePipeline,
   optimizeWasm,
@@ -35,10 +29,7 @@ import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
 import { BenchReplica } from "./bench-replica.js";
 
-type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
-
 type BenchOptions = {
-  replica: ReplicaName;
   replicaVersion: string;
   compiler: "moc";
   compilerVersion: string;
@@ -61,13 +52,12 @@ export async function bench(
   optionsArg: Partial<BenchOptions> = {},
 ): Promise<Benchmarks> {
   let config = readConfig();
-  let dfxJson = readDfxJson();
 
   let defaultOptions: BenchOptions = {
-    replica: config.toolchain?.["pocket-ic"] ? "pocket-ic" : "dfx",
-    replicaVersion: "",
+    replicaVersion:
+      config.toolchain?.["pocket-ic"] || DEFAULT_POCKET_IC_VERSION,
     compiler: "moc",
-    compilerVersion: getMocVersion(true),
+    compilerVersion: getMocVersion(),
     gc: "incremental",
     forceGc: true,
     query: false,
@@ -76,65 +66,26 @@ export async function bench(
     compare: false,
     verbose: false,
     silent: false,
-    profile: dfxJson?.profile || "Release",
+    profile: "Release",
     optimize: true,
     extraArgs: [],
   };
 
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
 
-  let replicaType =
-    options.replica ??
-    (config.toolchain?.["pocket-ic"] ? "pocket-ic" : ("dfx" as ReplicaName));
-  if (replicaType === "pocket-ic" && !config.toolchain?.["pocket-ic"]) {
-    let dfxVersion = getDfxVersion();
-    if (!dfxVersion || new SemVer(dfxVersion).compare("0.24.1") < 0) {
-      console.log(
-        chalk.red(
-          "Please update dfx to the version >=0.24.1 or specify pocket-ic version in mops.toml",
-        ),
-      );
-      process.exit(1);
-    } else {
-      replicaType = "dfx-pocket-ic";
-    }
-  }
-
-  options.replica = replicaType;
-
   if (process.env.CI) {
     console.log("# Benchmark Results\n\n");
   }
 
-  if (replicaType == "dfx") {
-    options.replicaVersion = getDfxVersion();
-  } else if (replicaType == "pocket-ic") {
-    options.replicaVersion = config.toolchain?.["pocket-ic"] || "";
-  }
-
-  warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");
-
   if (options.verbose) {
-    // With no mops pass (no [optimize] or --no-optimize), dfx still post-optimizes
-    // on deploy; pocket-ic runs raw moc output.
     let optimize = formatOptimizePipeline(config, {
       optimize: options.optimize,
     });
-    if (optimize.startsWith("none")) {
-      optimize =
-        replicaType === "dfx" || replicaType === "dfx-pocket-ic"
-          ? 'dfx `optimize: "cycles"` (ic-wasm) on deploy'
-          : optimize;
-    }
     let legacyGc = isLegacyGc(options.gc);
     let effectiveLegacyPersistence = options.legacyPersistence || legacyGc;
     console.log(chalk.gray("Benchmark pipeline:"));
     console.log(chalk.gray(`  compiler:  moc ${options.compilerVersion}`));
-    console.log(
-      chalk.gray(
-        `  replica:   ${replicaType}${options.replicaVersion ? ` ${options.replicaVersion}` : ""}`,
-      ),
-    );
+    console.log(chalk.gray(`  replica:   pocket-ic ${options.replicaVersion}`));
     console.log(
       chalk.gray(
         `  gc:        ${options.gc}${options.forceGc ? " (forced)" : ""}`,
@@ -159,7 +110,7 @@ export async function bench(
     console.log(chalk.gray(`  optimize:  ${optimize}`));
   }
 
-  let replica = new BenchReplica(replicaType, options.verbose);
+  let replica = new BenchReplica(options.verbose);
 
   let rootDir = getRootDir();
   let globStr = "**/bench?(mark)/**/*.bench.mo";
@@ -366,7 +317,7 @@ async function deployBenchFile(
   fs.writeFileSync(path.join(tempDir, "canister.mo"), benchCanisterData);
 
   // build canister
-  let mocPath = await toolchain.bin("moc", { fallback: true });
+  let mocPath = await toolchain.bin("moc");
   let mocArgsList = getMocArgs(options);
   let buildArgs = [
     "-c",
@@ -392,20 +343,11 @@ async function deployBenchFile(
 
   // deploy canister
   let wasm = path.join(tempDir, "canister.wasm");
-  let optimized = await optimizeWasm(wasm, readConfig(), {
+  await optimizeWasm(wasm, readConfig(), {
     verbose: options.verbose,
     optimize: options.optimize,
   });
-  fs.writeFileSync(
-    path.join(tempDir, "dfx.json"),
-    JSON.stringify(
-      replica.dfxJson(canisterName, { skipDfxOptimize: optimized }),
-      null,
-      2,
-    ),
-  );
   options.verbose && console.time(`deploy ${canisterName}`);
-  // await execaCommand(`dfx deploy ${canisterName} --mode reinstall --yes --identity anonymous`, {cwd: tempDir, stdio: options.verbose ? 'pipe' : ['pipe', 'ignore', 'pipe']});
   await replica.deploy(canisterName, wasm, tempDir);
   options.verbose && console.timeEnd(`deploy ${canisterName}`);
 
@@ -637,7 +579,7 @@ async function runBenchFile(
     let json: Record<any, any> = {
       version: 1,
       moc: options.compilerVersion,
-      replica: options.replica,
+      replica: "pocket-ic",
       replicaVersion: options.replicaVersion,
       gc: options.gc,
       forceGc: options.forceGc,
@@ -667,7 +609,7 @@ async function runBenchFile(
     file: absToRel(file),
     gc: options.gc,
     forceGC: options.forceGc,
-    replica: options.replica,
+    replica: "pocket-ic",
     replicaVersion: options.replicaVersion,
     compiler: options.compiler,
     compilerVersion: options.compilerVersion,

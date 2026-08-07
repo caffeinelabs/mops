@@ -49,7 +49,7 @@ export async function generateCandid(
     );
   }
 
-  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const mocPath = await toolchain.bin("moc");
   const rootDir = getRootDir();
 
   let configChanged = false;

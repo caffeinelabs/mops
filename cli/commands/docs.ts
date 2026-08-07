@@ -39,8 +39,7 @@ export async function docs(options: Partial<DocsOptions> = {}) {
 
   deleteSync([docsDir], { force: true });
 
-  // fallbacks to dfx moc if not specified in config
-  let mocPath = await toolchain.bin("moc", { fallback: true });
+  let mocPath = await toolchain.bin("moc");
   let moDocPath = mocPath.replace(/\/moc$/, "/mo-doc");
 
   // generate docs

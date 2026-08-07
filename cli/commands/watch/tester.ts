@@ -1,9 +1,7 @@
 import chalk from "chalk";
-import { readConfig } from "../../mops.js";
 import { ErrorChecker } from "./error-checker.js";
 import { testWithReporter } from "../test/test.js";
 import { SilentReporter } from "../test/reporters/silent-reporter.js";
-import { type ReplicaName } from "../../helpers/deprecate-dfx-replica.js";
 
 export class Tester {
   verbose = false;
@@ -53,16 +51,10 @@ export class Tester {
     this.reporter = new SilentReporter(false, onProgress);
     this.controller = new AbortController();
 
-    let config = readConfig();
-    let replicaType: ReplicaName = config.toolchain?.["pocket-ic"]
-      ? "pocket-ic"
-      : "dfx";
-
     this.currentRun = testWithReporter(
       this.reporter,
       "",
       "interpreter",
-      replicaType,
       true,
       this.controller.signal,
     );

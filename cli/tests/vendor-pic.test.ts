@@ -53,7 +53,15 @@ describeBuilt("vendored @dfinity/pic bundle", () => {
     const client = readFileSync(clientPath, "utf8");
     expect(client).toContain('import("../vendor/pic.mjs")');
     expect(client).not.toContain('import("@dfinity/pic")');
-    // The legacy client is a real dependency, so it must NOT be rewritten.
-    expect(client).toContain('import("pic-ic")');
+  });
+
+  // `@icp-sdk/core` is a real dependency of mops on the same major pic wants, so
+  // the bundle must resolve it at runtime rather than inline a second copy
+  // (~550 KB, and two structurally-identical-but-unrelated sets of IDL types).
+  test("leaves @icp-sdk/core external", () => {
+    const bundle = readFileSync(bundlePath, "utf8");
+    expect(bundle).toMatch(/__require\("@icp-sdk\/core\/principal"\)/);
+    // The inlined copy brings its own crypto stack along with it.
+    expect(bundle).not.toContain("node_modules/@icp-sdk/core/");
   });
 });

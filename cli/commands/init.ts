@@ -1,13 +1,10 @@
 import process from "node:process";
-import { execSync } from "node:child_process";
 import path from "node:path";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import chalk from "chalk";
 import prompts from "prompts";
 
-import { checkApiCompatibility, writeConfig } from "../mops.js";
-import { mainActor } from "../api/actors.js";
-import { installAll } from "./install/install-all.js";
+import { writeConfig } from "../mops.js";
 import { Config } from "../types.js";
 import { template } from "./template.js";
 import { kebabCase } from "change-case";
@@ -195,37 +192,6 @@ async function applyInit({
     }
   }
 
-  // get default packages
-  if (type === "project") {
-    let compatible = await checkApiCompatibility();
-    if (!compatible) {
-      return;
-    }
-
-    let dfxVersion = dfxJsonData?.dfx || "";
-    if (!dfxVersion) {
-      try {
-        let res = execSync("dfx --version").toString();
-        let match = res.match(/\d+\.\d+\.\d+/);
-        if (match) {
-          dfxVersion = match[0];
-        }
-      } catch {}
-    }
-
-    console.log(`Fetching default packages for dfx ${dfxVersion}...`);
-    let actor = await mainActor();
-    let defaultPackages = await actor.getDefaultPackages(dfxVersion);
-
-    if (!config.dependencies) {
-      config.dependencies = {};
-    }
-
-    for (let [name, version] of defaultPackages) {
-      config.dependencies[name] = { name, version };
-    }
-  }
-
   // save config
   let configFile = path.join(process.cwd(), "mops.toml");
   writeConfig(config, configFile);
@@ -280,12 +246,6 @@ async function applyInit({
         `${additions.join(", ")} to .gitignore`,
       );
     }
-  }
-
-  // install deps
-  if (Object.keys(config.dependencies || {}).length) {
-    console.log("Installing dependencies...");
-    await installAll({ verbose: true });
   }
 
   console.log(chalk.green("Done!"));

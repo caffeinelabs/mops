@@ -539,12 +539,6 @@ program
       .choices(["interpreter", "wasi", "replica"])
       .default("interpreter"),
   )
-  .addOption(
-    new Option(
-      "--replica <replica>",
-      "Which replica to use to run tests in replica mode (`dfx` is deprecated; prefer `pocket-ic`)",
-    ).choices(["dfx", "pocket-ic"]),
-  )
   .option("-w, --watch", "Enable watch mode")
   .option("--verbose", "Verbose output")
   .addHelpText(
@@ -569,12 +563,6 @@ program
 program
   .command("bench [filter...]")
   .description("Run benchmarks")
-  .addOption(
-    new Option(
-      "--replica <replica>",
-      "Which replica to use to run benchmarks (`dfx` is deprecated; prefer `pocket-ic`)",
-    ).choices(["dfx", "pocket-ic"]),
-  )
   .addOption(
     new Option(
       "--gc <gc>",
@@ -608,7 +596,7 @@ program
   .addOption(
     new Option(
       "--verbose",
-      "Print the benchmark pipeline (compiler, replica, GC, context, persistence, profile, optimization) and stream compiler/replica output, including dfx optimization warnings",
+      "Print the benchmark pipeline (compiler, replica, GC, context, persistence, profile, optimization) and stream compiler and replica output",
     ),
   )
   .addOption(
@@ -919,14 +907,8 @@ toolchainCommand
   .command("bin")
   .description("Get path to the tool binary")
   .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
-  .addOption(
-    new Option(
-      "--fallback",
-      "Fallback to the moc that comes with dfx if moc is not specified in the [toolchain] section",
-    ),
-  )
-  .action(async (tool, options) => {
-    let bin = await toolchain.bin(tool, options);
+  .action(async (tool) => {
+    let bin = await toolchain.bin(tool);
     console.log(bin);
   });
 

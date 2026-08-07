@@ -1,107 +1,58 @@
 import process from "node:process";
-import { execSync } from "node:child_process";
-import path from "node:path";
-import fs from "node:fs";
-import { execaCommand } from "execa";
-import { getRootDir } from "../mops.js";
 import {
-  type AnyPocketIc,
-  type AnyPocketIcServer,
-  type AnySetupCanister,
+  type PocketIc,
+  type PocketIcServer,
   startPocketIc,
 } from "../helpers/pocket-ic-client.js";
-import { createActor, idlFactory } from "../declarations/bench/index.js";
+import { idlFactory } from "../declarations/bench/index.js";
 import { toolchain } from "./toolchain/index.js";
-import { getDfxVersion } from "../helpers/get-dfx-version.js";
 
 export class BenchReplica {
-  type: "dfx" | "pocket-ic" | "dfx-pocket-ic";
   verbose = false;
   canisters: Record<string, { cwd: string; canisterId: string; actor: any }> =
     {};
-  pocketIcServer?: AnyPocketIcServer;
-  pocketIc?: AnyPocketIc;
+  pocketIcServer?: PocketIcServer;
+  pocketIc?: PocketIc;
 
-  constructor(type: "dfx" | "pocket-ic" | "dfx-pocket-ic", verbose = false) {
-    this.type = type;
+  constructor(verbose = false) {
     this.verbose = verbose;
   }
 
   async start({ silent = false } = {}) {
     if (!process.env.CI && !silent) {
-      console.log(`Starting ${this.type} replica...`);
+      console.log("Starting pocket-ic replica...");
     }
 
-    if (this.type == "dfx" || this.type === "dfx-pocket-ic") {
-      await this.stop();
-      let dir = path.join(getRootDir(), ".mops/.bench");
-      fs.writeFileSync(
-        path.join(dir, "dfx.json"),
-        JSON.stringify(this.dfxJson(""), null, 2),
-      );
-      execSync(
-        "dfx start --background --clean --artificial-delay 0" +
-          (this.type === "dfx-pocket-ic" ? " --pocketic" : "") +
-          (this.verbose ? "" : " -qqqq"),
-        {
-          cwd: dir,
-          stdio: ["inherit", this.verbose ? "inherit" : "ignore", "inherit"],
-        },
-      );
-    } else {
-      let pocketIcBin = await toolchain.bin("pocket-ic");
+    let pocketIcBin = await toolchain.bin("pocket-ic");
 
-      // `@dfinity/pic` omits the flag when `ttl` is unset and lets the server
-      // default apply. Passed explicitly so the lifetime of an orphaned server
-      // doesn't depend on the pocket-ic default.
-      let pic = await startPocketIc({ binPath: pocketIcBin, ttl: 60 });
-      this.pocketIcServer = pic.server;
-      this.pocketIc = pic.client;
-    }
+    // `@dfinity/pic` omits the flag when `ttl` is unset and lets the server
+    // default apply. Passed explicitly so the lifetime of an orphaned server
+    // doesn't depend on the pocket-ic default.
+    let pic = await startPocketIc({ binPath: pocketIcBin, ttl: 60 });
+    this.pocketIcServer = pic.server;
+    this.pocketIc = pic.client;
   }
 
   async stop() {
-    if (this.type == "dfx" || this.type === "dfx-pocket-ic") {
-      let dir = path.join(getRootDir(), ".mops/.bench");
-      execSync("dfx stop" + (this.verbose ? "" : " -qqqq"), {
-        cwd: dir,
-        stdio: ["pipe", this.verbose ? "inherit" : "ignore", "pipe"],
-      });
-    } else if (this.pocketIc && this.pocketIcServer) {
+    if (this.pocketIc && this.pocketIcServer) {
       await this.pocketIc.tearDown();
       await this.pocketIcServer.stop();
     }
   }
 
   async deploy(name: string, wasm: string, cwd: string = process.cwd()) {
-    if (this.type === "dfx" || this.type === "dfx-pocket-ic") {
-      await execaCommand(
-        `dfx deploy ${name} --mode reinstall --yes --identity anonymous`,
-        // `inherit` so dfx output is streamed under --verbose (incl. its `Failed to optimize` warning)
-        { cwd, stdio: this.verbose ? "inherit" : ["pipe", "ignore", "pipe"] },
-      );
-      let canisterId = execSync(`dfx canister id ${name}`, { cwd })
-        .toString()
-        .trim();
-      let actor = await createActor(canisterId, {
-        agentOptions: {
-          host: "http://127.0.0.1:4944",
-        },
-      });
-      this.canisters[name] = { cwd, canisterId, actor };
-    } else if (this.pocketIc) {
-      let { canisterId, actor } = await (
-        this.pocketIc.setupCanister as AnySetupCanister
-      )({
-        idlFactory,
-        wasm,
-      });
-      this.canisters[name] = {
-        cwd,
-        canisterId: canisterId.toText(),
-        actor,
-      };
+    if (!this.pocketIc) {
+      throw new Error("Replica is not started");
     }
+    let { canisterId, actor } = await this.pocketIc.setupCanister({
+      idlFactory,
+      wasm,
+    });
+    this.canisters[name] = {
+      cwd,
+      canisterId: canisterId.toText(),
+      actor,
+    };
   }
 
   getActor(name: string): unknown {
@@ -110,41 +61,5 @@ export class BenchReplica {
 
   getCanisterId(name: string): string {
     return this.canisters[name]?.canisterId || "";
-  }
-
-  dfxJson(
-    canisterName: string,
-    { skipDfxOptimize = false }: { skipDfxOptimize?: boolean } = {},
-  ) {
-    let canisters: Record<string, any> = {};
-    if (canisterName) {
-      let canister: Record<string, unknown> = {
-        type: "custom",
-        wasm: "canister.wasm",
-        candid: "canister.did",
-      };
-      // Only skip dfx's pass when mops already optimized successfully
-      if (!skipDfxOptimize) {
-        canister.optimize = "cycles";
-      }
-      canisters[canisterName] = canister;
-    }
-
-    return {
-      version: 1,
-      canisters,
-      dfx: getDfxVersion(),
-      defaults: {
-        build: {
-          packtool: "mops sources",
-        },
-      },
-      networks: {
-        local: {
-          type: "ephemeral",
-          bind: "127.0.0.1:4944",
-        },
-      },
-    };
   }
 }

@@ -9,7 +9,7 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 
 ## Key Principles
 
-1. **No dfx** — always pin `moc` in `[toolchain]`. Use the newest `moc` version. Pin `pocket-ic` too if you have replica tests or benchmarks (otherwise `mops test --mode replica`, `mops bench`, and `mops watch --test/--deploy` fall back to the deprecated dfx replica and print a warning).
+1. **No dfx** — mops never invokes `dfx`. Always pin `moc` in `[toolchain]`; every command that compiles requires it. Use the newest `moc` version. Pin `pocket-ic` too if you have replica tests or benchmarks — with no pin, `mops test --mode replica`, `mops bench` and `mops watch --test` download and run the mops default (`14.0.0`).
 2. **No `mo:base`** — it is deprecated. Always use `mo:core` (`import Array "mo:core/Array"`).
 3. **All config in `mops.toml`** — canisters, moc flags, toolchain versions, build settings.
 4. **Canister-centric workflow** — define all canisters in `[canisters]`; never pass file paths to `mops check`. Exception: library packages (no `[canisters]`) use file paths directly: `mops check src/**/*.mo`.
@@ -22,7 +22,7 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 [toolchain]
 moc = "1.7.0"
 lintoko = "0.10.0"
-pocket-ic = "12.0.0"  # only if you have replica tests / benchmarks
+pocket-ic = "14.0.0"  # optional; defaults to 14.0.0 for replica tests / benchmarks
 
 [dependencies]
 core = "2.5.0"
@@ -164,7 +164,7 @@ mops generate candid backend -o <path>   # single canister, ad-hoc path
 mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.10.0    # pin specific version
-mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the vendored `@dfinity/pic` client doesn't support)
+mops toolchain use pocket-ic 14.0.0  # pin for replica tests / benchmarks (optional; defaults to 14.0.0)
 mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
@@ -174,7 +174,7 @@ mops toolchain info <tool> --versions --all # full stable history (cache warming
 mops toolchain bin moc               # print path to binary
 ```
 
-**`pocket-ic` versions**: `9.0.0` and newer run on the vendored `@dfinity/pic` client. Pins below `9.0.0` still work on the legacy `pic-ic` client but print a deprecation warning and are removed in mops v3 — pin `9.0.0` or newer.
+**`pocket-ic` versions**: pin anything from `9.0.0` up, `latest` included — mops keeps no list of blessed versions. Pins below `9.0.0` error with a migration message (they ran on the legacy client that mops 3.0.0 removed). With no pin, mops uses `14.0.0` — a fixed constant, never a network lookup, so a warmed cache keeps runtime offline.
 
 **Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
 
@@ -235,7 +235,7 @@ mops test --watch                 # re-run on file changes
 mops test -- -Werror              # pass extra moc flags
 ```
 
-Replica tests (actor files or `// @testmode replica`) use `pocket-ic` from `[toolchain]`. With no pin they fall back to the deprecated `dfx` replica (warning printed) — pin `pocket-ic` in `[toolchain]` to silence it. Same applies to `mops bench` and `mops watch`.
+Replica tests (actor files or `// @testmode replica`) run on PocketIC — the `pocket-ic` version from `[toolchain]`, or `14.0.0` when unpinned. Same for `mops bench` and `mops watch --test`. There is no `--replica` flag and no dfx replica.
 
 ### `mops bench`
 

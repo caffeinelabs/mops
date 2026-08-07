@@ -12,7 +12,7 @@ When you run `mops install` command, Mops will install the specified version of 
 ## Available tools
 - `moc` - Motoko compiler
 - `wasmtime` - Wasmtime runtime (used by `mops test --mode wasi`)
-- `pocket-ic` - PocketIC replica (used by `mops bench --replica pocket-ic`). Versions below `9.0.0` are deprecated and will no longer be supported in mops v3.
+- `pocket-ic` - PocketIC replica (used by `mops bench` and `mops test --mode replica`)
 - `lintoko` - Extensible linter for Motoko ([https://github.com/caffeinelabs/lintoko](https://github.com/caffeinelabs/lintoko))
 - `wasm-opt` - Binaryen Wasm optimizer (used when [`[optimize]`](../../09-mops.toml.md#optimize) is set)
 
@@ -45,6 +45,14 @@ wasm-opt = "131"
 ```
 
 You need to run `mops install` command when you edit `mops.toml` file manually.
+
+### `pocket-ic` versions {#pocket-ic-versions}
+
+`pocket-ic` is the one tool with a default: if `[toolchain]` has no `pocket-ic` entry, `mops test --mode replica` and `mops bench` download and run **`14.0.0`**. The default is a fixed constant baked into the CLI, never a "latest" lookup, so warming the cache ahead of time (in a Docker image build, for example) is enough to keep later runs off the network entirely.
+
+Any version from `9.0.0` up can be pinned, `latest` included. Mops keeps no list of blessed versions — as with `moc`, `wasmtime` and `lintoko`, the version you pin is the version you get.
+
+Pins **below `9.0.0`** are rejected with a migration message. They worked in Mops 2.x through a second, legacy PocketIC client, which 3.0.0 removed; without the check, upgrading with an old pin would fail with an opaque timeout from the client instead. Run `mops toolchain use pocket-ic 14.0.0`.
 
 ### Option 3: Use explicit file paths
 
