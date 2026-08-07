@@ -506,10 +506,12 @@ async function bin(tool: Tool): Promise<string> {
       return path.join(globalCacheDir, tool, version, tool);
     }
   } else {
+    // Both lines go to stderr: stdout is the tool path, and `moc-wrapper`
+    // command-substitutes it. A hint printed there is read back as the compiler.
     console.error(
       `Tool '${tool}' is not defined in [toolchain] section in mops.toml`,
     );
-    console.log(
+    console.error(
       `Run ${chalk.green(`mops toolchain use ${tool} <version>`)} to install it ` +
         `(${chalk.green(`mops toolchain info ${tool} --versions`)} lists the available versions)`,
     );
