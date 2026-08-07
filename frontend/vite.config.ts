@@ -6,39 +6,25 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 type Network = "ic" | "local" | "staging";
 let network = (process.env["ICP_ENVIRONMENT"] as Network) || "local";
 
-interface CanisterIds {
-  /* eslint-disable-next-line no-unused-vars */
-  [key: string]: { [key in Network]: string };
-}
+// icp-cli stores ids per environment as a flat { name: id } map. Managed
+// networks (local) land in .icp/cache/, connected ones in .icp/data/, which is
+// committed so a fresh checkout can build against mainnet.
+const mappingsFile =
+  network === "local"
+    ? "../.icp/cache/mappings/local.ids.json"
+    : `../.icp/data/mappings/${network}.ids.json`;
 
-let canisterIds: CanisterIds = {};
+let canisterIds: Record<string, string> = {};
 try {
-  if (network === "local") {
-    // The local replica allocates ids at create time, so they come from
-    // icp-cli's store rather than canister_ids.json. Flat { name: id } there,
-    // keyed by network here.
-    const icpIds = JSON.parse(
-      fs.readFileSync("../.icp/cache/mappings/local.ids.json").toString(),
-    ) as Record<string, string>;
-    canisterIds = Object.fromEntries(
-      Object.entries(icpIds).map(([name, id]) => [
-        name,
-        { local: id } as { [k in Network]: string },
-      ]),
-    );
-  } else {
-    canisterIds = JSON.parse(
-      fs.readFileSync("../canister_ids.json").toString(),
-    );
-  }
+  canisterIds = JSON.parse(fs.readFileSync(mappingsFile).toString());
 } catch (e) {
-  // Only local is allowed to proceed without ids — that is the "you have not
-  // deployed yet" case, and the dev server is useful anyway. For staging or ic
-  // a missing id silently yields a bundle whose every canister lookup is
-  // undefined, which builds green and cannot reach anything once deployed.
+  // Only local may proceed without ids — that is the "not deployed yet" case,
+  // and the dev server is still useful. For staging or ic a missing id yields a
+  // bundle whose every canister lookup is undefined: it builds green and cannot
+  // reach anything once deployed.
   if (network !== "local") {
     throw new Error(
-      `Could not read canister ids for the '${network}' network: ${e instanceof Error ? e.message : e}`,
+      `Could not read canister ids from ${mappingsFile}: ${e instanceof Error ? e.message : e}`,
     );
   }
   console.error(
@@ -50,12 +36,12 @@ try {
 // declarations/*/index.js. This strange way of JSON.stringifying the value is
 // required by vite.
 const canisterDefinitions = Object.entries(canisterIds).reduce(
-  (acc, [key, val]) => ({
+  (acc, [key, id]) => ({
     ...acc,
     [`process.env.${key.toUpperCase().replace(/-/g, "_")}_CANISTER_ID`]:
-      JSON.stringify(val[network as Network]),
+      JSON.stringify(id),
     [`process.env.CANISTER_ID_${key.toUpperCase().replace(/-/g, "_")}`]:
-      JSON.stringify(val[network as Network]),
+      JSON.stringify(id),
   }),
   {},
 );

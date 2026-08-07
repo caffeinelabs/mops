@@ -3,7 +3,7 @@ description: Build and deploy one of the repo's asset canisters to the IC with i
 
 inputs:
   canister:
-    description: Canister name, as declared in icp.yaml and keyed in canister_ids.json.
+    description: Canister name, as declared in icp.yaml and mapped in .icp/data/mappings/ic.ids.json.
     required: true
   domain:
     description: >-

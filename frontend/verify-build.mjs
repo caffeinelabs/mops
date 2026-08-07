@@ -25,20 +25,46 @@ if (missing.length) {
 // `process.env.MAIN_CANISTER_ID` at build time and a catch-all `process.env`
 // define turns a missed replacement into `undefined` at runtime — a bundle that
 // builds green and cannot reach any canister.
+//
+// Assert the *expected* id, not any principal-shaped string: cli/api/network.ts
+// hardcodes the ic and staging endpoint ids and the frontend bundles it, so a
+// shape-only check passes even on a bundle built with no mappings at all.
+const network = process.env["ICP_ENVIRONMENT"] || "local";
+const mappingsFile = path.resolve(
+  import.meta.dirname,
+  network === "local"
+    ? "../.icp/cache/mappings/local.ids.json"
+    : `../.icp/data/mappings/${network}.ids.json`,
+);
+
+let expectedId;
+try {
+  expectedId = JSON.parse(readFileSync(mappingsFile, "utf8"))["main"];
+} catch {
+  // Left undefined — the failure below carries the useful message.
+}
+
+if (!expectedId) {
+  console.error(
+    `\n✗ No main canister id in ${mappingsFile}.` +
+      `\n  The build could not read canister ids, so every lookup resolves to undefined.` +
+      `\n  Locally, run: npm run deploy-local\n`,
+  );
+  process.exit(1);
+}
+
 const bundleDir = path.join(dist, "bundle");
 const bundles = existsSync(bundleDir)
   ? readdirSync(bundleDir).filter((f) => f.endsWith(".js"))
   : [];
-const principal = /"[a-z0-9]{5}(?:-[a-z0-9]{5}){3,}-[a-z0-9]{3}"/;
 const hasId = bundles.some((f) =>
-  principal.test(readFileSync(path.join(bundleDir, f), "utf8")),
+  readFileSync(path.join(bundleDir, f), "utf8").includes(`"${expectedId}"`),
 );
 
 if (!hasId) {
   console.error(
-    `\n✗ No canister id found in dist/bundle/*.js.` +
-      `\n  The build could not read canister ids, so every lookup resolves to undefined.` +
-      `\n  Locally, run: npm run deploy-local\n`,
+    `\n✗ Main canister id ${expectedId} is not baked into dist/bundle/*.js.` +
+      `\n  It was read from ${mappingsFile}, so the define did not reach the bundle.\n`,
   );
   process.exit(1);
 }

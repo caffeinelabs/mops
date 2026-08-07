@@ -203,7 +203,7 @@ jobs:
                 "Read(package-lock.json)",
                 "Read(tsconfig*.json)",
                 "Read(icp.yaml)",
-                "Read(canister_ids.json)",
+                "Read(.icp/data/mappings/*.ids.json)",
                 "Read(mops.toml)",
                 "Read(mops.lock)",
                 "Read(README.md)",
