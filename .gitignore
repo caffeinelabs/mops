@@ -2,6 +2,9 @@ node_modules/
 target/
 dist/
 .dfx/
+# icp-cli splits its state: .icp/cache/ is machine-local (managed-network ids,
+# downloaded artifacts), while .icp/data/ holds the mainnet/staging id mappings
+# and is meant to be committed, so a fresh checkout can deploy without relinking.
 .icp/cache/
 .mops/
 .migrations-*/

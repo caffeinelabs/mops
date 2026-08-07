@@ -347,9 +347,12 @@ jobs:
 
       # --- On-chain release artifacts ---
       #
-      # Everything from here to the docs deploy is stable-only. Previews are
-      # npm-only: no cli-releases artifacts, no cli canister upload, so
-      # `mops self update` keeps serving the latest 2.x. Said so in the notes.
+      # Everything from here up to — but not including — the docs deploy is
+      # stable-only. Previews are npm-only: no cli-releases artifacts, no cli
+      # canister upload, so `mops self update` keeps serving the latest 2.x.
+      # Said so in the notes. The docs deploy itself is deliberately ungated:
+      # it is what publishes docs.mops.one/next/, which the preview notes
+      # point 3.x users at.
 
       - name: Generate on-chain release artifacts
         if: steps.version.outputs.prerelease == 'false'
@@ -361,41 +364,62 @@ jobs:
 
       # --- Canister deployments ---
 
-      - if: steps.version.outputs.prerelease == 'false'
-        uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
-
-      # For the cli canister only — the docs deploy imports the same pem into icp-cli.
-      - name: Import mops identity into dfx
-        if: steps.version.outputs.prerelease == 'false'
-        env:
-          MOPS_IDENTITY_PEM: ${{ secrets.MOPS_IDENTITY_PEM }}
-        run: |
-          echo "$MOPS_IDENTITY_PEM" > /tmp/mops.pem
-          trap 'rm -f /tmp/mops.pem' EXIT
-          dfx identity import mops /tmp/mops.pem --storage-mode plaintext
-
-      - name: Install cli-releases dependencies
-        if: steps.version.outputs.prerelease == 'false'
-        working-directory: cli-releases
-        run: npm ci
-
       - name: Deploy CLI canister
         if: steps.version.outputs.prerelease == 'false'
+        uses: ./.github/actions/deploy-canister
+        with:
+          canister: cli
+          domain: cli.mops.one
+          build-deps-dir: cli-releases
+          identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
+
+      # `mops self update` reads /tags/latest and then installs
+      # /versions/<that>.tgz, and the mops-test.yml matrix installs
+      # /versions/latest.tgz. The action's domain check cannot cover any of it —
+      # this is the one part of the cli deploy that is version-specific.
+      # Unpacking rather than checking the status is deliberate: the asset
+      # canister answers unknown paths with index.html at HTTP 200.
+      - name: Verify the released CLI is served
+        if: steps.version.outputs.prerelease == 'false'
         env:
-          DFX_WARNING: -mainnet_plaintext_identity
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          for i in 1 2 3; do
-            dfx deploy --network ic --no-wallet cli --identity mops && exit 0
-            echo "::warning::CLI canister deploy attempt $i/3 failed"
-            [ "$i" -lt 3 ] && sleep 30
+          set -euo pipefail
+          # Retried like every other network assertion here: a boundary-node 5xx
+          # or a briefly stale cache would otherwise abort the release between
+          # the upload and the artifacts commit, leaving the canister ahead of
+          # the repo and the next release building on a stale releases.json.
+          check() {
+            served=$(curl -sSf --max-time 60 https://cli.mops.one/tags/latest | tr -d '[:space:]') || return 1
+            if [ "$served" != "$VERSION" ]; then
+              echo "tags/latest is '${served}', expected '${VERSION}'"
+              return 1
+            fi
+            for name in "$VERSION" latest; do
+              url="https://cli.mops.one/versions/${name}.tgz"
+              curl -sSf --max-time 180 -o /tmp/served.tgz "$url" || return 1
+              tar -tzf /tmp/served.tgz > /dev/null 2>&1 || { echo "$url is not a readable tarball"; return 1; }
+            done
+            return 0
+          }
+
+          for attempt in 1 2 3; do
+            if check; then
+              echo "ok    tags/latest and both tarballs are served"
+              exit 0
+            fi
+            echo "::warning::CLI serve check attempt $attempt/3 failed"
+            [ "$attempt" -lt 3 ] && sleep 15
           done
+          echo "::error::cli.mops.one is not serving ${VERSION}. \`mops self update\` will not offer this release, and the artifacts commit has not run."
           exit 1
 
-      # docs runs on icp-cli; the cli canister above stays on dfx on purpose,
-      # so only one production deploy path moves at a time.
       - name: Deploy docs canister
-        uses: ./.github/actions/deploy-docs
+        uses: ./.github/actions/deploy-canister
         with:
+          canister: docs
+          domain: docs.mops.one
+          build-deps-dir: docs
           identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
 
       # --- Commit release artifacts ---
