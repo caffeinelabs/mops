@@ -6,6 +6,7 @@ let globConfig = {
     "**/node_modules/**",
     "**/.mops/**",
     "**/.git/**",
+    // not dfx support — just a build dir users may still have lying around
     "**/.dfx/**",
     "**/{build,bundle,dist}/**",
   ],

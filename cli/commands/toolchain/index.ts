@@ -339,8 +339,8 @@ async function bin(tool: Tool): Promise<string> {
       return path.join(globalCacheDir, tool, version, tool);
     }
   } else {
-    // Both lines go to stderr: stdout is the tool path, and `moc-wrapper`
-    // command-substitutes it. A hint printed there is read back as the compiler.
+    // Both lines go to stderr: stdout is the tool path, and callers command-
+    // substitute it. A hint printed there would be read back as the binary.
     console.error(
       `Tool '${tool}' is not defined in [toolchain] section in mops.toml`,
     );

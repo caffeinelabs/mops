@@ -974,14 +974,8 @@ program
   .description(
     "Watch *.mo files and check for syntax errors and warnings and format code. Pass flags to run only the selected tasks; --test is opt-in only",
   )
-  .option(
-    "-e, --error",
-    "Check *.mo files for syntax errors (always on)",
-  )
-  .option(
-    "-w, --warning",
-    "Check *.mo files for warnings (on by default)",
-  )
+  .option("-e, --error", "Check *.mo files for syntax errors (always on)")
+  .option("-w, --warning", "Check *.mo files for warnings (on by default)")
   .option("-f, --format", "Format Motoko code (on by default)")
   .option("-t, --test", "Run tests (opt-in)")
   .addHelpText(
