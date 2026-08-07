@@ -20,7 +20,8 @@ if (!network || !NETWORKS.includes(network)) {
   throw new Error(
     `MOPS_FRONTEND_NETWORK must be one of ${NETWORKS.join(", ")}` +
       `${network ? `, got "${network}"` : " (unset)"}.` +
-      `\nDeploy with npm run deploy-local / deploy-staging / deploy-ic, which set it.`,
+      `\nBuild with MOPS_FRONTEND_NETWORK=local npm run build-frontend,` +
+      `\nor deploy with npm run deploy-staging / deploy-ic, which set it.`,
   );
 }
 

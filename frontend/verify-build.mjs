@@ -36,7 +36,8 @@ if (missing.length) {
 const network = process.env["MOPS_FRONTEND_NETWORK"];
 if (!network) {
   console.error(
-    "\n✗ MOPS_FRONTEND_NETWORK is not set. Run this through `npm run build`.\n",
+    "\n✗ MOPS_FRONTEND_NETWORK is not set." +
+      "\n  Run: MOPS_FRONTEND_NETWORK=local npm run build-frontend\n",
   );
   process.exit(1);
 }
