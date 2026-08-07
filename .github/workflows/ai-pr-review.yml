@@ -198,7 +198,6 @@ jobs:
                 "Read(cli-releases/**)",
                 "Read(.github/**)",
                 "Read(.agents/**)",
-                "Read(scripts/**)",
                 "Read(package.json)",
                 "Read(package-lock.json)",
                 "Read(tsconfig*.json)",

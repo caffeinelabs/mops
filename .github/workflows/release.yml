@@ -412,6 +412,7 @@ jobs:
           exit 1
 
       - name: Deploy docs canister
+        if: steps.version.outputs.prerelease == 'false'
         uses: ./.github/actions/deploy-canister
         with:
           canister: docs

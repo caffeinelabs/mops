@@ -1,18 +1,36 @@
 import fs from "node:fs";
+import path from "node:path";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
-type Network = "ic" | "local" | "staging";
-let network = (process.env["ICP_ENVIRONMENT"] as Network) || "local";
+const NETWORKS = ["ic", "local", "staging"] as const;
+type Network = (typeof NETWORKS)[number];
+
+// Required, with no default. Defaulting to `local` meant a build that forgot to
+// set it baked the local replica's ids while looking entirely successful — and
+// `icp deploy assets -e ic` run by hand sets nothing, so that was one typo away
+// from uploading a local-id bundle to mainnet. The dev server passes the value
+// explicitly (see frontend/package.json).
+const network = process.env["ICP_ENVIRONMENT"] as Network | undefined;
+if (!network || !NETWORKS.includes(network)) {
+  throw new Error(
+    `ICP_ENVIRONMENT must be one of ${NETWORKS.join(", ")}` +
+      `${network ? `, got "${network}"` : " (unset)"}.` +
+      `\nDeploy with npm run deploy-local / deploy-staging / deploy-ic, which set it.`,
+  );
+}
 
 // icp-cli stores ids per environment as a flat { name: id } map. Managed
 // networks (local) land in .icp/cache/, connected ones in .icp/data/, which is
-// committed so a fresh checkout can build against mainnet.
-const mappingsFile =
+// committed so a fresh checkout can build against mainnet. Resolved against
+// this file, not cwd, so it does not matter where vite is invoked from.
+const mappingsFile = path.resolve(
+  import.meta.dirname,
   network === "local"
     ? "../.icp/cache/mappings/local.ids.json"
-    : `../.icp/data/mappings/${network}.ids.json`;
+    : `../.icp/data/mappings/${network}.ids.json`,
+);
 
 let canisterIds: Record<string, string> = {};
 try {

@@ -35,9 +35,6 @@ runs:
       working-directory: ${{ inputs.build-deps-dir }}
       run: npm ci
 
-    # `icp identity import` has no --force and errors on an existing name, and
-    # a release deploys more than one canister through this action, so the
-    # second call would fail on an already-imported identity. Probe first.
     - name: Import mops identity
       shell: bash
       env:

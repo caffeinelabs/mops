@@ -70,6 +70,7 @@ canisters:
             - npm run build-cli-releases
         - type: pre-built
           url: https://github.com/dfinity/sdk/releases/download/0.29.1/assetstorage.wasm.gz
+          sha256: 4014793c83ae0ff2d851a0c4e62f289a114d36bc1826f5579f55a70ff3c70551
     sync:
       steps:
         - type: plugin

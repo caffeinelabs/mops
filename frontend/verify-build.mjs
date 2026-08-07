@@ -26,10 +26,13 @@ if (missing.length) {
 // define turns a missed replacement into `undefined` at runtime — a bundle that
 // builds green and cannot reach any canister.
 //
-// Assert the *expected* id, not any principal-shaped string: cli/api/network.ts
-// hardcodes the ic and staging endpoint ids and the frontend bundles it, so a
-// shape-only check passes even on a bundle built with no mappings at all.
-const network = process.env["ICP_ENVIRONMENT"] || "local";
+// Two assertions, because neither is sufficient alone. cli/api/network.ts
+// hardcodes the ic and staging endpoint ids and the frontend bundles it, and
+// those are the same principals as `main` in the mappings — so on those two
+// networks "the id is present" is true no matter what vite did.
+//
+// vite.config.ts has already rejected an unset or unknown ICP_ENVIRONMENT.
+const network = process.env["ICP_ENVIRONMENT"];
 const mappingsFile = path.resolve(
   import.meta.dirname,
   network === "local"
@@ -57,14 +60,32 @@ const bundleDir = path.join(dist, "bundle");
 const bundles = existsSync(bundleDir)
   ? readdirSync(bundleDir).filter((f) => f.endsWith(".js"))
   : [];
-const hasId = bundles.some((f) =>
-  readFileSync(path.join(bundleDir, f), "utf8").includes(`"${expectedId}"`),
+const sources = bundles.map((f) =>
+  readFileSync(path.join(bundleDir, f), "utf8"),
 );
 
-if (!hasId) {
+// 1. The id is present at all. Catches a build that read no mappings — the
+//    only signal available on `local`, where the id is replica-allocated.
+if (!sources.some((s) => s.includes(`"${expectedId}"`))) {
   console.error(
     `\n✗ Main canister id ${expectedId} is not baked into dist/bundle/*.js.` +
       `\n  It was read from ${mappingsFile}, so the define did not reach the bundle.\n`,
+  );
+  process.exit(1);
+}
+
+// 2. No define was left unreplaced. declarations/*/index.js reads
+//    `process.env.CANISTER_ID_<NAME>`, and the catch-all `process.env` define
+//    turns a missed key into a silent `undefined` rather than a build error.
+//    A successful build leaves no occurrence of the name; a missed one does.
+const unreplaced = sources.flatMap(
+  (s) => s.match(/CANISTER_ID_[A-Z0-9_]+/g) ?? [],
+);
+if (unreplaced.length) {
+  console.error(
+    `\n✗ Unreplaced canister-id defines in dist/bundle/*.js: ${[...new Set(unreplaced)].join(", ")}.` +
+      `\n  Those lookups resolve to undefined at runtime. Check the define keys in vite.config.ts` +
+      `\n  against the names in ${mappingsFile}.\n`,
   );
   process.exit(1);
 }

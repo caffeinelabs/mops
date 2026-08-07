@@ -9,7 +9,7 @@
     "vite": "vite",
     "build": "vite build && node verify-build.mjs",
     "preview": "vite preview",
-    "check": "svelte-check --threshold error"
+    "check": "ICP_ENVIRONMENT=${ICP_ENVIRONMENT:-local} svelte-check --threshold error"
   },
   "author": "Zen Voich <zen.voich@gmail.com>",
   "license": "ISC",
