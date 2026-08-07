@@ -141,12 +141,12 @@ Content: pin git deps to a **resolved commit SHA**. Today the `deps` map (`cli/i
 
 We can't credibly tell users to drop `dfx` while our own dev loop runs on it, but v3 keeps explicit dfx support anyway, so this proceeds in parallel:
 
-- `package.json` `deploy*` scripts → `icp` equivalents. (`replica` and `decl:cli` are done.)
-- `.github/workflows/{release,mops-test,setup-mops}.yml`: replace `dfinity/setup-dfx` + `dfx cache install` with the `icp` setup action. (`ci.yml` is done.)
-- `dfx.json` → `icp` project config (decide whether to keep `dfx.json` for back-compat).
+- ~~`package.json` `deploy*` scripts → `icp` equivalents.~~ Done.
+- ~~`dfx.json` → `icp` project config.~~ Done — `dfx.json` is deleted, `icp.yaml` declares the `ic` and `staging` environments, and `scripts/link-canister-ids.mjs` points icp-cli's ID store at `canister_ids.json`.
+- ~~`.github/workflows/release.yml`: replace `dfinity/setup-dfx` with the `icp` setup action.~~ Done — both canister deploys go through `.github/actions/deploy-canister`.
+- `.github/workflows/{mops-test,setup-mops}.yml` still install dfx, and cannot stop until the matrix drops mops 1.x/2.x: those versions run `test/storage-actor.test.mo` on the dfx replica, and 1.0.0 speaks only the PocketIC 4.0.0 API so pinning `[toolchain] pocket-ic` would not help.
 - `cli/tests/build/no-dfx/` + `build-no-dfx.test.ts` — keep as a regression test that mops works with neither `dfx` nor `icp` on PATH.
-- `backend/DEVELOPMENT.md`, `cli/{DEVELOPMENT,README,RELEASE}.md`, `docs/docs/01-quick-start.md`, blog posts — rewrite in `icp` terms; add a "migrating from dfx" note.
-- `AGENTS.md` rule "do not run `dfxvm update/install/default`" needs an `icp`-equivalent.
+- `cli/{DEVELOPMENT,README,RELEASE}.md`, `docs/docs/01-quick-start.md`, blog posts — rewrite in `icp` terms; add a "migrating from dfx" note. (`backend/DEVELOPMENT.md` and the root `DEVELOPMENT.md` are done.)
 
 ---
 
