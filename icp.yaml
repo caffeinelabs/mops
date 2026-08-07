@@ -1,8 +1,10 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/dfinity/icp-cli/main/docs/schemas/icp-yaml-schema.json
 #
-# Mirrors dfx.json. dfx.json is still kept around for the production deploy
-# path (release.yml, deploy-staging, deploy-ic) and for mops users who haven't
-# migrated yet.
+# The only deploy config in this repo — local, staging, mainnet and release.yml
+# all read it. dfx.json is gone.
+#
+# Canister IDs are not here: icp-cli 1.2.0 cannot declare one, so
+# scripts/link-canister-ids.mjs feeds them in from canister_ids.json.
 #
 # Recipes are pinned by version and sha256 — an unpinned recipe changing
 # underneath us is what broke this file the first time around.
@@ -56,9 +58,9 @@ canisters:
         version: "0.29.1"
         dir: play-frontend
   # Raw build/sync (not the recipe) because the asset-canister recipe template
-  # only supports a single `dir`, but dfx.json ships two sources for `cli`:
-  # `cli-releases/` (install.sh, releases.json, tags/, versions/ — served at
-  # cli.mops.one) and `cli-releases/frontend/dist/` (the SPA).
+  # only supports a single `dir`, and `cli` serves two: `cli-releases/`
+  # (install.sh, releases.json, tags/, versions/ — what `mops self update`
+  # reads) and `cli-releases/frontend/dist/` (the SPA at cli.mops.one).
   # Keep the sync plugin below in step with the pinned asset-canister recipe.
   - name: cli
     build:
@@ -77,8 +79,8 @@ canisters:
             - cli-releases
             - cli-releases/frontend/dist
 
-# Override the default local network port (8000) to bind on dfx's 4943 so
-# vite's /api proxy keeps working without changes to the proxy config.
+# Override the default local network port (8000) to bind on 4943, which is what
+# vite's /api proxy and DEVELOPMENT.md's MOPS_REGISTRY_HOST already point at.
 networks:
   - name: local
     mode: managed
