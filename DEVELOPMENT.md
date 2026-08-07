@@ -67,18 +67,20 @@ npm run deploy-ic               # every canister the ic environment declares
 npm run deploy-ic blog          # or just one
 ```
 
-Both import the `mops` identity by name, and both run `scripts/link-canister-ids.mjs`
-first. That is not optional: icp-cli 1.2.0 cannot declare a canister ID in
-`icp.yaml` and keeps its own store outside git, so on a fresh clone it has no
-idea the canisters already exist. The script points it at `canister_ids.json`,
-which stays the source of truth, and the deploy passes `--no-create` so a
-missing entry fails instead of quietly creating a second canister.
+Both import the `mops` identity by name. The canister IDs come from
+`.icp/data/mappings/<environment>.ids.json`, which is committed — icp-cli keeps
+mainnet IDs there precisely so a fresh clone knows the canisters already exist,
+and only `.icp/cache/` (local networks, downloads) is ignored. Deploys pass
+`--no-create`, so a missing mapping fails instead of quietly creating a second
+canister.
+
+Adding a mainnet canister means `icp canister link <name> <id> -e ic` once, then
+committing the updated mapping.
 
 `docs` and `cli` are deployed by `release.yml` on a CLI release, through
 `.github/actions/deploy-canister`. To roll one back, check out the previous
 release commit and run what that action runs:
 
 ```bash
-node scripts/link-canister-ids.mjs ic cli
 icp deploy cli -e ic --identity mops --no-create --yes
 ```

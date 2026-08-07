@@ -54,15 +54,6 @@ runs:
         printf '%s\n' "$MOPS_IDENTITY_PEM" > "$RUNNER_TEMP/mops.pem"
         icp identity import mops --from-pem "$RUNNER_TEMP/mops.pem" --storage plaintext
 
-    # icp-cli keeps canister IDs in an untracked store, so the ID has to be
-    # linked on every run. Same helper the deploy-staging / deploy-ic scripts
-    # use, so the path CI takes is the one a maintainer can exercise locally.
-    - name: Link the ${{ inputs.canister }} canister ID
-      shell: bash
-      env:
-        CANISTER: ${{ inputs.canister }}
-      run: node scripts/link-canister-ids.mjs ic "$CANISTER"
-
     - name: Deploy ${{ inputs.canister }} canister
       shell: bash
       env:
@@ -97,6 +88,5 @@ runs:
         done
         echo "::error::$url does not list ${DOMAIN}. The custom domain is broken."
         echo "::error::Roll back from a checkout of the previous release commit with:"
-        echo "::error::  node scripts/link-canister-ids.mjs ic ${CANISTER}"
         echo "::error::  icp deploy ${CANISTER} -e ic --identity mops --no-create --yes"
         exit 1

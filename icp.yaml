@@ -3,8 +3,8 @@
 # The only deploy config in this repo — local, staging, mainnet and release.yml
 # all read it. dfx.json is gone.
 #
-# Canister IDs are not here: icp-cli 1.2.0 cannot declare one, so
-# scripts/link-canister-ids.mjs feeds them in from canister_ids.json.
+# Canister IDs are not here: icp-cli cannot declare one in the manifest. Mainnet
+# and staging IDs live in .icp/data/mappings/, which is committed.
 #
 # Recipes are pinned by version and sha256 — an unpinned recipe changing
 # underneath us is what broke this file the first time around.
