@@ -16,8 +16,8 @@ export async function watch(options: {
   test: boolean;
   format: boolean;
 }) {
-  // No flags = the safe informative set. Heavy/side-effectful tasks
-  // (test) run only when explicitly requested.
+  // No flags = the safe informative set. The test task runs only when
+  // explicitly requested.
   let hasOptions = Object.values(options).includes(true);
   if (!hasOptions) {
     options = {
