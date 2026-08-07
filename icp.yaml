@@ -85,3 +85,28 @@ networks:
     gateway:
       bind: 127.0.0.1
       port: 4943
+
+# Both mainnet environments are declared explicitly so that a bare
+# `npm run deploy-ic` / `deploy-staging` cannot reach a canister it should not.
+# `network:` is not optional here — it defaults to `local`, which for an
+# environment named `ic` would be a very quiet way to deploy nothing.
+environments:
+  # bench is a fixture `mops bench` deploys to a local replica; dfx.json kept
+  # it off mainnet with a `remote` id, and an explicit list is the equivalent.
+  - name: ic
+    network: ic
+    canisters:
+      - main
+      - assets
+      - docs
+      - blog
+      - cli
+      - play-frontend
+  # staging exists for the registry only. canister_ids.json gives docs, blog
+  # and cli the same id on both networks, so a staging deploy of those would
+  # be a production deploy wearing a different name.
+  - name: staging
+    network: ic
+    canisters:
+      - main
+      - assets

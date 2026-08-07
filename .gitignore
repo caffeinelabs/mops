@@ -2,7 +2,10 @@ node_modules/
 target/
 dist/
 .dfx/
-.icp/cache/
+# icp-cli's own state. Its ID store under .icp/data/ is deliberately not
+# committed — canister_ids.json is the source of truth, and scripts/link-canister-ids.mjs
+# points icp-cli at it.
+.icp/
 .mops/
 .migrations-*/
 mops.lock

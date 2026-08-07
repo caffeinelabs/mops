@@ -83,7 +83,8 @@
 		};
 
 		let downloadCode = async () => {
-			window.MOPS_NETWORK = process.env.DFX_NETWORK === "local" ? "local" : "ic";
+			window.MOPS_NETWORK =
+				process.env.ICP_ENVIRONMENT === "local" ? "local" : "ic";
 			fileIds = await getFileIds(packageDetails.config.name, packageDetails.config.version);
 		};
 
