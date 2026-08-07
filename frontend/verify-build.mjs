@@ -22,7 +22,7 @@ if (missing.length) {
 }
 
 // The main canister id has to be baked in, not merely defined. Vite replaces
-// `process.env.MAIN_CANISTER_ID` at build time and a catch-all `process.env`
+// `process.env.CANISTER_ID_MAIN` at build time and a catch-all `process.env`
 // define turns a missed replacement into `undefined` at runtime — a bundle that
 // builds green and cannot reach any canister.
 //
@@ -31,8 +31,15 @@ if (missing.length) {
 // those are the same principals as `main` in the mappings — so on those two
 // networks "the id is present" is true no matter what vite did.
 //
-// vite.config.ts has already rejected an unset or unknown ICP_ENVIRONMENT.
+// vite.config.ts rejects an unset or unknown value, but this file also runs
+// standalone, where an unset one would otherwise read `undefined.ids.json`.
 const network = process.env["ICP_ENVIRONMENT"];
+if (!network) {
+  console.error(
+    "\n✗ ICP_ENVIRONMENT is not set. Run this through `npm run build`.\n",
+  );
+  process.exit(1);
+}
 const mappingsFile = path.resolve(
   import.meta.dirname,
   network === "local"
@@ -40,12 +47,13 @@ const mappingsFile = path.resolve(
     : `../.icp/data/mappings/${network}.ids.json`,
 );
 
-let expectedId;
+let canisterIds = {};
 try {
-  expectedId = JSON.parse(readFileSync(mappingsFile, "utf8"))["main"];
+  canisterIds = JSON.parse(readFileSync(mappingsFile, "utf8"));
 } catch {
-  // Left undefined — the failure below carries the useful message.
+  // Left empty — the failure below carries the useful message.
 }
+const expectedId = canisterIds["main"];
 
 if (!expectedId) {
   console.error(
@@ -78,8 +86,17 @@ if (!sources.some((s) => s.includes(`"${expectedId}"`))) {
 //    `process.env.CANISTER_ID_<NAME>`, and the catch-all `process.env` define
 //    turns a missed key into a silent `undefined` rather than a build error.
 //    A successful build leaves no occurrence of the name; a missed one does.
-const unreplaced = sources.flatMap(
-  (s) => s.match(/CANISTER_ID_[A-Z0-9_]+/g) ?? [],
+//
+//    The keys are derived exactly as vite.config.ts derives them, covering both
+//    spellings it defines, rather than pattern-matched: a loose /CANISTER_ID/
+//    also hits `MOPS_REGISTRY_CANISTER_ID`, which cli/api/network.ts reads at
+//    runtime on purpose and which must survive into the bundle.
+const defineKeys = Object.keys(canisterIds).flatMap((name) => {
+  const upper = name.toUpperCase().replace(/-/g, "_");
+  return [`CANISTER_ID_${upper}`, `${upper}_CANISTER_ID`];
+});
+const unreplaced = defineKeys.filter((key) =>
+  sources.some((s) => s.includes(key)),
 );
 if (unreplaced.length) {
   console.error(

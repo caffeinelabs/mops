@@ -84,6 +84,11 @@ jobs:
         run: npm run decl
 
       - name: Build frontend
+        # Required, and deliberately not defaulted in vite.config.ts — a silent
+        # default is how a mainnet bundle could get local ids. The local
+        # mappings exist by now: Deploy backend wrote them.
+        env:
+          ICP_ENVIRONMENT: local
         run: npm run build-frontend
 
       - name: Build docs

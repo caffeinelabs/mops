@@ -13,7 +13,7 @@ Run from the repo root:
 
 ```bash
 npm run lint
-npm run build-frontend
+ICP_ENVIRONMENT=local npm run build-frontend
 npm run build-cli-releases
 ```
 
