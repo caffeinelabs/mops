@@ -7,18 +7,9 @@ sidebar_label: mops sources
 
 Prints the final resolved package sources.
 
-The main purpose of this command is to be specified in the dfx.json file:
-```json
-...
-	"defaults": {
-		"build": {
-			"packtool": "mops sources"
-		}
-	},
-...
-```
+The output is formatted to be passed to `moc`, one `--package` flag pair per line. It is meant to be consumed by a build tool that accepts a "packtool" command, or spliced into a `moc` invocation of your own.
 
-The output is formatted to be passed to the `moc`.
+Mops does not support `dfx`, and this command does not make it supported: it carries dependency paths only, never the compiler. A build tool that brings its own `moc` will keep using it, whatever `[toolchain] moc` says.
 
 Example output:
 ```
@@ -40,7 +31,7 @@ What to do with dependency version conflicts.
 
 If the dependency graph requests the same registry dependency at different major versions, that is treated as conflicting. Packages that differ only in minor or patch version are not conflicting — the highest one wins. `repo` and `path` dependencies carry no comparable major version and never take part in a conflict.
 
-Conflicts are reported on stderr, so the resolved sources on stdout stay parseable by dfx.
+Conflicts are reported on stderr, so the resolved sources on stdout stay machine-parseable.
 
 Possible values:
 - `warning` - Report conflicts _(default)_
@@ -49,20 +40,16 @@ Possible values:
 
 To resolve a conflict, pin the version you want in your own `mops.toml`: a root dependency always wins over a transitive one. This is also how you pick up a transitive dependency's bugfix release before the package in between republishes.
 
-If you have reviewed a cross-major conflict and decided to keep it, use `--conflicts ignore` to stop reporting it. Because `mops sources` runs on every `dfx build`, this is the way to silence a conflict you have accepted:
+If you have reviewed a cross-major conflict and decided to keep it, use `--conflicts ignore` to stop reporting it. Because `mops sources` runs on every build that invokes it as a packtool, this is the way to silence a conflict you have accepted:
 
-```json
-"defaults": {
-	"build": {
-		"packtool": "mops sources --conflicts ignore"
-	}
-}
+```
+mops sources --conflicts ignore
 ```
 
 Other commands resolve dependencies too (`mops install`, `mops build`, `mops test`), and they report cross-major conflicts with no way to turn it off.
 
 ## Lockfile
 
-`mops sources` installs from [`mops.lock`](../../10-mops.lock.md) when it is valid, but never writes it and never prints integrity output — its stdout is machine-parsed by the dfx packtool.
+`mops sources` installs from [`mops.lock`](../../10-mops.lock.md) when it is valid, but never writes it and never prints integrity output — its stdout is machine-parsed.
 
-It has no `--locked` flag: failing in the middle of a `dfx build` is a poor place to report a stale lockfile. Enforce it with a preceding `mops install --locked` step instead.
+It has no `--locked` flag: failing in the middle of someone else's build is a poor place to report a stale lockfile. Enforce it with a preceding `mops install --locked` step instead.

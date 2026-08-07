@@ -5,7 +5,7 @@ exports[`build error 1`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "build canister foo
-<CACHE>moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+<CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/foo.most
 Adding metadata to .mops/.build/foo.wasm
 
@@ -35,11 +35,11 @@ exports[`build ok 1`] = `
   "exitCode": 0,
   "stderr": "",
   "stdout": "build canister foo
-<CACHE>moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
+<CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/foo.most
 Adding metadata to .mops/.build/foo.wasm
 build canister bar
-<CACHE>moc-wrapper ["-c","--idl","--stable-types","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
+<CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/bar.most
 Candid compatibility check passed for canister bar
 Adding metadata to .mops/.build/bar.wasm

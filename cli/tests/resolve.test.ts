@@ -3,7 +3,7 @@ import { rmSync } from "node:fs";
 import path from "node:path";
 import { cli, cliSnapshot } from "./helpers";
 
-// `mops sources` writes the resolved packages to stdout for dfx's packtool, so
+// `mops sources` writes the resolved packages to stdout for a build tool to consume, so
 // conflict reports go to stderr and machine consumers stay clean.
 describe("cross-major conflicts", () => {
   jest.setTimeout(120_000);

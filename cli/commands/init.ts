@@ -166,32 +166,6 @@ async function applyInit({
   addTest,
   copyrightOwner,
 }: ApplyInitOptions) {
-  // set packtool in dfx.json
-  let dfxJson = path.resolve(process.cwd(), "dfx.json");
-  let dfxJsonData;
-  if (existsSync(dfxJson)) {
-    let dfxJsonText = readFileSync(dfxJson).toString();
-    try {
-      dfxJsonData = JSON.parse(dfxJsonText);
-    } catch (err) {
-      console.log(chalk.yellow("Failed to parse dfx.json"));
-    }
-    if (dfxJsonData) {
-      console.log("Setting packtool in dfx.json...");
-      dfxJsonData.defaults = dfxJsonData.defaults || {};
-      dfxJsonData.defaults.build = dfxJsonData.defaults.build || {};
-      if (dfxJsonData.defaults.build.packtool !== "mops sources") {
-        dfxJsonData.defaults.build.packtool = "mops sources";
-        let indent = dfxJsonText.match(/([ \t]+)"/)?.[1] || "  ";
-        writeFileSync(
-          path.join(process.cwd(), "dfx.json"),
-          JSON.stringify(dfxJsonData, null, indent),
-        );
-        console.log(chalk.green('packtool set to "mops sources"'));
-      }
-    }
-  }
-
   // save config
   let configFile = path.join(process.cwd(), "mops.toml");
   writeConfig(config, configFile);

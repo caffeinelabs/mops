@@ -4,13 +4,11 @@
   "type": "module",
   "bin": {
     "mops": "dist/bin/mops.js",
-    "ic-mops": "dist/bin/mops.js",
-    "moc-wrapper": "bin/moc-wrapper.sh"
+    "ic-mops": "dist/bin/mops.js"
   },
   "files": [
     "/dist",
     "!/dist/tests",
-    "/bin",
     "/CHANGELOG.md"
   ],
   "homepage": "https://mops.one",

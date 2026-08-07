@@ -4,14 +4,8 @@ import debounce from "debounce";
 import chalk from "chalk";
 import { ErrorChecker } from "./error-checker.js";
 import { WarningChecker } from "./warning-checker.js";
-import {
-  getMotokoCanisters,
-  getMotokoCanistersWithDeclarations,
-} from "./parseDfxJson.js";
 import { getRootDir } from "../../mops.js";
 import { Tester } from "./tester.js";
-import { Generator } from "./generator.js";
-import { Deployer } from "./deployer.js";
 import { Formatter } from "./formatter.js";
 
 let ignore = ["**/node_modules/**", "**/.mops/**", "**/.git/**"];
@@ -20,12 +14,10 @@ export async function watch(options: {
   error: boolean;
   warning: boolean;
   test: boolean;
-  generate: boolean;
-  deploy: boolean;
   format: boolean;
 }) {
-  // No flags = the safe informative set. Heavy/side-effectful tasks
-  // (test, generate, deploy) run only when explicitly requested.
+  // No flags = the safe informative set. The test task runs only when
+  // explicitly requested.
   let hasOptions = Object.values(options).includes(true);
   if (!hasOptions) {
     options = {
@@ -33,33 +25,14 @@ export async function watch(options: {
       warning: true,
       format: true,
       test: false,
-      generate: false,
-      deploy: false,
     };
   }
   options.error = true;
 
   let rootDir = getRootDir();
-  let canisters = getMotokoCanisters();
-  let canistersWithDeclarations = getMotokoCanistersWithDeclarations();
-  let errorChecker = new ErrorChecker({ verbose: true, canisters: canisters });
-  let warningChecker = new WarningChecker({
-    errorChecker,
-    verbose: true,
-    canisters: canisters,
-  });
+  let errorChecker = new ErrorChecker({ verbose: true });
+  let warningChecker = new WarningChecker({ errorChecker, verbose: true });
   let tester = new Tester({ errorChecker, verbose: true });
-  let generator = new Generator({
-    errorChecker,
-    verbose: true,
-    canisters: canistersWithDeclarations,
-  });
-  let deployer = new Deployer({
-    errorChecker,
-    generator,
-    verbose: true,
-    canisters: canisters,
-  });
   let formatter = new Formatter({ errorChecker, verbose: true });
 
   let watcher = chokidar.watch(
@@ -80,8 +53,6 @@ export async function watch(options: {
     errorChecker.reset();
     warningChecker.reset();
     tester.reset();
-    generator.reset();
-    deployer.reset();
     formatter.reset();
 
     if (options.format) {
@@ -95,8 +66,6 @@ export async function watch(options: {
         .run(print)
         .then(() => setTimeout(() => (formatting = false), 500));
     options.test && tester.run(print);
-    options.generate && (await generator.run(print));
-    options.deploy && deployer.run(print);
   }, 200);
 
   let print = () => {
@@ -107,16 +76,12 @@ export async function watch(options: {
     options.warning && console.log(warningChecker.getOutput());
     options.format && console.log(formatter.getOutput());
     options.test && console.log(tester.getOutput());
-    options.generate && console.log(generator.getOutput());
-    options.deploy && console.log(deployer.getOutput());
 
     let statuses = [];
     options.error && statuses.push(errorChecker.status);
     options.warning && statuses.push(warningChecker.status);
     options.format && statuses.push(formatter.status);
     options.test && statuses.push(tester.status);
-    options.generate && statuses.push(generator.status);
-    options.deploy && statuses.push(deployer.status);
 
     if (
       statuses.every((status) => status !== "pending" && status !== "running")

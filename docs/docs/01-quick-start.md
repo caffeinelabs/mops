@@ -8,7 +8,7 @@
 ## 1. Prerequisites
 - [Node.js](https://nodejs.org/) >= 20.0.0
 
-Mops downloads and manages the Motoko toolchain itself — `moc`, `pocket-ic`, `wasmtime`, `lintoko`, `wasm-opt`. It does not need `dfx` installed. If you deploy with `dfx`, see [step 7](#7-configure-dfxjson-optional).
+Mops downloads and manages the Motoko toolchain itself — `moc`, `pocket-ic`, `wasmtime`, `lintoko`, `wasm-opt`. It does not need `dfx` installed, and does not support it.
 
 ## 2. Install Mops CLI
 
@@ -53,17 +53,7 @@ Now you can import installed packages in your Motoko code
 import Array "mo:core/Array";
 ```
 
-## 7. Configure dfx.json (optional)
-If you deploy with `dfx`, add `mops` as a packtool to your `dfx.json` so `dfx build` resolves mops packages:
+## 7. Deploy
+Mops builds and type-checks; it does not deploy. Use [`icp`](https://js.icp.build/), whose Motoko recipe builds each canister with `mops build`, so the `moc` you pinned above is the compiler that produces the deployed Wasm.
 
-```json
-{
-  "defaults": {
-    "build": {
-      "packtool": "mops sources"
-    }
-  }
-}
-```
-
-[`mops init`](./cli/00-mops-init.md) does this for you when `dfx.json` already exists. To make `dfx build` use the pinned `moc` too, run [`mops toolchain init`](./cli/5-toolchain/02-mops-toolchain-init.md).
+Mops does not support `dfx`. [`mops sources`](./cli/7-misc/04-mops-sources.md) still prints `--package` flags for any build tool that takes a packtool, but it carries dependencies only — a tool that brings its own compiler will not use your pinned `moc`.
