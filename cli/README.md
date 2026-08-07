@@ -11,7 +11,8 @@ Mops is a package manager for the Motoko programming language.
 
 ### 1. Check system requirements
 - [Node.js](https://nodejs.org/) >= 20.0.0
-- [DFX](https://internetcomputer.org/docs/current/developer-docs/quickstart/local-quickstart) >= 0.10.0
+
+Mops downloads and manages the Motoko toolchain itself. It does not need `dfx`, and does not support it.
 
 ### 2. Install CLI tool
 ```
@@ -24,31 +25,25 @@ npm i -g ic-mops
 
 ## Install Packages
 
-### 1. Configure dfx.json
-Add `mops` as a packtool to your `dfx.json`
-
-```json
-{
-  "defaults": {
-    "build": {
-      "packtool": "mops sources"
-    }
-  }
-}
-```
-
-### 2. Initialize
-Run this command in the root directory of your project (where is `dfx.json` placed)
+### 1. Initialize
+Run this command in the root directory of your project
 
 ```
 mops init
+```
+
+### 2. Pin the Motoko compiler
+Every command that compiles uses the `moc` pinned in `mops.toml`
+
+```
+mops toolchain use moc latest
 ```
 
 ### 3. Install Motoko Packages
 Use `mops add <package_name>` to install a specific package and save it to `mops.toml`
 
 ```
-mops add base
+mops add core
 ```
 
 You can also add packages from GitHub like this
@@ -85,16 +80,10 @@ import Itertools "mo:itertools/Iter";
 ## Publish a Package
 
 ### 1. Import Identity
-Create new identity to publish packages
+Import an existing secp256k1 or Ed25519 private key into `mops`
 
 ```
-dfx identity new mops
-```
-
-Import identity into `mops`
-
-```
-mops user import -- "$(dfx identity export mops)"
+mops user import -- "$(icp identity export mops)"
 ```
 
 ### 2. Initialize

@@ -87,6 +87,7 @@ Svelte 5 + Vite 8, queries the main canister. Staging canister: `ogp6e-diaaa-aaa
 
 ## Key constraints
 
+- **The CLI does not support dfx.** Nothing in `cli/` may invoke `dfx`, read `dfx.json`, or set `DFX_*` env vars. `mops sources` is the one command a dfx user can still wire up, and it is tool-agnostic on purpose — describe it by what it prints, never by who calls it. Its stdout is machine-parsed, so it must stay parseable whatever the caller.
 - **dfx is not needed for local development or CI.** `npm run replica` and `npm run deploy-local` use `icp` (config in `icp.yaml`), and `npm run decl` uses `mops` + `icp-bindgen`. `dfx.json` is still kept around for the production deploy path (`deploy-staging`, `deploy-ic`, `release.yml`).
 - **dfx version**: pinned in `dfx.json` via `dfxvm`. Do not run `dfxvm update/install/default` to change it.
 - **icp-cli version**: pinned in `.github/workflows/ci.yml`; the `icp.yaml` recipes are pinned by version and sha256. icp-cli still makes breaking manifest changes between minor versions, so do not unpin a recipe and do not run `icp network update` — it upgrades the network launcher out from under the pin. To move versions, bump the CI pin and the recipes together and re-run the local pipeline.

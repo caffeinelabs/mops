@@ -61,7 +61,7 @@ Pass `--locked` and commit `mops.lock`:
 
 `--locked` is available on `mops install` and on every command that installs dependencies implicitly (`mops build`, `mops check`, `mops check-candid`, `mops check-stable`, `mops test`, `mops bench`, `mops generate candid`), so a job can run `mops test --locked` with no preceding install step.
 
-`mops sources` has no `--locked`: the dfx packtool invokes it mid-build and machine-parses its stdout. Enforce the lockfile with a preceding `mops install --locked` step.
+`mops sources` has no `--locked`: a packtool caller invokes it mid-build and machine-parses its stdout. Enforce the lockfile with a preceding `mops install --locked` step.
 
 Dependency-mutating commands (`mops add`, `mops remove`, `mops update`, `mops sync`) have no `--locked` — their job is to change dependencies, so they always update the lockfile.
 

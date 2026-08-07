@@ -1,15 +1,11 @@
 import process from "node:process";
 import path from "node:path";
-import fs from "node:fs";
-import os from "node:os";
-import { execSync } from "node:child_process";
 import chalk from "chalk";
 import prompts from "prompts";
 import { createLogUpdate } from "log-update";
 import {
   checkConfigFile,
   getClosestConfigFile,
-  getRootDir,
   globalCacheDir,
   readConfig,
   writeConfig,
@@ -55,158 +51,6 @@ function getToolUtils(tool: Tool) {
   } else {
     console.error(`Unknown tool '${tool}'`);
     process.exit(1);
-  }
-}
-
-async function checkToolchainInited({ strict = false } = {}): Promise<boolean> {
-  // auto init in CI
-  if (process.env.CI) {
-    await init({ silent: true });
-    return true;
-  }
-
-  // for non-stict perform check only if dfx.json exists and moc is listed in [toolchain] section
-  let rootDir = getRootDir();
-  let config = readConfig();
-  if (
-    !strict &&
-    (!config.toolchain?.moc ||
-      (rootDir && !fs.existsSync(path.join(rootDir, "dfx.json"))))
-  ) {
-    return true;
-  }
-
-  try {
-    let res = execSync("which moc-wrapper").toString().trim();
-    if (res && process.env.DFX_MOC_PATH === "moc-wrapper") {
-      return true;
-    }
-  } catch {}
-  process.stderr.write(
-    `${chalk.yellow(
-      'Toolchain management is not initialized. Run "mops toolchain init" to use with dfx.',
-    )}\n`,
-  );
-  return false;
-}
-
-export const SHELLS = ["bash", "zsh"] as const;
-export type Shell = (typeof SHELLS)[number];
-
-function shellConfigFile(shell: Shell): string {
-  if (shell === "zsh") {
-    return path.join(os.homedir(), ".zshrc");
-  }
-  // bash: prefer ~/.bashrc; fall back to ~/.bash_profile when only it exists
-  // (macOS login shells)
-  let bashrc = path.join(os.homedir(), ".bashrc");
-  let bashProfile = path.join(os.homedir(), ".bash_profile");
-  if (!fs.existsSync(bashrc) && fs.existsSync(bashProfile)) {
-    return bashProfile;
-  }
-  return bashrc;
-}
-
-function detectShellConfigFile(): string {
-  let shell = path.basename(process.env.SHELL || "");
-  if ((SHELLS as readonly string[]).includes(shell)) {
-    return shellConfigFile(shell as Shell);
-  }
-  // $SHELL unset or unsupported — fall back to the first existing known config file
-  for (let name of [".bashrc", ".zshrc", ".bash_profile", ".zprofile"]) {
-    let file = path.join(os.homedir(), name);
-    if (fs.existsSync(file)) {
-      return file;
-    }
-  }
-  return "";
-}
-
-// update shell config file to set DFX_MOC_PATH to moc-wrapper
-async function init({
-  reset = false,
-  silent = false,
-  shell,
-}: { reset?: boolean; silent?: boolean; shell?: Shell } = {}) {
-  if (process.platform == "win32") {
-    console.error("Windows is not supported. Please use WSL");
-    process.exit(1);
-  }
-
-  let shellConfigFiles: string[] = [];
-
-  if (reset) {
-    // old versions wrote every detected shell config file — clean them all
-    shellConfigFiles = [".bashrc", ".zshrc", ".bash_profile", ".zprofile"]
-      .map((name) => path.join(os.homedir(), name))
-      .filter((file) => fs.existsSync(file));
-  } else {
-    let configFile = shell ? shellConfigFile(shell) : detectShellConfigFile();
-    if (configFile) {
-      shellConfigFiles = [configFile];
-    }
-  }
-
-  // in GitHub Actions, env vars propagate to next steps via $GITHUB_ENV
-  if (process.env.GITHUB_ENV && fs.existsSync(process.env.GITHUB_ENV)) {
-    shellConfigFiles.push(process.env.GITHUB_ENV);
-  }
-
-  if (shellConfigFiles.length === 0) {
-    console.error(
-      "Could not detect your shell. Supported shells: " + SHELLS.join(", "),
-    );
-    console.log(
-      `TIP: Run ${chalk.green("mops toolchain init --shell <bash|zsh>")} to choose the shell config file to update`,
-    );
-    console.log(
-      'TIP: You can add "export DFX_MOC_PATH=moc-wrapper" to your shell config file manually to initialize Mops toolchain',
-    );
-    process.exit(1);
-  }
-
-  for (let shellConfigFile of shellConfigFiles) {
-    let text = fs.existsSync(shellConfigFile)
-      ? fs.readFileSync(shellConfigFile).toString()
-      : "";
-    let setDfxMocPathLine = "\nexport DFX_MOC_PATH=moc-wrapper";
-
-    let newLines = [setDfxMocPathLine];
-
-    let oldLines = [setDfxMocPathLine];
-
-    // remove old lines
-    for (let oldLine of oldLines) {
-      text = text.replace(oldLine, "");
-    }
-
-    if (text.endsWith("\n\n")) {
-      text = text.trimEnd() + "\n";
-    }
-
-    // insert new lines
-    if (!reset) {
-      if (!text.endsWith("\n")) {
-        text += "\n";
-      }
-      for (let newLine of newLines) {
-        if (shellConfigFile === process.env.GITHUB_ENV) {
-          newLine = newLine.replace("export ", "");
-        }
-        text += newLine;
-      }
-      text += "\n";
-    }
-
-    fs.writeFileSync(shellConfigFile, text);
-  }
-
-  if (!silent) {
-    console.log(chalk.green("Success!"));
-    console.log(
-      `${reset ? "Cleaned" : "Updated"} ${shellConfigFiles.join(", ")}`,
-    );
-    console.log("Restart terminal to apply changes");
   }
 }
 
@@ -322,9 +166,6 @@ async function promptVersion(tool: Tool): Promise<string> {
 
 // download binary and set version in mops.toml
 async function use(tool: Tool, version?: string) {
-  if (tool === "moc") {
-    await checkToolchainInited();
-  }
   if (!version) {
     version = await promptVersion(tool);
   }
@@ -356,10 +197,6 @@ async function use(tool: Tool, version?: string) {
 
 // download latest binary and set version in mops.toml
 async function update(tool?: Tool) {
-  if (tool === "moc") {
-    await checkToolchainInited();
-  }
-
   let config = readConfig();
   config.toolchain = config.toolchain || {};
 
@@ -492,10 +329,6 @@ async function bin(tool: Tool): Promise<string> {
       return version;
     }
 
-    if (tool === "moc") {
-      await checkToolchainInited();
-    }
-
     await download(tool, version, { silent: true });
 
     if (tool === "moc") {
@@ -520,11 +353,9 @@ async function bin(tool: Tool): Promise<string> {
 }
 
 export let toolchain = {
-  init,
   use,
   update,
   bin,
   info,
   installAll,
-  checkToolchainInited,
 };

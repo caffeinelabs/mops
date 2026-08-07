@@ -182,8 +182,9 @@ export async function resolvePackages({
   // Cross-major conflicts report by default on every path that resolves, not
   // just where a caller opted in: handing a dependency a different major than
   // it asked for changes the API it compiles against. `ignore` remains a real
-  // opt-out, because `mops sources` runs on every `dfx build` and a project
-  // that has knowingly accepted an override needs a way to stop the noise.
+  // opt-out, because `mops sources` runs on every build of a project that uses
+  // it as a packtool, and one that has knowingly accepted an override needs a
+  // way to stop the noise.
   // Same-major skew stays silent.
   let hasConflicts = false;
 

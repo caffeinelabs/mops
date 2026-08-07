@@ -36,7 +36,7 @@ import { sources } from "./commands/sources.js";
 import { sync } from "./commands/sync.js";
 import { template } from "./commands/template.js";
 import { test } from "./commands/test/test.js";
-import { SHELLS, toolchain } from "./commands/toolchain/index.js";
+import { toolchain } from "./commands/toolchain/index.js";
 import { update } from "./commands/update.js";
 import {
   getPrincipal,
@@ -193,10 +193,6 @@ program
       return;
     }
 
-    if (options.toolchain) {
-      await toolchain.checkToolchainInited({ strict: false });
-    }
-
     let ok = await installAll({
       ...options,
       lock: options.locked ? "locked" : "maintain",
@@ -268,7 +264,9 @@ program
 // sources
 program
   .command("sources")
-  .description("for dfx packtool")
+  .description(
+    "Print the resolved dependencies as `--package` flags for the Motoko compiler",
+  )
   .option("--no-install", "Do not install dependencies before running sources")
   .addOption(
     new Option(
@@ -286,13 +284,12 @@ program
     // command, not just the final resolve that produces the sources.
     setConflictPolicy(options.conflicts);
     if (options.install) {
-      // `mops sources` is machine-parsed by the dfx packtool, so it must not
-      // write the lock or print integrity output — hence `lock: "skip"`.
-      // It has no `--locked`: enforce the lock with a preceding
-      // `mops install --locked` step instead of failing mid-`dfx build`.
+      // `mops sources` stdout is machine-parsed, so it must not write the lock
+      // or print integrity output — hence `lock: "skip"`. It has no `--locked`:
+      // enforce the lock with a preceding `mops install --locked` step instead
+      // of failing in the middle of whatever build invoked it.
       await installAll({ silent: true, lock: "skip", threads: 6 });
     }
-    await toolchain.checkToolchainInited({ strict: false });
     let sourcesArr = await sources(options);
     console.log(sourcesArr.join("\n"));
   });
@@ -829,30 +826,6 @@ const toolchainCommand = new Command("toolchain")
   .showHelpAfterError();
 
 toolchainCommand
-  .command("init")
-  .description(
-    "One-time initialization of toolchain management (updates the current shell's config file)",
-  )
-  .addOption(
-    new Option(
-      "--shell <shell>",
-      "Shell config file to update (defaults to the shell from $SHELL)",
-    ).choices(SHELLS),
-  )
-  .action(async (options) => {
-    await toolchain.init(options);
-  });
-
-toolchainCommand
-  .command("reset")
-  .description(
-    "Uninstall toolchain management (cleans all known shell config files)",
-  )
-  .action(async () => {
-    await toolchain.init({ reset: true });
-  });
-
-toolchainCommand
   .command("use")
   .description("Install specified tool version and update mops.toml")
   .addArgument(new Argument("<tool>", "tool to install").choices(TOOLCHAINS))
@@ -999,30 +972,25 @@ program.addCommand(selfCommand);
 program
   .command("watch")
   .description(
-    "Watch *.mo files and check for syntax errors and warnings and format code. Pass flags to run only the selected tasks; --test, --generate and --deploy are opt-in only",
+    "Watch *.mo files and check for syntax errors and warnings and format code. Pass flags to run only the selected tasks; --test is opt-in only",
   )
   .option(
     "-e, --error",
-    "Check Motoko canisters or *.mo files for syntax errors (on by default)",
+    "Check *.mo files for syntax errors (always on)",
   )
   .option(
     "-w, --warning",
-    "Check Motoko canisters or *.mo files for warnings (on by default)",
+    "Check *.mo files for warnings (on by default)",
   )
   .option("-f, --format", "Format Motoko code (on by default)")
   .option("-t, --test", "Run tests (opt-in)")
-  .option(
-    "-g, --generate",
-    "Generate declarations for Motoko canisters (opt-in)",
-  )
-  .option("-d, --deploy", "Deploy Motoko canisters (opt-in)")
   .addHelpText(
     "after",
     "\nWith no flags, runs the default set: errors, warnings and formatting.\n" +
       "Passing any flag runs only the selected tasks (error checking is always on).\n" +
-      "Tests, declaration generation and deploys never run unless requested:\n" +
+      "Tests never run unless requested:\n" +
       "  $ mops watch -t     # errors + tests\n" +
-      "  $ mops watch -tgd   # errors + tests + generate + deploy",
+      "  $ mops watch -tw    # errors + tests + warnings",
   )
   .action(async (options) => {
     checkConfigFile(true);

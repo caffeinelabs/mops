@@ -12,7 +12,6 @@ import { globMoFiles } from "./globMoFiles.js";
 
 export class WarningChecker {
   verbose = false;
-  canisters: Record<string, string> = {};
   status: "pending" | "running" | "syntax-error" | "error" | "success" =
     "pending";
   warnings: string[] = [];
@@ -25,15 +24,12 @@ export class WarningChecker {
 
   constructor({
     verbose,
-    canisters,
     errorChecker,
   }: {
     verbose: boolean;
-    canisters: Record<string, string>;
     errorChecker: ErrorChecker;
   }) {
     this.verbose = verbose;
-    this.canisters = canisters;
     this.errorChecker = errorChecker;
   }
 

@@ -73,9 +73,7 @@ lintoko = "../custom-lintoko/bin/lintoko"
 
 ## Toolchain management commands
 
-- [`mops toolchain init`](./02-mops-toolchain-init.md)
 - [`mops toolchain use`](./03-mops-toolchain-use.md)
 - [`mops toolchain update`](./04-mops-toolchain-update.md)
 - [`mops toolchain info`](./07-mops-toolchain-info.md)
 - [`mops toolchain bin`](./05-mops-toolchain-bin.md)
-- [`mops toolchain reset`](./06-mops-toolchain-rest.md)

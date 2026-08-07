@@ -11,21 +11,13 @@ import { globMoFiles } from "./globMoFiles.js";
 
 export class ErrorChecker {
   verbose = false;
-  canisters: Record<string, string> = {};
   status: "pending" | "running" | "error" | "success" = "pending";
   errors: string[] = [];
   totalFiles = 0;
   processedFiles = 0;
 
-  constructor({
-    verbose,
-    canisters,
-  }: {
-    verbose: boolean;
-    canisters: Record<string, string>;
-  }) {
+  constructor({ verbose }: { verbose: boolean }) {
     this.verbose = verbose;
-    this.canisters = canisters;
   }
 
   reset() {

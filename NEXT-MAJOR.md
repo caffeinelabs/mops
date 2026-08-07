@@ -51,10 +51,11 @@ All three shipped in GH #679 (`fix(cli): use real semver in the resolver and alw
 - ~~Flip the default so an unpinned `pocket-ic` auto-resolves to a mops-controlled `DEFAULT_POCKET_IC_VERSION`~~ — **done on `v3`**. The constant lives in `cli/commands/toolchain/pocket-ic-versions.ts` next to `MIN_POCKET_IC_VERSION`, with the bump policy in a comment there (track whatever `@dfinity/pic` pins for itself) and in `docs/docs/cli/5-toolchain/01-toolchain-overview.md`. **Offline-runtime guarantee (Caffeine requirement, 2026-07) holds**: the default is a fixed constant, `toolchain.bin("pocket-ic")` goes through the cached-check in `download()`, and a warmed cache was verified to make a full `mops test --mode replica` run with all non-loopback network blocked.
 - ~~**User-visible break**: implicit-dfx benchmark baselines drift~~ — **done on `v3`**: called out in `cli/CHANGELOG.md` and in the `mops bench` docs, recommending `--save`.
 - ~~`mops init` stops fetching "default packages for dfx"~~ — **done on `v3`**. `mops init` no longer contacts the registry at all; a fresh `mops.toml` has no `[dependencies]`. (LIN: Doctor overhaul)
-- Drop `mops toolchain init` requirement; env-var setup becomes a hint when `dfx.json` is present. (LIN) — **not done, and deliberately out of scope**: `mops toolchain init` and the `DFX_MOC_PATH=moc-wrapper` bridge exist so that a project which *deploys* with dfx still type-checks and builds with the pinned `moc`. Removing it would mean checking with one compiler and deploying with another.
+- ~~Drop `mops toolchain init` requirement; env-var setup becomes a hint when `dfx.json` is present. (LIN)~~ — **done on `v3`**, and taken further: the command is gone rather than reduced to a hint. `mops toolchain init` / `toolchain reset`, `cli/bin/moc-wrapper.sh` and the `moc-wrapper` bin entry are deleted, along with `checkToolchainInited()`. The bridge existed so a project that deploys with dfx still built with the pinned `moc`; icp-cli's Motoko recipe invokes `mops build`, so it inherits the pin with nothing in between.
 - ~~Reject `dfx` field in `[package]` at publish~~ — **done on `v3`**: rejected with a dedicated error and dropped from `cli/types.ts`. Note the preflight list already rejected it as "not supported yet"; the change is the type removal and an accurate message. The backend `PackageConfigV3_Publishing.dfx` field is still sent as `""` for wire compatibility (dropping it needs the registry-data-model cleanup below).
+- ~~Remove the remaining dfx-facing surface: `mops toolchain init` / `moc-wrapper`, `mops init` writing `defaults.build.packtool`, and `mops watch --deploy` / `--generate`~~ — **done on `v3`**. `mops watch` keeps errors, warnings, formatting and tests; the deploy and generate tasks shelled out to `dfx` and were dropped rather than ported (mops is not a deployment tool, and `dfx generate` emits JS/TS bindings, which mops has never produced — `mops generate candid` only writes `.did`). `cli/commands/watch/{deployer,generator,parseDfxJson}.ts` are deleted.
 
-Still dfx-facing on purpose, all for projects that deploy with dfx: `mops sources` as a packtool, `mops toolchain init` / `moc-wrapper`, `mops init` writing `defaults.build.packtool`, and `mops watch --deploy` / `--generate`.
+Only `mops sources` remains, and it is tool-agnostic: it prints `--package` flags and nothing else. A dfx user can still wire it up as a packtool, but the pinned `[toolchain] moc` no longer reaches `dfx build`.
 
 ### Drop vessel / dhall
 
@@ -137,15 +138,15 @@ Content: pin git deps to a **resolved commit SHA**. Today the `deps` map (`cli/i
 - True Node-less binary distribution (single executable, no `node_modules`). Today `npm i -g ic-mops` and the `cli-releases` `install.sh` both end up shelling to `npm add -g <tgz>`, so any Node-runtime / native-module bug hits both. Node SEA, `bun build --compile`, or Rust rewrite (GH #237) eliminates this whole class of install failures. (LIN: investigate publishing standalone binary)
 - Rust CLI rewrite — defer or commit. (GH #237)
 
-### Internal repo migration `dfx` → `icp` (dev/CI loop, not user-facing — non-blocking for v3)
+### Internal repo migration `dfx` → `icp` (dev/CI loop, not user-facing — must land before the dfx-support removal ships)
 
-We can't credibly tell users to drop `dfx` while our own dev loop runs on it, but v3 keeps explicit dfx support anyway, so this proceeds in parallel:
+v3 tells users mops does not support `dfx`, so this can no longer lag behind — our own release pipeline must be off dfx before that lands:
 
 - `package.json` `deploy*` scripts → `icp` equivalents. (`replica` and `decl:cli` are done.)
 - `.github/workflows/{release,mops-test,setup-mops}.yml`: replace `dfinity/setup-dfx` + `dfx cache install` with the `icp` setup action. (`ci.yml` is done.)
 - `dfx.json` → `icp` project config (decide whether to keep `dfx.json` for back-compat).
 - `cli/tests/build/no-dfx/` + `build-no-dfx.test.ts` — keep as a regression test that mops works with neither `dfx` nor `icp` on PATH.
-- `backend/DEVELOPMENT.md`, `cli/{DEVELOPMENT,README,RELEASE}.md`, `docs/docs/01-quick-start.md`, blog posts — rewrite in `icp` terms; add a "migrating from dfx" note.
+- `backend/DEVELOPMENT.md`, `cli/{DEVELOPMENT,RELEASE}.md`, blog posts — rewrite in `icp` terms; add a "migrating from dfx" note. (`cli/README.md` and `docs/docs/01-quick-start.md` are done.)
 - `AGENTS.md` rule "do not run `dfxvm update/install/default`" needs an `icp`-equivalent.
 
 ---

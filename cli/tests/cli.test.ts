@@ -40,6 +40,24 @@ describe("cli", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout.trim()).toMatch(/mops\/staging$/);
   });
+
+  // These set up and tore down the `DFX_MOC_PATH=moc-wrapper` bridge, which
+  // only ever existed to make `dfx build` compile with the pinned moc.
+  test.each(["init", "reset"])(
+    "`toolchain %s` is not a command",
+    async (name) => {
+      const result = await cli(["toolchain", name]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/unknown command/);
+    },
+  );
+
+  test("`watch` no longer offers dfx generate/deploy tasks", async () => {
+    const result = await cli(["watch", "--help"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/--test/);
+    expect(result.stdout).not.toMatch(/--generate|--deploy/);
+  });
 });
 
 describe("install", () => {
