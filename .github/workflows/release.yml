@@ -361,41 +361,50 @@ jobs:
 
       # --- Canister deployments ---
 
-      - if: steps.version.outputs.prerelease == 'false'
-        uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
-
-      # For the cli canister only — the docs deploy imports the same pem into icp-cli.
-      - name: Import mops identity into dfx
-        if: steps.version.outputs.prerelease == 'false'
-        env:
-          MOPS_IDENTITY_PEM: ${{ secrets.MOPS_IDENTITY_PEM }}
-        run: |
-          echo "$MOPS_IDENTITY_PEM" > /tmp/mops.pem
-          trap 'rm -f /tmp/mops.pem' EXIT
-          dfx identity import mops /tmp/mops.pem --storage-mode plaintext
-
-      - name: Install cli-releases dependencies
-        if: steps.version.outputs.prerelease == 'false'
-        working-directory: cli-releases
-        run: npm ci
-
       - name: Deploy CLI canister
         if: steps.version.outputs.prerelease == 'false'
-        env:
-          DFX_WARNING: -mainnet_plaintext_identity
-        run: |
-          for i in 1 2 3; do
-            dfx deploy --network ic --no-wallet cli --identity mops && exit 0
-            echo "::warning::CLI canister deploy attempt $i/3 failed"
-            [ "$i" -lt 3 ] && sleep 30
-          done
-          exit 1
-
-      # docs runs on icp-cli; the cli canister above stays on dfx on purpose,
-      # so only one production deploy path moves at a time.
-      - name: Deploy docs canister
-        uses: ./.github/actions/deploy-docs
+        uses: ./.github/actions/deploy-canister
         with:
+          canister: cli
+          domain: cli.mops.one
+          build-deps-dir: cli-releases
+          identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
+
+      # `mops self update` reads /tags/latest and then installs
+      # /versions/<that>.tgz, and the mops-test.yml matrix installs
+      # /versions/latest.tgz. The action's domain check cannot cover any of it —
+      # this is the one part of the cli deploy that is version-specific.
+      # Unpacking rather than checking the status is deliberate: the asset
+      # canister answers unknown paths with index.html at HTTP 200.
+      - name: Verify the released CLI is served
+        if: steps.version.outputs.prerelease == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          served=$(curl -sSf --max-time 60 https://cli.mops.one/tags/latest | tr -d '[:space:]')
+          if [ "$served" != "$VERSION" ]; then
+            echo "::error::cli.mops.one/tags/latest is '${served}', expected '${VERSION}'. \`mops self update\` will not offer this release."
+            exit 1
+          fi
+          echo "ok    tags/latest is $served"
+
+          for name in "$VERSION" latest; do
+            url="https://cli.mops.one/versions/${name}.tgz"
+            curl -sSf --max-time 180 -o /tmp/served.tgz "$url"
+            if ! tar -tzf /tmp/served.tgz > /dev/null 2>&1; then
+              echo "::error::$url is not a readable tarball. \`npm i -g\` from it would fail."
+              exit 1
+            fi
+            echo "ok    $url"
+          done
+
+      - name: Deploy docs canister
+        uses: ./.github/actions/deploy-canister
+        with:
+          canister: docs
+          domain: docs.mops.one
+          build-deps-dir: docs
           identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
 
       # --- Commit release artifacts ---
