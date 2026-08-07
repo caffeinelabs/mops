@@ -46,11 +46,14 @@ const config = {
 				docs: {
 					routeBasePath: '/',
 					sidebarPath: './sidebars.js',
-					// The in-development line is served at the root; older lines live under /<version>.
-					lastVersion: 'current',
+					// The released line is served at the root; the in-development line
+					// lives under /next. Flip back to 'current' at the 3.0.0 GA.
+					// `main` carries 'current', so whichever branch released most
+					// recently decides the layout until the two converge at GA.
+					lastVersion: '2.x',
 					versions: {
-						current: {label: '3.x (unreleased)', path: ''},
-						'2.x': {label: '2.x', path: '2.x'},
+						current: {label: '3.x (unreleased)', path: 'next'},
+						'2.x': {label: '2.x', path: ''},
 					},
 					// Please change this to your repo.
 					// Remove this to remove the "edit this page" links.

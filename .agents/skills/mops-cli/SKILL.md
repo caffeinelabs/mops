@@ -296,4 +296,4 @@ To update tools later: `mops toolchain update moc` or `mops toolchain update` (a
 
 ## Editing the mops docs site
 
-Edits go to `docs/docs/` — the in-development line, served at the root of docs.mops.one. `docs/versioned_docs/version-2.x/` is a frozen snapshot; back-port only correctness fixes for behavior that also exists in 2.x.
+Edits go to `docs/docs/` — the in-development 3.x line, served at `docs.mops.one/next/` during the 3.x preview. `docs/versioned_docs/version-2.x/` is the released line, served at the root, and is a frozen snapshot; back-port only correctness fixes for behavior that also exists in 2.x. The two swap back at the 3.0.0 GA.
