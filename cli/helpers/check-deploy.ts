@@ -5,7 +5,7 @@ import { mapPocketIcError } from "./ic-error-codes.js";
 import { startPocketIc, type AnyPocketIcServer } from "./pocket-ic-client.js";
 import type { PocketIc } from "@dfinity/pic";
 
-export interface TestDeployArtifact {
+export interface CheckDeployArtifact {
   name: string;
   wasmPath: string;
   initCandid: string;
@@ -14,19 +14,19 @@ export interface TestDeployArtifact {
   hasMigrationChain: boolean;
 }
 
-export type TestDeployOutcome =
+export type CheckDeployOutcome =
   | { canister: string; status: "success" }
   | { canister: string; status: "inconclusive" }
   | { canister: string; status: "failure"; error: Error };
 
-export interface TestDeployReport {
-  outcomes: TestDeployOutcome[];
+export interface CheckDeployReport {
+  outcomes: CheckDeployOutcome[];
 }
 
-export async function testDeploy(
-  artifacts: TestDeployArtifact[],
+export async function checkDeploy(
+  artifacts: CheckDeployArtifact[],
   { verbose = false } = {},
-): Promise<TestDeployReport> {
+): Promise<CheckDeployReport> {
   const preparedArtifacts = artifacts.map((artifact) => {
     try {
       return {
@@ -52,7 +52,7 @@ export async function testDeploy(
   let client: PocketIc | undefined;
   let operationFailed = false;
   let operationError: unknown;
-  const outcomes: TestDeployOutcome[] = [];
+  const outcomes: CheckDeployOutcome[] = [];
 
   try {
     const pocketIc = await startPocketIc(
@@ -69,7 +69,7 @@ export async function testDeploy(
 
     for (const artifact of preparedArtifacts) {
       console.log(
-        chalk.blue("test deploy canister"),
+        chalk.blue("check deploy canister"),
         chalk.bold(artifact.name),
       );
       const canisterId = await client.createCanister(
@@ -113,19 +113,22 @@ export async function testDeploy(
 
   if (operationFailed) {
     const mappedError = mapPocketIcError(operationError);
-    throw new Error(`PocketIC test deployment failed\n${mappedError.message}`, {
-      cause: operationError,
-    });
+    throw new Error(
+      `PocketIC deployment check failed\n${mappedError.message}`,
+      {
+        cause: operationError,
+      },
+    );
   }
 
   const failures = outcomes.filter(
-    (outcome): outcome is Extract<TestDeployOutcome, { status: "failure" }> =>
+    (outcome): outcome is Extract<CheckDeployOutcome, { status: "failure" }> =>
       outcome.status === "failure",
   );
   if (failures.length) {
     throw new Error(
       [
-        "PocketIC test deployment failed",
+        "PocketIC deployment check failed",
         ...failures.flatMap((failure) => [
           `Canister: ${failure.canister}`,
           failure.error.message,
@@ -142,7 +145,7 @@ export async function testDeploy(
     const successful = outcomes.length - inconclusive;
     console.warn(
       chalk.yellow(
-        `Test deployment summary: ${successful} successful, ${inconclusive} inconclusive.`,
+        `Deployment check summary: ${successful} successful, ${inconclusive} inconclusive.`,
       ),
     );
   }
@@ -151,7 +154,7 @@ export async function testDeploy(
 }
 
 function isMigrationBaselineFailure(
-  artifact: TestDeployArtifact,
+  artifact: CheckDeployArtifact,
   error: Error,
 ): boolean {
   return (
@@ -164,11 +167,11 @@ function isMigrationBaselineFailure(
 
 function formatMigrationInconclusiveWarning(canister: string): string {
   return [
-    "Warning [MOPS-TEST-DEPLOY-INCONCLUSIVE]:",
+    "Warning [MOPS-CHECK-DEPLOY-INCONCLUSIVE]:",
     `Canister: ${canister}`,
     "Result: Fresh PocketIC installation could not be validated.",
     "Reason: This canister has an enhanced migration chain that may require state from a previous deployment. A fresh canister cannot reproduce that baseline.",
-    "Impact: The Wasm build succeeded, but test deployment remains unverified.",
+    "Impact: The Wasm build succeeded, but deployment check remains unverified.",
     "Suggested action: Validate the upgrade against a canister containing representative baseline state.",
   ].join("\n");
 }

@@ -14,7 +14,7 @@ import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { optimizeWasm } from "../helpers/optimize-wasm.js";
 import { parseMostAppliedMigrationNames } from "../helpers/parse-most.js";
 import { assertDfinityClientSupportsPocketIc } from "../helpers/pocket-ic-startup.js";
-import type { TestDeployArtifact } from "../helpers/test-deploy.js";
+import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
@@ -24,7 +24,7 @@ import { toolchain } from "./toolchain/index.js";
 export interface BuildOptions {
   outputDir: string;
   verbose: boolean;
-  testDeploy: boolean;
+  checkDeploy: boolean;
   /** `false` skips the `[optimize]` wasm-opt pass (`--no-optimize`). */
   optimize: boolean;
   extraArgs: string[];
@@ -57,13 +57,13 @@ export async function build(
   }
 
   let config = readConfig();
-  const testDeployEnabled =
-    options.testDeploy ?? config.build?.["test-deploy"] ?? false;
-  if (testDeployEnabled) {
+  const checkDeployEnabled =
+    options.checkDeploy ?? config.build?.["check-deploy"] ?? false;
+  if (checkDeployEnabled) {
     const pocketIcVersion = config.toolchain?.["pocket-ic"];
     if (!pocketIcVersion) {
       cliError(
-        "PocketIC test deployment requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 12.0.0` to pin it.",
+        "PocketIC deployment check requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 12.0.0` to pin it.",
       );
     }
     try {
@@ -84,7 +84,7 @@ export async function build(
   }
 
   const filteredCanisters = filterCanisters(canisters, canisterNames);
-  const testDeployArtifacts: TestDeployArtifact[] = [];
+  const checkDeployArtifacts: CheckDeployArtifact[] = [];
 
   for (let [canisterName, canister] of Object.entries(filteredCanisters)) {
     console.log(chalk.blue("build canister"), chalk.bold(canisterName));
@@ -228,7 +228,7 @@ export async function build(
           verbose: options.verbose,
           optimize: options.optimize,
         });
-        if (testDeployEnabled) {
+        if (checkDeployEnabled) {
           runWasmComplexityPreflight(canisterName, await readFile(wasmPath));
           // Init args must be encoded against the Motoko-generated init
           // signature. A declared candid file is typically service-only and
@@ -237,7 +237,7 @@ export async function build(
             ? await readFile(generatedDidPath, "utf-8")
             : candidText;
           const mostText = await readFile(mostPath, "utf-8");
-          testDeployArtifacts.push({
+          checkDeployArtifacts.push({
             name: canisterName,
             wasmPath,
             initCandid: initCandidText,
@@ -264,10 +264,10 @@ export async function build(
     }
   }
 
-  if (testDeployEnabled) {
+  if (checkDeployEnabled) {
     try {
-      const { testDeploy } = await import("../helpers/test-deploy.js");
-      await testDeploy(testDeployArtifacts, { verbose: options.verbose });
+      const { checkDeploy } = await import("../helpers/check-deploy.js");
+      await checkDeploy(checkDeployArtifacts, { verbose: options.verbose });
     } catch (err) {
       cliError(err instanceof Error ? err.message : String(err));
     }

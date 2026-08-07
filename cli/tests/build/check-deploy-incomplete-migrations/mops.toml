@@ -6,7 +6,7 @@ pocket-ic = "12.0.0"
 args = ["--default-persistent-actors"]
 
 [build]
-test-deploy = true
+check-deploy = true
 
 [canisters.problematic]
 main = "src/Main.mo"

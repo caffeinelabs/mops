@@ -351,14 +351,14 @@ program
   .addOption(new Option("--output, -o <output>", "Output directory"))
   .addOption(
     new Option(
-      "--test-deploy",
-      "Install the built Wasm on PocketIC to detect deployment failures (also enabled by [build].test-deploy)",
+      "--check-deploy",
+      "Install the built Wasm on PocketIC to detect deployment failures (also enabled by [build].check-deploy)",
     ),
   )
   .addOption(
     new Option(
-      "--no-test-deploy",
-      "Skip PocketIC deployment validation even when [build].test-deploy is enabled",
+      "--no-check-deploy",
+      "Skip PocketIC deployment validation even when [build].check-deploy is enabled",
     ),
   )
   .addOption(

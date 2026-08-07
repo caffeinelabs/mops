@@ -101,7 +101,7 @@ Each canister entry specifies the entrypoint file and optional compiler settings
 | args     | Array of additional `moc` arguments for this canister (optional). Applied after `[moc].args` in `check`, `check-stable`, and `build`. |
 | candid   | Path to a Candid interface file (optional). `mops build` subtype-checks the generated interface against this file and embeds it into the wasm as `candid:service` metadata. `mops generate candid` writes the regenerated `.did` to this path. |
 | initArg  | Candid-encoded initialization arguments (optional)              |
-| wasmMemoryLimit | Positive integer Wasm memory limit in bytes applied by `mops build --test-deploy` (optional). Invalid values are rejected by every command that resolves canisters. |
+| wasmMemoryLimit | Positive integer Wasm memory limit in bytes applied by `mops build --check-deploy` (optional). Invalid values are rejected by every command that resolves canisters. |
 
 Example:
 ```toml
@@ -187,14 +187,14 @@ Global build settings used by [`mops build`](./cli/4-dev/03-mops-build.md).
 | --------- | --------------------------------------------------------------- |
 | outputDir | Output directory for compiled Wasm and Candid files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
 | args      | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
-| test-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Requires `pocket-ic` 9.0.0 or newer in `[toolchain]`. A migration-specific missing-state trap for a canister with an enhanced migration chain is reported as inconclusive because a fresh canister cannot reproduce legacy baseline state; sibling deployments continue. Other failures remain fatal. Override for one build with `--test-deploy` or `--no-test-deploy`. |
+| check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Requires `pocket-ic` 9.0.0 or newer in `[toolchain]`. A migration-specific missing-state trap for a canister with an enhanced migration chain is reported as inconclusive because a fresh canister cannot reproduce legacy baseline state; sibling deployments continue. Other failures remain fatal. Override for one build with `--check-deploy` or `--no-check-deploy`. |
 
 Example:
 ```toml
 [build]
 outputDir = "dist"
 args = ["--release", "--ai-errors"]
-test-deploy = true
+check-deploy = true
 ```
 
 These flags are applied after `[moc].args` and before per-canister `[canisters.<name>].args`.

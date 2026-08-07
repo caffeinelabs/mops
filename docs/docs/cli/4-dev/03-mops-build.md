@@ -25,7 +25,7 @@ If the canister config sets a `candid` field, the generated `.did` is also check
 
 When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Failures warn and leave the unoptimized module. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
 
-When `--test-deploy` or `[build].test-deploy = true` enables deployment validation, Mops first uses Walrus to estimate each function's IC0505 compilation complexity in the final Wasm:
+When `--check-deploy` or `[build].check-deploy = true` enables deployment validation, Mops first uses Walrus to estimate each function's IC0505 compilation complexity in the final Wasm:
 
 - Below 750,000: no warning
 - 750,000 through 899,999: early warning
@@ -57,7 +57,7 @@ mops build --output ./build
 
 Build and verify that each Wasm installs on PocketIC
 ```
-mops build --test-deploy
+mops build --check-deploy
 ```
 
 Pass additional arguments to the Motoko compiler
@@ -89,14 +89,14 @@ Skip the [`[optimize]`](../../09-mops.toml.md#optimize) `wasm-opt` post-pass for
 mops build --no-optimize
 ```
 
-### `--test-deploy`
+### `--check-deploy`
 
 Install each built Wasm on a fresh PocketIC canister after compilation, metadata embedding, and optimization. The build fails if PocketIC rejects the Wasm or the canister initialization traps. Initialization uses the canister's configured `initArg`, or `()` when it is omitted.
 
 Enable the same validation for every plain `mops build` invocation:
 ```toml
 [build]
-test-deploy = true
+check-deploy = true
 ```
 
 PocketIC 9.0.0 or newer, or a local PocketIC binary path, must be pinned in
@@ -106,7 +106,7 @@ PocketIC 9.0.0 or newer, or a local PocketIC binary path, must be pinned in
 pocket-ic = "12.0.0"
 ```
 
-To test deployment with a non-default Wasm memory limit, configure the limit in
+To check deployment with a non-default Wasm memory limit, configure the limit in
 bytes on the canister:
 ```toml
 [canisters.backend]
@@ -114,15 +114,15 @@ main = "src/backend/main.mo"
 wasmMemoryLimit = 16777216
 ```
 
-The PocketIC client and binary are only loaded when `--test-deploy` or
-`[build].test-deploy` enables this validation.
+The PocketIC client and binary are only loaded when `--check-deploy` or
+`[build].check-deploy` enables this validation.
 PocketIC error names are reported with their canonical IC error codes,
 for example `IC0539 (CanisterWasmMemoryLimitExceeded)`.
 
 This validation performs a fresh install. When PocketIC reports the
 migration-specific missing-state trap for a canister whose generated `.most`
 contains an enhanced migration chain, Mops reports
-`MOPS-TEST-DEPLOY-INCONCLUSIVE` instead of failing the command. It continues
+`MOPS-CHECK-DEPLOY-INCONCLUSIVE` instead of failing the command. It continues
 testing sibling canisters and prints a final success/inconclusive summary.
 The warning explains that a chain converted from legacy migrations may require
 baseline state that a fresh canister cannot reproduce.
@@ -131,13 +131,13 @@ Only that migration baseline case is inconclusive. Complexity, memory-limit,
 invalid Wasm, ordinary initialization, Candid, configuration, and PocketIC
 startup failures still fail the command.
 
-### `--no-test-deploy`
+### `--no-check-deploy`
 
 Skip PocketIC deployment validation for this build, even when
-`[build].test-deploy = true`.
+`[build].check-deploy = true`.
 
 ```bash
-mops build --no-test-deploy
+mops build --no-check-deploy
 ```
 
 ## Configuration
@@ -161,7 +161,7 @@ You can also set global build settings:
 [build]
 outputDir = "dist"
 args = ["--release", "--ai-errors"]
-test-deploy = true
+check-deploy = true
 ```
 
 ### `[build].outputDir`

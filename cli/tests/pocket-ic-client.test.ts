@@ -7,7 +7,7 @@ describe("PocketIC client compatibility", () => {
     "rejects PocketIC %s for the dfinity client",
     (version) => {
       expect(() => assertDfinityClientSupportsPocketIc(version)).toThrow(
-        `PocketIC ${version} is incompatible with test deployment`,
+        `PocketIC ${version} is incompatible with deployment checks`,
       );
     },
   );
