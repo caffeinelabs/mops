@@ -175,7 +175,6 @@ describe("build", () => {
 
   test("over-limit IC0505 estimate continues to PocketIC", async () => {
     const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
-    const startupMarker = path.join(cwd, "pocket-ic-started");
     try {
       const result = await cli(["build"], { cwd });
       expect(result.exitCode).toBe(1);
@@ -186,24 +185,23 @@ describe("build", () => {
       expect(result.stderr).toMatch(
         "PocketIC test deployment will verify the authoritative result",
       );
-      expect(existsSync(startupMarker)).toBe(true);
+      expect(result.stderr).toMatch("Error code: IC0505 (CanisterInvalidWasm)");
+      expect(result.stderr).not.toMatch("MOPS-TEST-DEPLOY-INCONCLUSIVE");
     } finally {
-      cleanFixture(cwd, startupMarker);
+      cleanFixture(cwd);
     }
   });
 
   test("--no-test-deploy disables the Wasm preflight", async () => {
     const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
-    const startupMarker = path.join(cwd, "pocket-ic-started");
     try {
       const result = await cli(["build", "--no-test-deploy"], { cwd });
       expect(result.exitCode).toBe(0);
       expect(result.stderr).not.toMatch("MOPS-WASM-COMPLEXITY");
       expect(result.stdout).not.toMatch("test deploy canister");
       expect(result.stdout).toMatch("Built 1 canister successfully");
-      expect(existsSync(startupMarker)).toBe(false);
     } finally {
-      cleanFixture(cwd, startupMarker);
+      cleanFixture(cwd);
     }
   });
 
@@ -278,7 +276,7 @@ describe("build", () => {
       expect(result.stderr).toMatch(
         "Error code: IC0539 (CanisterWasmMemoryLimitExceeded)",
       );
-      expect(result.stderr).not.toMatch("has an enhanced migration chain");
+      expect(result.stderr).not.toMatch("MOPS-TEST-DEPLOY-INCONCLUSIVE");
     } finally {
       cleanFixture(cwd);
     }
@@ -296,24 +294,67 @@ describe("build", () => {
     }
   });
 
-  test("test-deploy annotates an install failure for a migration chain", async () => {
+  test("--test-deploy preserves an ordinary installation failure", async () => {
+    const cwd = path.join(import.meta.dirname, "build/test-deploy-trap");
+    try {
+      const result = await cli(["build", "--test-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("PocketIC test deployment failed");
+      expect(result.stderr).toMatch("assertion failed");
+      expect(result.stderr).toMatch("Error code: IC0503 (CanisterCalledTrap)");
+      expect(result.stderr).not.toMatch("MOPS-TEST-DEPLOY-INCONCLUSIVE");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--test-deploy preserves PocketIC startup failures", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "build/test-deploy-startup-fail",
+    );
+    try {
+      const result = await cli(["build", "--test-deploy"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("PocketIC test deployment failed");
+      expect(result.stderr).not.toMatch("MOPS-TEST-DEPLOY-INCONCLUSIVE");
+      expect(result.stdout).not.toMatch("test deploy canister");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("test-deploy continues after deterministic migration inconclusive outcomes", async () => {
     const cwd = path.join(
       import.meta.dirname,
       "build/test-deploy-incomplete-migrations",
     );
     try {
-      const result = await cli(["build"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("PocketIC test deployment failed");
+      const result = await cliSnapshot(["build"], { cwd }, 0);
+      expect(result.exitCode).toBe(0);
       expect(result.stderr).toMatch(
-        "Canister problematic has an enhanced migration chain",
+        "Warning [MOPS-TEST-DEPLOY-INCONCLUSIVE]:\nCanister: problematic\nResult: Fresh PocketIC installation could not be validated.",
       );
       expect(result.stderr).toMatch(
-        "a fresh install cannot reproduce its baseline",
+        "Canister: problematic2\nResult: Fresh PocketIC installation could not be validated.",
       );
-      expect(result.stderr).toMatch("`--no-test-deploy`");
+      expect(result.stderr).toMatch(
+        "Suggested action: Validate the upgrade against a canister containing representative baseline state.",
+      );
+      expect(
+        result.stderr.match(/MOPS-TEST-DEPLOY-INCONCLUSIVE/g),
+      ).toHaveLength(2);
+      expect(result.stderr.indexOf("Canister: problematic")).toBeLessThan(
+        result.stderr.indexOf("Canister: problematic2"),
+      );
+      expect(result.stderr).toMatch(
+        "Test deployment summary: 1 successful, 2 inconclusive.",
+      );
+      expect(result.stderr).not.toMatch("PocketIC test deployment failed");
       expect(result.stdout).toMatch("test deploy canister problematic");
-      expect(result.stdout).not.toMatch("test deploy canister healthy");
+      expect(result.stdout).toMatch("test deploy canister problematic2");
+      expect(result.stdout).toMatch("test deploy canister healthy");
+      expect(result.stdout).toMatch("Built 3 canisters successfully");
     } finally {
       cleanFixture(cwd);
     }

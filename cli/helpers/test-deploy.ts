@@ -14,10 +14,19 @@ export interface TestDeployArtifact {
   hasMigrationChain: boolean;
 }
 
+export type TestDeployOutcome =
+  | { canister: string; status: "success" }
+  | { canister: string; status: "inconclusive" }
+  | { canister: string; status: "failure"; error: Error };
+
+export interface TestDeployReport {
+  outcomes: TestDeployOutcome[];
+}
+
 export async function testDeploy(
   artifacts: TestDeployArtifact[],
   { verbose = false } = {},
-): Promise<void> {
+): Promise<TestDeployReport> {
   const preparedArtifacts = artifacts.map((artifact) => {
     try {
       return {
@@ -41,7 +50,9 @@ export async function testDeploy(
   const pocketIcBin = await toolchain.bin("pocket-ic");
   let server: AnyPocketIcServer | undefined;
   let client: PocketIc | undefined;
-  let installingArtifact: TestDeployArtifact | undefined;
+  let operationFailed = false;
+  let operationError: unknown;
+  const outcomes: TestDeployOutcome[] = [];
 
   try {
     const pocketIc = await startPocketIc(
@@ -66,27 +77,98 @@ export async function testDeploy(
           ? undefined
           : { wasmMemoryLimit: BigInt(artifact.wasmMemoryLimit) },
       );
-      installingArtifact = artifact;
-      await client.installCode({
-        canisterId,
-        wasm: artifact.wasmPath,
-        arg: artifact.arg,
-      });
-      installingArtifact = undefined;
+      try {
+        await client.installCode({
+          canisterId,
+          wasm: artifact.wasmPath,
+          arg: artifact.arg,
+        });
+        outcomes.push({ canister: artifact.name, status: "success" });
+      } catch (error) {
+        const mappedError = mapPocketIcError(error);
+        if (isMigrationBaselineFailure(artifact, mappedError)) {
+          console.warn(
+            chalk.yellow(formatMigrationInconclusiveWarning(artifact.name)),
+          );
+          outcomes.push({
+            canister: artifact.name,
+            status: "inconclusive",
+          });
+          continue;
+        }
+        outcomes.push({
+          canister: artifact.name,
+          status: "failure",
+          error: mappedError,
+        });
+      }
     }
   } catch (error) {
-    const mappedError = mapPocketIcError(error);
-    const hint = installingArtifact?.hasMigrationChain
-      ? `\nCanister ${installingArtifact.name} has an enhanced migration chain. If it was converted from legacy migrations, a fresh install cannot reproduce its baseline. Use \`--no-test-deploy\` to skip deployment validation for this build.`
-      : "";
-    throw new Error(
-      `PocketIC test deployment failed\n${mappedError.message}${hint}`,
-      {
-        cause: error,
-      },
-    );
+    operationFailed = true;
+    operationError = error;
   } finally {
     await client?.tearDown().catch(() => {});
     await server?.stop().catch(() => {});
   }
+
+  if (operationFailed) {
+    const mappedError = mapPocketIcError(operationError);
+    throw new Error(`PocketIC test deployment failed\n${mappedError.message}`, {
+      cause: operationError,
+    });
+  }
+
+  const failures = outcomes.filter(
+    (outcome): outcome is Extract<TestDeployOutcome, { status: "failure" }> =>
+      outcome.status === "failure",
+  );
+  if (failures.length) {
+    throw new Error(
+      [
+        "PocketIC test deployment failed",
+        ...failures.flatMap((failure) => [
+          `Canister: ${failure.canister}`,
+          failure.error.message,
+        ]),
+      ].join("\n"),
+      { cause: failures[0]?.error },
+    );
+  }
+
+  const inconclusive = outcomes.filter(
+    (outcome) => outcome.status === "inconclusive",
+  ).length;
+  if (inconclusive) {
+    const successful = outcomes.length - inconclusive;
+    console.warn(
+      chalk.yellow(
+        `Test deployment summary: ${successful} successful, ${inconclusive} inconclusive.`,
+      ),
+    );
+  }
+
+  return { outcomes };
+}
+
+function isMigrationBaselineFailure(
+  artifact: TestDeployArtifact,
+  error: Error,
+): boolean {
+  return (
+    artifact.hasMigrationChain &&
+    error.message.includes("Error code: IC0503 (CanisterCalledTrap)") &&
+    error.message.includes("migration ") &&
+    error.message.includes("expected but not found in state")
+  );
+}
+
+function formatMigrationInconclusiveWarning(canister: string): string {
+  return [
+    "Warning [MOPS-TEST-DEPLOY-INCONCLUSIVE]:",
+    `Canister: ${canister}`,
+    "Result: Fresh PocketIC installation could not be validated.",
+    "Reason: This canister has an enhanced migration chain that may require state from a previous deployment. A fresh canister cannot reproduce that baseline.",
+    "Impact: The Wasm build succeeded, but test deployment remains unverified.",
+    "Suggested action: Validate the upgrade against a canister containing representative baseline state.",
+  ].join("\n");
 }

@@ -1,9 +1,6 @@
 [toolchain]
-moc = "./mock-moc"
+moc = "1.5.0"
 pocket-ic = "12.0.0"
-
-[build]
-test-deploy = true
 
 [canisters.main]
 main = "src/Main.mo"

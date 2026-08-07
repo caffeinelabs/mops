@@ -1,0 +1,3 @@
+persistent actor {
+  assert false;
+};

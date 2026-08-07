@@ -14,5 +14,11 @@ main = "src/Main.mo"
 [canisters.problematic.migrations]
 chain = "migrations"
 
+[canisters.problematic2]
+main = "src/Main.mo"
+
+[canisters.problematic2.migrations]
+chain = "migrations"
+
 [canisters.healthy]
 main = "src/Healthy.mo"
