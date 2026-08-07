@@ -74,7 +74,7 @@ The CLI and frontend both communicate with the **main canister** (`backend/main/
 ### Backend (`backend/`)
 - `backend/main/main-canister.mo` — Motoko actor; manages the package registry using TrieMap-based state. Key sub-modules: `PackagePublisher.mo`, `DownloadLog.mo`, `Users.mo`, `registry/`.
 - `backend/storage/` — Separate storage canisters for file chunks.
-- Canister IDs are in `canister_ids.json` (`dfx.json` holds `specified_id`s for staging/local). Production main canister: `oknww-riaaa-aaaam-qaf6a-cai`.
+- Canister IDs are in `canister_ids.json`. Production main canister: `oknww-riaaa-aaaam-qaf6a-cai`.
 
 ### CLI (`cli/`)
 - Entry: `cli/environments/nodejs/cli.ts` (Node adapter, sets up WASM bindings) re-exports `cli/cli.ts` (Commander.js setup)
@@ -87,8 +87,9 @@ Svelte 5 + Vite 8, queries the main canister. Staging canister: `ogp6e-diaaa-aaa
 
 ## Key constraints
 
-- **dfx is not needed for local development or CI.** `npm run replica` and `npm run deploy-local` use `icp` (config in `icp.yaml`), and `npm run decl` uses `mops` + `icp-bindgen`. `dfx.json` is still kept around for the production deploy path (`deploy-staging`, `deploy-ic`, `release.yml`).
-- **dfx version**: pinned in `dfx.json` via `dfxvm`. Do not run `dfxvm update/install/default` to change it.
+- **Nothing in this repo deploys with dfx.** Every canister deploy runs on `icp` (config in `icp.yaml`) — local, staging, mainnet and `release.yml` alike — and `npm run decl` uses `mops` + `icp-bindgen`. The one remaining `setup-dfx` is in `mops-test.yml` / `setup-mops.yml`, where mops 1.x/2.x need a dfx *replica* for `test/storage-actor.test.mo`; those pin `dfx-version` explicitly now that there is no `dfx.json` for `auto` to read. The CLI still *supports* projects that deploy with dfx (`mops sources` as a packtool, `mops toolchain init`, `mops watch --deploy`); that is a user-facing feature, not a dependency of ours.
+- **Canister IDs**: icp-cli 1.2.0 cannot declare an ID in `icp.yaml` and keeps its own untracked store, so `scripts/link-canister-ids.mjs <environment> [canister...]` points that store at `canister_ids.json` before a staging/mainnet deploy. `canister_ids.json` is the source of truth; never commit `.icp/`. The mainnet deploy scripts pass `--no-create` so a missing link fails loudly instead of creating a new canister.
+- **Deploy environments** are declared explicitly in `icp.yaml`: `ic` excludes `bench`, and `staging` covers only `main` and `assets` because `docs`/`blog`/`cli` share one ID across both networks.
 - **icp-cli version**: pinned in `.github/workflows/ci.yml`; the `icp.yaml` recipes are pinned by version and sha256. icp-cli still makes breaking manifest changes between minor versions, so do not unpin a recipe and do not run `icp network update` — it upgrades the network launcher out from under the pin. To move versions, bump the CI pin and the recipes together and re-run the local pipeline.
 - **Declarations must be regenerated** after backend changes: `npm run decl` (no replica needed). Two steps per canister: `mops generate candid` writes the `.did` from Motoko source with the pinned `[toolchain] moc`, then [`icp-bindgen`](https://www.npmjs.com/package/@icp-sdk/bindgen) turns it into `*.did.js` / `*.did.d.ts`. The `index.js` / `index.d.ts` actor factories next to them are hand-maintained — nothing regenerates those; add them by hand when adding a canister.
 - **API version** in `cli/mops.ts` (`apiVersion`) and `backend/main/main-canister.mo` (`API_VERSION`) must match.
@@ -101,4 +102,4 @@ Changes here can corrupt live registry state, break published packages, or silen
 - Authn/authz — owner/maintainer/admin checks in `backend/main/main-canister.mo` and `Users.mo`, identity handling in `cli/mops.ts` and `cli/pem.ts`. A wrongly-accepted caller is worse than a wrongly-rejected one.
 - `backend/storage/**` — package file chunks; integrity of everything already published.
 - Install/resolution paths — `cli/commands/install/**`, `cli/resolve-packages.ts`, `cli/integrity.ts` (lockfile), `cli/cache.ts`, `cli/api/**`. Wrong version resolution or a corrupted cache/lockfile silently affects every downstream build.
-- Release/deploy pipeline — `.github/workflows/release*.yml`, canister IDs in `canister_ids.json` / `dfx.json`.
+- Release/deploy pipeline — `.github/workflows/release*.yml`, `.github/actions/deploy-canister/`, canister IDs in `canister_ids.json`, environment/canister declarations in `icp.yaml`.

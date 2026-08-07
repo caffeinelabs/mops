@@ -32,7 +32,8 @@ const icp = (args, quiet = false) =>
 let declared;
 try {
   declared = new Set(
-    JSON.parse(icp(["canister", "list", "--json", "-e", environment])).canisters,
+    JSON.parse(icp(["canister", "list", "--json", "-e", environment]))
+      .canisters,
   );
 } catch {
   console.error(`Could not list canisters in the ${environment} environment`);
