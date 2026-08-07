@@ -44,10 +44,11 @@ runs:
         MOPS_IDENTITY_PEM: ${{ inputs.identity-pem }}
       run: |
         set -euo pipefail
-        if icp identity principal --identity mops > /dev/null 2>&1; then
-          echo "Identity 'mops' is already imported."
-          exit 0
-        fi
+        # Import unconditionally rather than probing: a probe only proves an
+        # identity *named* mops exists, not that it holds this key, so a stale
+        # one on a reused runner would win silently and fail at deploy time.
+        # `icp identity import` has no --force, so drop any existing one first.
+        icp identity delete mops > /dev/null 2>&1 || true
         umask 077
         trap 'rm -f "$RUNNER_TEMP/mops.pem"' EXIT
         printf '%s\n' "$MOPS_IDENTITY_PEM" > "$RUNNER_TEMP/mops.pem"
@@ -88,7 +89,7 @@ runs:
         set -euo pipefail
         url="https://${DOMAIN}/.well-known/ic-domains"
         for attempt in 1 2 3; do
-          if curl -sS --max-time 30 "$url" 2>/dev/null | grep -qxF "$DOMAIN"; then
+          if grep -qxF "$DOMAIN" <<< "$(curl -sS --max-time 30 "$url" 2>/dev/null)"; then
             echo "ok    $url"
             exit 0
           fi

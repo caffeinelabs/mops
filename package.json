@@ -19,7 +19,7 @@
     "decl:frontend": "cp -r cli/declarations frontend",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "deploy": "node scripts/link-canister-ids.mjs \"${ICP_ENVIRONMENT:?use deploy-staging or deploy-ic}\" && icp deploy -y --no-create --identity \"${IDENTITY:-default}\" -e \"$ICP_ENVIRONMENT\"",
+    "deploy": "node scripts/link-canister-ids.mjs \"${ICP_ENVIRONMENT:?use deploy-staging or deploy-ic}\" && icp deploy --no-create --identity \"${IDENTITY:-default}\" -e \"$ICP_ENVIRONMENT\"",
     "deploy-local": "NODE_ENV=development icp deploy -y -e local main",
     "deploy-staging": "NODE_ENV=production IDENTITY=mops ICP_ENVIRONMENT=staging npm run deploy",
     "deploy-ic": "NODE_ENV=production IDENTITY=mops ICP_ENVIRONMENT=ic npm run deploy",

@@ -32,6 +32,15 @@ try {
     );
   }
 } catch (e) {
+  // Only local is allowed to proceed without ids — that is the "you have not
+  // deployed yet" case, and the dev server is useful anyway. For staging or ic
+  // a missing id silently yields a bundle whose every canister lookup is
+  // undefined, which builds green and cannot reach anything once deployed.
+  if (network !== "local") {
+    throw new Error(
+      `Could not read canister ids for the '${network}' network: ${e instanceof Error ? e.message : e}`,
+    );
+  }
   console.error(
     "\n⚠️  Before starting the dev server run: npm run deploy-local\n\n",
   );

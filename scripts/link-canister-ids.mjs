@@ -35,8 +35,12 @@ try {
     JSON.parse(icp(["canister", "list", "--json", "-e", environment]))
       .canisters,
   );
-} catch {
-  console.error(`Could not list canisters in the ${environment} environment`);
+} catch (e) {
+  // Surface the cause: an `icp` missing from PATH raises ENOENT with no stderr
+  // of its own, and a bare message sends a fresh clone hunting the wrong thing.
+  console.error(
+    `Could not list canisters in the ${environment} environment: ${e instanceof Error ? e.message : e}`,
+  );
   process.exit(1);
 }
 
@@ -72,7 +76,7 @@ for (const name of names) {
   try {
     icp(["canister", "link", name, id, "-e", environment], true);
   } catch {
-    icp(["canister", "link", name, id, "-e", environment, "--force"]);
+    icp(["canister", "link", name, id, "-e", environment, "--force"], true);
   }
   console.log(`link  ${name} -> ${id} (${environment})`);
 }

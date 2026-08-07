@@ -382,22 +382,34 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          served=$(curl -sSf --max-time 60 https://cli.mops.one/tags/latest | tr -d '[:space:]')
-          if [ "$served" != "$VERSION" ]; then
-            echo "::error::cli.mops.one/tags/latest is '${served}', expected '${VERSION}'. \`mops self update\` will not offer this release."
-            exit 1
-          fi
-          echo "ok    tags/latest is $served"
-
-          for name in "$VERSION" latest; do
-            url="https://cli.mops.one/versions/${name}.tgz"
-            curl -sSf --max-time 180 -o /tmp/served.tgz "$url"
-            if ! tar -tzf /tmp/served.tgz > /dev/null 2>&1; then
-              echo "::error::$url is not a readable tarball. \`npm i -g\` from it would fail."
-              exit 1
+          # Retried like every other network assertion here: a boundary-node 5xx
+          # or a briefly stale cache would otherwise abort the release between
+          # the upload and the artifacts commit, leaving the canister ahead of
+          # the repo and the next release building on a stale releases.json.
+          check() {
+            served=$(curl -sSf --max-time 60 https://cli.mops.one/tags/latest | tr -d '[:space:]') || return 1
+            if [ "$served" != "$VERSION" ]; then
+              echo "tags/latest is '${served}', expected '${VERSION}'"
+              return 1
             fi
-            echo "ok    $url"
+            for name in "$VERSION" latest; do
+              url="https://cli.mops.one/versions/${name}.tgz"
+              curl -sSf --max-time 180 -o /tmp/served.tgz "$url" || return 1
+              tar -tzf /tmp/served.tgz > /dev/null 2>&1 || { echo "$url is not a readable tarball"; return 1; }
+            done
+            return 0
+          }
+
+          for attempt in 1 2 3; do
+            if check; then
+              echo "ok    tags/latest and both tarballs are served"
+              exit 0
+            fi
+            echo "::warning::CLI serve check attempt $attempt/3 failed"
+            [ "$attempt" -lt 3 ] && sleep 15
           done
+          echo "::error::cli.mops.one is not serving ${VERSION}. \`mops self update\` will not offer this release, and the artifacts commit has not run."
+          exit 1
 
       - name: Deploy docs canister
         uses: ./.github/actions/deploy-canister
