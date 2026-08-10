@@ -140,8 +140,7 @@ wasmMemoryLimit = 16777216
 
 The PocketIC client and binary are only loaded when `--check-deploy` or
 `[build].check-deploy` enables this validation.
-PocketIC error names are reported with their canonical IC error codes,
-for example `IC0539 (CanisterWasmMemoryLimitExceeded)`.
+PocketIC errors are reported as provided by the client.
 
 This validation performs a fresh install. When PocketIC reports the
 migration-specific missing-state trap for a canister whose generated `.most`

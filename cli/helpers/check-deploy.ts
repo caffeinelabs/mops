@@ -1,7 +1,6 @@
 import chalk from "chalk";
 import { getWasmBindings } from "../wasm.js";
 import { toolchain } from "../commands/toolchain/index.js";
-import { mapPocketIcError } from "./ic-error-codes.js";
 import { startPocketIc, type AnyPocketIcServer } from "./pocket-ic-client.js";
 import type { PocketIc } from "@dfinity/pic";
 
@@ -85,8 +84,9 @@ export async function checkDeploy(
         });
         outcomes.push({ canister: artifact.name, status: "success" });
       } catch (error) {
-        const mappedError = mapPocketIcError(error);
-        if (isMigrationBaselineFailure(artifact, mappedError)) {
+        const installError =
+          error instanceof Error ? error : new Error(String(error));
+        if (isMigrationBaselineFailure(artifact, installError)) {
           console.warn(
             chalk.yellow(formatMigrationInconclusiveWarning(artifact.name)),
           );
@@ -99,7 +99,7 @@ export async function checkDeploy(
         outcomes.push({
           canister: artifact.name,
           status: "failure",
-          error: mappedError,
+          error: installError,
         });
       }
     }
@@ -112,13 +112,13 @@ export async function checkDeploy(
   }
 
   if (operationFailed) {
-    const mappedError = mapPocketIcError(operationError);
-    throw new Error(
-      `PocketIC deployment check failed\n${mappedError.message}`,
-      {
-        cause: operationError,
-      },
-    );
+    const message =
+      operationError instanceof Error
+        ? operationError.message
+        : String(operationError);
+    throw new Error(`PocketIC deployment check failed\n${message}`, {
+      cause: operationError,
+    });
   }
 
   const failures = outcomes.filter(
@@ -159,7 +159,7 @@ function isMigrationBaselineFailure(
 ): boolean {
   return (
     artifact.hasMigrationChain &&
-    error.message.includes("Error code: IC0503 (CanisterCalledTrap)") &&
+    error.message.includes("Error code: CanisterCalledTrap") &&
     error.message.includes("migration ") &&
     error.message.includes("expected but not found in state")
   );

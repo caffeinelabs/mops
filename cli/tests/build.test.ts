@@ -185,7 +185,7 @@ describe("build", () => {
       expect(result.stderr).toMatch(
         "Run `mops build --check-deploy` for authoritative PocketIC validation",
       );
-      expect(result.stderr).toMatch("Error code: IC0505 (CanisterInvalidWasm)");
+      expect(result.stderr).toMatch("Error code: CanisterInvalidWasm");
       expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-INCONCLUSIVE");
     } finally {
       cleanFixture(cwd);
@@ -224,7 +224,7 @@ describe("build", () => {
       const result = await cli(["build", "--no-check-wasm"], { cwd });
       expect(result.exitCode).toBe(1);
       expect(result.stderr).not.toMatch("MOPS-WASM-COMPLEXITY");
-      expect(result.stderr).toMatch("Error code: IC0505 (CanisterInvalidWasm)");
+      expect(result.stderr).toMatch("Error code: CanisterInvalidWasm");
       expect(result.stdout).toMatch("check deploy canister main");
     } finally {
       cleanFixture(cwd);
@@ -300,7 +300,7 @@ describe("build", () => {
       expect(result.stderr).toMatch("PocketIC deployment check failed");
       expect(result.stderr).toMatch("Wasm memory limit");
       expect(result.stderr).toMatch(
-        "Error code: IC0539 (CanisterWasmMemoryLimitExceeded)",
+        "Error code: CanisterWasmMemoryLimitExceeded",
       );
       expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-INCONCLUSIVE");
     } finally {
@@ -330,7 +330,7 @@ describe("build", () => {
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toMatch("PocketIC deployment check failed");
       expect(result.stderr).toMatch("assertion failed");
-      expect(result.stderr).toMatch("Error code: IC0503 (CanisterCalledTrap)");
+      expect(result.stderr).toMatch("Error code: CanisterCalledTrap");
       expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-INCONCLUSIVE");
     } finally {
       cleanFixture(cwd);
