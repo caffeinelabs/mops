@@ -45,12 +45,14 @@ async function confirmMajorUpdate(latest: string): Promise<boolean> {
     `https://github.com/caffeinelabs/mops/releases/tag/cli-v${latest}`,
   );
 
+  // Not an error: a script running `mops self update` must keep succeeding
+  // (and staying on its major) after the new major ships, not turn red until
+  // someone edits it.
   if (!process.stdout.isTTY) {
-    console.error(
-      chalk.red("Error: ") +
-        `updating across major versions requires confirmation. Run ${chalk.green("mops self update --major")} to update.`,
+    console.log(
+      `Skipping the major update. Run ${chalk.green("mops self update --major")} to update.`,
     );
-    process.exit(1);
+    return false;
   }
 
   let { confirm } = await prompts(
@@ -91,7 +93,6 @@ export async function update({ major = false } = {}) {
     console.log("Current version: " + chalk.yellow(current));
 
     if (kind === "major" && !major && !(await confirmMajorUpdate(latest))) {
-      console.log("aborted");
       return;
     }
 

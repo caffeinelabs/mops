@@ -6,7 +6,7 @@
 
 ## 3.0.0 (unreleased)
 
-- `mops self update` now asks for confirmation before updating across major versions, since a new major contains breaking changes. It prints the release-notes link, prompts in a terminal, and in non-interactive environments refuses with an error naming the fix: `mops self update --major`. Updates within the same major are unchanged.
+- `mops self update` no longer crosses major versions on its own, since a new major contains breaking changes. It prints the release-notes link and asks for confirmation in a terminal; in non-interactive environments it skips the update with a notice and exits successfully, so scripted updates keep working and stay on their major. Pass `--major` to update across majors. Updates within the same major are unchanged.
 
 - **Breaking**: mops no longer invokes `dfx` for anything it does itself. `dfx` does not need to be installed.
   - The `dfx` and `dfx-pocket-ic` replicas are gone, and so is the `--replica` flag on `mops test` and `mops bench`. `mops test --mode replica`, `mops bench` and `mops watch --test` always run on PocketIC. Migration: drop `--replica dfx` / `--replica pocket-ic` from your commands; there is nothing to replace them with. Both were deprecated with a warning since 2.14.
