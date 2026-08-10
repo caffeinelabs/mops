@@ -183,7 +183,7 @@ describe("build", () => {
         /Function: 0[\s\S]*Estimated complexity: 1,000,050[\s\S]*IC0505 limit: 1,000,000[\s\S]*Limit usage: 100\.0%[\s\S]*Instruction count: 20,001/,
       );
       expect(result.stderr).toMatch(
-        "PocketIC deployment check will verify the authoritative result",
+        "Run `mops build --check-deploy` for authoritative PocketIC validation",
       );
       expect(result.stderr).toMatch("Error code: IC0505 (CanisterInvalidWasm)");
       expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-INCONCLUSIVE");
@@ -192,14 +192,40 @@ describe("build", () => {
     }
   });
 
-  test("--no-check-deploy disables the Wasm preflight", async () => {
+  test("--check-wasm analyzes Wasm without starting PocketIC", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-wasm-flag");
+    try {
+      const result = await cli(["build", "--check-wasm"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toMatch("Warning [MOPS-WASM-COMPLEXITY]");
+      expect(result.stdout).not.toMatch("check deploy canister");
+      expect(result.stdout).toMatch("Built 1 canister successfully");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--no-check-deploy leaves configured Wasm analysis enabled", async () => {
     const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
     try {
       const result = await cli(["build", "--no-check-deploy"], { cwd });
       expect(result.exitCode).toBe(0);
-      expect(result.stderr).not.toMatch("MOPS-WASM-COMPLEXITY");
+      expect(result.stderr).toMatch("Warning [MOPS-WASM-COMPLEXITY]");
       expect(result.stdout).not.toMatch("check deploy canister");
       expect(result.stdout).toMatch("Built 1 canister successfully");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--no-check-wasm leaves configured PocketIC validation enabled", async () => {
+    const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
+    try {
+      const result = await cli(["build", "--no-check-wasm"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).not.toMatch("MOPS-WASM-COMPLEXITY");
+      expect(result.stderr).toMatch("Error code: IC0505 (CanisterInvalidWasm)");
+      expect(result.stdout).toMatch("check deploy canister main");
     } finally {
       cleanFixture(cwd);
     }

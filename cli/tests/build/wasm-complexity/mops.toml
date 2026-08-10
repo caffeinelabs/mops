@@ -3,6 +3,7 @@ moc = "./mock-moc"
 pocket-ic = "12.0.0"
 
 [build]
+check-wasm = true
 check-deploy = true
 
 [canisters.main]

@@ -96,7 +96,8 @@ function formatComplexityMessage(
     ...formatPrimaryContributors(func),
     ...(exceedsLimit
       ? [
-          "Result: This estimate exceeds the IC0505 limit. PocketIC deployment check will verify the authoritative result.",
+          "Result: This estimate exceeds the IC0505 limit.",
+          "Next step: Run `mops build --check-deploy` for authoritative PocketIC validation.",
           "Suggested correction: Split this Motoko function into smaller independently compiled functions, reduce generated statements or branches, then rebuild.",
         ]
       : [

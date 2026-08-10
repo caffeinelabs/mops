@@ -25,7 +25,7 @@ If the canister config sets a `candid` field, the generated `.did` is also check
 
 When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Failures warn and leave the unoptimized module. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
 
-When `--check-deploy` or `[build].check-deploy = true` enables deployment validation, Mops first uses Walrus to estimate each function's IC0505 compilation complexity in the final Wasm:
+When `--check-wasm` or `[build].check-wasm = true` enables static validation, Mops uses Walrus to estimate each function's IC0505 compilation complexity in the final Wasm:
 
 - Below 750,000: no warning
 - 750,000 through 899,999: early warning
@@ -53,6 +53,11 @@ mops build --verbose
 Build with custom output directory
 ```
 mops build --output ./build
+```
+
+Analyze each final Wasm for complexity risks
+```
+mops build --check-wasm
 ```
 
 Build and verify that each Wasm installs on PocketIC
@@ -87,6 +92,25 @@ Skip the [`[optimize]`](../../09-mops.toml.md#optimize) `wasm-opt` post-pass for
 
 ```
 mops build --no-optimize
+```
+
+### `--check-wasm`
+
+Analyze each final Wasm for likely IC0505 function-complexity risks without starting PocketIC. This check emits actionable warnings and never fails the build.
+
+Enable the same analysis for every plain `mops build` invocation:
+```toml
+[build]
+check-wasm = true
+```
+
+### `--no-check-wasm`
+
+Skip static Wasm analysis for this build, even when
+`[build].check-wasm = true`.
+
+```bash
+mops build --no-check-wasm
 ```
 
 ### `--check-deploy`
@@ -161,6 +185,7 @@ You can also set global build settings:
 [build]
 outputDir = "dist"
 args = ["--release", "--ai-errors"]
+check-wasm = true
 check-deploy = true
 ```
 

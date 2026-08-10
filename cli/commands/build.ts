@@ -24,6 +24,7 @@ import { toolchain } from "./toolchain/index.js";
 export interface BuildOptions {
   outputDir: string;
   verbose: boolean;
+  checkWasm: boolean;
   checkDeploy: boolean;
   /** `false` skips the `[optimize]` wasm-opt pass (`--no-optimize`). */
   optimize: boolean;
@@ -57,6 +58,8 @@ export async function build(
   }
 
   let config = readConfig();
+  const checkWasmEnabled =
+    options.checkWasm ?? config.build?.["check-wasm"] ?? false;
   const checkDeployEnabled =
     options.checkDeploy ?? config.build?.["check-deploy"] ?? false;
   if (checkDeployEnabled) {
@@ -228,8 +231,10 @@ export async function build(
           verbose: options.verbose,
           optimize: options.optimize,
         });
-        if (checkDeployEnabled) {
+        if (checkWasmEnabled) {
           runWasmComplexityPreflight(canisterName, await readFile(wasmPath));
+        }
+        if (checkDeployEnabled) {
           // Init args must be encoded against the Motoko-generated init
           // signature. A declared candid file is typically service-only and
           // has no init types.

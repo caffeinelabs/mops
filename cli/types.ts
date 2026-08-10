@@ -26,6 +26,7 @@ export type Config = {
   build?: {
     outputDir?: string;
     args?: string[];
+    "check-wasm"?: boolean;
     "check-deploy"?: boolean;
   };
   deployed?: {

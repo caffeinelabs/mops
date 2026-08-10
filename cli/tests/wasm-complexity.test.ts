@@ -103,7 +103,7 @@ describe("Wasm complexity thresholds", () => {
     );
     expect(output).not.toContain("Blocks/loops/conditionals:");
     expect(output).toContain(
-      "PocketIC deployment check will verify the authoritative result",
+      "Next step: Run `mops build --check-deploy` for authoritative PocketIC validation.",
     );
     expect(output).toContain("Suggested correction: Split this Motoko");
   });
