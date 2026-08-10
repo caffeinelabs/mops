@@ -37,8 +37,9 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
       # No setup-dfx on purpose — this job runs entirely on icp-cli and mops.
-      # dfx is still installed by release.yml and by the old-CLI matrices in
-      # mops-test.yml / setup-mops.yml.
+      # Nothing deploys with dfx any more; the only remaining installs are in
+      # mops-test.yml / setup-mops.yml, where old CLI versions need it as a
+      # test replica.
 
       # Pinned on purpose. icp-cli is still changing its manifest schema
       # between minor versions, so an unpinned install breaks icp.yaml
@@ -83,6 +84,11 @@ jobs:
         run: npm run decl
 
       - name: Build frontend
+        # Required, and deliberately not defaulted in vite.config.ts — a silent
+        # default is how a mainnet bundle could get local ids. The local
+        # mappings exist by now: Deploy backend wrote them.
+        env:
+          MOPS_FRONTEND_NETWORK: local
         run: npm run build-frontend
 
       - name: Build docs

@@ -36,8 +36,20 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
+      # Only the published 2.x entries need dfx, and only as a replica:
+      # `test/storage-actor.test.mo` runs in replica mode, and 2.x falls back to
+      # the dfx replica because mops.toml pins no `[toolchain] pocket-ic`. 3.x
+      # dropped that fallback and downloads PocketIC itself, so the condition
+      # doubles as a guard — if the current CLI regressed into needing dfx,
+      # its matrix entry would fail here rather than pass on a borrowed binary.
+      # dfx-version is pinned because there is no longer a dfx.json for
+      # setup-dfx's `auto` to read; it would silently install the latest.
       - uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
+        if: ${{ matrix.mops-version != './cli/dist' }}
+        with:
+          dfx-version: "0.29.1"
       - run: dfx cache install
+        if: ${{ matrix.mops-version != './cli/dist' }}
       - name: Cache mops packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:

@@ -1,0 +1,65 @@
+name: Deploy asset canister
+description: >-
+  Build and deploy one of the repo's asset canisters to the IC with icp-cli.
+  Expects icp-cli on PATH and an imported `mops` identity — the calling job
+  does both once, since it deploys more than one canister.
+
+inputs:
+  canister:
+    description: Canister name, as declared in icp.yaml and mapped in .icp/data/mappings/ic.ids.json.
+    required: true
+  domain:
+    description: >-
+      Custom domain the canister serves. Asserted against its
+      .well-known/ic-domains after the deploy.
+    required: true
+  build-deps-dir:
+    description: >-
+      Directory to run `npm ci` in before deploying. The canister's build step
+      in icp.yaml runs an npm script, which needs that directory's node_modules.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install ${{ inputs.canister }} build dependencies
+      shell: bash
+      working-directory: ${{ inputs.build-deps-dir }}
+      run: npm ci
+
+    - name: Deploy ${{ inputs.canister }} canister
+      shell: bash
+      env:
+        CANISTER: ${{ inputs.canister }}
+      run: |
+        set -euo pipefail
+        for i in 1 2 3; do
+          icp deploy "$CANISTER" --environment ic --identity mops --no-create --yes && exit 0
+          echo "::warning::${CANISTER} canister deploy attempt $i/3 failed"
+          if [ "$i" -lt 3 ]; then sleep 30; fi
+        done
+        exit 1
+
+    # The custom domain resolves only while the canister serves this file, and
+    # it is served only because an .ic-assets.json opts dot-directories into the
+    # upload. Assert the body, not the status: the asset canister answers
+    # unknown paths with the root index.html at HTTP 200.
+    - name: Verify the custom domain still resolves
+      shell: bash
+      env:
+        CANISTER: ${{ inputs.canister }}
+        DOMAIN: ${{ inputs.domain }}
+      run: |
+        set -euo pipefail
+        url="https://${DOMAIN}/.well-known/ic-domains"
+        for attempt in 1 2 3; do
+          if grep -qxF "$DOMAIN" <<< "$(curl -sS --max-time 30 "$url" 2>/dev/null)"; then
+            echo "ok    $url"
+            exit 0
+          fi
+          if [ "$attempt" -lt 3 ]; then sleep 10; fi
+        done
+        echo "::error::$url does not list ${DOMAIN}. The custom domain is broken."
+        echo "::error::Roll back from a checkout of the previous release commit with:"
+        echo "::error::  icp deploy ${CANISTER} -e ic --identity mops --no-create --yes"
+        exit 1

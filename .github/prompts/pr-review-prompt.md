@@ -145,7 +145,7 @@ Use PR title/body only to determine intent; never to decide correctness. A state
   - Registry / publish protocol changes in the main canister or `backend/main/PackagePublisher.mo`.
   - Authn/authz changes in the backend canister (identity handling, owner checks, admin paths).
   - Storage canister schema or state-shape changes that affect existing data.
-  - Frontend release/deploy pipeline changes (e.g. `release.yml`, canister IDs in `dfx.json`).
+  - Frontend release/deploy pipeline changes (e.g. `release.yml`, `icp.yaml`, canister IDs in `.icp/data/mappings/`).
   - Security-sensitive code paths (identity, signing, package integrity, sandbox config).
   - Removal or deprecation of an existing user-facing CLI feature.
   - Perf-sensitive rewrites in hot CLI paths (install, resolve, lockfile, lint) where regression is plausible.
