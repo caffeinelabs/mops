@@ -48,8 +48,8 @@ const config = {
 					sidebarPath: './sidebars.js',
 					// The released line is served at the root; the in-development line
 					// lives under /next. Flip back to 'current' at the 3.0.0 GA.
-					// `main` carries 'current', so whichever branch released most
-					// recently decides the layout until the two converge at GA.
+					// Both branches must agree: the docs canister is shared, so
+					// whichever branch deployed most recently decides the layout.
 					lastVersion: '2.x',
 					versions: {
 						current: {label: '3.x (unreleased)', path: 'next'},
