@@ -31,8 +31,8 @@ All three shipped in GH #679 (`fix(cli): use real semver in the resolver and alw
 - ~~Verify integrity at **download time**, stop re-hashing `.mops/` on every install; move on-disk verification behind `mops verify`~~ — **done on `v3`**. Files are hashed as they arrive and compared against the registry before the package is committed to the cache; `mops verify` is the on-demand on-disk audit. (GH #517)
 - ~~Add `--locked`; drop the `CI` env-var auto-detection~~ — **done on `v3`** (GH #516). Available on `mops install` and every implicitly-resolving command; `mops sources` deliberately has none (dfx packtool parses its stdout mid-build). **Design correction:** `--locked` does *not* re-walk the dependency graph to byte-compare a freshly computed lock. It cannot: a lock-driven install skips the versions that lost a conflict, so their manifests are never cached and `resolvePackages({skipLock: true})` throws ENOENT on a fresh clone (reproduced). Instead it checks that the lock is present, parseable, current-format, pins every dependency declared in `mops.toml`, and agrees with the registry on every file hash. Same structural limitation the resolver-correctness work hit (GH #679); closing it needs a per-candidate manifest fetch, which is a new feature, not a lockfile change.
 - ~~**Drop `--lock <check|update|ignore>` entirely**~~ — **done on `v3`**. `check` → `--locked`; `ignore` → no successor; `update` → plain `mops install`, now self-healing (also migrates locks carrying absolute local `path` entries, which previously required an explicit `--lock update`).
-- `mops install` becomes purely additive (`npm install` semantics) — no implicit "switch to check mode".
-- `mops.lock` enabled by default (already done in 2.8); remove opt-in/legacy paths — and with `--lock ignore` gone, no opt-out at all (cargo model; ties into the commit-guidance question under Decide before release). (GH #288)
+- ~~`mops install` becomes purely additive (`npm install` semantics) — no implicit "switch to check mode".~~ — **done on `v3`** with the `--locked` work (GH #516): the `CI` env auto-`check` path is gone; plain commands maintain the lock, `--locked` is the only check mode and always explicit.
+- ~~`mops.lock` enabled by default (already done in 2.8); remove opt-in/legacy paths — and with `--lock ignore` gone, no opt-out at all.~~ — **done on `v3`**: the only lock modes left are `locked`/`maintain`/`skip` (`skip` is internal to `mops sources`); no user-facing opt-out exists. (GH #288)
 
 ### Hidden-state cleanup (silent-wrong-behavior — high priority)
 
@@ -100,7 +100,7 @@ Everything here except the canister-id item shipped in GH #676 (`feat(cli)!: str
 ### Decide before release
 
 - ~~Lockfile commit guidance~~ — **decided and done on `v3`**: everyone commits `mops.lock`, libraries included. A library's lock has no effect on consumers (they resolve their own graph) and it makes the library's own CI reproducible. The `mops.lock created.` message, `docs/docs/10-mops.lock.md` and the CLI skill all say so now.
-- Custom registry endpoints — ship as supported feature or drop the env-var? Removal is only free in a major. (LIN, PR #425)
+- ~~Custom registry endpoints — ship as supported feature or drop the env-var?~~ — **decided: keep as supported.** `MOPS_REGISTRY_HOST` / `MOPS_REGISTRY_CANISTER_ID` are documented in the 3.x env-vars page, and the `@icp-sdk/core` 5.x entry in the changelog names their compatibility requirement (the replica must serve the HTTP API `v3` endpoint). (LIN, PR #425)
 
 ---
 
@@ -147,7 +147,7 @@ v3 tells users mops does not support `dfx`, so this can no longer lag behind —
 - ~~`.github/workflows/release.yml`: replace `dfinity/setup-dfx` with the `icp` setup action.~~ Done — both canister deploys go through `.github/actions/deploy-canister`.
 - ~~`.github/workflows/{mops-test,setup-mops}.yml` still install dfx.~~ Done — `mops.toml` pins `[toolchain] pocket-ic`, which 2.x honours over the dfx replica, and `setup-mops.yml` dropped its 2024-era `mops-version: 1.0.0` pin. 1.0.0 was the only version a pin could not rescue: it speaks only the PocketIC 4.0.0 API.
 - `cli/tests/build/no-dfx/` + `build-no-dfx.test.ts` — keep as a regression test that mops works with neither `dfx` nor `icp` on PATH.
-- `cli/{DEVELOPMENT,RELEASE}.md`, blog posts — rewrite in `icp` terms; add a "migrating from dfx" note. (`cli/README.md`, `docs/docs/01-quick-start.md`, `backend/DEVELOPMENT.md` and the root `DEVELOPMENT.md` are done.)
+- ~~`cli/{DEVELOPMENT,RELEASE}.md` — rewrite in `icp` terms.~~ Done — `cli/DEVELOPMENT.md` is a real development doc (the release half was stale duplication of `RELEASE.md`, down to a dead `dfx deploy`), and `cli/RELEASE.md` deploys with the npm scripts and documents the preview-tag path. Remaining: a release blog post announcing v3 with a migrating-from-dfx note.
 
 ---
 
