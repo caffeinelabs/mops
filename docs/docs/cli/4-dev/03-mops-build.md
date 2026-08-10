@@ -142,18 +142,6 @@ The PocketIC client and binary are only loaded when `--check-deploy` or
 `[build].check-deploy` enables this validation.
 PocketIC errors are reported as provided by the client.
 
-This validation performs a fresh install. When PocketIC reports the
-migration-specific missing-state trap for a canister whose generated `.most`
-contains an enhanced migration chain, Mops reports
-`MOPS-CHECK-DEPLOY-INCONCLUSIVE` instead of failing the command. It continues
-testing sibling canisters and prints a final success/inconclusive summary.
-The warning explains that a chain converted from legacy migrations may require
-baseline state that a fresh canister cannot reproduce.
-
-Only that migration baseline case is inconclusive. Complexity, memory-limit,
-invalid Wasm, ordinary initialization, Candid, configuration, and PocketIC
-startup failures still fail the command.
-
 ### `--no-check-deploy`
 
 Skip PocketIC deployment validation for this build, even when

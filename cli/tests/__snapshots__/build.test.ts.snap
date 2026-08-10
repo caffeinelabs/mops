@@ -101,33 +101,6 @@ build canister bar
 }
 `;
 
-exports[`build check-deploy continues after deterministic migration inconclusive outcomes 1`] = `
-{
-  "exitCode": 0,
-  "stderr": "Warning [MOPS-CHECK-DEPLOY-INCONCLUSIVE]:
-Canister: problematic
-Result: Fresh PocketIC installation could not be validated.
-Reason: This canister has an enhanced migration chain that may require state from a previous deployment. A fresh canister cannot reproduce that baseline.
-Impact: The Wasm build succeeded, but deployment check remains unverified.
-Suggested action: Validate the upgrade against a canister containing representative baseline state.
-Warning [MOPS-CHECK-DEPLOY-INCONCLUSIVE]:
-Canister: problematic2
-Result: Fresh PocketIC installation could not be validated.
-Reason: This canister has an enhanced migration chain that may require state from a previous deployment. A fresh canister cannot reproduce that baseline.
-Impact: The Wasm build succeeded, but deployment check remains unverified.
-Suggested action: Validate the upgrade against a canister containing representative baseline state.
-Deployment check summary: 1 successful, 2 inconclusive.",
-  "stdout": "build canister problematic
-build canister problematic2
-build canister healthy
-check deploy canister problematic
-check deploy canister problematic2
-check deploy canister healthy
-
-✓ Built 3 canisters successfully",
-}
-`;
-
 exports[`build warns when args contain managed flags 1`] = `
 {
   "exitCode": 1,
