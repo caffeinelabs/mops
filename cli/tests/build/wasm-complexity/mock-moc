@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+
+import fs from "node:fs";
+
+const args = process.argv.slice(2);
+if (args[0] === "--stable-compatible") {
+  process.exit(0);
+}
+
+const outputFlag = args.indexOf("-o");
+if (outputFlag === -1 || !args[outputFlag + 1]) {
+  console.error("mock-moc: missing -o");
+  process.exit(1);
+}
+
+const output = args[outputFlag + 1];
+const encodeU32 = (value) => {
+  const bytes = [];
+  do {
+    let byte = value & 0x7f;
+    value >>>= 7;
+    if (value) byte |= 0x80;
+    bytes.push(byte);
+  } while (value);
+  return bytes;
+};
+const section = (id, payload) => [id, ...encodeU32(payload.length), ...payload];
+
+const instructions = [];
+for (let index = 0; index < 20_001; index += 1) {
+  instructions.push(0x02, 0x40, 0x0b);
+}
+const body = [0x00, ...instructions, 0x0b];
+const wasm = Uint8Array.from([
+  0x00,
+  0x61,
+  0x73,
+  0x6d,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  ...section(1, [0x01, 0x60, 0x00, 0x00]),
+  ...section(3, [0x01, 0x00]),
+  ...section(10, [0x01, ...encodeU32(body.length), ...body]),
+]);
+
+fs.writeFileSync(output, wasm);
+fs.writeFileSync(output.replace(/\.wasm$/, ".did"), "service : {}\n");
+fs.writeFileSync(output.replace(/\.wasm$/, ".most"), "");

@@ -7,6 +7,20 @@ import type {
 
 export type { PocketIc, PocketIcServer, StartServerOptions };
 
+// A server whose client never came up is an orphaned process: nothing holds a
+// handle to stop it later, so it must be stopped here.
+export async function createClientOrStopServer<T>(
+  server: { stop(): Promise<void> },
+  createClient: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await createClient();
+  } catch (error) {
+    await server.stop().catch(() => {});
+    throw error;
+  }
+}
+
 export async function startPocketIc(
   options: StartServerOptions,
 ): Promise<{ server: PocketIcServer; client: PocketIc }> {
@@ -17,7 +31,9 @@ export async function startPocketIc(
   // `fix-dist` rewrites this specifier — and only this one — to the bundle.
   const { PocketIc, PocketIcServer } = await import("@dfinity/pic");
   let server = await PocketIcServer.start(options);
-  let client = await PocketIc.create(server.getUrl());
+  let client = await createClientOrStopServer(server, () =>
+    PocketIc.create(server.getUrl()),
+  );
   return { server, client };
 }
 

@@ -1,0 +1,6 @@
+[toolchain]
+moc = "../wasm-complexity/mock-moc"
+
+[canisters.main]
+type = "motoko"
+main = "src/Main.mo"

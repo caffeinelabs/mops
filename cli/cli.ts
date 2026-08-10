@@ -349,6 +349,30 @@ program
   .addOption(new Option("--output, -o <output>", "Output directory"))
   .addOption(
     new Option(
+      "--check-wasm",
+      "Analyze the built Wasm for likely IC0505 complexity risks (also enabled by [build].check-wasm)",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--no-check-wasm",
+      "Skip Wasm complexity analysis even when [build].check-wasm is enabled",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--check-deploy",
+      "Install the built Wasm on PocketIC to detect deployment failures (also enabled by [build].check-deploy)",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--no-check-deploy",
+      "Skip PocketIC deployment validation even when [build].check-deploy is enabled",
+    ),
+  )
+  .addOption(
+    new Option(
       "--no-optimize",
       "Skip the [optimize] wasm-opt post-pass even when it is configured in mops.toml",
     ),
