@@ -15,8 +15,5 @@ export default {
   transform: {
     "^.+\\.tsx?$": ["ts-jest", { useESM: true }],
   },
-  moduleNameMapper: {
-    "^(\\.{1,2}/.*)\\.js$": "$1",
-  },
   testTimeout: 60000,
 };
