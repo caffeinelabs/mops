@@ -1,0 +1,11 @@
+[toolchain]
+moc = "1.3.0"
+pocket-ic = "12.0.0"
+
+[build]
+check-deploy = true
+
+[canisters.main]
+main = "../check-deploy/src/Main.mo"
+candid = "../check-deploy/main.did"
+initArg = "(42)"

@@ -11,10 +11,19 @@ import type {
 } from "@dfinity/pic";
 import { readConfig } from "../mops.js";
 import { warnLegacyPocketIc } from "./deprecate-legacy-pocket-ic.js";
+import {
+  assertDfinityClientSupportsPocketIc,
+  createClientOrStopServer,
+} from "./pocket-ic-startup.js";
 
 // Both packages declare the same `StartServerOptions` fields, so one type covers
 // both clients.
 export type { StartServerOptions };
+
+type PocketIcResult = {
+  server: AnyPocketIcServer;
+  client: AnyPocketIc;
+};
 
 // `pic-ic` is the only client that can talk to a pocket-ic server older than
 // 9.0.0. It is deprecated and goes away in v3 (NEXT-MAJOR.md), but until then
@@ -40,17 +49,36 @@ function legacyVersion(): string | undefined {
   return undefined;
 }
 
+export function startPocketIc(
+  options: StartServerOptions,
+  clientOptions: { client: "dfinity" },
+): Promise<{ server: PocketIcServer; client: PocketIc }>;
+export function startPocketIc(
+  options: StartServerOptions,
+): Promise<PocketIcResult>;
 export async function startPocketIc(
   options: StartServerOptions,
-): Promise<{ server: AnyPocketIcServer; client: AnyPocketIc }> {
+  {
+    client: clientName = "versioned",
+  }: {
+    client?: "versioned" | "dfinity";
+  } = {},
+): Promise<PocketIcResult | { server: PocketIcServer; client: PocketIc }> {
+  const version = readConfig().toolchain?.["pocket-ic"];
+  if (clientName === "dfinity") {
+    assertDfinityClientSupportsPocketIc(version);
+  }
+
   // Imported lazily so commands that never start a replica don't load the
   // PocketIC client (and its `@icp-sdk/core` dependency).
   let legacy = legacyVersion();
-  if (legacy) {
+  if (legacy && clientName === "versioned") {
     warnLegacyPocketIc(legacy);
     const { PocketIc, PocketIcServer } = await import("pic-ic");
     let server = await PocketIcServer.start(options);
-    let client = await PocketIc.create(server.getUrl());
+    let client = await createClientOrStopServer(server, () =>
+      PocketIc.create(server.getUrl()),
+    );
     return { server, client };
   }
 
@@ -58,7 +86,9 @@ export async function startPocketIc(
   // `fix-dist` rewrites this specifier — and only this one — to the bundle.
   const { PocketIc, PocketIcServer } = await import("@dfinity/pic");
   let server = await PocketIcServer.start(options);
-  let client = await PocketIc.create(server.getUrl());
+  let client = await createClientOrStopServer(server, () =>
+    PocketIc.create(server.getUrl()),
+  );
   return { server, client };
 }
 

@@ -26,6 +26,8 @@ export type Config = {
   build?: {
     outputDir?: string;
     args?: string[];
+    "check-wasm"?: boolean;
+    "check-deploy"?: boolean;
   };
   deployed?: {
     dir?: string;
@@ -56,6 +58,7 @@ export type CanisterConfig = {
   args?: string[];
   candid?: string;
   initArg?: string;
+  wasmMemoryLimit?: number;
   "check-stable"?: {
     path: string;
     /** @deprecated Create the file with an empty actor instead. */
