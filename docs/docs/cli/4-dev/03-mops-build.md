@@ -142,11 +142,12 @@ The PocketIC client and binary are only loaded when `--check-deploy` or
 `[build].check-deploy` enables this validation.
 PocketIC errors are reported as provided by the client.
 
-This validation performs fresh installations. If the generated `.most` shows
-that an enhanced migration chain starts from pre-existing state instead of an
-empty actor, Mops reports `MOPS-CHECK-DEPLOY-SKIPPED` and does not run the
-deployment check for that canister. Other canisters are still checked. Validate
-the skipped upgrade against representative baseline state.
+Before installation, Mops writes a temporary empty-actor `.most` and asks the
+configured `moc` to run `--stable-compatible` against each generated `.most`.
+If moc reports that a canister cannot reach its built stable state from an
+empty canister, Mops reports `MOPS-CHECK-DEPLOY-SKIPPED` with the compiler
+diagnostic and does not run that deployment check. Other canisters are still
+checked. Validate the skipped upgrade against representative baseline state.
 
 ### `--no-check-deploy`
 

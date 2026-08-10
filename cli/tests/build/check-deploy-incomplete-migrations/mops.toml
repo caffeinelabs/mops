@@ -18,7 +18,13 @@ chain = "migrations"
 main = "src/Main.mo"
 
 [canisters.problematic2.migrations]
-chain = "migrations"
+chain = "migrations-later"
 
 [canisters.healthy]
 main = "src/Healthy.mo"
+
+[canisters.aliased]
+main = "src/Main.mo"
+
+[canisters.aliased.migrations]
+chain = "migrations-alias"

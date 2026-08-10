@@ -12,7 +12,6 @@ import {
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { optimizeWasm } from "../helpers/optimize-wasm.js";
-import { mostRequiresPreexistingState } from "../helpers/parse-most.js";
 import { assertDfinityClientSupportsPocketIc } from "../helpers/pocket-ic-startup.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
@@ -241,14 +240,13 @@ export async function build(
           const initCandidText = resolvedCandidPath
             ? await readFile(generatedDidPath, "utf-8")
             : candidText;
-          const mostText = await readFile(mostPath, "utf-8");
           checkDeployArtifacts.push({
             name: canisterName,
             wasmPath,
+            mostPath,
             initCandid: initCandidText,
             initArg: canister.initArg,
             wasmMemoryLimit: canister.wasmMemoryLimit,
-            requiresPreexistingState: mostRequiresPreexistingState(mostText),
           });
         }
       } catch (err: any) {
@@ -271,7 +269,10 @@ export async function build(
   if (checkDeployEnabled) {
     try {
       const { checkDeploy } = await import("../helpers/check-deploy.js");
-      await checkDeploy(checkDeployArtifacts, { verbose: options.verbose });
+      await checkDeploy(checkDeployArtifacts, {
+        verbose: options.verbose,
+        mocPath,
+      });
     } catch (err) {
       cliError(err instanceof Error ? err.message : String(err));
     }

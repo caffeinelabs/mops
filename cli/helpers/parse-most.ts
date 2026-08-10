@@ -22,36 +22,6 @@ export function parseMostAppliedMigrationNames(
   return names;
 }
 
-/**
- * Whether a Version 4.0.0 enhanced-migration chain starts from pre-existing
- * state instead of the empty state available on a fresh canister.
- *
- * Returns false for older or malformed formats so callers keep validating
- * rather than skipping a deployment based on an uncertain parse.
- */
-export function mostRequiresPreexistingState(content: string): boolean {
-  const version = content.match(/^\/\/ Version: ([^\n]+)/m)?.[1]?.trim();
-  if (version !== "4.0.0") {
-    return false;
-  }
-
-  const actorIdx = content.search(/\nactor\b/);
-  if (actorIdx < 0) {
-    return false;
-  }
-
-  const chainBlock = content.slice(0, actorIdx);
-  const firstEntry = chainBlock.match(/[{;]\s*"[^"]+"\s*:\s*/s);
-  if (!firstEntry || firstEntry.index === undefined) {
-    return false;
-  }
-
-  const input = chainBlock.slice(firstEntry.index + firstEntry[0].length);
-  const startsFromEmpty =
-    /^(?:\{\s*\}|\(\s*(?:[\w']+\s*:\s*)?\{\s*\}\s*\))\s*->/s.test(input);
-  return !startsFromEmpty;
-}
-
 export function migrationBasename(file: string): string {
   return file.endsWith(".mo") ? file.slice(0, -3) : file;
 }

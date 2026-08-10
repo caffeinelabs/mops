@@ -1,38 +1,34 @@
 import chalk from "chalk";
+import { execa } from "execa";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { getWasmBindings } from "../wasm.js";
 import { toolchain } from "../commands/toolchain/index.js";
 import { startPocketIc, type AnyPocketIcServer } from "./pocket-ic-client.js";
 import type { PocketIc } from "@dfinity/pic";
 
+const CHECK_DEPLOY_PARENT = ".mops";
+const CHECK_DEPLOY_PREFIX = ".check-deploy-";
+const EMPTY_ACTOR_MOST = "// Version: 1.0.0\nactor { };\n";
+
 export interface CheckDeployArtifact {
   name: string;
   wasmPath: string;
+  mostPath: string;
   initCandid: string;
   initArg?: string;
   wasmMemoryLimit?: number;
-  requiresPreexistingState: boolean;
 }
 
 export async function checkDeploy(
   artifacts: CheckDeployArtifact[],
-  { verbose = false } = {},
+  { verbose = false, mocPath }: { verbose?: boolean; mocPath: string },
 ): Promise<void> {
-  const deployableArtifacts = artifacts.filter((artifact) => {
-    if (!artifact.requiresPreexistingState) {
-      return true;
-    }
-    console.warn(
-      chalk.yellow(
-        [
-          "Warning [MOPS-CHECK-DEPLOY-SKIPPED]:",
-          `Canister: ${artifact.name}`,
-          "Result: Fresh PocketIC deployment check did not run.",
-          "Reason: The enhanced migration chain is incomplete and requires pre-existing state that a fresh canister cannot provide.",
-        ].join("\n"),
-      ),
-    );
-    return false;
-  });
+  const deployableArtifacts = await filterFreshDeployableArtifacts(
+    artifacts,
+    mocPath,
+    verbose,
+  );
   if (!deployableArtifacts.length) {
     return;
   }
@@ -132,5 +128,57 @@ export async function checkDeploy(
       ].join("\n"),
       { cause: installationFailures[0]?.error },
     );
+  }
+}
+
+async function filterFreshDeployableArtifacts(
+  artifacts: CheckDeployArtifact[],
+  mocPath: string,
+  verbose: boolean,
+): Promise<CheckDeployArtifact[]> {
+  await mkdir(CHECK_DEPLOY_PARENT, { recursive: true });
+  const scratchDir = await mkdtemp(
+    join(CHECK_DEPLOY_PARENT, CHECK_DEPLOY_PREFIX),
+  );
+  const emptyMostPath = join(scratchDir, "empty.most");
+
+  try {
+    await writeFile(emptyMostPath, EMPTY_ACTOR_MOST);
+    const deployableArtifacts: CheckDeployArtifact[] = [];
+
+    for (const artifact of artifacts) {
+      const args = ["--stable-compatible", emptyMostPath, artifact.mostPath];
+      if (verbose) {
+        console.log(chalk.gray(mocPath, JSON.stringify(args)));
+      }
+      const result = await execa(mocPath, args, {
+        stdio: "pipe",
+        reject: false,
+      });
+      if (result.exitCode === 0) {
+        deployableArtifacts.push(artifact);
+        continue;
+      }
+
+      const compilerOutput = [result.stderr, result.stdout]
+        .filter((output) => output?.trim())
+        .join("\n")
+        .trim();
+      console.warn(
+        chalk.yellow(
+          [
+            "Warning [MOPS-CHECK-DEPLOY-SKIPPED]:",
+            `Canister: ${artifact.name}`,
+            "Result: Fresh PocketIC deployment check did not run.",
+            "Reason: moc reported that the generated stable state is incompatible with an empty canister.",
+            ...(compilerOutput ? [`Compiler output:\n${compilerOutput}`] : []),
+          ].join("\n"),
+        ),
+      );
+    }
+
+    return deployableArtifacts;
+  } finally {
+    await rm(scratchDir, { recursive: true, force: true });
   }
 }

@@ -1,7 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
 import {
   latestAppliedMigrationName,
-  mostRequiresPreexistingState,
   parseMostAppliedMigrationNames,
 } from "../helpers/parse-most";
 
@@ -61,53 +60,5 @@ actor ({
         "20250201_000000_AddField",
       ]),
     ).toBe("20250301_000000_AddD");
-  });
-});
-
-describe("mostRequiresPreexistingState", () => {
-  test("accepts an enhanced migration chain that starts from empty state", () => {
-    const content = `// Version: 4.0.0
-{
-  "Init" : {} -> {id : Nat};
-}
-actor {
-  stable id : Nat
-};
-`;
-    expect(mostRequiresPreexistingState(content)).toBe(false);
-  });
-
-  test("accepts a named empty-state migration input", () => {
-    const content = `// Version: 4.0.0
-{
-  "Init" : (_ : {}) -> {id : Nat};
-}
-actor {
-  stable id : Nat
-};
-`;
-    expect(mostRequiresPreexistingState(content)).toBe(false);
-  });
-
-  test("detects a chain that requires legacy state", () => {
-    const content = `// Version: 4.0.0
-{
-  "ConvertLegacy" : (old : {id : Nat}) -> {id : Nat; name : Text};
-}
-actor {
-  stable id : Nat;
-  stable name : Text
-};
-`;
-    expect(mostRequiresPreexistingState(content)).toBe(true);
-  });
-
-  test("does not skip deployment for older or malformed formats", () => {
-    expect(
-      mostRequiresPreexistingState("// Version: 3.0.0\nactor ({}, {});"),
-    ).toBe(false);
-    expect(
-      mostRequiresPreexistingState('// Version: 4.0.0\n{ "Init" : Bad }'),
-    ).toBe(false);
   });
 });

@@ -350,7 +350,7 @@ describe("build", () => {
     }
   });
 
-  test("check-deploy skips incomplete migration chains and checks siblings", async () => {
+  test("check-deploy skips chains incompatible with empty state and checks siblings", async () => {
     const cwd = path.join(
       import.meta.dirname,
       "build/check-deploy-incomplete-migrations",
@@ -365,12 +365,14 @@ describe("build", () => {
         result.stderr.match(/Fresh PocketIC deployment check did not run\./g),
       ).toHaveLength(2);
       expect(result.stderr).toMatch(
-        "The enhanced migration chain is incomplete and requires pre-existing state",
+        "moc reported that the generated stable state is incompatible with an empty canister",
       );
+      expect(result.stderr).toMatch("Compatibility error");
       expect(result.stdout).not.toMatch("check deploy canister problematic");
       expect(result.stdout).not.toMatch("check deploy canister problematic2");
       expect(result.stdout).toMatch("check deploy canister healthy");
-      expect(result.stdout).toMatch("Built 3 canisters successfully");
+      expect(result.stdout).toMatch("check deploy canister aliased");
+      expect(result.stdout).toMatch("Built 4 canisters successfully");
     } finally {
       cleanFixture(cwd);
     }

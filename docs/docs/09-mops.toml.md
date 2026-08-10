@@ -188,7 +188,7 @@ Global build settings used by [`mops build`](./cli/4-dev/03-mops-build.md).
 | outputDir | Output directory for compiled Wasm and Candid files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
 | args      | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
 | check-wasm | Analyze each final Wasm for likely IC0505 function-complexity risks without starting PocketIC (default `false`). Override for one build with `--check-wasm` or `--no-check-wasm`. |
-| check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Requires `pocket-ic` 9.0.0 or newer in `[toolchain]`. Canisters whose generated `.most` shows an enhanced migration chain that requires pre-existing state are skipped with `MOPS-CHECK-DEPLOY-SKIPPED`; eligible siblings are still checked. Override for one build with `--check-deploy` or `--no-check-deploy`. |
+| check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Requires `pocket-ic` 9.0.0 or newer in `[toolchain]`. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. Incompatible canisters are skipped with `MOPS-CHECK-DEPLOY-SKIPPED`; eligible siblings are still checked. Override for one build with `--check-deploy` or `--no-check-deploy`. |
 
 Example:
 ```toml
