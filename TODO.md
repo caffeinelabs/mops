@@ -16,9 +16,7 @@ Refs: GH = `caffeinelabs/mops`, LIN = Linear ticket title.
 - Downloadable package index (cargo/purescript style), additive endpoint. (GH #291)
 
 **Security / dependency hygiene**
-- **Replace `decompress` (critical, no fix available).** `cli/package.json` pins `decompress` 4.2.1, but both advisories against it cover `<=4.2.1`, so the newest release is still affected and `npm audit` reports no fix: [GHSA-mp2f-45pm-3cg9](https://github.com/advisories/GHSA-mp2f-45pm-3cg9) (extraction can create files and links outside the target directory) and [GHSA-h39j-r5qq-r9mm](https://github.com/advisories/GHSA-h39j-r5qq-r9mm) (zip-slip arbitrary file write). Removing the dependency is the only remedy. The toolchain extractor moved to `tar` + `xz-decompress` in 2.20.0, so one call site remains, needing a maintained zip extractor (or Node's own `zlib` plus explicit path validation):
-  - `downloadFromGithub` in `cli/commands/install/install-from-github.ts` — archives from **arbitrary user-specified repos** (`repo = "..."` deps), so this is the more exposed surface: a malicious package repo is exactly the zip-slip threat model.
-  Non-breaking, so it should not wait for v3. Note `installFromGithub` survived the v3 vessel drop (it serves git deps, not vessel — see `NEXT-MAJOR.md`), so dropping vessel did not resolve this on its own. GitHub deps are always `.zip` archives — no `.tar.xz` handling needed here.
+- ~~**Replace `decompress` (critical, no fix available).**~~ Done: `downloadFromGithub` extracts with `fflate` plus explicit path containment (`cli/helpers/extract-github-zip.ts`); the `decompress` dependency is removed and `npm audit` is clean.
 
 **Bundling / runtime**
 - `MOPS_PASSWORD` / `--password` for non-interactive identity (today `getIdentity()` blocks on stdin for encrypted PEMs — `cli/mops.ts:59-82`).

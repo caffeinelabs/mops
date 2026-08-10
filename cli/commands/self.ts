@@ -1,10 +1,10 @@
 import process from "node:process";
 import child_process, { execSync } from "node:child_process";
 import chalk from "chalk";
+import prompts from "prompts";
 import { version, globalConfigDir } from "../mops.js";
 import { cleanCache } from "../cache.js";
 import { classifySelfUpdate } from "../helpers/self-update-kind.js";
-import prompts from "prompts";
 
 let url = "https://x344g-ziaaa-aaaap-abl7a-cai.icp0.io";
 

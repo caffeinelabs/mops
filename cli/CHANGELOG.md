@@ -2,6 +2,7 @@
 
 ## Next
 
+- Security: GitHub dependencies (`repo = "..."`) are now extracted with a purpose-built unzipper instead of the `decompress` package, which has two unfixed advisories ([GHSA-mp2f-45pm-3cg9](https://github.com/advisories/GHSA-mp2f-45pm-3cg9), [GHSA-h39j-r5qq-r9mm](https://github.com/advisories/GHSA-h39j-r5qq-r9mm)) allowing a malicious archive to write files outside the install directory. Entries that would escape the target directory now fail the whole extraction, and symlinks are written as plain files instead of being created. `npm audit` on the CLI is clean again. One behavior change: a GitHub dependency whose repo contains symlinks gets those as regular files holding the link target.
 - Fix `moc-wrapper` caching a failed compiler lookup. In a project with no `[toolchain] moc` and no `dfx` on `PATH`, it wrote an empty `.mops/moc-<host>-<hash>` file and then ran the empty string, so every later invocation failed with `--version: command not found` instead of naming the problem. It now leaves no cache entry when the lookup fails and reports `could not resolve moc`, pointing at `mops toolchain use moc <version>`. Projects that pin `[toolchain] moc`, and anyone with dfx installed, are unaffected. (Applies to the 2.x line only — 3.0.0 removes `moc-wrapper` outright, see below.)
 
 ## 3.0.0 (unreleased)

@@ -5,8 +5,8 @@ import { pipeline } from "node:stream";
 import chalk from "chalk";
 import { createLogUpdate } from "log-update";
 import got from "got";
-import decompress from "decompress";
 import { getRootDir, parseGithubURL, progressBar } from "../../mops.js";
+import { extractGithubZip } from "../../helpers/extract-github-zip.js";
 import {
   commitStagingDir,
   createStagingDir,
@@ -68,22 +68,13 @@ export const downloadFromGithub = async (
             cleanup();
             reject(err);
           } else {
-            let options = {
-              extract: true,
-              strip: 1,
-              headers: {
-                accept: "application/zip",
-              },
-            };
-            decompress(tmpFile, dest, options)
-              .then((unzippedFiles) => {
-                cleanup();
-                resolve(unzippedFiles);
-              })
-              .catch((err) => {
-                cleanup();
-                reject(err);
-              });
+            try {
+              resolve(extractGithubZip(tmpFile, dest));
+            } catch (err) {
+              reject(err);
+            } finally {
+              cleanup();
+            }
           }
         });
       } catch (err) {
