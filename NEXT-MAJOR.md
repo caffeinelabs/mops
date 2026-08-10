@@ -145,7 +145,7 @@ v3 tells users mops does not support `dfx`, so this can no longer lag behind —
 - ~~`package.json` `deploy*` scripts → `icp` equivalents.~~ Done.
 - ~~`dfx.json` → `icp` project config.~~ Done — `dfx.json` is deleted, `icp.yaml` declares the `ic` and `staging` environments, and the mainnet/staging ID mappings are committed under `.icp/data/mappings/`.
 - ~~`.github/workflows/release.yml`: replace `dfinity/setup-dfx` with the `icp` setup action.~~ Done — both canister deploys go through `.github/actions/deploy-canister`.
-- `.github/workflows/{mops-test,setup-mops}.yml` still install dfx, and cannot stop until the matrix drops mops 1.x/2.x: those versions run `test/storage-actor.test.mo` on the dfx replica, and 1.0.0 speaks only the PocketIC 4.0.0 API so pinning `[toolchain] pocket-ic` would not help.
+- ~~`.github/workflows/{mops-test,setup-mops}.yml` still install dfx.~~ Done — `mops.toml` pins `[toolchain] pocket-ic`, which 2.x honours over the dfx replica, and `setup-mops.yml` dropped its 2024-era `mops-version: 1.0.0` pin. 1.0.0 was the only version a pin could not rescue: it speaks only the PocketIC 4.0.0 API.
 - `cli/tests/build/no-dfx/` + `build-no-dfx.test.ts` — keep as a regression test that mops works with neither `dfx` nor `icp` on PATH.
 - `cli/{DEVELOPMENT,RELEASE}.md`, blog posts — rewrite in `icp` terms; add a "migrating from dfx" note. (`cli/README.md`, `docs/docs/01-quick-start.md`, `backend/DEVELOPMENT.md` and the root `DEVELOPMENT.md` are done.)
 
