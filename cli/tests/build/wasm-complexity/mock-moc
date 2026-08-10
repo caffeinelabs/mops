@@ -3,6 +3,10 @@
 import fs from "node:fs";
 
 const args = process.argv.slice(2);
+if (args[0] === "--stable-compatible") {
+  process.exit(0);
+}
+
 const outputFlag = args.indexOf("-o");
 if (outputFlag === -1 || !args[outputFlag + 1]) {
   console.error("mock-moc: missing -o");
