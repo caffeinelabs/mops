@@ -7,6 +7,84 @@
 
 ## 3.0.0 (unreleased)
 
+### Migrating from 2.x
+
+Everything that requires action, in one list. Details in the themed sections below.
+
+- **Pin a compiler**: `mops toolchain use moc <version>`, commit `mops.toml`. Every command that compiles now requires the pin — there is no dfx fallback.
+- **If you deploy with dfx**: delete the `export DFX_MOC_PATH=moc-wrapper` line from your shell config (`dfx build` fails outright while it points at the removed binary), then read [dfx support is removed](#dfx-support-is-removed) — your dfx builds no longer use the pinned compiler.
+- **Drop `--replica dfx` / `--replica pocket-ic`** from `mops test` / `mops bench` — the flag is gone, PocketIC is always used. Re-record benchmark baselines with `mops bench --save`.
+- **`[toolchain] pocket-ic` below `9.0.0`**: run `mops toolchain use pocket-ic 14.0.0`.
+- **CI pipelines**: replace `--lock check` and the `CI` env-var behavior with an explicit `--locked` flag; it is accepted by `mops install` and every command that installs implicitly.
+- **Replace `mops set-network <net>`** with the `MOPS_NETWORK` environment variable.
+- **`mops watch`**: drop `-g` / `-d` (removed); no flags now means error + warning + format, `--test` is opt-in.
+- **Scripts parsing `mops info <pkg> --versions`**: take the first line for the latest version, not the last.
+- **Node.js >= 20** is required.
+- **Commit `mops.lock`** — libraries too; remove it from `.gitignore` if the old advice put it there.
+- **Publishing**: delete the `dfx = "..."` line from `[package]` if you still have one.
+- **Vessel users**: `mops init` no longer migrates `vessel.dhall` — copy dependencies into `mops.toml` by hand.
+
+### dfx support is removed
+
+mops neither invokes dfx nor supports projects that deploy with it. `dfx` does not need to be installed, and nothing mops does reaches it.
+
+- The `dfx` and `dfx-pocket-ic` replicas are gone, and with them the `--replica` flag on `mops test` and `mops bench` (deprecated since 2.14). PocketIC is always used.
+- The dfx-bundled `moc` fallback is gone. `mops build`, `check`, `check-stable`, `test`, `bench`, `docs`, `generate`, `sync` and `mops watch` resolve the compiler only from `[toolchain] moc` and error naming the fix when it is unset. `mops toolchain bin --fallback` is removed (the flag, not the command).
+- `mops toolchain init` and `mops toolchain reset` are gone, along with the `moc-wrapper` binary. Their job was exporting `DFX_MOC_PATH=moc-wrapper` so `dfx build` compiled with the pinned `moc`. **If you deploy with dfx, this is the entry to read**: `mops sources` still works as a `dfx.json` packtool, so dfx keeps resolving your mops dependencies — but `dfx build` now uses its own bundled compiler while `mops check` / `build` / `test` use your pinned one, and a program that passes `mops check` can build differently, or not at all, under dfx. In GitHub Actions the same applies silently: `mops install` / `mops sources` no longer write `DFX_MOC_PATH` into `$GITHUB_ENV`, so such a workflow stays green while compiling with a different `moc`. The supported path is [`icp`](https://js.icp.build/), whose Motoko recipe builds by invoking `mops build`, so the pin propagates. If you stay on dfx, set `DFX_MOC_PATH` yourself and keep it in step with `[toolchain] moc`.
+- `mops watch --deploy` and `mops watch --generate` are removed, not replaced: mops is not a deployment tool, and `dfx generate` emits JS/TS bindings mops has never produced. Flag bundles fail loudly — `mops watch -tgd` errors with `unknown option '-gd'`; use `mops watch -t`. To deploy or regenerate declarations on change, run `icp deploy` / `icp-bindgen` (or the dfx equivalents) in a second terminal.
+- `mops init` no longer contacts the registry for a dfx-versioned "default package set" (a fresh `mops.toml` has no `[dependencies]` — `mops add core` yourself) and no longer writes `defaults.build.packtool` into a `dfx.json` it finds. It touches nothing outside your project's own files.
+- `mops bench` no longer reads `profile` from `dfx.json`; benchmark canisters are always compiled `--release`. Projects with `"profile": "Debug"` were silently benchmarking debug builds.
+- **Benchmark baselines drift**: PocketIC and the dfx replica report different instruction and heap counts, so the first `mops bench --compare` after upgrading shows a large diff wherever a dfx replica was implicitly in use. Change of measuring instrument, not a regression — re-record with `mops bench --save`.
+- The `dfx` field in `[package]` is rejected at publish with an error naming the field (documentation-deprecated since 2.7, but no runtime warning ever shipped). Delete the line.
+- `mops sources` is unchanged, byte-for-byte, including its stdout. It prints `--package` flags and has no opinion about who consumes them.
+
+### PocketIC and toolchain
+
+- `pocket-ic` no longer has to be pinned: with no `[toolchain]` entry, `mops test --mode replica`, `mops bench` and `mops watch --test` download and run **`14.0.0`**. The default is a fixed constant compiled into the CLI, never a "latest" lookup, so a cache warmed ahead of time (e.g. `mops toolchain use pocket-ic <version>` during a Docker image build) keeps runtime completely off the network. Pinning is still recommended for reproducibility.
+- **Breaking**: the legacy `pic-ic` PocketIC client is gone, and with it `[toolchain] pocket-ic` pins below `9.0.0` (deprecated in 2.20). Migration: `mops toolchain use pocket-ic 14.0.0`. A `< 9.0.0` pin fails with a message naming that fix rather than an opaque `BinTimeoutError` — which is all `5.x`–`8.x` pins ever produced anyway, since `pic-ic` spoke only the `4.0.0` protocol. There is no upper bound: mops keeps no list of blessed `pocket-ic` versions, same as for `moc`, `wasmtime` and `lintoko`.
+- `@icp-sdk/core` upgraded from `4.0.2` to `5.4.0` (#652). Only affects `MOPS_NETWORK=local` / `MOPS_REGISTRY_HOST`: update calls now use the IC HTTP API `v3` endpoint, so the replica you point mops at must serve it — `icp` and recent `dfx` do. Nothing changes for the default `ic` network or `staging`. `dist/vendor/pic.mjs` no longer inlines a second copy and shrinks from 1.15 MB to 600 KB.
+- Removed legacy `mocv` detection: `mops docs` no longer resolves `mo-doc` from a mocv-managed `DFX_MOC_PATH`. Use `mops toolchain use moc <version>`.
+
+### Lockfile and integrity
+
+- **Breaking**: `--locked` replaces `--lock <check|update|ignore>`, which is removed from `mops add`, `remove`, `install`, `sync` and `update` (#516). Two modes, one flag: plain commands are the dev flow, `--locked` is the CI flow.
+  - `--lock check` → `--locked`. Strictly stronger: it also refuses to write the lockfile, so a CI run can never mutate it. Fails when `mops.lock` is missing, unparseable, not the current format version, does not pin what `mops.toml` declares, or records a file hash the registry disagrees with. Accepted by `mops install` **and** every implicitly-installing command (`build`, `check`, `check-candid`, `check-stable`, `test`, `bench`, `generate candid`), so a pipeline can run `mops test --locked` with no install step. `mops sources` deliberately has no `--locked` (machine-parsed mid-build) — put `mops install --locked` earlier in the pipeline.
+  - `--lock update` → plain `mops install`, now **self-healing**: a missing, unparseable, legacy-format or `mops.toml`-inconsistent lockfile is regenerated instead of erroring, as is one carrying absolute local `path` entries from a pre-2.19.2 CLI.
+  - `--lock ignore` → no successor; the lockfile is always maintained (cargo model).
+  - Note when moving off `--lock check`: `--locked` requires the current format (v3), while `--lock check` accepted v1/v2. A committed v1/v2 lock fails `--locked` with a message saying to run `mops install` once and commit the upgrade.
+- **Breaking**: the `CI` environment variable no longer switches `mops install` to check mode (deprecated in 2.18). Pass `--locked` explicitly. (#516)
+- **Breaking**: integrity is verified **at download time** instead of by re-hashing `.mops/` on every install (#517). Files are hashed as they arrive and compared against the registry before the package is committed to the cache, so a corrupted download never reaches your project.
+  - **Guarantee change**: editing a file under `.mops/` no longer fails your next install/build/test — installs are not a tamper gate for files already on disk. If a pipeline relied on that, run the new `mops verify`: it re-hashes every file the lockfile records and checks the lock against `mops.toml` and the registry. Packages cached by an earlier CLI were never download-verified; `mops verify` audits them, `mops cache clean` forces a verified re-download. Neither `--locked` nor `mops verify` re-walks the dependency graph from scratch — registry versions are immutable so that is not a gap for them, but transitive changes reached through a local `path` dependency are not detected.
+  - The removed re-hash was paid on every install, proportional to the whole tree (~136 ms for an 842-file tree on a warm SSD, worse on cold caches or networked filesystems).
+- **Breaking**: `mops build`, `check`, `check-candid`, `check-stable`, `test`, `bench` and `generate candid` no longer silently ignore `mops.lock` when installing implicitly — they follow the same lock flow as `mops install`, and a download that fails its integrity check aborts them with exit code 1 (previously they carried on against a partially-populated `.mops/`).
+- `mops install` also self-heals what it previously ignored: a structurally-wrong lock (missing/non-object `deps` or `hashes`) is regenerated instead of throwing a `TypeError`; a `deps` entry that disagrees with `mops.toml` (previously installed as-is — the wrong version, silently) and a `hashes` section inconsistent with `deps` are both detected offline and repaired.
+- Known limitation, by design: hand-edited file *hash values* in `mops.lock` are not repaired by `mops install` — detecting them costs a ~1.2 s registry call that would outweigh the re-hash this release removes. They are consumed only by `--locked` and `mops verify` (never by the build), and both report the mismatch with the recovery that works: restore `mops.lock` from version control, or delete and reinstall.
+- **Breaking (guidance)**: commit `mops.lock`, for libraries as well as applications. A library's lock has no effect on consumers (they resolve their own graph) and makes the library's own CI reproducible. The old gitignore advice is gone from the `mops.lock created.` message and the docs.
+
+### Dependency resolution
+
+- Version comparison uses a real semver comparator instead of `parseInt` on dot-split parts. Semantics are unchanged — bare `1.2.3` is still exact, conflicts still resolve to the root version or the highest — but the broken edges are fixed: prereleases no longer compare equal to their release (`#v1.2.0-rc.1` vs `#v1.2.0` resolved to whichever was walked first) or to each other (`rc.2` vs `rc.10` was a coin flip), two-part versions no longer drop the patch comparison (`0.16` equalled `0.16.1`), and a prefixed tag like `#release-v1.2.0` no longer parses as `0.2.0`. Registry versions are validated `x.y.z` at publish, so nothing changes for them; the CLI now matches the backend `Semver` module on that set, including leading zeros.
+- **Breaking**: cross-major dependency conflicts are reported by default on every resolving command (`mops install`, `build`, `test`, `sources`, …). A different major than a package declared changes the API it compiles against, so it must not happen quietly. It is a warning — resolution still succeeds. The report names every dependent, which version won, and that pinning in your root `mops.toml` is how you choose otherwise; it goes to stderr, so `mops sources` stdout stays machine-parseable. Minor/patch skew stays silent, and only registry dependencies take part — `repo` / `path` deps have no comparable major. Resolution served from a valid `mops.lock` does not re-walk the graph, so the report appears on the run that produces or updates the lock. (`mops watch` cannot surface it yet: its redraw clears the terminal.)
+- `mops sources --conflicts ignore` silences the report for the whole command — pass it where your build tool invokes `mops sources` after you have reviewed a conflict and decided to keep it. `--conflicts error` still exits non-zero. Other commands have no opt-out.
+
+### Defaults and CLI strictness
+
+- **Breaking**: unknown flags before `--` are rejected with an error instead of silently swallowed as arguments (a mistyped `mops check --nope` used to be treated as an ordinary argument). Applies to `build`, `check`, `check-stable`, `test`, `bench`, `generate candid` and `lint`. The `-- <tool flags>` passthrough is unaffected: `mops check -- -Werror`, `mops lint -- --severity warning` keep working.
+- **Breaking**: `mops watch` without flags runs the safe informative set — error check, warning check, formatting — instead of "almost everything"; `--test` is opt-in. Passing any flag still selects only the named tasks.
+- **Breaking**: `mops test` defaults to the `verbose` reporter for any number of files. Pass `--reporter files` for the old multi-file output.
+- **Breaking**: `mops info <pkg> --versions` lists newest-first, matching `mops toolchain info --versions`. Scripts that took the last line (`| tail -1`) should take the first (`| head -1`).
+- `mops check` gets `--no-lint` to skip the automatic lint step for one run when `lintoko` is pinned. Projects without a pin are unaffected.
+- Fix `mops lint -- <lintoko flags>` failing with `too many arguments` (Commander 13 regression). `mops lint <filter> -- <lintoko flags>` works too.
+- `mops self update` no longer crosses major versions on its own. It prints the release-notes link and asks in a terminal; non-interactively it skips the update with a notice and exits successfully, so scripted updates keep working and stay on their major. Pass `--major` to opt in.
+
+### Removals
+
+- **Breaking**: `mops set-network` and `mops get-network` are removed. Use the `MOPS_NETWORK` environment variable — `MOPS_NETWORK=local mops install` (or `staging`); unset means `ic`. The removed commands stored the choice in a file inside the installed CLI directory: frequently not writable (CI, Docker, root-owned globals), shared across every project on the machine, and wiped by the next `npm i -g ic-mops`. `MOPS_NETWORK` has been the documented mechanism since 2.5.1. `mops get-network` has no replacement — read `$MOPS_NETWORK`.
+- Remove vessel/dhall support (deprecated since 2.14). `mops init` no longer migrates `vessel.dhall` — copy dependencies into `mops.toml` and delete `vessel.dhall` / `package-set.dhall`. GitHub dependencies (`repo = "..."`) are unaffected, but transitives they declare via vessel files are no longer resolved — add what you need to your own `mops.toml`. `.vessel` directories are no longer excluded from `mops test`/`watch` scans, and the `dhall-to-json-cli` dependency is gone.
+
+### Runtime
+
+- **Breaking**: Node.js >= 20 is required (`engines` bump from >= 18); installs on Node 18 fail with an engines error. (#288)
 
 ## 2.20.0
 - Fix `mops bench` (and `mops sync`, `mops watch`) ignoring `[toolchain] moc` and always resolving the compiler via `DFX_MOC_PATH` / `dfx cache show`, unlike `mops build`/`test`/`check`/`check-stable`/`generate`/`docs`. A pinned `[toolchain] moc` is now the compiler these commands invoke, regardless of `DFX_MOC_PATH`.
