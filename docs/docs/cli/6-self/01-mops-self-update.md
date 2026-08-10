@@ -15,7 +15,7 @@ When the latest version is a new **major** release, it contains breaking changes
 
 ## `--major`
 
-Skip the confirmation and update across major versions. This is also the only way to cross a major non-interactively — in CI or any other non-terminal environment, `mops self update` refuses a major update unless `--major` is passed:
+Skip the confirmation and update across major versions. This is also the only way to cross a major non-interactively — in a non-terminal environment (CI, scripts), `mops self update` prints the notice and exits successfully **without updating** unless `--major` is passed, so a scripted update never absorbs a major silently and never starts failing when one is released:
 
 ```
 mops self update --major
