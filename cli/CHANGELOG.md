@@ -2,6 +2,8 @@
 
 ## Next
 
+- `mops self update` now asks for confirmation before updating across major versions, since a new major contains breaking changes. It prints the release-notes link, prompts in a terminal, and in non-interactive environments refuses with an error naming the fix: `mops self update --major`. Updates within the same major are unchanged.
+
 - Fix `moc-wrapper` caching a failed compiler lookup. In a project with no `[toolchain] moc` and no `dfx` on `PATH`, it wrote an empty `.mops/moc-<host>-<hash>` file and then ran the empty string, so every later invocation failed with `--version: command not found` instead of naming the problem. It now leaves no cache entry when the lookup fails and reports `could not resolve moc`, pointing at `mops toolchain use moc <version>`. Projects that pin `[toolchain] moc`, and anyone with dfx installed, are unaffected.
 
 ## 2.20.0

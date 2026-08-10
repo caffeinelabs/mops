@@ -990,8 +990,12 @@ const selfCommand = new Command("self").description("Mops CLI management");
 selfCommand
   .command("update")
   .description("Update mops CLI to the latest version")
-  .action(async () => {
-    await self.update();
+  .option(
+    "--major",
+    "Allow updating across major versions without confirmation (major releases contain breaking changes)",
+  )
+  .action(async (options: { major?: boolean }) => {
+    await self.update(options);
   });
 
 selfCommand
