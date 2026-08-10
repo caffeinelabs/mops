@@ -1,9 +1,11 @@
 import process from "node:process";
 import child_process, { execSync } from "node:child_process";
 import chalk from "chalk";
+import prompts from "prompts";
 import { version, globalConfigDir } from "../mops.js";
 import { cleanCache } from "../cache.js";
 import { toolchain } from "./toolchain/index.js";
+import { classifySelfUpdate } from "../helpers/self-update-kind.js";
 
 let url = "https://x344g-ziaaa-aaaap-abl7a-cai.icp0.io";
 
@@ -32,14 +34,69 @@ export async function getLatestVersion() {
   return (await res.text()).trim();
 }
 
-export async function update() {
+// A new major means breaking changes, so crossing one is a decision, not a
+// routine refresh — confirmed in a terminal, `--major` everywhere else.
+async function confirmMajorUpdate(latest: string): Promise<boolean> {
+  console.log(
+    chalk.yellow(
+      `Version ${latest} is a new major release with breaking changes:`,
+    ),
+  );
+  console.log(
+    `https://github.com/caffeinelabs/mops/releases/tag/cli-v${latest}`,
+  );
+
+  // Not an error: a script running `mops self update` must keep succeeding
+  // (and staying on its major) after the new major ships, not turn red until
+  // someone edits it.
+  if (!process.stdout.isTTY) {
+    console.log(
+      `Skipping the major update. Run ${chalk.green("mops self update --major")} to update.`,
+    );
+    return false;
+  }
+
+  let { confirm } = await prompts(
+    {
+      type: "confirm",
+      name: "confirm",
+      message: `Update to ${latest}?`,
+      initial: false,
+    },
+    {
+      onCancel() {
+        console.log("aborted");
+        process.exit(0);
+      },
+    },
+  );
+  return confirm;
+}
+
+export async function update({ major = false } = {}) {
   let latest = await getLatestVersion();
   let current = version();
+  let kind = classifySelfUpdate(current, latest);
 
-  if (latest === current) {
+  if (kind === "up-to-date") {
     console.log(chalk.green("You are up to date. Version: " + current));
   } else {
+    // An unparseable tag means the release server is serving something
+    // broken — refuse rather than npm-install whatever it said.
+    if (kind === "invalid") {
+      console.error(
+        chalk.red("Error: ") +
+          `expected a version from ${url}/tags/latest, got ${JSON.stringify(latest)}.`,
+      );
+      process.exit(1);
+    }
+
     console.log("Current version: " + chalk.yellow(current));
+
+    if (kind === "major" && !major && !(await confirmMajorUpdate(latest))) {
+      return;
+    }
+
     console.log("Updating to version: " + chalk.green(latest));
 
     let pm = detectPackageManager();
