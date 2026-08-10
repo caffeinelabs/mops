@@ -254,20 +254,6 @@ export function formatGithubDir(name: string, repo: string) {
   );
 }
 
-export function readDfxJson(): any {
-  let dir = process.cwd();
-  let dfxJson = null;
-  for (let i = 0; i < 5; i++) {
-    let file = path.resolve(dir, "dfx.json");
-    if (fs.existsSync(file)) {
-      dfxJson = JSON.parse(fs.readFileSync(file).toString());
-      break;
-    }
-    dir = path.resolve(dir, "..");
-  }
-  return dfxJson;
-}
-
 // warn on minor mismatch
 // err on major mismatch
 export async function checkApiCompatibility() {

@@ -48,19 +48,18 @@ When accepted, adds `.github/workflows/mops-test.yml` that runs `mops test` on p
 
 ## What it creates
 
-1. **`dfx.json`** — sets `defaults.build.packtool = "mops sources"` if `dfx.json` is present. Existing indentation is preserved.
-2. **`mops.toml`** — `[package]` metadata for packages. No dependencies are added; use [`mops add`](./1-deps/01-mops-add.md) to install the packages you need.
-3. **`src/lib.mo`** — starter module (package only, when `src/` doesn't exist).
-4. **`test/lib.test.mo`** — starter test (package only, when you opted in and `test/` doesn't exist).
-5. **`LICENSE`** (and `NOTICE` for Apache-2.0) — package only, filled with the current year and copyright owner.
-6. **`README.md`** — package only, with placeholders replaced by the package name.
-7. **`.github/workflows/mops-test.yml`** — when the workflow prompt was accepted.
-8. **`.mops`** and **`.migrations-*/`** appended to `.gitignore` (created if missing).
+1. **`mops.toml`** — `[package]` metadata for packages. No dependencies are added; use [`mops add`](./1-deps/01-mops-add.md) to install the packages you need.
+2. **`src/lib.mo`** — starter module (package only, when `src/` doesn't exist).
+3. **`test/lib.test.mo`** — starter test (package only, when you opted in and `test/` doesn't exist).
+4. **`LICENSE`** (and `NOTICE` for Apache-2.0) — package only, filled with the current year and copyright owner.
+5. **`README.md`** — package only, with placeholders replaced by the package name.
+6. **`.github/workflows/mops-test.yml`** — when the workflow prompt was accepted.
+7. **`.mops`** and **`.migrations-*/`** appended to `.gitignore` (created if missing).
 
 Existing `LICENSE`, `README.md`, and workflow files are not overwritten.
 
 :::note
-`mops init` does not contact the registry and does not add any dependencies. Up to mops v3 it fetched a "default package set" keyed on the detected `dfx` version; that is gone. Add what you need with [`mops add`](./1-deps/01-mops-add.md), and pin a compiler with [`mops toolchain use moc <version>`](./5-toolchain/03-mops-toolchain-use.md) — every command that compiles requires a pinned `moc`.
+`mops init` touches nothing outside your project. It does not contact the registry, does not add any dependencies, and — since mops v3 — does not write a `dfx.json`. Add what you need with [`mops add`](./1-deps/01-mops-add.md), and pin a compiler with [`mops toolchain use moc <version>`](./5-toolchain/03-mops-toolchain-use.md) — every command that compiles requires a pinned `moc`.
 :::
 
 ### Migrating from Vessel

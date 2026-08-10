@@ -75,12 +75,12 @@ exports[`migrate check check with trimming shows reduced chain 1`] = `
   "stdout": "check Using --all-libs for richer diagnostics
 migrations Prepared 2 migration(s) for backend (trimmed from 3)
 check Checking canister backend:
-<CACHE>moc-wrapper ["src/main.mo","--check","--all-libs","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
+<CACHE><MOC> ["src/main.mo","--check","--all-libs","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
 ✓ backend
 check-stable Generating stable types for src/main.mo
-<CACHE>moc-wrapper ["--stable-types","-o",".mops/.check-stable/new.wasm","src/main.mo","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
+<CACHE><MOC> ["--stable-types","-o",".mops/.check-stable/new.wasm","src/main.mo","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
 check-stable Comparing deployed.most ↔ .mops/.check-stable/new.most
-<CACHE>moc-wrapper ["--stable-compatible","deployed.most",".mops/.check-stable/new.most"]
+<CACHE><MOC> ["--stable-compatible","deployed.most",".mops/.check-stable/new.most"]
 ✓ Stable compatibility check passed for canister 'backend'",
 }
 `;

@@ -35,7 +35,7 @@ Warning! Conflicting major versions of dependency "test"
 
 Resolution still succeeds: the highest major wins, unless your own `mops.toml` pins the dependency, in which case yours wins. Packages differing only in minor or patch version are not conflicts and are not reported. Neither are `repo` or `path` dependencies, which carry no comparable major version.
 
-Since resolution is skipped when the lockfile is up to date, the report appears on the run that creates or updates `mops.lock`. If you have reviewed a conflict and decided to keep it, [`mops sources --conflicts ignore`](../7-misc/04-mops-sources.md#--conflicts-action) silences it for `dfx` builds.
+Since resolution is skipped when the lockfile is up to date, the report appears on the run that creates or updates `mops.lock`. If you have reviewed a conflict and decided to keep it, [`mops sources --conflicts ignore`](../7-misc/04-mops-sources.md#--conflicts-action) silences it there.
 
 ## Options
 
@@ -58,7 +58,7 @@ mops install --locked   # CI: fail rather than update the lockfile
 mops install            # dev: keep the lockfile in sync
 ```
 
-`mops sources` deliberately has no `--locked`: it is invoked by the dfx packtool in the middle of a build, and its stdout is machine-parsed. Enforce the lockfile with a preceding `mops install --locked` step instead.
+`mops sources` deliberately has no `--locked`: it is invoked as a packtool in the middle of another tool's build, and its stdout is machine-parsed. Enforce the lockfile with a preceding `mops install --locked` step instead.
 
 ### `--no-toolchain`
 
