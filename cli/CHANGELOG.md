@@ -6,6 +6,8 @@
 
 ## 3.0.0 (unreleased)
 
+- `mops self update` no longer crosses major versions on its own, since a new major contains breaking changes. It prints the release-notes link and asks for confirmation in a terminal; in non-interactive environments it skips the update with a notice and exits successfully, so scripted updates keep working and stay on their major. Pass `--major` to update across majors. Updates within the same major are unchanged.
+
 - **Breaking**: mops no longer invokes `dfx` for anything it does itself. `dfx` does not need to be installed.
   - The `dfx` and `dfx-pocket-ic` replicas are gone, and so is the `--replica` flag on `mops test` and `mops bench`. `mops test --mode replica`, `mops bench` and `mops watch --test` always run on PocketIC. Migration: drop `--replica dfx` / `--replica pocket-ic` from your commands; there is nothing to replace them with. Both were deprecated with a warning since 2.14.
   - The dfx-bundled `moc` fallback is gone. `mops build`, `check`, `check-stable`, `test`, `bench`, `docs`, `generate`, `sync` and `mops watch` resolve the compiler only from `[toolchain] moc`, and error naming the fix when it is unset instead of shelling out to `dfx cache show`. `mops toolchain bin --fallback` is removed (the flag, not the command). Migration: run `mops toolchain use moc <version>` once and commit `mops.toml`.
