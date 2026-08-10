@@ -142,6 +142,13 @@ The PocketIC client and binary are only loaded when `--check-deploy` or
 `[build].check-deploy` enables this validation.
 PocketIC errors are reported as provided by the client.
 
+This validation performs fresh installations. An enhanced migration chain
+converted from legacy migrations may expect state from a previous deployment,
+which a fresh canister does not contain. The installation still fails, but Mops
+adds a hint when the generated `.most` identifies an enhanced migration chain.
+Validate that upgrade against representative baseline state, or disable
+`check-deploy` for projects that cannot support fresh installation.
+
 ### `--no-check-deploy`
 
 Skip PocketIC deployment validation for this build, even when

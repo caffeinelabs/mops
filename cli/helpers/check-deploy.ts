@@ -10,6 +10,7 @@ export interface CheckDeployArtifact {
   initCandid: string;
   initArg?: string;
   wasmMemoryLimit?: number;
+  hasMigrationChain: boolean;
 }
 
 export async function checkDeploy(
@@ -39,6 +40,12 @@ export async function checkDeploy(
   const pocketIcBin = await toolchain.bin("pocket-ic");
   let server: AnyPocketIcServer | undefined;
   let client: PocketIc | undefined;
+  let operationFailed = false;
+  let operationError: unknown;
+  const installationFailures: Array<{
+    artifact: CheckDeployArtifact;
+    error: Error;
+  }> = [];
 
   try {
     const pocketIc = await startPocketIc(
@@ -63,19 +70,52 @@ export async function checkDeploy(
           ? undefined
           : { wasmMemoryLimit: BigInt(artifact.wasmMemoryLimit) },
       );
-      await client.installCode({
-        canisterId,
-        wasm: artifact.wasmPath,
-        arg: artifact.arg,
-      });
+      try {
+        await client.installCode({
+          canisterId,
+          wasm: artifact.wasmPath,
+          arg: artifact.arg,
+        });
+      } catch (error) {
+        installationFailures.push({
+          artifact,
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      }
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`PocketIC deployment check failed\n${message}`, {
-      cause: error,
-    });
+    operationFailed = true;
+    operationError = error;
   } finally {
     await client?.tearDown().catch(() => {});
     await server?.stop().catch(() => {});
+  }
+
+  if (operationFailed) {
+    const message =
+      operationError instanceof Error
+        ? operationError.message
+        : String(operationError);
+    throw new Error(`PocketIC deployment check failed\n${message}`, {
+      cause: operationError,
+    });
+  }
+
+  if (installationFailures.length) {
+    throw new Error(
+      [
+        "PocketIC deployment check failed",
+        ...installationFailures.flatMap(({ artifact, error }) => [
+          `Canister: ${artifact.name}`,
+          error.message,
+          ...(artifact.hasMigrationChain
+            ? [
+                "Hint: This canister has an enhanced migration chain, so a fresh installation may fail when a migration expects state from a previous deployment; validate the upgrade against representative baseline state.",
+              ]
+            : []),
+        ]),
+      ].join("\n"),
+      { cause: installationFailures[0]?.error },
+    );
   }
 }
