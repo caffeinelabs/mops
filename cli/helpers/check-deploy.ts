@@ -10,14 +10,34 @@ export interface CheckDeployArtifact {
   initCandid: string;
   initArg?: string;
   wasmMemoryLimit?: number;
-  hasMigrationChain: boolean;
+  requiresPreexistingState: boolean;
 }
 
 export async function checkDeploy(
   artifacts: CheckDeployArtifact[],
   { verbose = false } = {},
 ): Promise<void> {
-  const preparedArtifacts = artifacts.map((artifact) => {
+  const deployableArtifacts = artifacts.filter((artifact) => {
+    if (!artifact.requiresPreexistingState) {
+      return true;
+    }
+    console.warn(
+      chalk.yellow(
+        [
+          "Warning [MOPS-CHECK-DEPLOY-SKIPPED]:",
+          `Canister: ${artifact.name}`,
+          "Result: Fresh PocketIC deployment check did not run.",
+          "Reason: The enhanced migration chain is incomplete and requires pre-existing state that a fresh canister cannot provide.",
+        ].join("\n"),
+      ),
+    );
+    return false;
+  });
+  if (!deployableArtifacts.length) {
+    return;
+  }
+
+  const preparedArtifacts = deployableArtifacts.map((artifact) => {
     try {
       return {
         ...artifact,
@@ -108,11 +128,6 @@ export async function checkDeploy(
         ...installationFailures.flatMap(({ artifact, error }) => [
           `Canister: ${artifact.name}`,
           error.message,
-          ...(artifact.hasMigrationChain
-            ? [
-                "Hint: This canister has an enhanced migration chain, so a fresh installation may fail when a migration expects state from a previous deployment; validate the upgrade against representative baseline state.",
-              ]
-            : []),
         ]),
       ].join("\n"),
       { cause: installationFailures[0]?.error },

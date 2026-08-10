@@ -12,7 +12,7 @@ import {
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { optimizeWasm } from "../helpers/optimize-wasm.js";
-import { parseMostAppliedMigrationNames } from "../helpers/parse-most.js";
+import { mostRequiresPreexistingState } from "../helpers/parse-most.js";
 import { assertDfinityClientSupportsPocketIc } from "../helpers/pocket-ic-startup.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
@@ -248,8 +248,7 @@ export async function build(
             initCandid: initCandidText,
             initArg: canister.initArg,
             wasmMemoryLimit: canister.wasmMemoryLimit,
-            hasMigrationChain:
-              (parseMostAppliedMigrationNames(mostText)?.length ?? 0) > 0,
+            requiresPreexistingState: mostRequiresPreexistingState(mostText),
           });
         }
       } catch (err: any) {

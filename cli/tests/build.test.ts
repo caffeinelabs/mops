@@ -329,9 +329,7 @@ describe("build", () => {
       expect(result.stderr).toMatch("PocketIC deployment check failed");
       expect(result.stderr).toMatch("assertion failed");
       expect(result.stderr).toMatch("Error code: CanisterCalledTrap");
-      expect(result.stderr).not.toMatch(
-        "This canister has an enhanced migration chain",
-      );
+      expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-SKIPPED");
     } finally {
       cleanFixture(cwd);
     }
@@ -352,26 +350,27 @@ describe("build", () => {
     }
   });
 
-  test("check-deploy preserves migration installation failures", async () => {
+  test("check-deploy skips incomplete migration chains and checks siblings", async () => {
     const cwd = path.join(
       import.meta.dirname,
       "build/check-deploy-incomplete-migrations",
     );
     try {
       const result = await cli(["build"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("PocketIC deployment check failed");
-      expect(result.stderr).toMatch("Error code: CanisterCalledTrap");
-      expect(result.stderr).toMatch("expected but not found in state");
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toMatch("Warning [MOPS-CHECK-DEPLOY-SKIPPED]");
       expect(result.stderr).toMatch("Canister: problematic");
       expect(result.stderr).toMatch("Canister: problematic2");
       expect(
-        result.stderr.match(/This canister has an enhanced migration chain/g),
+        result.stderr.match(/Fresh PocketIC deployment check did not run\./g),
       ).toHaveLength(2);
-      expect(result.stdout).toMatch("check deploy canister problematic");
-      expect(result.stdout).toMatch("check deploy canister problematic2");
+      expect(result.stderr).toMatch(
+        "The enhanced migration chain is incomplete and requires pre-existing state",
+      );
+      expect(result.stdout).not.toMatch("check deploy canister problematic");
+      expect(result.stdout).not.toMatch("check deploy canister problematic2");
       expect(result.stdout).toMatch("check deploy canister healthy");
-      expect(result.stdout).not.toMatch("Built 3 canisters successfully");
+      expect(result.stdout).toMatch("Built 3 canisters successfully");
     } finally {
       cleanFixture(cwd);
     }
