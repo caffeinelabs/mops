@@ -1,0 +1,3 @@
+[canisters.main]
+main = "src/Main.mo"
+wasmMemoryLimit = -1

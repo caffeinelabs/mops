@@ -12,6 +12,8 @@ import {
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { optimizeWasm } from "../helpers/optimize-wasm.js";
+import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
+import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
 import { Config } from "../types.js";
@@ -20,6 +22,8 @@ import { toolchain } from "./toolchain/index.js";
 export interface BuildOptions {
   outputDir: string;
   verbose: boolean;
+  checkWasm: boolean;
+  checkDeploy: boolean;
   /** `false` skips the `[optimize]` wasm-opt pass (`--no-optimize`). */
   optimize: boolean;
   extraArgs: string[];
@@ -52,18 +56,23 @@ export async function build(
   }
 
   let config = readConfig();
+  const checkWasmEnabled =
+    options.checkWasm ?? config.build?.["check-wasm"] ?? false;
+  const checkDeployEnabled =
+    options.checkDeploy ?? config.build?.["check-deploy"] ?? false;
   let outputDir = resolveBuildOutputDir(config, options.outputDir);
-  let mocPath = await toolchain.bin("moc");
   let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {
     cliError(`No Motoko canisters found in mops.toml configuration`);
   }
+  let mocPath = await toolchain.bin("moc");
 
   if (!(await exists(outputDir))) {
     await mkdir(outputDir, { recursive: true });
   }
 
   const filteredCanisters = filterCanisters(canisters, canisterNames);
+  const checkDeployArtifacts: CheckDeployArtifact[] = [];
 
   for (let [canisterName, canister] of Object.entries(filteredCanisters)) {
     console.log(chalk.blue("build canister"), chalk.bold(canisterName));
@@ -207,6 +216,25 @@ export async function build(
           verbose: options.verbose,
           optimize: options.optimize,
         });
+        if (checkWasmEnabled) {
+          runWasmComplexityPreflight(canisterName, await readFile(wasmPath));
+        }
+        if (checkDeployEnabled) {
+          // Init args must be encoded against the Motoko-generated init
+          // signature. A declared candid file is typically service-only and
+          // has no init types.
+          const initCandidText = resolvedCandidPath
+            ? await readFile(generatedDidPath, "utf-8")
+            : candidText;
+          checkDeployArtifacts.push({
+            name: canisterName,
+            wasmPath,
+            mostPath,
+            initCandid: initCandidText,
+            initArg: canister.initArg,
+            wasmMemoryLimit: canister.wasmMemoryLimit,
+          });
+        }
       } catch (err: any) {
         if (err.message?.includes("Build failed for canister")) {
           throw err;
@@ -221,6 +249,18 @@ export async function build(
       try {
         await release?.();
       } catch {}
+    }
+  }
+
+  if (checkDeployEnabled) {
+    try {
+      const { checkDeploy } = await import("../helpers/check-deploy.js");
+      await checkDeploy(checkDeployArtifacts, {
+        verbose: options.verbose,
+        mocPath,
+      });
+    } catch (err) {
+      cliError(err instanceof Error ? err.message : String(err));
     }
   }
 

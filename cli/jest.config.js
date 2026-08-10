@@ -5,7 +5,7 @@ export default {
     "<rootDir>/node_modules/",
     "<rootDir>/dist/",
     "<rootDir>/bundle/",
-    "<rootDir>/commands/"
+    "<rootDir>/commands/",
   ],
   // Source files import each other with .js suffixes (ESM), which jest cannot
   // resolve back to the .ts sources without this mapping.

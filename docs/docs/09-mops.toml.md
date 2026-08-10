@@ -101,6 +101,7 @@ Each canister entry specifies the entrypoint file and optional compiler settings
 | args     | Array of additional `moc` arguments for this canister (optional). Applied after `[moc].args` in `check`, `check-stable`, and `build`. |
 | candid   | Path to a Candid interface file (optional). `mops build` subtype-checks the generated interface against this file and embeds it into the wasm as `candid:service` metadata. `mops generate candid` writes the regenerated `.did` to this path. |
 | initArg  | Candid-encoded initialization arguments (optional)              |
+| wasmMemoryLimit | Positive integer Wasm memory limit in bytes applied by `mops build --check-deploy` (optional). Invalid values are rejected by every command that resolves canisters. |
 
 Example:
 ```toml
@@ -186,12 +187,16 @@ Global build settings used by [`mops build`](./cli/4-dev/03-mops-build.md).
 | --------- | --------------------------------------------------------------- |
 | outputDir | Output directory for compiled Wasm and Candid files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
 | args      | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
+| check-wasm | Analyze each final Wasm for likely IC0505 function-complexity risks without starting PocketIC (default `false`). Override for one build with `--check-wasm` or `--no-check-wasm`. |
+| check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Runs on the pinned `[toolchain] pocket-ic`, or the default version when unpinned; pins below 9.0.0 are rejected. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. Incompatible canisters are skipped with `MOPS-CHECK-DEPLOY-SKIPPED`; eligible siblings are still checked. Override for one build with `--check-deploy` or `--no-check-deploy`. |
 
 Example:
 ```toml
 [build]
 outputDir = "dist"
 args = ["--release", "--ai-errors"]
+check-wasm = true
+check-deploy = true
 ```
 
 These flags are applied after `[moc].args` and before per-canister `[canisters.<name>].args`.
