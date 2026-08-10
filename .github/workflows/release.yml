@@ -363,6 +363,25 @@ jobs:
         run: npx tsx release-cli.ts
 
       # --- Canister deployments ---
+      #
+      # icp-cli and the identity are set up once for the job rather than per
+      # canister: both deploys run on the same runner, so repeating the import
+      # would only give `icp identity import` — which has no --force — an
+      # existing name to fail on. Not gated on prerelease: the docs deploy
+      # below runs on preview tags too.
+      - name: Install icp-cli
+        # Keep in step with the pin in ci.yml.
+        run: npm install -g @icp-sdk/icp-cli@1.2.0
+
+      - name: Import mops identity
+        env:
+          MOPS_IDENTITY_PEM: ${{ secrets.MOPS_IDENTITY_PEM }}
+        run: |
+          set -euo pipefail
+          umask 077
+          trap 'rm -f "$RUNNER_TEMP/mops.pem"' EXIT
+          printf '%s\n' "$MOPS_IDENTITY_PEM" > "$RUNNER_TEMP/mops.pem"
+          icp identity import mops --from-pem "$RUNNER_TEMP/mops.pem" --storage plaintext
 
       - name: Deploy CLI canister
         if: steps.version.outputs.prerelease == 'false'
@@ -371,7 +390,6 @@ jobs:
           canister: cli
           domain: cli.mops.one
           build-deps-dir: cli-releases
-          identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
 
       # `mops self update` reads /tags/latest and then installs
       # /versions/<that>.tgz, and the mops-test.yml matrix installs
@@ -420,7 +438,6 @@ jobs:
           canister: docs
           domain: docs.mops.one
           build-deps-dir: docs
-          identity-pem: ${{ secrets.MOPS_IDENTITY_PEM }}
 
       # --- Commit release artifacts ---
       # Stable-only: previews generate no cli-releases artifacts to commit.

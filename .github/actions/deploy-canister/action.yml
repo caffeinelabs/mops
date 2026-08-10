@@ -1,5 +1,8 @@
 name: Deploy asset canister
-description: Build and deploy one of the repo's asset canisters to the IC with icp-cli.
+description: >-
+  Build and deploy one of the repo's asset canisters to the IC with icp-cli.
+  Expects icp-cli on PATH and an imported `mops` identity — the calling job
+  does both once, since it deploys more than one canister.
 
 inputs:
   canister:
@@ -10,46 +13,19 @@ inputs:
       Custom domain the canister serves. Asserted against its
       .well-known/ic-domains after the deploy.
     required: true
-  identity-pem:
-    description: PEM-encoded identity that controls the canister.
-    required: true
   build-deps-dir:
     description: >-
       Directory to run `npm ci` in before deploying. The canister's build step
       in icp.yaml runs an npm script, which needs that directory's node_modules.
     required: true
-  icp-version:
-    description: icp-cli version to install. Keep in step with the pin in ci.yml.
-    required: false
-    default: "1.2.0"
 
 runs:
   using: composite
   steps:
-    - name: Install icp-cli
-      shell: bash
-      run: npm install -g @icp-sdk/icp-cli@${{ inputs.icp-version }}
-
     - name: Install ${{ inputs.canister }} build dependencies
       shell: bash
       working-directory: ${{ inputs.build-deps-dir }}
       run: npm ci
-
-    - name: Import mops identity
-      shell: bash
-      env:
-        MOPS_IDENTITY_PEM: ${{ inputs.identity-pem }}
-      run: |
-        set -euo pipefail
-        # Import unconditionally rather than probing: a probe only proves an
-        # identity *named* mops exists, not that it holds this key, so a stale
-        # one on a reused runner would win silently and fail at deploy time.
-        # `icp identity import` has no --force, so drop any existing one first.
-        icp identity delete mops > /dev/null 2>&1 || true
-        umask 077
-        trap 'rm -f "$RUNNER_TEMP/mops.pem"' EXIT
-        printf '%s\n' "$MOPS_IDENTITY_PEM" > "$RUNNER_TEMP/mops.pem"
-        icp identity import mops --from-pem "$RUNNER_TEMP/mops.pem" --storage plaintext
 
     - name: Deploy ${{ inputs.canister }} canister
       shell: bash
