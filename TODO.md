@@ -16,12 +16,7 @@ Refs: GH = `caffeinelabs/mops`, LIN = Linear ticket title.
 - Downloadable package index (cargo/purescript style), additive endpoint. (GH #291)
 
 **Security / dependency hygiene**
-- **Replace `decompress` (critical, no fix available).** `cli/package.json` pins `decompress` 4.2.1, but both advisories against it cover `<=4.2.1`, so the newest release is still affected and `npm audit` reports no fix: [GHSA-mp2f-45pm-3cg9](https://github.com/advisories/GHSA-mp2f-45pm-3cg9) (extraction can create files and links outside the target directory) and [GHSA-h39j-r5qq-r9mm](https://github.com/advisories/GHSA-h39j-r5qq-r9mm) (zip-slip arbitrary file write). Removing the dependency is the only remedy. Two call sites, both need a maintained extractor (or Node's own `zlib`/`tar` plus explicit path validation):
-  - `cli/commands/toolchain/toolchain-utils.ts:64` — moc / wasmtime / pocket-ic / lintoko archives from GitHub releases.
-  - `cli/vessel.ts:167` via `installFromGithub` — archives from **arbitrary user-specified repos** (`repo = "..."` deps), so this is the more exposed surface: a malicious package repo is exactly the zip-slip threat model.
-  Non-breaking, so it should not wait for v3. Note `installFromGithub` survives v3 (it serves git deps, not vessel — see `NEXT-MAJOR.md`), so dropping vessel does not resolve this on its own. Whatever replaces it must keep handling `.tar.xz` (currently via the `decomp-tarxz` plugin) and preserve executable bits on extracted toolchain binaries.
-
-**Bundling / runtime**
+- ~~**Replace `decompress` (critical, no fix available).**~~ Done: `downloadFromGithub` extracts with `fflate` plus explicit path containment (`cli/helpers/extract-github-zip.ts`); the `decompress` dependency is removed and `npm audit` is clean.
 - `MOPS_PASSWORD` / `--password` for non-interactive identity (today `getIdentity()` blocks on stdin for encrypted PEMs — `cli/mops.ts:59-82`).
 - Standalone binary distribution alongside npm — additive third channel. (LIN: standalone binary)
 - Narrow `files` in `cli/package.json` (currently `["*"]` with a few exclusions). The published npm tarball ships **both** distributions: the unbundled `dist/` tree that `bin` actually points at *and* the 5.9 MB bun `bundle/cli.js` that only the `cli.mops.one` installer uses (that installer downloads `bundle/cli.tgz` from the releases canister instead — `cli-releases/install.sh` → `cli/release-cli.ts:33-41`). Excluding `bundle/` would roughly halve the npm download. Pre-existing; found while investigating the `@dfinity/pic` postinstall (see `NEXT-MAJOR.md`).
