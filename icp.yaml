@@ -85,6 +85,11 @@ canisters:
 networks:
   - name: local
     mode: managed
+    # Pinned like everything else icp in this file. Without it, every replica
+    # start after a cache wipe asks api.github.com for the newest launcher —
+    # an unpinned version, and an anonymous request that 403s under the shared
+    # rate limit on CI runners.
+    version: 15.0.0-2026-07-31-04-23
     gateway:
       bind: 127.0.0.1
       port: 4943
