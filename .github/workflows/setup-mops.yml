@@ -16,7 +16,16 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+      # dfx is still needed here, as a replica rather than a compiler:
+      # `test/storage-actor.test.mo` runs in replica mode, and mops 1.0.0 falls
+      # back to the dfx replica because mops.toml pins no `[toolchain]
+      # pocket-ic`. Pinning one would not help — 1.0.0 speaks only the PocketIC
+      # 4.0.0 API, which the current CLI has long since dropped. dfx-version is
+      # pinned because there is no longer a dfx.json for setup-dfx's `auto` to
+      # read; it would silently install the latest.
       - uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
+        with:
+          dfx-version: "0.29.1"
       - uses: dfinity/setup-mops@3e94e453352269b34137b5ce49f09a8df81bed7d # v1.4.1
         with:
           mops-version: 1.0.0

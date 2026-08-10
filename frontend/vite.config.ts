@@ -1,87 +1,75 @@
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
-import dfxJson from "../dfx.json";
 
-type Network = "ic" | "local" | "staging";
-let network = (process.env["DFX_NETWORK"] as Network) || "local";
+const NETWORKS = ["ic", "local", "staging"] as const;
+type Network = (typeof NETWORKS)[number];
 
-interface CanisterIds {
-  /* eslint-disable-next-line no-unused-vars */
-  [key: string]: { [key in Network]: string };
+// Required, with no default, and deliberately not icp-cli's own
+// ICP_ENVIRONMENT. Sharing that name looks tidy but the two resolve
+// differently: `icp deploy -e ic` targets ic while an exported
+// ICP_ENVIRONMENT=local would still reach vite, baking local replica ids into
+// a bundle bound for mainnet. `npm run deploy` derives this from the same
+// value it passes to `-e`, so they cannot disagree, and a raw `icp deploy`
+// leaves it unset and fails here instead of shipping. The dev server passes it
+// explicitly (see frontend/package.json).
+const network = process.env["MOPS_FRONTEND_NETWORK"] as Network | undefined;
+if (!network || !NETWORKS.includes(network)) {
+  throw new Error(
+    `MOPS_FRONTEND_NETWORK must be one of ${NETWORKS.join(", ")}` +
+      `${network ? `, got "${network}"` : " (unset)"}.` +
+      `\nBuild with MOPS_FRONTEND_NETWORK=local npm run build-frontend,` +
+      `\nor deploy with npm run deploy-staging / deploy-ic, which set it.`,
+  );
 }
 
-let canisterIds: CanisterIds = {};
+// icp-cli stores ids per environment as a flat { name: id } map. Managed
+// networks (local) land in .icp/cache/, connected ones in .icp/data/, which is
+// committed so a fresh checkout can build against mainnet. Resolved against
+// this file, not cwd, so it does not matter where vite is invoked from.
+const mappingsFile = path.resolve(
+  import.meta.dirname,
+  network === "local"
+    ? "../.icp/cache/mappings/local.ids.json"
+    : `../.icp/data/mappings/${network}.ids.json`,
+);
+
+let canisterIds: Record<string, string> = {};
 try {
-  if (network === "local") {
-    // icp-cli writes a flat { name: id } map per environment; dfx writes
-    // { name: { network: id } }. Try icp first, fall back to dfx.
-    try {
-      const icpIds = JSON.parse(
-        fs.readFileSync("../.icp/cache/mappings/local.ids.json").toString(),
-      ) as Record<string, string>;
-      canisterIds = Object.fromEntries(
-        Object.entries(icpIds).map(([name, id]) => [
-          name,
-          { local: id } as { [k in Network]: string },
-        ]),
-      );
-    } catch {
-      canisterIds = JSON.parse(
-        fs.readFileSync("../.dfx/local/canister_ids.json").toString(),
-      );
-    }
-  } else {
-    canisterIds = JSON.parse(
-      fs.readFileSync("../canister_ids.json").toString(),
+  canisterIds = JSON.parse(fs.readFileSync(mappingsFile).toString());
+} catch (e) {
+  // Only local may proceed without ids — that is the "not deployed yet" case,
+  // and the dev server is still useful. For staging or ic a missing id yields a
+  // bundle whose every canister lookup is undefined: it builds green and cannot
+  // reach anything once deployed.
+  if (network !== "local") {
+    throw new Error(
+      `Could not read canister ids from ${mappingsFile}: ${e instanceof Error ? e.message : e}`,
     );
   }
-} catch (e) {
   console.error(
     "\n⚠️  Before starting the dev server run: npm run deploy-local\n\n",
   );
 }
 
-// Generate canister ids, required by the generated canister code in .dfx/local/declarations/*
-// This strange way of JSON.stringifying the value is required by vite
+// Baked into the bundle for the hand-maintained actor factories in
+// declarations/*/index.js. This strange way of JSON.stringifying the value is
+// required by vite.
 const canisterDefinitions = Object.entries(canisterIds).reduce(
-  (acc, [key, val]) => ({
+  (acc, [key, id]) => ({
     ...acc,
     [`process.env.${key.toUpperCase().replace(/-/g, "_")}_CANISTER_ID`]:
-      JSON.stringify(val[network as Network]),
+      JSON.stringify(id),
     [`process.env.CANISTER_ID_${key.toUpperCase().replace(/-/g, "_")}`]:
-      JSON.stringify(val[network as Network]),
+      JSON.stringify(id),
   }),
   {},
 );
 
-// List of all aliases for canisters
-// This will allow us to: import {canisterName} from "canisters/canisterName"
-const aliases = Object.entries(dfxJson.canisters).reduce(
-  /* eslint-disable-next-line no-unused-vars */
-  (acc, [name, _value]) => {
-    // Get the network name, or `local` by default.
-    const networkName = network || "local";
-    const outputRoot = path.join(
-      __dirname,
-      ".dfx",
-      networkName,
-      "canisters",
-      name,
-    );
-
-    return {
-      ...acc,
-      ["canisters/" + name]: path.join(outputRoot, "index" + ".js"),
-    };
-  },
-  {},
-);
-
-// Gets the port dfx is running on from dfx.json
-const DFX_PORT = "4943";
+// Matches the local network's gateway port in icp.yaml.
+const LOCAL_REPLICA_PORT = "4943";
 
 // See guide on how to configure Vite at:
 // https://vitejs.dev/config/
@@ -120,12 +108,6 @@ export default defineConfig({
       },
     },
   },
-  resolve: {
-    alias: {
-      // Here we tell Vite the "fake" modules that we want to define
-      ...aliases,
-    },
-  },
   server: {
     watch: {
       usePolling: true,
@@ -134,10 +116,10 @@ export default defineConfig({
       allow: ["."],
     },
     proxy: {
-      // This proxies all http requests made to /api to our running dfx instance
+      // Proxies all http requests made to /api to the local replica
       "/api": {
         // target: 'https://icp-api.io/',
-        target: `http://127.0.0.1:${DFX_PORT}`,
+        target: `http://127.0.0.1:${LOCAL_REPLICA_PORT}`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, "/api"),
       },
@@ -145,9 +127,11 @@ export default defineConfig({
   },
   define: {
     // Here we can define global constants
-    // This is required for now because the code generated by dfx relies on process.env being set
+    // Required because the actor factories in declarations/ read process.env
     ...canisterDefinitions,
-    "process.env.DFX_NETWORK": JSON.stringify(process.env.DFX_NETWORK),
+    // The resolved value, not the raw env var: baking `undefined` here while
+    // the ids above came from the local replica let the two disagree.
+    "process.env.MOPS_FRONTEND_NETWORK": JSON.stringify(network),
     "process.env.NODE_ENV": JSON.stringify(
       network === "local" ? "development" : "production",
     ),
