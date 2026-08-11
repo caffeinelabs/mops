@@ -30,12 +30,15 @@ canisters:
         dir: frontend/dist
         build:
           - npm run build-frontend
+  # dfinity's certified-assets canister, unlike its legacy siblings above. The
+  # recipe tag pins the canister wasm and its sync plugin as a matched pair,
+  # `.well-known/` uploads with no opt-in file, and clean URLs are canonicalised
+  # — `docs/docusaurus.config.js` must keep `trailingSlash: false`. See AGENTS.md.
   - name: docs
     recipe:
-      type: "@dfinity/asset-canister@v2.3.0"
-      sha256: ee41744bd1361593a041d830b06ce50598cae5b21b57209fc727e8f63ae7e906
+      type: "@dfinity/static-site@v0.3.3"
+      sha256: d3493c1220b956b04225b84b2921f5a30ef39cbb8a359efb9dd3937de90e9975
       configuration:
-        version: "0.29.1"
         dir: docs/build
         build:
           - npm run build-docs

@@ -204,7 +204,8 @@ jobs:
             echo "> published to npm only and are not uploaded to the cli-releases canister."
             echo "> Use the npm command above to move between betas."
             echo ""
-            echo "Docs for this line: https://docs.mops.one/next/"
+            # No trailing slash — the docs canister 307s `/next/` to `/next`.
+            echo "Docs for this line: https://docs.mops.one/next"
             echo ""
           } > /tmp/release-notes.md
 
@@ -351,7 +352,7 @@ jobs:
       # stable-only. Previews are npm-only: no cli-releases artifacts, no cli
       # canister upload, so `mops self update` keeps serving the latest 2.x.
       # Said so in the notes. The docs deploy itself is deliberately ungated:
-      # it is what publishes docs.mops.one/next/, which the preview notes
+      # it is what publishes docs.mops.one/next, which the preview notes
       # point 3.x users at.
 
       - name: Generate on-chain release artifacts

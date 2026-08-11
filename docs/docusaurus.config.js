@@ -17,6 +17,11 @@ const config = {
 	// Set the /<baseUrl>/ pathname under which your site is served
 	// For GitHub pages deployment, it is often '/<projectName>/'
 	baseUrl: '/',
+	// Required by the docs canister (`@dfinity/static-site` in `icp.yaml`), which
+	// canonicalises clean URLs: with Docusaurus's default `<route>/index.html`
+	// output every deep link would 307 to the trailing-slash form. `false` emits
+	// `<route>.html` instead, served at the extension-less URLs with no redirect.
+	trailingSlash: false,
 
 	// GitHub pages deployment config.
 	// If you aren't using GitHub pages, you don't need these.

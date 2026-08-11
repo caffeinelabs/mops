@@ -28,7 +28,7 @@ git tag cli-vX.Y.Z-beta.N <commit-on-v3>
 git push origin cli-vX.Y.Z-beta.N
 ```
 
-`release.yml` detects the prerelease by parsing the version (any prerelease component counts, not a tag pattern) and deviates from a stable release in exactly these ways: npm publish lands under the `next` dist-tag instead of `latest`, the GitHub Release is marked prerelease, and nothing is uploaded to the `cli` canister — so `mops self update` and fresh `install.sh` installs keep serving the latest stable, and no artifacts PR is created. The docs canister still deploys (previews are what publish `docs.mops.one/next/`).
+`release.yml` detects the prerelease by parsing the version (any prerelease component counts, not a tag pattern) and deviates from a stable release in exactly these ways: npm publish lands under the `next` dist-tag instead of `latest`, the GitHub Release is marked prerelease, and nothing is uploaded to the `cli` canister — so `mops self update` and fresh `install.sh` installs keep serving the latest stable, and no artifacts PR is created. The docs canister still deploys (previews are what publish `docs.mops.one/next`).
 
 Install a preview with `npm i -g ic-mops@next` or a pinned `ic-mops@X.Y.Z-beta.N`.
 

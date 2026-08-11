@@ -40,10 +40,9 @@ runs:
         done
         exit 1
 
-    # The custom domain resolves only while the canister serves this file, and
-    # it is served only because an .ic-assets.json opts dot-directories into the
-    # upload. Assert the body, not the status: the asset canister answers
-    # unknown paths with the root index.html at HTTP 200.
+    # The custom domain resolves only while the canister serves this file.
+    # Assert the body, not the status: the legacy asset canister still behind
+    # `cli` answers unknown paths with the root index.html at HTTP 200.
     - name: Verify the custom domain still resolves
       shell: bash
       env:
