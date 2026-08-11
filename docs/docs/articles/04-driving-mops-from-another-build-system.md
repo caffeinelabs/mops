@@ -21,7 +21,7 @@ Each step is optional except the last, but the order matters: `--locked` refuses
 `--locked` is accepted by `install` **and** by every command that installs implicitly (`build`, `check`, `check-candid`, `check-stable`, `test`, `bench`, `generate candid`), so a pipeline can run `mops build --locked` with no separate install step. It fails when `mops.lock` is missing, unparseable, not the current format version, inconsistent with `mops.toml`, or records a file hash the registry disagrees with.
 
 :::warning
-`--locked` does **not** detect tampering with files already on disk. Since 3.0.0, integrity is verified when a package is downloaded, not by re-hashing `.mops/` on every install — so editing a file under `.mops/` afterwards does not fail a subsequent build. [`mops verify`](../cli/1-deps/06-mops-verify.md) is the on-disk gate: it re-hashes every file the lockfile records and checks the lock against `mops.toml` and the registry. Run it explicitly if your threat model includes the build inputs changing after acquisition.
+`--locked` does **not** detect tampering with files already on disk. It checks the lockfile against `mops.toml` and against the hashes the registry publishes — not the bytes in `.mops/`. Since 3.0.0, integrity is verified when a package is downloaded rather than by re-hashing `.mops/` on every install, so editing a file there afterwards does not fail a subsequent build. [`mops verify`](../cli/1-deps/06-mops-verify.md) is the on-disk gate: it re-hashes every file the lockfile records. Run it explicitly if your threat model includes the build inputs changing after acquisition.
 :::
 
 ## What each command writes
@@ -45,12 +45,20 @@ No build command writes `mops.toml`. If a required pin is missing — `[toolchai
 |---|---|
 | Downloading a package absent from the cache | registry canister + storage canisters |
 | Downloading a toolchain binary absent from the cache | GitHub releases |
-| Reporting a new install | one update call to the registry, best-effort |
-| Everything else in a build | none |
+| Validating or writing `mops.lock` | registry query for the published file hashes |
+| `mops verify` | the same registry query |
+| Reporting a new install | one best-effort update call to the registry |
+| `sources`, `moc-args`, `toolchain bin`, and compilation itself | none |
 
-The install-reporting call feeds package download counts. It fires only for packages newly copied into `.mops/` — a rebuild against a populated `.mops/` makes no registry call at all — and failures are swallowed, so it never fails a build.
+The lock check is the one that surprises people. `--locked` compares the recorded hashes against what the registry currently publishes, so it reaches the registry on **every** run — a warm `.mops/` avoids the downloads, not the query. A plain install does the same while rebuilding the lock.
 
-Two things follow for a pipeline that must not reach the network. First, pre-warm both caches: `mops install` for packages, `mops toolchain use <tool> <version>` for binaries — the latter is worth doing in a container image build, since PocketIC in particular is a ~90 MB download. Second, nothing in mops resolves a "latest" version at build time; every tool version comes from `[toolchain]` in `mops.toml` or, for PocketIC, a constant compiled into the CLI.
+The install-reporting call is the exception: it feeds package download counts, fires only for packages newly copied into `.mops/`, and has its errors swallowed, so it never fails a build.
+
+:::warning
+There is no fully offline mode. Pre-warming both caches — `mops install` for packages, `mops toolchain use <tool> <version>` for binaries, worth doing in a container image build since PocketIC alone is a ~90 MB download — removes the download traffic, but the lock check still queries the registry. A pipeline that must not reach the network at all has no supported way to express that yet.
+:::
+
+What mops does *not* do at build time is resolve a version. Every tool version comes from `[toolchain]` in `mops.toml`, or for PocketIC a constant compiled into the CLI, so no build depends on what happens to be the latest release that day.
 
 ## Exit codes
 
