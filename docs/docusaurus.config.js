@@ -48,8 +48,9 @@ const config = {
 					sidebarPath: './sidebars.js',
 					// The released line is served at the root; the in-development line
 					// lives under /next. Flip back to 'current' at the 3.0.0 GA.
-					// Both branches must agree: the docs canister is shared, so
-					// whichever branch deployed most recently decides the layout.
+					// Keep this in step with `v3`, which is the only branch that
+					// deploys the docs canister — this config shapes local previews
+					// here, but what docs.mops.one serves is built from v3.
 					lastVersion: '2.x',
 					versions: {
 						current: {label: '3.x (unreleased)', path: 'next'},
