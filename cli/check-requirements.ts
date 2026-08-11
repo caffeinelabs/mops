@@ -1,7 +1,9 @@
 import path from "node:path";
+import { existsSync } from "node:fs";
 import { SemVer } from "semver";
 import chalk from "chalk";
 
+import { getDepCacheDir } from "./cache.js";
 import { getDependencyType, getRootDir, readConfig } from "./mops.js";
 import { resolvePackages } from "./resolve-packages.js";
 import { getMocSemVer } from "./helpers/get-moc-version.js";
@@ -35,9 +37,16 @@ export async function checkRequirements({ verbose = false } = {}) {
     for (let [name, version] of Object.entries(resolvedPackages)) {
       if (getDependencyType(version) === "mops") {
         let pkgId = getPackageId(name, version);
-        let depConfig = readConfig(
-          path.join(rootDir, ".mops", pkgId, "mops.toml"),
-        );
+        // requirements checks are advisory — fall back to the global cache
+        // and skip the package instead of crashing on a missing manifest
+        let configPath = path.join(rootDir, ".mops", pkgId, "mops.toml");
+        if (!existsSync(configPath)) {
+          configPath = path.join(getDepCacheDir(pkgId), "mops.toml");
+          if (!existsSync(configPath)) {
+            continue;
+          }
+        }
+        let depConfig = readConfig(configPath);
         let required = depConfig.requirements?.[tool];
 
         if (required) {

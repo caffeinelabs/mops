@@ -8,9 +8,10 @@ import {
   parseGithubURL,
   readConfig,
 } from "./mops.js";
-import { VesselConfig, readVesselConfig } from "./vessel.js";
+import { VesselConfig, installFromGithub, readVesselConfig } from "./vessel.js";
 import { Config, Dependency } from "./types.js";
-import { getDepCacheDir, getDepCacheName } from "./cache.js";
+import { getDepCacheDir, getDepCacheName, isDepCached } from "./cache.js";
+import { installMopsDep } from "./commands/install/install-mops-dep.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { normalizeLocalDepPath } from "./helpers/normalize-local-path.js";
 import { checkLockFileLight, readLockFile } from "./integrity.js";
@@ -127,6 +128,14 @@ export async function resolvePackages({
       // read nested config
       if (repo) {
         let cacheDir = getDepCacheName(name, repo);
+        if (!isDepCached(cacheDir)) {
+          // best effort: an uncached github dep would otherwise silently
+          // drop its nested deps from resolution
+          await installFromGithub(name, repo, {
+            silent: true,
+            ignoreTransitive: true,
+          });
+        }
         nestedConfig =
           (await readVesselConfig(getDepCacheDir(cacheDir), {
             silent: true,
@@ -141,6 +150,22 @@ export async function resolvePackages({
         }
       } else if (version) {
         let cacheDir = getDepCacheName(name, version);
+        // a lock-driven install only caches winning versions, so a later
+        // re-walk (stale lock after add/update/sync) can hit versions
+        // absent from the cache — fetch them instead of crashing
+        if (!isDepCached(cacheDir)) {
+          let ok = await installMopsDep(name, version, {
+            silent: true,
+            ignoreTransitive: true,
+          });
+          if (!ok) {
+            console.error(
+              chalk.red("Error: ") +
+                `Package ${name}@${version} is not in the cache and could not be downloaded`,
+            );
+            process.exit(1);
+          }
+        }
         nestedConfig = readConfig(
           path.join(getDepCacheDir(cacheDir), "mops.toml"),
         );

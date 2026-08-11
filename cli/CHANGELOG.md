@@ -1,6 +1,12 @@
 # Mops CLI Changelog
 
 ## Next
+- Fix crashes with a raw `ENOENT: no such file or directory ... mops.toml` on incomplete cache state:
+  - `mops add`, `update`, `sync` and `remove` after a lock-driven install used to crash while regenerating the lock. Installing from `mops.lock` deliberately skips versions that lost a dependency conflict, but the re-walk of the dependency graph still read every declared version's manifest from the global cache. Manifests missing from the cache are now downloaded on demand; if the download fails, the command reports which package could not be fetched instead of crashing.
+  - A global cache entry now counts as cached only if it is complete: registry packages must contain `mops.toml`, GitHub packages must be non-empty. Leftover empty directories from interrupted runs (or a bad shared cache volume) are deleted and re-downloaded instead of being treated as cache hits.
+  - Packages missing from the global cache are re-downloaded when syncing `.mops`, instead of failing the copy.
+  - Toolchain requirements checks (`moc`/`lintoko` minimum versions) no longer crash when a package manifest is missing from `.mops`; they fall back to the global cache copy or skip that package, since these checks are advisory.
+  - Uncached GitHub dependencies encountered while resolving the dependency graph are now fetched, so their transitive dependencies are no longer silently dropped from resolution.
 
 ## 2.21.0
 - Security: GitHub dependencies (`repo = "..."`) are now extracted with a purpose-built unzipper instead of the `decompress` package, which has two unfixed advisories ([GHSA-mp2f-45pm-3cg9](https://github.com/advisories/GHSA-mp2f-45pm-3cg9), [GHSA-h39j-r5qq-r9mm](https://github.com/advisories/GHSA-h39j-r5qq-r9mm)) allowing a malicious archive to write files outside the install directory. Entries that would escape the target directory now fail the whole extraction, and symlinks are written as plain files instead of being created. `npm audit` on the CLI is clean again. One behavior change: a GitHub dependency whose repo contains symlinks gets those as regular files holding the link target.
