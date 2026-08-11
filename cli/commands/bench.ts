@@ -19,6 +19,7 @@ import { getMocVersion } from "../helpers/get-moc-version.js";
 import { toolchain } from "./toolchain/index.js";
 import { DEFAULT_POCKET_IC_VERSION } from "./toolchain/pocket-ic-versions.js";
 import {
+  checkOptimizeConfig,
   formatOptimizePipeline,
   optimizeWasm,
 } from "../helpers/optimize-wasm.js";
@@ -72,6 +73,10 @@ export async function bench(
   };
 
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
+
+  if (options.optimize !== false) {
+    checkOptimizeConfig(config);
+  }
 
   if (process.env.CI) {
     console.log("# Benchmark Results\n\n");

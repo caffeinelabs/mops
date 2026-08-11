@@ -225,9 +225,9 @@ keep-names = false
 args = ["--enable-bulk-memory"]
 ```
 
-Pin Binaryen via `[toolchain] wasm-opt` (e.g. `"131"`). If `[optimize]` is set and `wasm-opt` is not pinned, mops auto-pins the latest Binaryen release into `mops.toml` on the next build/bench (rewrites the file like `mops add` — prefer pinning explicitly in CI).
+`[optimize]` requires a Binaryen pin in `[toolchain] wasm-opt` (e.g. `"131"`). Without one, `mops build` and `mops bench` fail before compiling and name the fix — they never resolve a version or write `mops.toml`. Add the pin with [`mops toolchain use wasm-opt <version>`](./cli/5-toolchain/03-mops-toolchain-use.md).
 
-If `wasm-opt` fails, mops warns and keeps the unoptimized Wasm (same soft-fail behavior as dfx). Use `--verbose` for full `wasm-opt` output.
+If `wasm-opt` fails, the build fails. `[optimize]` describes the artifact you asked for, so producing an unoptimized one instead would silently change what downstream tooling hashes or deploys. Use `--verbose` for full `wasm-opt` output, or `--no-optimize` to skip the pass.
 
 Pass `--no-optimize` to [`mops build`](./cli/4-dev/03-mops-build.md#--no-optimize) or [`mops bench`](./cli/4-dev/02-mops-bench.md#--no-optimize) to skip this pass for a single run without editing `mops.toml`.
 

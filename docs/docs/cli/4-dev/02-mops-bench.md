@@ -37,7 +37,7 @@ The number you get is for the exact wasm PocketIC runs, and nothing post-optimiz
 
 Always compare runs made with the same `moc` version, the same PocketIC version, and the same `[optimize]` settings. Different replicas report different instruction and heap counts, so baselines recorded before mops 3.0.0 on the `dfx` replica are not comparable — re-record them with [`--save`](#--save).
 
-If `wasm-opt` fails, mops warns and keeps the unoptimized module. Run with [`--verbose`](#--verbose) for details.
+`[optimize]` requires a `[toolchain] wasm-opt` pin, and a `wasm-opt` failure fails the run. Use [`--verbose`](#--verbose) for full `wasm-opt` output.
 
 :::
 

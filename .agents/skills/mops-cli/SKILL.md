@@ -50,7 +50,7 @@ check-deploy = true  # optional: verify fresh PocketIC installation after build
 [optimize]
 # level = "O3"       # default
 # keep-names = true  # default
-# wasm-opt pin: [toolchain] wasm-opt = "131" (auto-pinned to latest if missing)
+# wasm-opt pin: [toolchain] wasm-opt = "131" (required when [optimize] is set)
 ```
 
 `check-stable` runs ICP's upgrade-time stable-variable compatibility check locally, so incompatible changes fail in `mops check` instead of being rejected when upgrading a live canister. It compares the current code against a `.most` from the deployed version.
@@ -140,7 +140,7 @@ mops build -- --ai-errors # pass extra moc flags
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
 
-With `[optimize]` in `mops.toml`, runs `wasm-opt` after candid metadata (default `-O3 -g`). Pin Binaryen with `mops toolchain use wasm-opt 131` (or let auto-pin write latest on first build). Soft-fails to unoptimized Wasm on error. Pass `--no-optimize` (on `build` or `bench`) to skip the pass for a single run without editing `mops.toml`.
+With `[optimize]` in `mops.toml`, runs `wasm-opt` after candid metadata (default `-O3 -g`). Requires a Binaryen pin: `mops toolchain use wasm-opt 131`. Build commands never write the pin themselves, and a `wasm-opt` failure fails the build. Pass `--no-optimize` (on `build` or `bench`) to skip the pass for a single run without editing `mops.toml`.
 
 When `--check-wasm` or `[build].check-wasm = true` is enabled, Mops runs fast Walrus analysis on the final Wasm without starting PocketIC. Per-function IC0505 complexity below 750,000 is quiet, 750,000 through 899,999 emits an early warning, and 900,000 or more emits a critical warning. `MOPS-WASM-COMPLEXITY` output includes actionable function metrics, the three largest complexity contributors, and Motoko correction guidance. The estimate never fails the build. Use `--no-check-wasm` to skip configured analysis once.
 
