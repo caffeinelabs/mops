@@ -23,7 +23,7 @@ For each canister, three files are written to the output directory (default `.mo
 
 If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against it.
 
-When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Failures warn and leave the unoptimized module. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
+When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Requires a `[toolchain] wasm-opt` pin, and a `wasm-opt` failure fails the build. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
 
 When `--check-wasm` or `[build].check-wasm = true` enables static validation, Mops uses Walrus to estimate each function's IC0505 compilation complexity in the final Wasm:
 

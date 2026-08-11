@@ -1,6 +1,13 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { execa } from "execa";
-import { appendFileSync, existsSync, linkSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  appendFileSync,
+  existsSync,
+  linkSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import path from "path";
 import { cli, cliSnapshot } from "./helpers";
 
@@ -409,15 +416,67 @@ describe("build", () => {
     expect(result.stderr).not.toMatch("PocketIC deployment check failed");
   });
 
-  test("[optimize] soft-fails when wasm-opt errors", async () => {
+  test("[optimize] fails the build when wasm-opt errors", async () => {
     const cwd = path.join(import.meta.dirname, "build/optimize-fail");
     try {
       const result = await cli(["build"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/Failed to optimize main\.wasm/);
+      expect(result.stderr).toMatch("mock-wasm-opt: intentional failure");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("[optimize] without a wasm-opt pin errors instead of pinning one", async () => {
+    const cwd = path.join(import.meta.dirname, "build/optimize-unpinned");
+    const manifest = path.join(cwd, "mops.toml");
+    const before = readFileSync(manifest, "utf8");
+    try {
+      const result = await cli(["build"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("wasm-opt is not pinned");
+      expect(result.stderr).toMatch("mops toolchain use wasm-opt 131");
+      // The build must not rewrite the manifest it was handed.
+      expect(readFileSync(manifest, "utf8")).toBe(before);
+      // ...and must fail before compiling anything.
+      expect(existsSync(path.join(cwd, ".mops/.build/main.wasm"))).toBe(false);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--no-optimize builds despite an unpinned wasm-opt", async () => {
+    const cwd = path.join(import.meta.dirname, "build/optimize-unpinned");
+    try {
+      const result = await cli(["build", "--no-optimize"], { cwd });
       expect(result.exitCode).toBe(0);
-      expect(result.stdout + result.stderr).toMatch(
-        /Failed to optimize main\.wasm/,
-      );
       expect(existsSync(path.join(cwd, ".mops/.build/main.wasm"))).toBe(true);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  // Anything that consumes mops as a build step — CI attestation, a canister
+  // orchestrator, a cache keyed on artifact hashes — needs identical inputs to
+  // produce identical outputs. Nothing else in the suite would catch a
+  // timestamp or an iteration-order dependency creeping into the pipeline.
+  test("repeated builds of the same source produce identical artifacts", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    const outA = path.join(cwd, ".mops/.repro-a");
+    const outB = path.join(cwd, ".mops/.repro-b");
+    try {
+      expect((await cli(["build", "-o", outA], { cwd })).exitCode).toBe(0);
+      expect((await cli(["build", "-o", outB], { cwd })).exitCode).toBe(0);
+
+      const artifacts = ["foo.wasm", "foo.did", "foo.most"];
+      for (const name of artifacts) {
+        const a = readFileSync(path.join(outA, name));
+        const b = readFileSync(path.join(outB, name));
+        expect(`${name}: ${createHash("sha256").update(b).digest("hex")}`).toBe(
+          `${name}: ${createHash("sha256").update(a).digest("hex")}`,
+        );
+      }
     } finally {
       cleanFixture(cwd);
     }

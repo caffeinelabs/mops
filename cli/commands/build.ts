@@ -11,7 +11,7 @@ import {
   resolveCanisterConfigs,
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
-import { optimizeWasm } from "../helpers/optimize-wasm.js";
+import { checkOptimizeConfig, optimizeWasm } from "../helpers/optimize-wasm.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
@@ -64,6 +64,9 @@ export async function build(
   let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {
     cliError(`No Motoko canisters found in mops.toml configuration`);
+  }
+  if (options.optimize !== false) {
+    checkOptimizeConfig(config);
   }
   let mocPath = await toolchain.bin("moc");
 
