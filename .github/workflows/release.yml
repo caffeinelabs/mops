@@ -211,21 +211,20 @@ jobs:
           done
           exit 1
 
-      - name: Install docs dependencies
-        working-directory: docs
-        run: npm ci
-
-      - name: Deploy docs canister
-        env:
-          DFX_WARNING: -mainnet_plaintext_identity
-        run: |
-          for i in 1 2 3; do
-            dfx deploy --network ic --no-wallet docs --identity mops && exit 0
-            echo "::warning::Docs canister deploy attempt $i/3 failed"
-            [ "$i" -lt 3 ] && sleep 30
-          done
-          exit 1
-
+      # No docs deploy here: the `v3` branch owns the docs canister, and that
+      # covers the 2.x docs too. Its Docusaurus build is a superset of this
+      # branch's — the same `docs/versioned_docs/version-2.x/` at the site root,
+      # plus the in-development line under /next — so a 2.x release publishing
+      # docs from here would add nothing and drop /next until v3 redeployed.
+      #
+      # It would also fail. v3 migrated the docs canister to dfinity's
+      # certified-assets canister (`@dfinity/static-site` in `icp.yaml`), which
+      # `dfx deploy` cannot drive: different wasm, different Candid interface.
+      #
+      # So docs changes on this branch reach docs.mops.one only once they are
+      # merged into v3 and v3 deploys. Publish them with, from a v3 checkout:
+      #   icp deploy docs -e ic --identity mops --no-create --yes
+      #
       # --- Commit release artifacts ---
 
       - name: Create GitHub App Token
