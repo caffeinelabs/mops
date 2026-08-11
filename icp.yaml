@@ -30,18 +30,10 @@ canisters:
         dir: frontend/dist
         build:
           - npm run build-frontend
-  # Migrated off the legacy dfx-era asset canister (`@dfinity/asset-canister`,
-  # which installs dfinity/sdk's assetstorage 0.29.1) onto dfinity's current
-  # certified-assets canister. No `version:` here: the recipe tag pins the
-  # canister wasm and its sync plugin as a matched pair, and no
-  # `.ic-assets.json` either — `.well-known/` is uploaded despite the leading
-  # dot, so the custom domain keeps resolving with no opt-in file.
-  #
-  # `docs/docusaurus.config.js` must keep `trailingSlash: false`: this canister
-  # canonicalises clean URLs, and only the extension-less form Docusaurus emits
-  # under that setting serves at 200 without a 307 hop.
-  #
-  # The one-time cutover is `-m reinstall`, not a plain deploy — see AGENTS.md.
+  # dfinity's certified-assets canister, unlike its legacy siblings above. The
+  # recipe tag pins the canister wasm and its sync plugin as a matched pair,
+  # `.well-known/` uploads with no opt-in file, and clean URLs are canonicalised
+  # — `docs/docusaurus.config.js` must keep `trailingSlash: false`. See AGENTS.md.
   - name: docs
     recipe:
       type: "@dfinity/static-site@v0.3.3"

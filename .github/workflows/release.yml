@@ -204,8 +204,7 @@ jobs:
             echo "> published to npm only and are not uploaded to the cli-releases canister."
             echo "> Use the npm command above to move between betas."
             echo ""
-            # No trailing slash: the docs canister canonicalises to the
-            # extension-less form and would 307 `/next/` to `/next`.
+            # No trailing slash — the docs canister 307s `/next/` to `/next`.
             echo "Docs for this line: https://docs.mops.one/next"
             echo ""
           } > /tmp/release-notes.md

@@ -40,13 +40,9 @@ runs:
         done
         exit 1
 
-    # The custom domain resolves only while the canister serves this file, and
-    # and both asset canisters this action deploys serve it: `cli` because an
-    # .ic-assets.json opts dot-directories into the upload, `docs` because the
-    # certified-assets sync plugin uploads `.well-known/` despite the leading
-    # dot with no opt-in file at all. Assert the body, not the status: the
-    # legacy asset canister still behind `cli` answers unknown paths with the
-    # root index.html at HTTP 200, so a status check there proves nothing.
+    # The custom domain resolves only while the canister serves this file.
+    # Assert the body, not the status: the legacy asset canister still behind
+    # `cli` answers unknown paths with the root index.html at HTTP 200.
     - name: Verify the custom domain still resolves
       shell: bash
       env:
