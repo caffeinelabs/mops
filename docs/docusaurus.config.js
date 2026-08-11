@@ -17,6 +17,14 @@ const config = {
 	// Set the /<baseUrl>/ pathname under which your site is served
 	// For GitHub pages deployment, it is often '/<projectName>/'
 	baseUrl: '/',
+	// Required by the docs canister's asset recipe (`@dfinity/static-site` in
+	// `icp.yaml`), which canonicalises clean URLs: it serves `quick-start.html`
+	// at `/quick-start` and 307s `/quick-start/` to it, but with Docusaurus's
+	// default output (`quick-start/index.html`) the canonical form is the
+	// trailing-slash one — so every deep link would 307 to a URL that disagrees
+	// with the `<link rel="canonical">` Docusaurus writes. `false` makes
+	// Docusaurus emit `<route>.html`, which lands on today's exact URLs at 200.
+	trailingSlash: false,
 
 	// GitHub pages deployment config.
 	// If you aren't using GitHub pages, you don't need these.
