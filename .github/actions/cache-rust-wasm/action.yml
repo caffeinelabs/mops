@@ -10,3 +10,18 @@ runs:
         restore-keys: |
           rust-wasm-${{ runner.os }}-
         path: target
+
+    # `wasm-pack build` downloads Binaryen for wasm-opt into its own cache dir,
+    # at build time rather than install time — so caching node_modules does not
+    # cover it, and a GitHub outage fails the build. Keyed on the lockfile
+    # because that is what pins the wasm-pack version choosing the Binaryen
+    # release; restore-keys are safe here since wasm-pack re-downloads whatever
+    # is missing.
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        key: wasm-pack-tools-${{ runner.os }}-${{ hashFiles('cli/package-lock.json') }}
+        restore-keys: |
+          wasm-pack-tools-${{ runner.os }}-
+        path: |
+          ~/.cache/.wasm-pack
+          ~/Library/Caches/.wasm-pack

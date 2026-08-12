@@ -59,10 +59,16 @@ jobs:
             ~/.cache/mops
             ~/Library/Caches/mops
 
+      # cli is installed separately so it can come from the node_modules cache;
+      # the rest still install in parallel.
       - name: Install npm packages
         run: |
           npm ci --ignore-scripts
-          npm run ci:postinstall
+          npm run ci:postinstall:sites
+
+      - uses: ./.github/actions/setup-cli-deps
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install mops
         run: npm i -g ./cli/dist
@@ -144,12 +150,13 @@ jobs:
 
       # Only the CLI workspace. The frontend, docs, blog and cli-releases
       # installs belong to the `sites` job; nothing under cli/tests reaches for
-      # them. `npm ci` in cli/ runs its `prepare` script, and that is what
-      # builds the dist/ installed globally below.
+      # them. The cli setup below is what produces the dist/ installed globally.
       - name: Install npm packages
-        run: |
-          npm ci --ignore-scripts
-          cd cli && npm ci
+        run: npm ci --ignore-scripts
+
+      - uses: ./.github/actions/setup-cli-deps
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install mops
         run: npm i -g ./cli/dist
@@ -200,9 +207,11 @@ jobs:
       - uses: ./.github/actions/cache-rust-wasm
 
       - name: Install npm packages
-        run: |
-          npm ci --ignore-scripts
-          cd cli && npm ci
+        run: npm ci --ignore-scripts
+
+      - uses: ./.github/actions/setup-cli-deps
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Build and install bundle
         run: |

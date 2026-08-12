@@ -60,9 +60,10 @@ jobs:
       - uses: ./.github/actions/cache-rust-wasm
         if: ${{ matrix.mops-version == './cli/dist' }}
 
-      - name: Install and build local cli
+      - uses: ./.github/actions/setup-cli-deps
         if: ${{ matrix.mops-version == './cli/dist' }}
-        run: cd cli && npm ci
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Install mops
         run: npm i -g ${{ matrix.mops-version }}

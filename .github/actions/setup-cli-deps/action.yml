@@ -1,0 +1,56 @@
+name: Set up cli dependencies
+description: >
+  Restore cli/node_modules and make sure cli/dist is built. setup-node's
+  `cache: npm` only caches ~/.npm, the package tarballs — `npm ci` still runs
+  postinstall scripts, and wasm-pack and @dfinity/pic each download a binary
+  from GitHub releases at that point. A GitHub blip therefore takes out every
+  job before any repo code runs, which is exactly what happened on 2026-08-12.
+  Those binaries land inside node_modules, so caching the tree removes both
+  downloads.
+
+inputs:
+  node-version:
+    description: >
+      Node major in use. Part of the cache key: native artifacts are built for
+      one ABI, so a matrix leg must never restore another leg's node_modules.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # No restore-keys on purpose. A near-miss restore would hand us a tree
+    # built from a different lockfile, and the install below would be skipped,
+    # so the only safe hit is an exact one.
+    # ImageOS distinguishes ubuntu22 from ubuntu24, which runner.os does not —
+    # they can hold incompatible native binaries.
+    - id: cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: cli/node_modules
+        key: cli-node-modules-${{ runner.os }}-${{ env.ImageOS }}-${{ runner.arch }}-node${{ inputs.node-version }}-${{ hashFiles('cli/package-lock.json') }}
+
+    # `npm ci` wipes node_modules before installing, so it has to be skipped
+    # entirely for the cache to be worth anything. Retried because this is the
+    # step that reaches out to GitHub releases on a miss.
+    - name: Install cli dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        cd cli
+        for attempt in 1 2 3; do
+          if npm ci; then
+            exit 0
+          fi
+          echo "::warning::npm ci failed (attempt ${attempt} of 3), retrying in 15s"
+          sleep 15
+        done
+        echo "::error::npm ci failed after 3 attempts"
+        exit 1
+
+    # On a miss `npm ci` ran `prepare` for us. On a hit nothing has built dist/
+    # yet, and it is a build output of the working tree rather than of the
+    # lockfile, so it is rebuilt rather than cached.
+    - name: Build cli dist
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: cd cli && npm run prepare
