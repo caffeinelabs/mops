@@ -1,0 +1,6 @@
+[package]
+name = "self-root"
+version = "1.0.0"
+
+[dependencies]
+me = "./"
