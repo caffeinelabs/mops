@@ -88,5 +88,10 @@ _It's only faster when there are no globally cached packages — for example whe
 - Hash of the `[dependencies]` and `[dev-dependencies]` sections of `mops.toml`
 - All transitive dependencies with the final resolved versions
 - Hash of each file of each registry dependency (retrieved from the Mops registry canister)
+- The declared dependencies of every registry package version in the graph (`graph`), including versions that lost a conflict and were not installed
+
+The `graph` section lets Mops update the lock after `mops add`, `remove`, `update` or `sync` without re-downloading package manifests: published versions are immutable, so recorded dependencies never go stale. Local path dependencies are not recorded — their manifests are always read from disk. Locks written by older CLIs have no `graph`; Mops then falls back to reading manifests from the cache, downloading any that are missing.
+
+For the same reason, updating a stale lock carries file hashes of already-locked packages over and queries the registry only for packages new to the lock. Deleting `mops.lock` and running `mops install` rebuilds every hash from the registry.
 
 Local path dependencies are stored relative to the project root (e.g. `./packages/shared`, `../lib`) so the lockfile is portable across machines. A lockfile that still carries absolute paths from an older CLI is treated as stale and rewritten by a plain `mops install`. After regenerating, use a CLI that includes this fix; older CLIs treat relative lock paths as cwd-relative and break when run from a subdirectory.
