@@ -18,6 +18,7 @@ export async function installDep(
   dep: Dependency,
   { verbose, silent, threads, ignoreTransitive }: InstallDepOptions = {},
   parentPkgPath?: string,
+  visitedLocalDeps?: Set<string>,
 ): Promise<boolean> {
   if (dep.repo) {
     return installFromGithub(dep.name, dep.repo, {
@@ -30,11 +31,16 @@ export async function installDep(
     if (parentPkgPath) {
       depPath = path.resolve(parentPkgPath, dep.path);
     }
-    return installLocalDep(dep.name, depPath, {
-      silent,
-      verbose,
-      ignoreTransitive,
-    });
+    return installLocalDep(
+      dep.name,
+      depPath,
+      {
+        silent,
+        verbose,
+        ignoreTransitive,
+      },
+      visitedLocalDeps,
+    );
   } else if (dep.version) {
     return installMopsDep(dep.name, dep.version, {
       silent,

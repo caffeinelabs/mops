@@ -15,6 +15,10 @@ export async function installDeps(
   deps: Dependency[],
   { verbose, silent, threads, ignoreTransitive }: InstallDepsOptions = {},
   parentPkgPath?: string,
+  // Local `path` deps already walked in this run, by resolved directory. A
+  // default here means every top-level caller starts a fresh run, and only the
+  // recursion below carries one along.
+  visitedLocalDeps: Set<string> = new Set(),
 ): Promise<boolean> {
   let ok = true;
 
@@ -23,6 +27,7 @@ export async function installDeps(
       dep,
       { verbose, silent, threads, ignoreTransitive },
       parentPkgPath,
+      visitedLocalDeps,
     );
     if (!res) {
       ok = false;

@@ -17,6 +17,7 @@ export async function installLocalDep(
   pkg: string,
   pkgPath = "",
   { verbose, silent, ignoreTransitive }: InstallLocalDepOptions = {},
+  visitedLocalDeps: Set<string> = new Set(),
 ): Promise<boolean> {
   if (!silent) {
     let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
@@ -40,11 +41,21 @@ export async function installLocalDep(
       return true;
     }
 
+    // Two local packages can require each other. Without this the walk recurses
+    // until the stack overflows, which surfaced as a raw RangeError naming
+    // neither package. Already visited means its deps are installed, or are
+    // being installed further up this stack.
+    if (visitedLocalDeps.has(dir)) {
+      return true;
+    }
+    visitedLocalDeps.add(dir);
+
     let config = readConfig(mopsToml);
     return installDeps(
       Object.values(config.dependencies || {}),
       { silent, verbose },
       pkgPath,
+      visitedLocalDeps,
     );
   } else {
     return true;
