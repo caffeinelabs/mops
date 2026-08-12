@@ -1,5 +1,11 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -20,18 +26,24 @@ describe("global cache resilience", () => {
   const makeTempCacheHome = async () =>
     await mkdtemp(path.join(os.tmpdir(), "mops-cache-"));
 
-  test("add after a lock-driven install fetches conflict losers instead of crashing", async () => {
+  test("add after a lock-driven install resolves losers from the lock graph", async () => {
     const cwd = await makeTempFixture("conflict-loser");
     const cacheHome = await makeTempCacheHome();
     const env = { CI: undefined, XDG_CACHE_HOME: cacheHome };
     const packagesDir = path.join(cacheHome, "mops", "packages");
+    const lockFile = path.join(cwd, "mops.lock");
 
     try {
       // full install populates the cache with every declared version
       // (winner core@1.0.0 and loser core@2.6.1) and writes mops.lock
       const first = await cli(["install"], { cwd, env });
       expect(first.exitCode).toBe(0);
-      expect(existsSync(path.join(cwd, "mops.lock"))).toBe(true);
+
+      // the lock records declared edges for every registry version visited
+      const lock = JSON.parse(readFileSync(lockFile, "utf8"));
+      expect(Object.keys(lock.graph)).toEqual(
+        expect.arrayContaining(["core@1.0.0", "core@2.6.1"]),
+      );
 
       // fresh machine: the committed lock survives, caches don't
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
@@ -43,12 +55,51 @@ describe("global cache resilience", () => {
       expect(existsSync(path.join(packagesDir, "core@1.0.0"))).toBe(true);
       expect(existsSync(path.join(packagesDir, "core@2.6.1"))).toBe(false);
 
-      // the stale-lock re-walk visits the losing version's manifest;
-      // it must be fetched on demand, not crash with ENOENT
+      // the stale-lock re-walk needs the losing version's edges;
+      // the lock graph answers without downloading the package
       const result = await cli(["add", "base@0.16.0"], { cwd, env });
       expect(result.stderr).not.toMatch(/ENOENT/);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toMatch(/Package installed/);
+      expect(existsSync(path.join(packagesDir, "core@2.6.1"))).toBe(false);
+
+      const updated = JSON.parse(readFileSync(lockFile, "utf8"));
+      expect(Object.keys(updated.graph)).toEqual(
+        expect.arrayContaining(["core@1.0.0", "core@2.6.1", "base@0.16.0"]),
+      );
+    } finally {
+      rmSync(cacheHome, { recursive: true, force: true });
+    }
+  });
+
+  test("add with a pre-graph lock falls back to fetching losers on demand", async () => {
+    const cwd = await makeTempFixture("conflict-loser");
+    const cacheHome = await makeTempCacheHome();
+    const env = { CI: undefined, XDG_CACHE_HOME: cacheHome };
+    const packagesDir = path.join(cacheHome, "mops", "packages");
+    const lockFile = path.join(cwd, "mops.lock");
+
+    try {
+      const first = await cli(["install"], { cwd, env });
+      expect(first.exitCode).toBe(0);
+
+      // locks written by older CLIs carry no graph
+      const lock = JSON.parse(readFileSync(lockFile, "utf8"));
+      delete lock.graph;
+      writeFileSync(lockFile, JSON.stringify(lock, null, 2));
+
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+      rmSync(cacheHome, { recursive: true, force: true });
+
+      const second = await cli(["install"], { cwd, env });
+      expect(second.exitCode).toBe(0);
+      expect(existsSync(path.join(packagesDir, "core@2.6.1"))).toBe(false);
+
+      // without recorded edges the re-walk must download the losing
+      // version's manifest instead of crashing with ENOENT
+      const result = await cli(["add", "base@0.16.0"], { cwd, env });
+      expect(result.stderr).not.toMatch(/ENOENT/);
+      expect(result.exitCode).toBe(0);
       expect(
         existsSync(path.join(packagesDir, "core@2.6.1", "mops.toml")),
       ).toBe(true);

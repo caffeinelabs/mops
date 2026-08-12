@@ -5,7 +5,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
 import { getDependencyType, getRootDir, readConfig } from "./mops.js";
 import { mainActor } from "./api/actors.js";
-import { resolvePackages } from "./resolve-packages.js";
+import { resolveDepsAndGraph, resolvePackages } from "./resolve-packages.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { warnCiLockAutoDetect } from "./helpers/deprecate-ci-lock.js";
 
@@ -30,6 +30,10 @@ type LockFileV3 = {
   mopsTomlDepsHash: string;
   hashes: Record<string, Record<string, string>>;
   deps: Record<string, string>;
+  // declared dependency edges per registry package version (losers included),
+  // so a stale lock can be regenerated without those versions on disk;
+  // optional: locks written by older CLIs don't have it
+  graph?: Record<string, Record<string, string>>;
 };
 
 type LockFile = LockFileV1 | LockFileV2 | LockFileV3;
@@ -162,6 +166,22 @@ export function readLockFile(): LockFile | null {
   return null;
 }
 
+// Declared dependency edges from the lock. Tolerates a missing, corrupt or
+// pre-graph lock (unlike readLockFile, which exits on corruption) — the graph
+// is an optimization and its absence must never block regeneration.
+export function readLockFileGraph(): Record<string, Record<string, string>> {
+  let lockFile = path.join(getRootDir(), "mops.lock");
+  try {
+    let lock = JSON.parse(fs.readFileSync(lockFile).toString());
+    if (lock?.version === 3 && lock.graph) {
+      return lock.graph;
+    }
+  } catch {
+    // fall through
+  }
+  return {};
+}
+
 // check if lock file exists and integrity of mopsTomlDepsHash
 export function checkLockFileLight(): boolean {
   let existingLockFileJson = readLockFile();
@@ -190,7 +210,9 @@ export async function updateLockFile({
   }
 
   // skipLock: re-resolve from mops.toml so abs→relative local paths migrate.
-  let resolvedDeps = await resolvePackages({ skipLock: true });
+  let { deps: resolvedDeps, graph } = await resolveDepsAndGraph({
+    skipLock: true,
+  });
 
   let fileHashes = await getFileHashesFromRegistry();
 
@@ -198,6 +220,7 @@ export async function updateLockFile({
     version: 3,
     mopsTomlDepsHash: getMopsTomlDepsHash(),
     deps: resolvedDeps,
+    graph,
     hashes: fileHashes.reduce(
       (acc, [packageId, fileHashes]) => {
         acc[packageId] = fileHashes.reduce(
@@ -216,13 +239,28 @@ export async function updateLockFile({
   let rootDir = getRootDir();
   let lockFile = path.join(rootDir, "mops.lock");
   let isNew = !fs.existsSync(lockFile);
-  fs.writeFileSync(lockFile, JSON.stringify(lockFileJson, null, 2));
+  writeLockFileAtomic(lockFile, JSON.stringify(lockFileJson, null, 2));
   if (isNew) {
     console.log("mops.lock created.");
     console.log("  Applications: commit this file.");
     console.log("  Libraries: add mops.lock to .gitignore.");
   }
   return true;
+}
+
+// Stage into a sibling temp file and atomic-rename onto the lock, so a
+// concurrent `mops install` never reads a half-written lock.
+function writeLockFileAtomic(lockFile: string, content: string) {
+  let tmpFile = `${lockFile}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpFile, content);
+  try {
+    fs.renameSync(tmpFile, lockFile);
+  } catch {
+    // Windows can refuse to replace a file another process holds open;
+    // fall back to a direct write rather than failing the command
+    fs.writeFileSync(lockFile, content);
+    fs.rmSync(tmpFile, { force: true });
+  }
 }
 
 // compare hashes of local files with hashes from the lock file
