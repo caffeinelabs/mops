@@ -15,27 +15,25 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  MOC_VERSION: "0.14.13"
+  NODE_VERSION: "22"
+
 jobs:
-  build:
-    timeout-minutes: 45
-    strategy:
-      matrix:
-        moc-version: [0.14.13]
-        node-version: [22]
-        include:
-          - mops-version: ./cli/dist
-            test-global: false
-          - mops-version: ./cli/dist
-            test-global: true
-
+  # The backend still deploys, declarations still generate and every site still
+  # builds — but none of it is on the CLI test job's critical path any more. No
+  # CLI test touches the local replica (the ones that say "replica" mean
+  # PocketIC, which they download themselves), so this ran twice, for nothing,
+  # in front of every test run.
+  sites:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
-    name: node ${{ matrix.node-version }}, moc ${{ matrix.moc-version }}, ${{ matrix.mops-version }}
-
+    name: backend deploy + site builds
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       # No setup-dfx anywhere in this repo any more — everything deploys with
       # icp-cli and every test replica is PocketIC.
@@ -48,22 +46,15 @@ jobs:
 
       - uses: ./.github/actions/cache-rust-wasm
 
-      # Keyed on everything the pre-cache step below actually downloads: the
-      # root pins, every fixture's pins and deps, and the compiled-in default
-      # PocketIC version. Keying on `mops.toml` alone froze this cache — that
-      # file rarely changes, so every run hit the primary key, `actions/cache`
-      # skipped the save ("not saving cache"), and toolchains added afterwards
-      # were re-downloaded forever.
-      #
-      # The key is also namespaced per workflow. `mops test` jobs never install
-      # the fixtures, so sharing one key let them win the save race and publish
-      # a cache without the fixture toolchains in it.
+      # Namespaced away from the cli-tests cache on purpose: this job installs
+      # the root manifest only, so it must not be able to publish a cache that
+      # a fixture-heavy job would then restore as complete.
       - name: Cache mops packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          key: mops-ci-${{ runner.os }}-${{ hashFiles('mops.toml', 'cli/tests/**/mops.toml', 'cli/commands/toolchain/pocket-ic-versions.ts') }}
+          key: mops-sites-${{ runner.os }}-${{ hashFiles('mops.toml') }}
           restore-keys: |
-            mops-ci-${{ runner.os }}-
+            mops-sites-${{ runner.os }}-
           path: |
             ~/.cache/mops
             ~/Library/Caches/mops
@@ -74,13 +65,13 @@ jobs:
           npm run ci:postinstall
 
       - name: Install mops
-        run: npm i -g ${{ matrix.mops-version }}
+        run: npm i -g ./cli/dist
 
       - name: Install mops packages
         run: mops install
 
       - name: Select moc version
-        run: mops toolchain use moc ${{ matrix.moc-version }}
+        run: mops toolchain use moc ${{ env.MOC_VERSION }}
 
       - name: Run replica
         run: npm run replica
@@ -108,6 +99,56 @@ jobs:
       - name: Build CLI releases
         run: npm run build-cli-releases
 
+  # MOPS_TEST_GLOBAL runs the suite against the globally-installed compiled
+  # binary, which is the path a user gets from `npm i -g ic-mops`. The other
+  # mode drove the TypeScript sources through tsx — a property of the test
+  # harness rather than of the product, and one that cost a duplicate of this
+  # whole job. `build.test.ts` still covers the compiled dist entry point
+  # directly, which was the load-bearing part of it.
+  cli-tests:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    name: cli tests
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - uses: ./.github/actions/cache-rust-wasm
+
+      # Keyed on everything the pre-cache step below actually downloads: the
+      # root pins, every fixture's pins and deps, and the compiled-in default
+      # PocketIC version. Keying on `mops.toml` alone froze this cache — that
+      # file rarely changes, so every run hit the primary key, `actions/cache`
+      # skipped the save ("not saving cache"), and toolchains added afterwards
+      # were re-downloaded forever.
+      - name: Cache mops packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          key: mops-ci-${{ runner.os }}-${{ hashFiles('mops.toml', 'cli/tests/**/mops.toml', 'cli/commands/toolchain/pocket-ic-versions.ts') }}
+          restore-keys: |
+            mops-ci-${{ runner.os }}-
+          path: |
+            ~/.cache/mops
+            ~/Library/Caches/mops
+
+      # Only the CLI workspace. The frontend, docs, blog and cli-releases
+      # installs belong to the `sites` job; nothing under cli/tests reaches for
+      # them. `npm ci` in cli/ runs its `prepare` script, and that is what
+      # builds the dist/ installed globally below.
+      - name: Install npm packages
+        run: |
+          npm ci --ignore-scripts
+          cd cli && npm ci
+
+      - name: Install mops
+        run: npm i -g ./cli/dist
+
+      - name: Select moc version
+        run: mops toolchain use moc ${{ env.MOC_VERSION }}
+
       # Jest runs test suites in parallel. Toolchain binaries and package
       # dependencies used by test fixtures must be pre-installed here so
       # parallel workers don't race on the same downloads.
@@ -115,7 +156,7 @@ jobs:
       # add the corresponding download/install command below.
       - name: Pre-cache moc 1.3.0 and test fixture dependencies
         run: |
-          mops toolchain use moc 1.3.0 && mops toolchain use moc ${{ matrix.moc-version }}
+          mops toolchain use moc 1.3.0 && mops toolchain use moc ${{ env.MOC_VERSION }}
           # pocket-ic 12.0.0 is shared by the pocket-ic and bench fixtures; the
           # unpinned fixture pulls whatever DEFAULT_POCKET_IC_VERSION is.
           (cd cli/tests/pocket-ic && mops install)
@@ -129,11 +170,6 @@ jobs:
           (cd cli/tests/build/optimize-fail && mops install)
 
       - name: Run CLI tests
-        if: ${{ !matrix.test-global }}
-        run: cd cli && npm test
-
-      - name: Run CLI tests (global)
-        if: ${{ matrix.test-global }}
         env:
           MOPS_TEST_GLOBAL: 1
         run: cd cli && npm test
@@ -146,7 +182,7 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: ./.github/actions/cache-rust-wasm
@@ -154,7 +190,7 @@ jobs:
       - name: Install npm packages
         run: |
           npm ci --ignore-scripts
-          npm run ci:postinstall
+          cd cli && npm ci
 
       - name: Build and install bundle
         run: |
@@ -170,7 +206,7 @@ jobs:
   ci-ok:
     timeout-minutes: 5
     if: always()
-    needs: [build, bundle-smoke-test]
+    needs: [sites, cli-tests, bundle-smoke-test]
     runs-on: ubuntu-latest
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
