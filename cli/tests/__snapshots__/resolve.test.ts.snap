@@ -10,7 +10,6 @@ exports[`cross-major conflicts reports a cross-major diamond and still resolves 
   If you want a different version, pin it in your root mops.toml — a root dependency always wins.",
   "stdout": "--package test .mops/test@2.1.2/src
 --package core .mops/core@2.0.0/src
---package legacy legacy
---package base .mops/base@0.10.2/src",
+--package legacy legacy",
 }
 `;

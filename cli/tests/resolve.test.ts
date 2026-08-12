@@ -1,5 +1,5 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { rmSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { cli, cliSnapshot } from "./helpers";
 
@@ -113,6 +113,36 @@ describe("cross-major conflicts", () => {
       expect(result.stderr.match(/Conflicting major versions/g)).toHaveLength(
         1,
       );
+    } finally {
+      cleanup(cwd);
+    }
+  });
+
+  // The walk still visits the loser's manifest, because the lock's `graph`
+  // needs it — but what gets installed is the closure of the winners only.
+  // `base` is declared solely by test@1.2.0, which loses to test@2.1.2.
+  test("does not install a dependency declared only by a losing version", async () => {
+    const cwd = path.join(import.meta.dirname, "resolve/cross-major");
+    cleanup(cwd);
+    try {
+      // `mops sources` skips lockfile maintenance, so install to get one
+      expect((await cli(["install"], { cwd })).exitCode).toBe(0);
+      const result = await cli(["sources"], { cwd });
+      expect(result.exitCode).toBe(0);
+      // the winner and its own deps are there
+      expect(result.stdout).toMatch(/--package test .*test@2\.1\.2\/src/);
+      expect(result.stdout).toMatch(/--package core .*core@2\.0\.0\/src/);
+      // the loser's exclusive dependency is not handed to moc...
+      expect(result.stdout).not.toMatch(/--package base/);
+      // ...nor recorded as something this project depends on
+      const lock = JSON.parse(
+        readFileSync(path.join(cwd, "mops.lock"), "utf8"),
+      );
+      expect(Object.keys(lock.deps)).not.toContain("base");
+      expect(Object.keys(lock.deps)).toContain("test");
+      // the loser's edges are still recorded, so regenerating the lock later
+      // does not need test@1.2.0 back on disk
+      expect(Object.keys(lock.graph ?? {})).toContain("test@1.2.0");
     } finally {
       cleanup(cwd);
     }

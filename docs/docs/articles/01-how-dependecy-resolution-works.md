@@ -12,6 +12,8 @@ _Only for project's root `mops.toml` file. Does not apply to `mops.toml` files o
 
 3. Incompatible transitive dependency versions are reported as warnings.
 
+4. Only the winning versions and their own dependencies are installed. When two versions of a package are in the graph and one wins, a dependency declared *only* by the version that lost is not installed and is not passed to the compiler.
+
 
 ### Version compatibility
 
