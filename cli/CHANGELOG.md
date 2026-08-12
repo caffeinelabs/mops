@@ -13,6 +13,7 @@
 - Together those remove roughly 1.5 s of fixed cost from a warm-cache `mops install && mops update` in a fresh directory, none of it dependent on how many packages a project has.
 - File metadata and the first chunk of each file are now fetched concurrently rather than chained, halving per-file round trips for the single-chunk case that covers essentially every Motoko source file.
 - Chunk concatenation is no longer quadratic. **Breaking for programmatic consumers of the `ic-mops` package**: `downloadFile` and `downloadPackageFiles` now return `Uint8Array` instead of `Array<number>`.
+- `mops outdated` and `mops update` no longer make a registry call when a project has no registry dependencies to check.
 
 ### Integrity
 
@@ -26,6 +27,8 @@
 
 - **A local `path` dependency's own `mops.toml` no longer goes unnoticed.** Adding or bumping a dependency inside a local package left `mops.lock` judged fresh, so `mops install` exited 0, installed nothing, and never passed the new dependency to the compiler — the package then failed to build against a dependency mops had reported as installed. `mops.lock` now records a hash of the `[dependencies]` of every path dependency it reaches, transitively, so editing any of them makes the lockfile stale.
 - **Changing `MOPS_ENV` no longer leaves `mops.lock` pinned to the previous environment.** `{MOPS_ENV}` paths are stored expanded in the lockfile, but the freshness check compared the unexpanded string, so a full `mops install` under a new environment exited 0 and kept building against the old environment's directories. `mops install` now re-resolves, `mops sources` reports the current environment, and `mops install --locked` fails rather than silently using the wrong paths. Note that a committed lockfile now only satisfies `--locked` for the `MOPS_ENV` it was generated under.
+- **`mops outdated` is now usable as a CI gate.** It exited `0` whether or not anything was outdated. It now exits `1` when updates are available and `2` when the check itself could not be completed (no `mops.toml`, unknown package, registry or GitHub lookup error), so a partial report can never be mistaken for a clean bill of health. `1` for "found something" matches `npm outdated` and `pnpm outdated`.
+- **`mops outdated` and `mops update` no longer disagree.** `outdated` skipped GitHub dependencies while `mops update` updates them, so it could print "All dependencies are up to date!" for a project where `mops update` would rewrite a GitHub pin. GitHub dependencies whose branch has moved past the pinned commit are now reported, using the same rule `mops update` applies.
 - **`mops sync` no longer destroys a pinned alias dependency.** Given `map = "9.0.1"` and `"map@8.1.0" = "8.1.0"`, sync compared imports (`map@8.1.0`) against alias-stripped manifest keys (`map`), so it reported the alias as both missing and unused — adding it overwrote `map` with `8.1.0`, and a single run could remove the dependency entirely. Aliases are now matched verbatim and added under their own key.
 - `mops sync` adds packages imported only from `test`, `tests`, `bench` or `benchmark` directories to `[dev-dependencies]` rather than `[dependencies]`. Already-declared packages are never moved between sections.
 - `mops sync` removes an unused package from **both** sections when it is declared in both; previously it was only removed from `[dependencies]`, leaving a dangling entry that the next run reported again.
@@ -36,6 +39,7 @@
 
 ### Added
 
+- `mops outdated [pkg]` accepts a package name, matching `mops update [pkg]`.
 - `mops sync --dry-run` prints what would be added and removed without touching `mops.toml`, the local cache or `mops.lock`.
 - `mops cache clean --global` cleans only the global cache and keeps the project's `.mops` directory.
 - `mops.lock` gains an optional `localDepsHash` field, written only for projects that declare a local `path` dependency. Those projects have their lockfile regenerated once on the next `mops install`, and `mops install --locked` fails until the regenerated lockfile is committed. Projects without path dependencies are unaffected — the field is omitted entirely and existing lockfiles stay valid.

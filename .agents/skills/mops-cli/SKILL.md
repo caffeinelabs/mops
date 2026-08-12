@@ -219,7 +219,8 @@ mops remove base
 ### Dependency Management
 
 ```bash
-mops outdated             # list outdated dependencies (caret-bound)
+mops outdated             # list outdated deps (caret-bound); exit 1 if any, 2 if the check failed
+mops outdated core        # check a single package
 mops update               # update all within caret bound (no major-version crossing)
 mops update core          # update specific package within caret bound
 mops update --major       # allow updates that cross major versions
