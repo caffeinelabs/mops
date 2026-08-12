@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.22.0
 - Updating the lock after a dependency change no longer refetches file hashes for the whole graph from the registry: hashes of packages already in the lock are carried over (published versions are immutable), and only packages new to the lock are queried. `mops remove` now updates the lock without any registry queries. Explicit `mops install --lock update` still refreshes every hash from the registry, so it remains the recovery command for a lock with corrupt hashes.
 - `mops.lock` is now written atomically (staged temp file + rename), so a concurrent `mops install` can no longer read a half-written lock and crash with `Unexpected end of JSON input`.
 - `mops.lock` now records the declared dependencies of every registry package version in the graph (`graph` section), including versions that lost a conflict. Regenerating a stale lock (`mops add`/`remove`/`update`/`sync`, or after editing `mops.toml`) resolves from these recorded edges instead of reading — and, since the fix below, downloading — manifests of packages that were never installed. Works offline and adds no network calls. Locks written by older CLIs have no `graph` and keep the previous behavior; older CLIs ignore the new field.
