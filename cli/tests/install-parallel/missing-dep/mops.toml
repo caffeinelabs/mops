@@ -1,0 +1,4 @@
+[dependencies]
+core = "1.0.0"
+base = "0.16.0"
+nonexistent = "9.9.9"
