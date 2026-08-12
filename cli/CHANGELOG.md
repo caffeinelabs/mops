@@ -2,6 +2,8 @@
 
 ## Next
 
+- `mops.lock` is now written with all keys sorted — dependencies, packages, per-file hashes, graph entries and GitHub entries — so unrelated installs no longer produce diff churn or spurious merge conflicts. The lockfile format is unchanged: an existing lockfile with unsorted keys stays valid, still passes `mops install --locked`, and is reordered only the next time something legitimately updates it.
+
 - `mops install` no longer crashes with a raw `RangeError: Maximum call stack size exceeded` when two local `path` dependencies require each other, or when one requires itself. The install walk now skips a local package it has already visited in the same run, naming neither a cycle nor an error — the packages install normally.
 
 - Fixed `mops remove <pkg>` crashing with `Invalid dependency value ""` when the dependency is a local path dep.
