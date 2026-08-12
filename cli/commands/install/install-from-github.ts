@@ -135,20 +135,20 @@ export const installFromGithub = async (
   }
 
   let cached = isDepCached(cacheName);
-  let cachedHash =
-    cached && (locked || commitHash) ? hashGithubDir(cacheDir) : "";
+  let cachedHash = cached && locked ? hashGithubDir(cacheDir) : "";
 
   // What a cache hit is worth depends on what is known about it:
-  //   locked        trust it only if the tree hashes to the locked hash
-  //   commit in key the cache name names the commit, so the tree is what it says
-  //   neither       unknown provenance under a moving ref — re-fetch, so the
-  //                 commit recorded is the one the hash belongs to. Unless there
-  //                 is no commit to fetch either (ref resolution failed), where
-  //                 using the cache and recording nothing is what worked before.
+  //   locked      trust it only if the tree hashes to the locked hash
+  //   not locked  re-fetch, and hash that. A cache entry says nothing about how
+  //               it was produced: one written by an older CLI does not
+  //               necessarily match a fresh archive of the same commit, even
+  //               when the cache name pins that commit. Hashing it would record
+  //               a value no other machine reproduces, so the first CI run on
+  //               the resulting lockfile would fail.
   let useCache = cached;
   if (cached && locked) {
     useCache = cachedHash === locked.hash;
-  } else if (cached && !commitHash && resolved) {
+  } else if (cached && resolved) {
     useCache = false;
   }
 

@@ -153,7 +153,7 @@
   "github": {
     "motoko-datetime": {
       "resolved": "bda6139ec56d36731326727ae28510f1e1843f27",
-      "hash": "fc4cec6141da79f896812965ab266ce532c63c3446caa45dd577bdf0e6950172"
+      "hash": "82304548b9a4a0c7226d644e63a428d4914ceeb0bc1929a14bbbb534c724d508"
     },
     "matchers": {
       "resolved": "3dac8a071b69e4e651b25a7d9683fe831eb7cffd",
