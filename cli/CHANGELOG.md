@@ -2,6 +2,8 @@
 
 ## Next
 
+- Fixed `mops remove <pkg>` crashing with `Invalid dependency value ""` when the dependency is a local path dep.
+- `mops remove` now echoes the dependency value it removed for GitHub and local path deps, instead of an empty version.
 - Temporary compatibility shim: `mops add`, `remove`, `install`, `sync` and `update` again accept the removed 2.x flag `--lock <check|update|ignore>` instead of failing to parse. The value is ignored — including `check`, which is **not** treated as `--locked` — so v2 call sites keep working during the 3.x rollout. Migrate to `mops install --locked` for CI enforcement; the flag will be removed.
 
 ## 3.0.0 (unreleased)

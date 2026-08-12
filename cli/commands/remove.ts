@@ -119,7 +119,12 @@ export async function remove(
         );
       continue;
     }
-    let cacheName = getDepCacheName(dep.name, dep.version || dep.repo || "");
+    let depValue = dep.version || dep.repo;
+    // local path deps live in the user's tree, not under `.mops`
+    if (!depValue) {
+      continue;
+    }
+    let cacheName = getDepCacheName(dep.name, depValue);
     let localCacheDir = path.join(getRootDir(), ".mops", cacheName);
     if (localCacheDir && fs.existsSync(localCacheDir)) {
       dryRun || deleteSync([localCacheDir], { force: true });
@@ -139,5 +144,8 @@ export async function remove(
   await syncLocalCache();
   await checkIntegrity(lock);
 
-  console.log(chalk.green("Package removed ") + `${name} = "${version}"`);
+  console.log(
+    chalk.green("Package removed ") +
+      `${name} = "${pkgDetails.repo || pkgDetails.path || version}"`,
+  );
 }
