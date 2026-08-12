@@ -5,7 +5,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
 import { getDependencyType, getRootDir, readConfig } from "./mops.js";
 import { mainActor } from "./api/actors.js";
-import { resolvePackages } from "./resolve-packages.js";
+import { resolveDepsAndGraph } from "./resolve-packages.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 
 type LockFileV1 = {
@@ -25,6 +25,10 @@ type LockFileV3 = {
   mopsTomlDepsHash: string;
   hashes: Record<string, Record<string, string>>;
   deps: Record<string, string>;
+  // declared dependency edges per registry package version (losers included),
+  // so a stale lock can be regenerated without those versions on disk;
+  // optional: locks written by older CLIs don't have it
+  graph?: Record<string, Record<string, string>>;
 };
 
 type LockFile = LockFileV1 | LockFileV2 | LockFileV3;
@@ -142,6 +146,28 @@ function readLockFileState(): LockFileState {
 export function readLockFile(): LockFile | null {
   let state = readLockFileState();
   return state.status === "ok" ? state.lock : null;
+}
+
+// Declared dependency edges from the lock, even a stale one. The graph is an
+// optimization — resolution falls back to cached manifests (fetching missing
+// ones) without it — so a pre-graph or malformed `graph` yields {} rather
+// than an error.
+export function readLockFileGraph(): Record<string, Record<string, string>> {
+  let lock = readLockFile();
+  if (lock?.version !== CURRENT_LOCK_VERSION || !lock.graph) {
+    return {};
+  }
+  let graph = lock.graph;
+  if (
+    typeof graph !== "object" ||
+    Array.isArray(graph) ||
+    !Object.values(graph).every((edges) =>
+      isRecordOf(edges, (value) => value.length > 0),
+    )
+  ) {
+    return {};
+  }
+  return graph;
 }
 
 // Why a lock cannot be used as-is. Everything here is decided offline, from the
@@ -306,19 +332,58 @@ function getMopsTomlDepsHash(): string {
 }
 
 // The lock `mops install` would write right now, from a full re-walk of the
-// dependency graph. Only safe to call when the lock is *not* already valid:
-// a lock-driven install deliberately skips the versions that lost a conflict,
-// so their manifests are absent from the cache and the walk would throw ENOENT.
-// That is why validation (below) never re-walks. See PR notes on GH #679.
+// dependency graph. The walk reads each registry version's dependency list
+// from the old lock's `graph` first, then the cache, then the registry, so it
+// is safe regardless of what a lock-driven install left on disk. Validation
+// (below) still never re-walks — not for safety anymore, but because it must
+// stay offline and cheap.
 async function computeLockFile(): Promise<LockFileV3> {
   // skipLock: re-resolve from mops.toml so abs→relative local paths migrate.
-  let resolvedDeps = await resolvePackages({ skipLock: true });
+  let { deps: resolvedDeps, graph } = await resolveDepsAndGraph({
+    skipLock: true,
+  });
+
+  let packageIds = mopsPackageIds(resolvedDeps);
+
+  // Hashes of packages already in the lock are carried over: published
+  // versions are immutable, so their file hashes never change. A lock with
+  // corrupt hash values is recovered by deleting it (RESTORE_HINT), which
+  // leaves nothing to carry and forces a full registry refetch.
+  let hashes: Record<string, Record<string, string>> = {};
+  let oldLock = readLockFile();
+  if (oldLock && oldLock.version === CURRENT_LOCK_VERSION) {
+    for (let packageId of packageIds) {
+      let carried = oldLock.hashes[packageId];
+      if (carried) {
+        hashes[packageId] = carried;
+      }
+    }
+  }
+  let missingIds = packageIds.filter((packageId) => !hashes[packageId]);
+  Object.assign(hashes, await fetchRegistryFileHashes(missingIds));
+
   return {
     version: CURRENT_LOCK_VERSION,
     mopsTomlDepsHash: getMopsTomlDepsHash(),
     deps: resolvedDeps,
-    hashes: await fetchRegistryFileHashes(mopsPackageIds(resolvedDeps)),
+    graph,
+    hashes,
   };
+}
+
+// Stage into a sibling temp file and atomic-rename onto the lock, so a
+// concurrent `mops install` never reads a half-written lock.
+function writeLockFileAtomic(lockFile: string, content: string) {
+  let tmpFile = `${lockFile}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpFile, content);
+  try {
+    fs.renameSync(tmpFile, lockFile);
+  } catch {
+    // Windows can refuse to replace a file another process holds open;
+    // fall back to a direct write rather than failing the command
+    fs.writeFileSync(lockFile, content);
+    fs.rmSync(tmpFile, { force: true });
+  }
 }
 
 // Regenerate the lock unless the cheap check says it is already current.
@@ -335,7 +400,7 @@ export async function updateLockFile({
   let lockFileJson = await computeLockFile();
   let lockFile = getLockFilePath();
   let isNew = !fs.existsSync(lockFile);
-  fs.writeFileSync(lockFile, JSON.stringify(lockFileJson, null, 2));
+  writeLockFileAtomic(lockFile, JSON.stringify(lockFileJson, null, 2));
   if (isNew && !silent) {
     console.log("mops.lock created. Commit this file.");
   }
@@ -452,9 +517,9 @@ function checkLockedDeps(lock: LockFileV3): string[] {
 }
 
 // Validate a lock without re-walking the dependency graph. Deliberately
-// walk-free: on a lock-driven install the versions that lost a version conflict
-// are never downloaded, so `resolvePackages({skipLock: true})` cannot run — it
-// would throw ENOENT on a loser's missing manifest. What is checked instead:
+// walk-free so it stays cheap and independent of cache state — `--locked`
+// must not re-resolve in the mode meant to forbid resolution changes.
+// What is checked instead:
 //
 //   1. every dependency declared in mops.toml is pinned to that same value
 //   2. the `deps` and `hashes` maps agree on the set of registry packages
