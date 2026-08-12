@@ -127,8 +127,12 @@ export async function remove(
     let cacheName = getDepCacheName(dep.name, depValue);
     let localCacheDir = path.join(getRootDir(), ".mops", cacheName);
     if (localCacheDir && fs.existsSync(localCacheDir)) {
-      dryRun || deleteSync([localCacheDir], { force: true });
-      verbose && console.log(`Removed local cache ${localCacheDir}`);
+      if (dryRun) {
+        verbose && console.log(`Would remove local cache ${localCacheDir}`);
+      } else {
+        deleteSync([localCacheDir], { force: true });
+        verbose && console.log(`Removed local cache ${localCacheDir}`);
+      }
     }
   }
 
@@ -139,7 +143,17 @@ export async function remove(
   if (dev && config["dev-dependencies"]) {
     delete config["dev-dependencies"][name];
   }
-  dryRun || writeConfig(config);
+  // A dry run must not touch mops.toml, the local cache or mops.lock — the
+  // lockfile is rewritten by `checkIntegrity` even when it was only stale.
+  if (dryRun) {
+    console.log(
+      chalk.yellow("Would remove package ") +
+        `${name} = "${pkgDetails.repo || pkgDetails.path || version}"`,
+    );
+    return;
+  }
+
+  writeConfig(config);
 
   await syncLocalCache();
   await checkIntegrity(lock);

@@ -6,6 +6,21 @@
 - `mops remove` now echoes the dependency value it removed for GitHub and local path deps, instead of an empty version.
 - Temporary compatibility shim: `mops add`, `remove`, `install`, `sync` and `update` again accept the removed 2.x flag `--lock <check|update|ignore>` instead of failing to parse. The value is ignored — including `check`, which is **not** treated as `--locked` — so v2 call sites keep working during the 3.x rollout. Migrate to `mops install --locked` for CI enforcement; the flag will be removed.
 
+### Fixed
+
+- **`mops sync` no longer destroys a pinned alias dependency.** Given `map = "9.0.1"` and `"map@8.1.0" = "8.1.0"`, sync compared imports (`map@8.1.0`) against alias-stripped manifest keys (`map`), so it reported the alias as both missing and unused — adding it overwrote `map` with `8.1.0`, and a single run could remove the dependency entirely. Aliases are now matched verbatim and added under their own key.
+- `mops sync` adds packages imported only from `test`, `tests`, `bench` or `benchmark` directories to `[dev-dependencies]` rather than `[dependencies]`. Already-declared packages are never moved between sections.
+- `mops sync` removes an unused package from **both** sections when it is declared in both; previously it was only removed from `[dependencies]`, leaving a dangling entry that the next run reported again.
+- `mops sync` is roughly twice as fast — it runs `moc --print-deps` once per file instead of twice.
+- `mops remove --dry-run` is now side-effect free. It no longer deletes local cache directories or rewrites a stale `mops.lock`, and it prints `Would remove package …` instead of reporting the removal as done.
+- **`mops cache clean` works on Windows and on non-`ic` networks.** Its safety guard compared a `path.join` result against a forward-slash suffix, so it failed with "Invalid cache directory" on every Windows run and for every network-scoped cache directory. The replacement is separator-agnostic and strictly narrower: it also requires the directory to be inside the global cache root, rejecting a traversing `MOPS_NETWORK`.
+- `mops cache clean` no longer deletes `./.mops` when run outside a project, where an empty root directory made it target the current working directory.
+
+### Added
+
+- `mops sync --dry-run` prints what would be added and removed without touching `mops.toml`, the local cache or `mops.lock`.
+- `mops cache clean --global` cleans only the global cache and keeps the project's `.mops` directory.
+
 ## 3.0.0 (unreleased)
 
 ### Migrating from 2.x

@@ -24,3 +24,11 @@ Print global cache size.
 ### `mops cache clean`
 
 Clean global and local cache directories.
+
+Pass `--global` to clean only the global cache and keep the project's `.mops` directory:
+
+```
+mops cache clean --global
+```
+
+Run outside a project (no `mops.toml` in any parent directory), `mops cache clean` only cleans the global cache.
