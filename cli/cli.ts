@@ -54,6 +54,7 @@ import {
   readConfig,
   version,
 } from "./mops.js";
+import { legacyLockOption } from "./legacy-lock-flag.js";
 import { setConflictPolicy } from "./resolve-packages.js";
 import { verifyIntegrity } from "./integrity.js";
 import { Tool } from "./types.js";
@@ -148,6 +149,7 @@ program
   .description("Install the package and save it to mops.toml")
   .option("--dev", "Add to [dev-dependencies] section")
   .option("--verbose", "Show more information")
+  .addOption(legacyLockOption())
   .action(async (pkg, options) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -163,6 +165,7 @@ program
   .option("--dev", "Remove from dev-dependencies instead of dependencies")
   .option("--verbose", "Show more information")
   .option("--dry-run", "Do not actually remove anything")
+  .addOption(legacyLockOption())
   .action(async (pkg, options) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -183,6 +186,7 @@ program
       "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
     ),
   )
+  .addOption(legacyLockOption())
   .action(async (options) => {
     if (!checkConfigFile()) {
       process.exit(1);
@@ -794,6 +798,7 @@ program
 program
   .command("sync")
   .description("Add missing packages and remove unused packages")
+  .addOption(legacyLockOption())
   .action(async () => {
     await sync();
   });
@@ -838,6 +843,7 @@ program
       "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
+  .addOption(legacyLockOption())
   .action(async (pkg, options) => {
     await update(pkg, options);
   });
