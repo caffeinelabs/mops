@@ -19,14 +19,21 @@ jobs:
   test:
     timeout-minutes: 45
     strategy:
-      max-parallel: 4
       fail-fast: false
       matrix:
-        mops-version:
-          [./cli/dist, ic-mops, "https://cli.mops.one/versions/latest.tgz"]
+        # Node coverage belongs on the CLI in this commit — that is the code a
+        # PR can break. The published CLI gets a single leg, to catch a v3
+        # `mops.toml` that 2.x can no longer read during the 3.x preview; its
+        # own Node support is already settled by having been released.
+        mops-version: [./cli/dist]
         moc-version: [0.14.13]
         node-version: [22, 24, 26]
         runner: [ubuntu-latest]
+        include:
+          - mops-version: ic-mops
+            moc-version: 0.14.13
+            node-version: 22
+            runner: ubuntu-latest
 
     runs-on: ${{ matrix.runner }}
     name: ${{ matrix.runner }}, node ${{ matrix.node-version }}, moc ${{ matrix.moc-version }}, ${{ matrix.mops-version }}
