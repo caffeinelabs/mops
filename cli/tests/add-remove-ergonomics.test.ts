@@ -17,6 +17,50 @@ describe("add/remove ergonomics", () => {
   const toml = (cwd: string) =>
     readFileSync(path.join(cwd, "mops.toml"), "utf8");
 
+  // Moving between sections and searching both are interactive-only: `mops
+  // update` and `mops sync` call these for a package they already located in a
+  // specific section. Applying either there would drop the other entry (update)
+  // or error on the second of a paired call (sync). These call the functions
+  // directly because the CLI always opts in, so a CLI-level test cannot see the
+  // default.
+  describe("programmatic callers keep per-section semantics", () => {
+    const inDir = async <T>(cwd: string, fn: () => Promise<T>) => {
+      const before = process.cwd();
+      process.chdir(cwd);
+      try {
+        return await fn();
+      } finally {
+        process.chdir(before);
+      }
+    };
+
+    test("add() without moveSections leaves the other section alone", async () => {
+      const cwd = await makeTempFixture("local-both");
+      const { add } = await import("../commands/add.js");
+
+      await inDir(cwd, () =>
+        add("./packages/one", { dev: true, lock: "skip" }),
+      );
+
+      // both declarations survive — this is what `mops update` relies on
+      expect(toml(cwd)).toBe(
+        '[dependencies]\none = "./packages/one"\n\n[dev-dependencies]\none = "./packages/one"\n',
+      );
+    });
+
+    test("remove() without anySection touches only [dependencies]", async () => {
+      const cwd = await makeTempFixture("local-both");
+      const { remove } = await import("../commands/remove.js");
+
+      await inDir(cwd, () => remove("one", { lock: "skip" }));
+
+      // the dev entry is left for sync's second, --dev call to remove
+      expect(toml(cwd)).toBe(
+        '[dependencies]\n[dev-dependencies]\none = "./packages/one"\n',
+      );
+    });
+  });
+
   describe("add moves an entry between sections", () => {
     test("--dev moves a dependency to [dev-dependencies]", async () => {
       const cwd = await makeTempFixture("local-prod");
