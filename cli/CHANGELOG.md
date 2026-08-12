@@ -2,6 +2,9 @@
 
 ## Next
 
+- Fixed `mops remove <pkg>` crashing with `Invalid dependency value ""` when the dependency is a local path dep.
+- `mops remove` now echoes the dependency value it removed for GitHub and local path deps, instead of an empty version.
+
 ## 3.0.0 (unreleased)
 
 ### Migrating from 2.x
