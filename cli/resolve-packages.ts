@@ -1,7 +1,9 @@
 import process from "node:process";
 import path from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import chalk from "chalk";
+import { sha256 } from "@noble/hashes/sha256";
+import { bytesToHex } from "@noble/hashes/utils";
 import {
   checkConfigFile,
   getRootDir,
@@ -48,6 +50,55 @@ export async function resolvePackages({ skipLock = false } = {}): Promise<
   return (await resolveDepsAndGraph({ skipLock })).deps;
 }
 
+type ResolveResult = {
+  deps: Record<string, string>;
+  graph: Record<string, Record<string, string>>;
+};
+
+// In-process only, never written to disk. A single command resolves 3-5 times
+// and rewrites its own inputs while doing so — checkIntegrity writes mops.lock,
+// add/remove/update write mops.toml — so the key is the *content* of both, not
+// their paths. Local `path` deps are live directories, so their manifests are
+// validated too (see `localInputs`).
+type ResolveCacheEntry = {
+  key: string;
+  promise: Promise<ResolveResult>;
+  // Local manifests the walk read; unknown until it finishes.
+  localInputs: Map<string, string> | null;
+};
+
+let resolveCache: ResolveCacheEntry | null = null;
+
+// "" for a file that does not exist, so creating or deleting one invalidates.
+function fileHash(file: string): string {
+  try {
+    return bytesToHex(sha256(readFileSync(file)));
+  } catch {
+    return "";
+  }
+}
+
+// `skipLock` is keyed by what it changes, not by its value: it only suppresses
+// the lock short-circuit, so with no usable lock the two variants walk the same
+// graph. That is what lets a cold install's two resolves (sync, then lock
+// regeneration) share one walk.
+function resolveCacheKey(rootDir: string, usesLock: boolean): string {
+  return [
+    rootDir,
+    usesLock,
+    conflictPolicy,
+    process.env.MOPS_ENV || "",
+    fileHash(path.join(rootDir, "mops.toml")),
+    fileHash(path.join(rootDir, "mops.lock")),
+  ].join("|");
+}
+
+// Callers iterate and (in the lock's case) embed the result, so hand out a copy
+// rather than the memoized object itself.
+function copyResult(result: ResolveResult): ResolveResult {
+  return { deps: { ...result.deps }, graph: { ...result.graph } };
+}
+
 // Resolves winners and collects the declared dependency edges of every
 // registry package version visited (losers included), so the lock can be
 // regenerated later without those versions on disk.
@@ -55,15 +106,50 @@ export async function resolveDepsAndGraph({
   // Bypass a valid lock so lock regeneration re-reads mops.toml (this is how
   // absolute local paths from older CLIs get rewritten root-relative).
   skipLock = false,
-} = {}): Promise<{
-  deps: Record<string, string>;
-  graph: Record<string, Record<string, string>>;
-}> {
+} = {}): Promise<ResolveResult> {
   if (!checkConfigFile()) {
     return { deps: {}, graph: {} };
   }
 
-  if (!skipLock && checkLockFileLight()) {
+  let rootDir = getRootDir();
+  let usesLock = !skipLock && checkLockFileLight();
+  let key = resolveCacheKey(rootDir, usesLock);
+  let cached = resolveCache;
+  if (
+    cached &&
+    cached.key === key &&
+    (cached.localInputs === null ||
+      [...cached.localInputs].every(([file, hash]) => fileHash(file) === hash))
+  ) {
+    return copyResult(await cached.promise);
+  }
+
+  let localInputs = new Map<string, string>();
+  let entry: ResolveCacheEntry = {
+    key,
+    localInputs: null,
+    promise: resolveDepsAndGraphUncached(usesLock, rootDir, localInputs),
+  };
+  resolveCache = entry;
+
+  try {
+    let result = await entry.promise;
+    entry.localInputs = localInputs;
+    return copyResult(result);
+  } catch (err) {
+    if (resolveCache === entry) {
+      resolveCache = null;
+    }
+    throw err;
+  }
+}
+
+async function resolveDepsAndGraphUncached(
+  usesLock: boolean,
+  rootDir: string,
+  localInputs: Map<string, string>,
+): Promise<ResolveResult> {
+  if (usesLock) {
     let lockFileJson = readLockFile();
 
     if (lockFileJson && lockFileJson.version === 3) {
@@ -77,7 +163,6 @@ export async function resolveDepsAndGraph({
   let lockGraph = readLockFileGraph();
   let graph: Record<string, Record<string, string>> = {};
 
-  let rootDir = getRootDir();
   let packages: Record<string, Dependency & { isRoot: boolean }> = {};
   let versions: Record<
     string,
@@ -157,6 +242,8 @@ export async function resolveDepsAndGraph({
           .resolve(configDir, pkgDetails.path)
           .replaceAll("{MOPS_ENV}", process.env.MOPS_ENV || "local");
         let mopsToml = path.join(localNestedDir, "mops.toml");
+        // recorded even when absent: creating one changes the resolution
+        localInputs.set(mopsToml, fileHash(mopsToml));
         if (existsSync(mopsToml)) {
           nestedConfig = readConfig(mopsToml);
         }

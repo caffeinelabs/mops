@@ -1,5 +1,5 @@
 import path from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { SemVer } from "semver";
 import chalk from "chalk";
 
@@ -9,7 +9,7 @@ import { resolvePackages } from "./resolve-packages.js";
 import { getMocSemVer } from "./helpers/get-moc-version.js";
 import { getLintokoSemVer } from "./helpers/get-lintoko-version.js";
 import { getPackageId } from "./helpers/get-package-id.js";
-import type { Requirements } from "./types.js";
+import type { Config, Requirements } from "./types.js";
 
 type ToolRequirement = keyof Requirements;
 
@@ -20,6 +20,23 @@ const TOOL_REQUIREMENTS: {
   { tool: "moc", getInstalled: getMocSemVer },
   { tool: "lintoko", getInstalled: getLintokoSemVer },
 ];
+
+// A command can reach this twice (`mops add` runs it after installAll), and it
+// TOML-parses every installed package's manifest each time. Keyed on the stat so
+// a rewritten manifest is still picked up.
+const configCache = new Map<string, { stamp: string; config: Config }>();
+
+function readPackageConfig(configPath: string): Config {
+  let stat = statSync(configPath);
+  let stamp = `${stat.mtimeMs}|${stat.size}`;
+  let cached = configCache.get(configPath);
+  if (cached?.stamp === stamp) {
+    return cached.config;
+  }
+  let config = readConfig(configPath);
+  configCache.set(configPath, { stamp, config });
+  return config;
+}
 
 export async function checkRequirements({ verbose = false } = {}) {
   let rootDir = getRootDir();
@@ -46,7 +63,7 @@ export async function checkRequirements({ verbose = false } = {}) {
             continue;
           }
         }
-        let depConfig = readConfig(configPath);
+        let depConfig = readPackageConfig(configPath);
         let required = depConfig.requirements?.[tool];
 
         if (required) {

@@ -11,7 +11,9 @@ When you run `mops install`, `mops add <pkg>` or `mops toolchain use/update`, Mo
 
 Local cache directory is created in the project root in the `.mops` directory.
 
-Files are verified against the hashes published in the Mops registry as they are downloaded, before they enter the cache. To audit what is already on disk against [mops.lock](../../10-mops.lock.md), run [`mops verify`](../1-deps/06-mops-verify.md).
+Files are verified as they are downloaded, before they enter the cache. When [mops.lock](../../10-mops.lock.md) already records the package, its hashes are the reference — a local, committed record, so no registry round trip is needed. Otherwise the hashes published in the Mops registry are used.
+
+Verification happens on download, so a package served from the cache is not re-hashed. To audit what is already on disk, run [`mops verify`](../1-deps/06-mops-verify.md).
 
 ### `mops cache show`
 
@@ -24,3 +26,11 @@ Print global cache size.
 ### `mops cache clean`
 
 Clean global and local cache directories.
+
+Pass `--global` to clean only the global cache and keep the project's `.mops` directory:
+
+```
+mops cache clean --global
+```
+
+Run outside a project (no `mops.toml` in any parent directory), `mops cache clean` only cleans the global cache.

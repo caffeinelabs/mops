@@ -2,8 +2,45 @@
 
 ## Next
 
+### Performance
+
+- **Faster CLI startup.** The agent no longer eagerly synchronises time on every invocation, which cost three `read_state` requests against the ICP ledger canister — a canister mops never otherwise talks to, on a different subnet. Clock skew still self-heals: the agent re-syncs against the mops canister and retries once when a replica rejects an expired ingress expiry.
+- **Install telemetry no longer blocks.** `notifyInstalls` is submitted as an ingress message and acknowledged on acceptance instead of waiting for a certified reply (~125 ms rather than ~1.1 s). Delivery is unchanged — the method is `oneway` and never had a stronger guarantee.
+- **`mops install` overlaps the API compatibility check with the install** instead of serialising on it. An incompatible CLI still fails with the same message and exit code, but may now do so after the install rather than before. `mops publish` deliberately still checks first.
+- Net effect on a warm-cache `mops install && mops update` in a fresh directory: roughly 2.2 s → 0.7 s of actual work.
+- **Cold installs no longer serialise on consensus calls.** Download-time hash verification used one consensus update call per package (~1.2–2.5 s each), awaited before the package entered the cache and therefore blocking the next package too. It now uses the registry's query method, and the batched consensus call is made once, only when the lockfile is actually regenerated. A clean clone with a committed lock makes **no** consensus call at all — it verifies against the lock.
+- **Packages install concurrently.** `installDeps` was a sequential loop; it now drives a bounded pool with a fixed request budget (16 concurrent fetches, 8 in CI) shared between the package pool and the per-package file pool, so the two no longer multiply. Transitive levels run one package at a time so the budget holds at any graph depth. Measured: 8 root packages plus transitives, cold cache, 19.7 s → 13.2 s.
+- File metadata and the first chunk of each file are now fetched concurrently rather than chained, halving per-file round trips for the single-chunk case that covers essentially every Motoko source file.
+- Registry file hashes are fetched at most once per process, and chunk concatenation is no longer quadratic. **Breaking for programmatic consumers of the `ic-mops` package**: `downloadFile` and `downloadPackageFiles` now return `Uint8Array` instead of `Array<number>`.
+- Dependency resolution is memoised per process, keyed on the contents of `mops.toml`, `mops.lock` and every local dependency manifest the walk read. A single command resolved the graph 3–5 times from scratch.
+- `syncLocalCache` no longer fans out with unbounded concurrency, which could exhaust file descriptors on large graphs.
+
+### Integrity
+
+- **`mops.lock` is now a trust anchor on the install path.** When the lockfile already covers a package being downloaded, its bytes are verified against the hashes recorded there — a local, committed record — instead of trusting a freshly fetched registry answer. This is the model cargo uses with `Cargo.lock`.
+- Hashes written into `mops.lock` are always consensus-derived. Query replies are signed by a single node rather than agreed by the subnet, so they are used to verify a download but never to mint the lock's contents.
+- New, distinct failures when the two sources disagree, because the diagnosis differs: `mops.lock` versus the registry (one of the two records is wrong — restore the lock from version control or delete it), and the registry contradicting itself between its query and consensus replies (the cached copy is tainted — run `mops cache clean`, and please report it).
+- **Behaviour change**: plain `mops install` now fails when it has to *download* a package whose hashes disagree with the committed lockfile. It remains true that files already on disk under `.mops/` are not re-hashed by an install — `mops verify` is still the command that audits those.
+
+### Fixed
+
+- **A local `path` dependency's own `mops.toml` no longer goes unnoticed.** Adding or bumping a dependency inside a local package left `mops.lock` judged fresh, so `mops install` exited 0, installed nothing, and never passed the new dependency to the compiler — the package then failed to build against a dependency mops had reported as installed. `mops.lock` now records a hash of the `[dependencies]` of every path dependency it reaches, transitively, so editing any of them makes the lockfile stale.
+- **Changing `MOPS_ENV` no longer leaves `mops.lock` pinned to the previous environment.** `{MOPS_ENV}` paths are stored expanded in the lockfile, but the freshness check compared the unexpanded string, so a full `mops install` under a new environment exited 0 and kept building against the old environment's directories. `mops install` now re-resolves, `mops sources` reports the current environment, and `mops install --locked` fails rather than silently using the wrong paths. Note that a committed lockfile now only satisfies `--locked` for the `MOPS_ENV` it was generated under.
+- **`mops sync` no longer destroys a pinned alias dependency.** Given `map = "9.0.1"` and `"map@8.1.0" = "8.1.0"`, sync compared imports (`map@8.1.0`) against alias-stripped manifest keys (`map`), so it reported the alias as both missing and unused — adding it overwrote `map` with `8.1.0`, and a single run could remove the dependency entirely. Aliases are now matched verbatim and added under their own key.
+- `mops sync` adds packages imported only from `test`, `tests`, `bench` or `benchmark` directories to `[dev-dependencies]` rather than `[dependencies]`. Already-declared packages are never moved between sections.
+- `mops sync` removes an unused package from **both** sections when it is declared in both; previously it was only removed from `[dependencies]`, leaving a dangling entry that the next run reported again.
+- `mops sync` is roughly twice as fast — it runs `moc --print-deps` once per file instead of twice.
 - Fixed `mops remove <pkg>` crashing with `Invalid dependency value ""` when the dependency is a local path dep.
 - `mops remove` now echoes the dependency value it removed for GitHub and local path deps, instead of an empty version.
+- `mops remove --dry-run` is now side-effect free. It no longer deletes local cache directories or rewrites a stale `mops.lock`, and it prints `Would remove package …` instead of reporting the removal as done.
+- **`mops cache clean` works on Windows and on non-`ic` networks.** Its safety guard compared a `path.join` result against a forward-slash suffix, so it failed with "Invalid cache directory" on every Windows run and for every network-scoped cache directory. The replacement is separator-agnostic and strictly narrower: it also requires the directory to be inside the global cache root, rejecting a traversing `MOPS_NETWORK`.
+- `mops cache clean` no longer deletes `./.mops` when run outside a project, where an empty root directory made it target the current working directory.
+
+### Added
+
+- `mops sync --dry-run` prints what would be added and removed without touching `mops.toml`, the local cache or `mops.lock`.
+- `mops cache clean --global` cleans only the global cache and keeps the project's `.mops` directory.
+- `mops.lock` gains an optional `localDepsHash` field, written only for projects that declare a local `path` dependency. Those projects have their lockfile regenerated once on the next `mops install`, and `mops install --locked` fails until the regenerated lockfile is committed. Projects without path dependencies are unaffected — the field is omitted entirely and existing lockfiles stay valid.
 - Temporary compatibility shim: `mops add`, `remove`, `install`, `sync` and `update` again accept the removed 2.x flag `--lock <check|update|ignore>` instead of failing to parse. The value is ignored — including `check`, which is **not** treated as `--locked` — so v2 call sites keep working during the 3.x rollout. Migrate to `mops install --locked` for CI enforcement; the flag will be removed.
 
 ## 3.0.0 (unreleased)

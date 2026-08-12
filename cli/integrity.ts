@@ -5,8 +5,11 @@ import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
 import { getDependencyType, getRootDir, readConfig } from "./mops.js";
 import { mainActor } from "./api/actors.js";
+import { getEndpoint, getNetwork } from "./api/network.js";
 import { resolveDepsAndGraph } from "./resolve-packages.js";
 import { getPackageId } from "./helpers/get-package-id.js";
+import { normalizeLocalDepPath } from "./helpers/normalize-local-path.js";
+import { Dependency } from "./types.js";
 
 type LockFileV1 = {
   version: 1;
@@ -23,6 +26,11 @@ type LockFileV2 = {
 type LockFileV3 = {
   version: 3;
   mopsTomlDepsHash: string;
+  // the `[dependencies]` of every local `path` dependency, transitively, keyed
+  // by directory — so editing one, or pointing `{MOPS_ENV}` at another, makes
+  // the lock stale; omitted when the project declares no path dependency, which
+  // is what keeps locks written before this field valid
+  localDepsHash?: string;
   hashes: Record<string, Record<string, string>>;
   deps: Record<string, string>;
   // declared dependency edges per registry package version (losers included),
@@ -121,6 +129,16 @@ function hasValidShape(lock: unknown): boolean {
     return false;
   }
 
+  // Absent is the valid state for a project with no local path deps, and for
+  // locks written by a CLI that predates the field.
+  if (
+    candidate["version"] === CURRENT_LOCK_VERSION &&
+    candidate["localDepsHash"] !== undefined &&
+    typeof candidate["localDepsHash"] !== "string"
+  ) {
+    return false;
+  }
+
   return true;
 }
 
@@ -178,6 +196,7 @@ type LockDefect =
   | { kind: "unsupported-version"; version: number }
   | { kind: "legacy-version"; version: number }
   | { kind: "deps-hash"; locked: string; actual: string }
+  | { kind: "local-deps-hash" }
   | { kind: "absolute-paths" }
   | { kind: "deps-mismatch"; problems: string[] }
   | { kind: "hashes-deps-mismatch"; detail: string };
@@ -208,6 +227,14 @@ function inspectLockFile(): LockDefect | null {
   let actual = getMopsTomlDepsHash();
   if (lock.mopsTomlDepsHash !== actual) {
     return { kind: "deps-hash", locked: lock.mopsTomlDepsHash, actual };
+  }
+
+  // The root deps hash covers the declared `path` string, not what is behind it,
+  // so without this a local dep gaining a dependency of its own — or a
+  // `{MOPS_ENV}` path pointing somewhere else — leaves the lock looking fresh
+  // and the new dependency never gets installed.
+  if (lock.localDepsHash !== getLocalDepsHash()) {
+    return { kind: "local-deps-hash" };
   }
 
   // Locks written before local paths became root-relative store machine-specific
@@ -260,26 +287,232 @@ export function checkLockFileLight(): boolean {
   return inspectLockFile() === null;
 }
 
+type HashSource =
+  // `getFileHashesByPackageIds`, an update call, so the answer went through
+  // consensus.
+  | "update"
+  // `getFileHashesQuery`, a node-signed but not consensus-verified reply.
+  | "query";
+
+type MemoEntry = {
+  packageId: string;
+  source: HashSource;
+  hashes: Record<string, string>;
+};
+
+// Published versions are immutable, so a package's file hashes can never change
+// once published — that is what makes reusing a fetched answer safe. In-process
+// only, never persisted, and keyed by registry endpoint so two networks (or an
+// overridden canister id) cannot collide.
+const fileHashesMemo = new Map<string, MemoEntry>();
+
+function memoKey(packageId: string): string {
+  let { host, canisterId } = getEndpoint(getNetwork());
+  return `${host}|${canisterId}|${packageId}`;
+}
+
+function readMemo(
+  packageId: string,
+  requireConsensus: boolean,
+): Record<string, string> | undefined {
+  let entry = fileHashesMemo.get(memoKey(packageId));
+  if (!entry || (requireConsensus && entry.source === "query")) {
+    return undefined;
+  }
+  return entry.hashes;
+}
+
+function writeMemo(
+  packageId: string,
+  source: HashSource,
+  hashes: Record<string, string>,
+): Record<string, string> {
+  let existing = fileHashesMemo.get(memoKey(packageId));
+  if (!existing || existing.source !== "update") {
+    fileHashesMemo.set(memoKey(packageId), { packageId, source, hashes });
+  }
+  return hashes;
+}
+
+function toHashRecord(
+  fileHashes: Array<[string, Uint8Array | number[]]>,
+): Record<string, string> {
+  return Object.fromEntries(
+    fileHashes.map(([fileId, hash]) => [
+      fileId,
+      bytesToHex(new Uint8Array(hash)),
+    ]),
+  );
+}
+
+// `requireConsensus` is for the lock *validation* paths (`--locked`,
+// `mops verify`): they exist to check the lock against the registry, so they
+// must not be served a memo entry that came from a query reply.
 async function fetchRegistryFileHashes(
   packageIds: string[],
+  { requireConsensus = false }: { requireConsensus?: boolean } = {},
 ): Promise<Record<string, Record<string, string>>> {
-  if (packageIds.length === 0) {
-    return {};
-  }
-  let actor = await mainActor();
-  let fileHashesByPackageIds =
-    await actor.getFileHashesByPackageIds(packageIds);
-
   let hashes: Record<string, Record<string, string>> = {};
+  let missing: string[] = [];
+  for (let packageId of packageIds) {
+    let memoized = readMemo(packageId, requireConsensus);
+    if (memoized) {
+      hashes[packageId] = memoized;
+    } else if (!missing.includes(packageId)) {
+      missing.push(packageId);
+    }
+  }
+  if (missing.length === 0) {
+    return hashes;
+  }
+
+  let actor = await mainActor();
+  let fileHashesByPackageIds = await actor.getFileHashesByPackageIds(missing);
+
   for (let [packageId, fileHashes] of fileHashesByPackageIds) {
-    hashes[packageId] = Object.fromEntries(
-      fileHashes.map(([fileId, hash]) => [
-        fileId,
-        bytesToHex(new Uint8Array(hash)),
-      ]),
+    hashes[packageId] = writeMemo(
+      packageId,
+      "update",
+      toHashRecord(fileHashes),
     );
   }
   return hashes;
+}
+
+// Download-time twin of the above, for one package. `getFileHashesQuery` is a
+// query (~0.2s) where `getFileHashesByPackageIds` is a consensus update call
+// (~1.5s), and this runs once per package on the install critical path.
+// The registry returns `#err` both for an unknown package and for one whose
+// files are not all hashed; the batch method collapses both to an empty list,
+// so mirror that here — the two paths must classify a package identically.
+async function queryRegistryFileHashes(
+  packageId: string,
+): Promise<Record<string, string>> {
+  let memoized = readMemo(packageId, false);
+  if (memoized) {
+    return memoized;
+  }
+
+  let at = packageId.lastIndexOf("@");
+  if (at <= 0) {
+    return (await fetchRegistryFileHashes([packageId]))[packageId] ?? {};
+  }
+  let name = packageId.slice(0, at);
+  let version = packageId.slice(at + 1);
+
+  let actor = await mainActor();
+  let res = await actor.getFileHashesQuery(name, version);
+  return writeMemo(packageId, "query", "ok" in res ? toHashRecord(res.ok) : {});
+}
+
+// What a query reply told us, before any consensus answer overwrote it.
+function readQuerySourcedMemo(
+  packageId: string,
+): Record<string, string> | undefined {
+  let entry = fileHashesMemo.get(memoKey(packageId));
+  return entry?.source === "query" ? entry.hashes : undefined;
+}
+
+// Every package this process admitted to the cache on a query reply's word,
+// including versions that lost a conflict and so never reach the lock — they
+// are cached all the same, and a later project can install them from there.
+function querySourcedPackageIds(): string[] {
+  let prefix = memoKey("");
+  let packageIds: string[] = [];
+  for (let [key, entry] of fileHashesMemo) {
+    // An empty answer verified nothing, so there is nothing to hold it to.
+    if (
+      entry.source === "query" &&
+      key.startsWith(prefix) &&
+      Object.keys(entry.hashes).length
+    ) {
+      packageIds.push(entry.packageId);
+    }
+  }
+  return packageIds;
+}
+
+// A query reply is signed by one node; a consensus answer, and the lock derived
+// from one, needs 2/3 of the subnet. So a query reply is only ever checked
+// against them, never trusted over them.
+//
+// An *empty* query answer is not a disagreement: the registry reports `#err`
+// (which both hash methods collapse to "no hashes") until every file of a
+// package is hashed, so a node that has not yet seen the admin backfill
+// (`computeHashesForExistingFiles`), or is simply lagging, legitimately answers
+// empty. Nothing was verified against an empty answer either way.
+//
+// Two non-empty answers that differ are another matter: a file hash is written
+// once at publish and never rewritten, and the backfill only fills in file ids
+// that have none, so no legitimate state change can produce one.
+function diffQueryHashes(
+  queried: Record<string, string>,
+  trusted: Record<string, string>,
+  trustedLabel: string,
+): string[] {
+  if (Object.keys(queried).length === 0) {
+    return [];
+  }
+  let problems: string[] = [];
+  for (let fileId of new Set([
+    ...Object.keys(queried),
+    ...Object.keys(trusted),
+  ])) {
+    let queriedHash = queried[fileId];
+    let trustedHash = trusted[fileId];
+    if (queriedHash === trustedHash) {
+      continue;
+    }
+    if (trustedHash === undefined) {
+      problems.push(
+        `${fileId}: in the query response, absent from ${trustedLabel}`,
+      );
+    } else if (queriedHash === undefined) {
+      problems.push(
+        `${fileId}: in ${trustedLabel}, absent from the query response`,
+      );
+    } else {
+      problems.push(
+        `${fileId}: query ${queriedHash}, ${trustedLabel} ${trustedHash}`,
+      );
+    }
+  }
+  return problems;
+}
+
+// Both of the following are deliberately not phrased like an ordinary hash
+// mismatch: that one means the bytes arrived corrupted and a retry may fix it.
+// These mean two records that must agree about an immutable version do not.
+
+// Registry vs. lock. Either record could be the wrong one, so name both causes;
+// the remediation is the same either way. Nothing has entered the global cache
+// at this point — verification runs before the download is staged.
+function describeLockDisagreement(
+  packageId: string,
+  problems: string[],
+): string[] {
+  return [
+    `${packageId}: mops.lock and the registry disagree about the published file hashes`,
+    ...problems.map((problem) => `  ${problem}`),
+    "  A published version is immutable, so one of the two is wrong: either mops.lock is corrupt or hand-edited, or the registry reply was not genuine.",
+    `  ${RESTORE_HINT}`,
+  ];
+}
+
+// Registry vs. itself. Here the lock cannot be at fault — both answers came
+// from the registry, and the weaker of the two is what admitted these bytes to
+// the global cache, so the cached copy has to go.
+function describeConsensusDisagreement(
+  packageId: string,
+  problems: string[],
+): string[] {
+  return [
+    `${packageId}: the registry's query response disagrees with its consensus response`,
+    ...problems.map((problem) => `  ${problem}`),
+    "  A published version is immutable, so the registry cannot legitimately give two answers; this is not a corrupted download and reinstalling will not fix it.",
+    "  The downloaded files were checked against the query response, so the copy now in the global cache cannot be trusted.",
+    "  Run `mops cache clean` before retrying. If it persists, this is a bug in mops or in the registry; please report it.",
+  ];
 }
 
 // Registry packages only — github/path deps have no published file hashes.
@@ -309,26 +542,104 @@ function getMopsTomlHash(): string {
   );
 }
 
-function getMopsTomlDepsHash(): string {
-  let config = readConfig();
-  let deps = config.dependencies || {};
-  let devDeps = config["dev-dependencies"] || {};
-  let allDeps = { ...deps, ...devDeps };
-  // sort allDeps by key
-  let sortedDeps = Object.keys(allDeps)
+function sortedDepValues(
+  deps: Record<string, Dependency>,
+): Record<string, string> {
+  return Object.keys(deps)
     .sort()
     .reduce(
       (acc, key) => {
         acc[key] =
-          allDeps[key]?.version ||
-          allDeps[key]?.repo ||
-          allDeps[key]?.path ||
-          "";
+          deps[key]?.version || deps[key]?.repo || deps[key]?.path || "";
         return acc;
       },
       {} as Record<string, string>,
     );
-  return bytesToHex(sha256(JSON.stringify(sortedDeps)));
+}
+
+function getRootDeclaredDeps(): Record<string, Dependency> {
+  let config = readConfig();
+  return {
+    ...(config.dependencies || {}),
+    ...(config["dev-dependencies"] || {}),
+  };
+}
+
+function getMopsTomlDepsHash(): string {
+  return bytesToHex(
+    sha256(JSON.stringify(sortedDepValues(getRootDeclaredDeps()))),
+  );
+}
+
+function expandMopsEnv(value: string): string {
+  return value.replaceAll("{MOPS_ENV}", process.env.MOPS_ENV || "local");
+}
+
+// `[dependencies]` of every local `path` dependency reachable from the root,
+// keyed by the dep's root-relative directory. Only `[dependencies]`: a nested
+// manifest's dev-dependencies take no part in resolution.
+//
+// `null` marks a directory with no mops.toml, so creating one changes the
+// signature. `{MOPS_ENV}` is expanded into the key, which is what makes the
+// signature environment-specific for the projects that use the placeholder.
+type LocalDepSignature = Record<string, Record<string, string> | string | null>;
+
+function collectLocalDepManifests(
+  rootDir: string,
+  deps: Record<string, Dependency>,
+  configDir: string,
+  visited: Set<string>,
+  signature: LocalDepSignature,
+) {
+  for (let dep of Object.values(deps)) {
+    if (!dep.path) {
+      continue;
+    }
+    let dir = expandMopsEnv(path.resolve(configDir, dep.path));
+    // path deps chain, and can point back at each other
+    if (visited.has(dir)) {
+      continue;
+    }
+    visited.add(dir);
+
+    let key = normalizeLocalDepPath(rootDir, dir);
+    let mopsToml = path.join(dir, "mops.toml");
+    if (!fs.existsSync(mopsToml)) {
+      signature[key] = null;
+      continue;
+    }
+    let nestedDeps: Record<string, Dependency>;
+    try {
+      nestedDeps = readConfig(mopsToml).dependencies || {};
+    } catch {
+      // resolution fails on this manifest too; recorded so that fixing it counts
+      signature[key] = "unreadable";
+      continue;
+    }
+    signature[key] = sortedDepValues(nestedDeps);
+    collectLocalDepManifests(rootDir, nestedDeps, dir, visited, signature);
+  }
+}
+
+// Undefined when the project declares no local path dependency — that absence
+// is what keeps every lock written before this field from being judged stale.
+function getLocalDepsHash(): string | undefined {
+  let signature: LocalDepSignature = {};
+  let rootDir = getRootDir();
+  collectLocalDepManifests(
+    rootDir,
+    getRootDeclaredDeps(),
+    rootDir,
+    new Set(),
+    signature,
+  );
+  let keys = Object.keys(signature).sort();
+  if (!keys.length) {
+    return undefined;
+  }
+  return bytesToHex(
+    sha256(JSON.stringify(keys.map((key) => [key, signature[key]]))),
+  );
 }
 
 // The lock `mops install` would write right now, from a full re-walk of the
@@ -359,12 +670,52 @@ async function computeLockFile(): Promise<LockFileV3> {
       }
     }
   }
+  // Whatever is written into the lock comes from a consensus update call: the
+  // lock is the trust anchor every later check is measured against, so it must
+  // never launder a query reply forward. Every package this process verified
+  // against a query reply rides along in the same batch — one round trip either
+  // way — so nothing that reached the cache escapes the consensus check.
   let missingIds = packageIds.filter((packageId) => !hashes[packageId]);
-  Object.assign(hashes, await fetchRegistryFileHashes(missingIds));
+  let auditIds = [...new Set([...missingIds, ...querySourcedPackageIds()])];
+  // Captured before the fetch, which replaces query memo entries with the
+  // consensus answer.
+  let queried = new Map(
+    auditIds.map((packageId) => [packageId, readQuerySourcedMemo(packageId)]),
+  );
+  let fetched = await fetchRegistryFileHashes(auditIds, {
+    requireConsensus: true,
+  });
+
+  // These packages were admitted to the cache on the strength of the query
+  // answer. This is the moment that answer meets consensus, so it is the moment
+  // a forged one has to die.
+  for (let packageId of auditIds) {
+    let queriedHashes = queried.get(packageId);
+    if (!queriedHashes) {
+      continue;
+    }
+    let problems = diffQueryHashes(
+      queriedHashes,
+      fetched[packageId] ?? {},
+      "consensus",
+    );
+    if (problems.length) {
+      failIntegrity(describeConsensusDisagreement(packageId, problems));
+    }
+  }
+
+  // Only the resolved graph goes into the lock; the audit-only ids do not.
+  for (let packageId of missingIds) {
+    let consensus = fetched[packageId];
+    if (consensus) {
+      hashes[packageId] = consensus;
+    }
+  }
 
   return {
     version: CURRENT_LOCK_VERSION,
     mopsTomlDepsHash: getMopsTomlDepsHash(),
+    localDepsHash: getLocalDepsHash(),
     deps: resolvedDeps,
     graph,
     hashes,
@@ -407,7 +758,7 @@ export async function updateLockFile({
   return true;
 }
 
-function failLocked(lines: string[]): never {
+function failIntegrity(lines: string[]): never {
   console.error("Error: " + lines[0]);
   for (let line of lines.slice(1)) {
     console.error(line);
@@ -460,6 +811,12 @@ function describeLockDefect(defect: LockDefect): string[] {
         `  Actual dependencies hash: ${defect.actual}`,
         REGENERATE_HINT,
       ];
+    case "local-deps-hash":
+      return [
+        "mops.lock does not match the local `path` dependencies, but --locked was passed.",
+        "  A path dependency's mops.toml has changed, or MOPS_ENV differs from the one mops.lock was generated with.",
+        REGENERATE_HINT,
+      ];
     case "absolute-paths":
       return [
         "mops.lock records machine-specific absolute paths for local dependencies, but --locked was passed.",
@@ -486,14 +843,14 @@ function describeLockDefect(defect: LockDefect): string[] {
 export function checkLockedPrerequisites(): void {
   let defect = inspectLockFile();
   if (defect) {
-    failLocked(describeLockDefect(defect));
+    failIntegrity(describeLockDefect(defect));
   }
 }
 
 // Every dependency declared in mops.toml must be pinned to that same value in
 // the lock. Pure and offline, so `--locked` can run it before downloading
-// anything. Local `path` deps are skipped: resolution normalizes them and they
-// point at live directories by design.
+// anything. Local `path` deps are skipped here — resolution normalizes and
+// env-expands them, so they are covered by `localDepsHash` instead.
 function checkLockedDeps(lock: LockFileV3): string[] {
   let problems: string[] = [];
   let config = readConfig();
@@ -525,11 +882,12 @@ function checkLockedDeps(lock: LockFileV3): string[] {
 //   2. the `deps` and `hashes` maps agree on the set of registry packages
 //   3. every file hash in `hashes` matches the registry
 //
-// Together with the `mopsTomlDepsHash` check this catches the realistic drift
-// (an edited mops.toml, a hand-edited or stale lock) plus lock tampering.
-// Published versions are immutable, so a transitive version cannot change
-// underneath a lock. Not caught: transitive drift of local `path` dependencies,
-// which are live directories by design and carry no hashes.
+// Together with the `mopsTomlDepsHash` / `localDepsHash` checks this catches the
+// realistic drift (an edited mops.toml, an edited local dependency's manifest, a
+// hand-edited or stale lock) plus lock tampering. Published versions are
+// immutable, so a transitive version cannot change underneath a lock. Not
+// caught: the *file contents* of a local `path` dependency, which is a live
+// directory by design and carries no hashes.
 async function checkLockConsistency(lock: LockFileV3): Promise<string[]> {
   let problems = checkLockedDeps(lock);
 
@@ -547,7 +905,9 @@ async function checkLockConsistency(lock: LockFileV3): Promise<string[]> {
     }
   }
 
-  let registryHashes = await fetchRegistryFileHashes(packageIds);
+  let registryHashes = await fetchRegistryFileHashes(packageIds, {
+    requireConsensus: true,
+  });
   for (let packageId of packageIds) {
     let lockedFiles = lock.hashes[packageId];
     let registryFiles = registryHashes[packageId];
@@ -600,7 +960,7 @@ export async function assertLockedUpToDate(): Promise<void> {
     // prerequisites, so reaching here means the recorded file hashes disagree
     // with the registry — which install will not rewrite. Give the hint that
     // actually recovers, not the one that loops.
-    failLocked([
+    failIntegrity([
       "mops.lock does not match the registry, but --locked was passed.",
       ...problems.map((problem) => `  ${problem}`),
       RESTORE_HINT,
@@ -622,13 +982,35 @@ export async function verifyDownloadedPackageFiles(
   packageId: string,
   filesData: Map<string, ArrayLike<number>>,
 ): Promise<DownloadVerification> {
-  let registryHashes = (await fetchRegistryFileHashes([packageId]))[packageId];
+  let queriedHashes = await queryRegistryFileHashes(packageId);
+
+  // A committed lock already records this package's hashes from a consensus
+  // call, so where it covers the package it outranks the query reply — and a
+  // reply that contradicts it is reported instead of trusted. This is also what
+  // catches a forged query on the common path, where the lock is current and
+  // `computeLockFile` (which does the same check against consensus) never runs.
+  let lockedHashes = readLockFile()?.hashes[packageId] ?? {};
+  if (Object.keys(lockedHashes).length) {
+    let problems = diffQueryHashes(queriedHashes, lockedHashes, "mops.lock");
+    if (problems.length) {
+      return {
+        errors: describeLockDisagreement(packageId, problems),
+        unverified: false,
+      };
+    }
+  }
+
+  // Equal by the check above whenever both are populated; the fallback matters
+  // when the query node has not caught up with the hashes the lock already has.
+  let registryHashes = Object.keys(queriedHashes).length
+    ? queriedHashes
+    : lockedHashes;
 
   // The registry derives its hash list from the same file-id set it serves for
   // download, and collapses a partially-hashed package to an empty list, so
   // this is all-or-nothing: either every file is checkable or none is. Old
   // packages predating recorded hashes fall in the latter bucket.
-  if (!registryHashes || Object.keys(registryHashes).length === 0) {
+  if (Object.keys(registryHashes).length === 0) {
     return { errors: [], unverified: true };
   }
 
@@ -653,7 +1035,8 @@ export async function verifyDownloadedPackageFiles(
       );
       continue;
     }
-    let actualHash = bytesToHex(sha256(Uint8Array.from(data)));
+    let bytes = data instanceof Uint8Array ? data : Uint8Array.from(data);
+    let actualHash = bytesToHex(sha256(bytes));
     if (actualHash !== expectedHash) {
       errors.push(
         `Hash mismatch for ${prefix}${filePath}\n  Expected: ${expectedHash}\n  Actual:   ${actualHash}`,
@@ -733,6 +1116,16 @@ export async function verifyIntegrity(): Promise<VerifyResult> {
       "mops.toml has changed since mops.lock was generated.",
       `  Locked dependencies hash: ${lock.mopsTomlDepsHash}`,
       `  Actual dependencies hash: ${getMopsTomlDepsHash()}`,
+    );
+  }
+
+  if (
+    lock.version === CURRENT_LOCK_VERSION &&
+    lock.localDepsHash !== getLocalDepsHash()
+  ) {
+    errors.push(
+      "A local `path` dependency's mops.toml has changed since mops.lock was generated, or MOPS_ENV differs.",
+      "  Run `mops install` to update mops.lock, then commit it.",
     );
   }
 

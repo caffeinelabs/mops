@@ -1,11 +1,13 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import {
   existsSync,
+  mkdtempSync,
   readFileSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "path";
 import { cli } from "./helpers";
 
@@ -181,7 +183,9 @@ describe("--locked", () => {
   // Replaces the old #514 regression test. A corrupted hash *value* still
   // satisfies every staleness check, so plain `mops install` does not rewrite
   // it — which means the error must not tell the operator to run `mops install`,
-  // or CI loops forever on advice that cannot work.
+  // or CI loops forever on advice that cannot work. Note this is the
+  // already-installed case; when install has to download the package it does
+  // check the bytes against the lock (see the download-time test below).
   test("fails on a locked file hash that disagrees with the registry, with a hint that recovers", async () => {
     cleanup();
     try {
@@ -292,9 +296,10 @@ describe("--locked", () => {
     }
   });
 
-  // Verification moved to download time, so install no longer re-hashes
-  // `.mops/`. This is the guarantee change in this release: install is not a
-  // tamper gate any more — `mops verify` is.
+  // Verification moved to download time: install checks the bytes it downloads
+  // and re-hashes nothing already on disk. So install is still a tamper gate,
+  // but only for what it fetches — a locally edited `.mops/` file survives it,
+  // and `mops verify` is what catches that.
   test("tolerates a locally edited .mops/ file that mops verify rejects", async () => {
     cleanup();
     try {
@@ -320,6 +325,35 @@ describe("--locked", () => {
         /Delete the `\.mops\/core@1\.0\.0` directory and run `mops install`/,
       );
     } finally {
+      cleanup();
+    }
+  });
+
+  // The other half of that guarantee: plain install, with no --locked, refuses
+  // bytes that disagree with the lock. `XDG_CACHE_HOME` gives the run an empty
+  // global cache so the package is actually downloaded.
+  test("plain install refuses a download that disagrees with mops.lock", async () => {
+    cleanup();
+    const cache = mkdtempSync(path.join(tmpdir(), "mops-cache-"));
+    try {
+      await install();
+      const lock = readLock();
+      const fileId = Object.keys(lock.hashes["core@1.0.0"])[0] as string;
+      lock.hashes["core@1.0.0"][fileId] = "b".repeat(64);
+      writeLock(lock);
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+
+      const result = await cli(["install"], {
+        cwd,
+        env: { CI: undefined, XDG_CACHE_HOME: cache },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        /mops\.lock and the registry disagree about the published file hashes/,
+      );
+      expect(existsSync(path.join(cwd, ".mops", "core@1.0.0"))).toBe(false);
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
       cleanup();
     }
   });

@@ -132,26 +132,6 @@ export function getGithubDepCacheName(name: string, repo: string) {
   );
 }
 
-export let addCache = async (cacheName: string, source: string) => {
-  let dest = path.join(getGlobalCacheDir(), "packages", cacheName);
-  let staging = createStagingDir(dest);
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      ncp.ncp(source, staging, { stopOnErr: true }, (err) => {
-        if (err) {
-          reject(err);
-        }
-        resolve();
-      });
-    });
-    commitStagingDir(staging, dest);
-  } catch (err) {
-    fs.rmSync(staging, { recursive: true, force: true });
-    throw err;
-  }
-};
-
 export let copyCache = async (cacheName: string, dest: string) => {
   let source = path.join(getGlobalCacheDir(), "packages", cacheName);
   let staging = createStagingDir(dest);
@@ -183,18 +163,49 @@ export let cacheSize = async () => {
   return (size / 1024 / 1024).toFixed(2) + " MB";
 };
 
-export let cleanCache = async () => {
-  if (
-    !getGlobalCacheDir().endsWith("mops/cache") &&
-    !getGlobalCacheDir().endsWith("/mops") &&
-    !getGlobalCacheDir().endsWith("/mops/" + getNetwork())
-  ) {
-    throw new Error("Invalid cache directory: " + getGlobalCacheDir());
+// Refuse to recursively delete anything that is not the mops cache. The dir
+// must sit inside `globalCacheDir` and its trailing segments must be `mops`,
+// `mops/cache` (Windows), each optionally followed by the network segment.
+// Separators are compared per-segment because `path.join` yields backslashes
+// on Windows.
+export function assertGlobalCacheDir(dir: string, cacheRoot = globalCacheDir) {
+  let resolved = path.resolve(dir);
+  let base = path.resolve(cacheRoot);
+  let inBase =
+    resolved === base ||
+    resolved.startsWith(base + "/") ||
+    resolved.startsWith(base + "\\");
+
+  let segments = resolved.split(/[\\/]+/).filter(Boolean);
+  let network = getNetwork();
+  if (network !== "ic" && segments.at(-1) === network) {
+    segments.pop();
+  }
+  if (segments.at(-1) === "cache") {
+    segments.pop();
   }
 
-  // local cache
-  fs.rmSync(path.join(getRootDir(), ".mops"), { recursive: true, force: true });
+  if (!inBase || segments.at(-1) !== "mops" || segments.length < 2) {
+    throw new Error("Invalid cache directory: " + resolved);
+  }
+}
+
+type CleanCacheOptions = {
+  // Leave the project's `.mops` directory alone.
+  global?: boolean;
+};
+
+export let cleanCache = async ({ global = false }: CleanCacheOptions = {}) => {
+  let globalCache = getGlobalCacheDir();
+  assertGlobalCacheDir(globalCache);
+
+  // local cache — outside a project `getRootDir()` is empty, which would
+  // target `.mops` in the current working directory
+  let rootDir = getRootDir();
+  if (!global && rootDir) {
+    fs.rmSync(path.join(rootDir, ".mops"), { recursive: true, force: true });
+  }
 
   // global cache
-  fs.rmSync(getGlobalCacheDir(), { recursive: true, force: true });
+  fs.rmSync(globalCache, { recursive: true, force: true });
 };

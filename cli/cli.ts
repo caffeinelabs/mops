@@ -192,15 +192,20 @@ program
       process.exit(1);
     }
 
-    let compatible = await checkApiCompatibility();
+    // The compatibility check is a read-only query, so it overlaps the install
+    // instead of costing a round trip in front of it. An incompatible CLI still
+    // reports the same error and skips everything downstream.
+    let [compatible, ok] = await Promise.all([
+      checkApiCompatibility(),
+      installAll({
+        ...options,
+        lock: options.locked ? "locked" : "maintain",
+      }),
+    ]);
+
     if (!compatible) {
       return;
     }
-
-    let ok = await installAll({
-      ...options,
-      lock: options.locked ? "locked" : "maintain",
-    });
 
     // Bail before the conflicts check: it re-resolves, which reads dependency
     // manifests that a failed install may never have written.
@@ -333,9 +338,13 @@ program
   .command("cache")
   .description("Manage cache")
   .addArgument(new Argument("<sub>").choices(["size", "clean", "show"]))
-  .action(async (sub) => {
+  .option(
+    "--global",
+    "cache clean: clean only the global cache, keep the project's .mops directory",
+  )
+  .action(async (sub, options) => {
     if (sub == "clean") {
-      await cleanCache();
+      await cleanCache(options);
       console.log("Cache cleaned");
     } else if (sub == "size") {
       let size = await cacheSize();
@@ -799,8 +808,12 @@ program
   .command("sync")
   .description("Add missing packages and remove unused packages")
   .addOption(legacyLockOption())
-  .action(async () => {
-    await sync();
+  .option(
+    "--dry-run",
+    "Print what would be added and removed without changing mops.toml, the local cache or mops.lock",
+  )
+  .action(async (options) => {
+    await sync(options);
   });
 
 // outdated

@@ -86,9 +86,10 @@ export async function installMopsDep(
   }
   // download
   else {
-    // GitHub Actions fails with "fetch failed" if there are multiple concurrent actions
+    // GitHub Actions fails with "fetch failed" if there are multiple concurrent actions.
+    // A cap, not an assignment — the caller budgets across packages and may want fewer.
     if (process.env.GITHUB_ENV) {
-      threads = 4;
+      threads = Math.min(threads, 4);
     }
 
     try {
@@ -96,7 +97,7 @@ export async function installMopsDep(
 
       total = fileIds.length + 2;
 
-      let filesData = new Map();
+      let filesData = new Map<string, Uint8Array>();
       let storage = await storageActor(storageId);
 
       await parallel(threads, fileIds, async (fileId: string) => {
