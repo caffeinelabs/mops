@@ -88,7 +88,15 @@ Run after cloning or after manual `mops.toml` edits. `mops.lock` is always maint
 
 The `CI` env var no longer affects lockfile behavior (removed in v3). Commit `mops.lock` — for applications and libraries alike.
 
+A lock also goes stale when a local `path` dependency's own `mops.toml` changes — including one nested further down the chain. `mops install` regenerates it; `--locked` fails until the regenerated lock is committed. Note the first `mops install` after upgrading regenerates the lock of any project that has a `path` dependency, so commit it before running `--locked` in CI. Projects without `path` dependencies keep their existing lock.
+
+`{MOPS_ENV}` in a `path` dependency expands to `$MOPS_ENV` (default `local`), which makes the lock environment-specific. Switching `MOPS_ENV` makes it stale: `mops install` regenerates it, and `--locked` fails with a message naming `MOPS_ENV`. Keep one lock per environment, or drop `--locked` — a lock generated under one `MOPS_ENV` will not satisfy `--locked` under another.
+
 Integrity is verified at download time, so `mops install` no longer re-hashes `.mops/`: editing a dependency in place will not fail the next install. Use `mops verify` for the on-demand on-disk audit.
+
+Downloaded files are always checked before anything enters the cache — against `mops.lock` when it already records the package, otherwise against the registry. A committed lock therefore makes verification free, which is why a clean checkout installs without asking the registry about hashes.
+
+Two consequences worth knowing: a corrupt or hand-edited `mops.lock` now fails a *download* (the error names `mops.lock` as a possible culprit — restore it from version control; already-cached packages are unaffected), and a package the registry publishes no hashes for still installs, unverified, with a warning.
 
 ### `mops verify`
 
