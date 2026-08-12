@@ -48,13 +48,22 @@ jobs:
 
       - uses: ./.github/actions/cache-rust-wasm
 
+      # Keyed on everything the pre-cache step below actually downloads: the
+      # root pins, every fixture's pins and deps, and the compiled-in default
+      # PocketIC version. Keying on `mops.toml` alone froze this cache — that
+      # file rarely changes, so every run hit the primary key, `actions/cache`
+      # skipped the save ("not saving cache"), and toolchains added afterwards
+      # were re-downloaded forever.
+      #
+      # The key is also namespaced per workflow. `mops test` jobs never install
+      # the fixtures, so sharing one key let them win the save race and publish
+      # a cache without the fixture toolchains in it.
       - name: Cache mops packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          key: mops-packages-${{ runner.os }}-${{ hashFiles('mops.toml') }}
+          key: mops-ci-${{ runner.os }}-${{ hashFiles('mops.toml', 'cli/tests/**/mops.toml', 'cli/commands/toolchain/pocket-ic-versions.ts') }}
           restore-keys: |
-            mops-packages-${{ runner.os }}-${{ hashFiles('mops.toml') }}
-            mops-packages-${{ runner.os }}
+            mops-ci-${{ runner.os }}-
           path: |
             ~/.cache/mops
             ~/Library/Caches/mops
