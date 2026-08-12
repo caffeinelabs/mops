@@ -37,13 +37,15 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
+      # Namespaced separately from the CI workflow's cache: this job only ever
+      # installs the root manifest, so it must not be able to publish a cache
+      # that CI's fixture-heavy jobs would then restore as complete.
       - name: Cache mops packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          key: mops-packages-${{ runner.os }}-${{ hashFiles('mops.toml') }}
+          key: mops-repo-tests-${{ runner.os }}-${{ hashFiles('mops.toml') }}
           restore-keys: |
-            mops-packages-${{ runner.os }}-${{ hashFiles('mops.toml') }}
-            mops-packages-${{ runner.os }}
+            mops-repo-tests-${{ runner.os }}-
           path: |
             ~/.cache/mops
             ~/Library/Caches/mops
