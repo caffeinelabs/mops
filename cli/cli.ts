@@ -168,7 +168,9 @@ Accepted <pkg> forms:
     if (!checkConfigFile()) {
       process.exit(1);
     }
-    await add(pkg, options);
+    // Moving between sections is interactive-only: `mops update` and
+    // `mops sync` call add() for a package they already located in one section.
+    await add(pkg, { ...options, moveSections: true });
   });
 
 // remove
@@ -184,7 +186,9 @@ program
     if (!checkConfigFile()) {
       process.exit(1);
     }
-    await remove(pkg, options);
+    // Searching both sections is interactive-only: `mops sync` removes a
+    // dual-declared package with one call per section.
+    await remove(pkg, { ...options, anySection: true });
   });
 
 // install

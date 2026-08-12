@@ -22,6 +22,10 @@ type RemoveOptions = {
   dryRun?: boolean;
   // Internal: see `AddOptions.lock`.
   lock?: LockPolicy;
+  // Only the interactive `mops remove` searches both sections. `mops sync`
+  // removes a dual-declared package with one call per section, so a search
+  // across both would clear it on the first call and error on the second.
+  anySection?: boolean;
 };
 
 export async function remove(
@@ -31,6 +35,7 @@ export async function remove(
     verbose = false,
     dryRun = false,
     lock = "maintain",
+    anySection = false,
   }: RemoveOptions = {},
 ) {
   if (!checkConfigFile()) {
@@ -89,9 +94,10 @@ export async function remove(
 
   // `npm uninstall` and `cargo remove` drop the dependency wherever it is
   // declared; `--dev` narrows the search to [dev-dependencies].
-  let sections: DepsSection[] = dev
-    ? ["dev-dependencies"]
-    : ["dependencies", "dev-dependencies"];
+  let sections: DepsSection[] =
+    dev || !anySection
+      ? [dev ? "dev-dependencies" : "dependencies"]
+      : ["dependencies", "dev-dependencies"];
   let targets = sections
     .map((section) => ({ section, dep: (config[section] || {})[name] }))
     .filter((target): target is { section: DepsSection; dep: Dependency } =>

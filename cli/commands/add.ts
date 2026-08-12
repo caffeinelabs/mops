@@ -27,6 +27,11 @@ type AddOptions = {
   // Internal: `mops sync`/`mops update` pass "skip" to batch many add/remove
   // calls into a single lock update at the end. Not exposed as a flag.
   lock?: LockPolicy;
+  // Only the interactive `mops add` moves an entry between sections. `mops
+  // update` reaches here for a package it already located in one section, and a
+  // manifest that declares it in both — from the old duplicating bug, or by
+  // hand — would silently lose the other entry to an unrelated version bump.
+  moveSections?: boolean;
 };
 
 // `org/repo`, optionally with `#branch`, `#tag` or `#commit` (branches may
@@ -40,7 +45,12 @@ function findDeclared(config: Config, key: string): Dependency | undefined {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function add(
   name: string,
-  { verbose = false, dev = false, lock = "maintain" }: AddOptions = {},
+  {
+    verbose = false,
+    dev = false,
+    lock = "maintain",
+    moveSections = false,
+  }: AddOptions = {},
   asName?: string,
 ) {
   if (!checkConfigFile()) {
@@ -176,9 +186,9 @@ export async function add(
   // `cargo add --dev` and `npm i -D` move an existing entry between sections
   // instead of declaring the package twice.
   let otherDeps = config[otherProp];
-  let moved = Boolean(otherDeps?.[pkgDetails.name]);
-  if (otherDeps) {
-    delete otherDeps[pkgDetails.name];
+  let moved = moveSections && Boolean(otherDeps?.[pkgDetails.name]);
+  if (moved) {
+    delete otherDeps?.[pkgDetails.name];
   }
 
   deps[pkgDetails.name] = pkgDetails;
