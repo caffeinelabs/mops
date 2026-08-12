@@ -1,15 +1,12 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.22.0
 - Updating the lock after a dependency change no longer refetches file hashes for the whole graph from the registry: hashes of packages already in the lock are carried over (published versions are immutable), and only packages new to the lock are queried. `mops remove` now updates the lock without any registry queries. Explicit `mops install --lock update` still refreshes every hash from the registry, so it remains the recovery command for a lock with corrupt hashes.
 - `mops.lock` is now written atomically (staged temp file + rename), so a concurrent `mops install` can no longer read a half-written lock and crash with `Unexpected end of JSON input`.
 - `mops.lock` now records the declared dependencies of every registry package version in the graph (`graph` section), including versions that lost a conflict. Regenerating a stale lock (`mops add`/`remove`/`update`/`sync`, or after editing `mops.toml`) resolves from these recorded edges instead of reading — and, since the fix below, downloading — manifests of packages that were never installed. Works offline and adds no network calls. Locks written by older CLIs have no `graph` and keep the previous behavior; older CLIs ignore the new field.
 - Fix crashes with a raw `ENOENT: no such file or directory ... mops.toml` on incomplete cache state:
-  - `mops add`, `update`, `sync` and `remove` after a lock-driven install used to crash while regenerating the lock. Installing from `mops.lock` deliberately skips versions that lost a dependency conflict, but the re-walk of the dependency graph still read every declared version's manifest from the global cache. Manifests missing from the cache are now downloaded on demand; if the download fails, the command reports which package could not be fetched instead of crashing.
-  - A global cache entry now counts as cached only if it is complete: registry packages must contain `mops.toml`, GitHub packages must be non-empty. Leftover empty directories from interrupted runs (or a bad shared cache volume) are deleted and re-downloaded instead of being treated as cache hits.
-  - Packages missing from the global cache are re-downloaded when syncing `.mops`, instead of failing the copy.
-  - Toolchain requirements checks (`moc`/`lintoko` minimum versions) no longer crash when a package manifest is missing from `.mops`; they fall back to the global cache copy or skip that package, since these checks are advisory.
-  - Uncached GitHub dependencies encountered while resolving the dependency graph are now fetched, so their transitive dependencies are no longer silently dropped from resolution.
 
 ## 2.21.0
 - Security: GitHub dependencies (`repo = "..."`) are now extracted with a purpose-built unzipper instead of the `decompress` package, which has two unfixed advisories ([GHSA-mp2f-45pm-3cg9](https://github.com/advisories/GHSA-mp2f-45pm-3cg9), [GHSA-h39j-r5qq-r9mm](https://github.com/advisories/GHSA-h39j-r5qq-r9mm)) allowing a malicious archive to write files outside the install directory. Entries that would escape the target directory now fail the whole extraction, and symlinks are written as plain files instead of being created. `npm audit` on the CLI is clean again. One behavior change: a GitHub dependency whose repo contains symlinks gets those as regular files holding the link target.
