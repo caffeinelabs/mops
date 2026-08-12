@@ -6,6 +6,14 @@
 - `mops remove` now echoes the dependency value it removed for GitHub and local path deps, instead of an empty version.
 - Temporary compatibility shim: `mops add`, `remove`, `install`, `sync` and `update` again accept the removed 2.x flag `--lock <check|update|ignore>` instead of failing to parse. The value is ignored — including `check`, which is **not** treated as `--locked` — so v2 call sites keep working during the 3.x rollout. Migrate to `mops install --locked` for CI enforcement; the flag will be removed.
 
+### Performance
+
+- **Faster CLI startup.** The agent no longer eagerly synchronises time on every invocation, which cost three `read_state` requests against the ICP ledger canister — a canister mops never otherwise talks to, on a different subnet. Clock skew still self-heals: the agent re-syncs against the mops canister and retries once when a replica rejects an expired ingress expiry.
+- **Install telemetry no longer blocks.** `notifyInstalls` is submitted as an ingress message and acknowledged on acceptance instead of waiting for a certified reply (~125 ms rather than ~1.1 s). Delivery is unchanged — the method is `oneway` and never had a stronger guarantee.
+- Together those remove roughly 1.5 s of fixed cost from a warm-cache `mops install && mops update` in a fresh directory, none of it dependent on how many packages a project has.
+- File metadata and the first chunk of each file are now fetched concurrently rather than chained, halving per-file round trips for the single-chunk case that covers essentially every Motoko source file.
+- Chunk concatenation is no longer quadratic. **Breaking for programmatic consumers of the `ic-mops` package**: `downloadFile` and `downloadPackageFiles` now return `Uint8Array` instead of `Array<number>`.
+
 ### Fixed
 
 - **`mops sync` no longer destroys a pinned alias dependency.** Given `map = "9.0.1"` and `"map@8.1.0" = "8.1.0"`, sync compared imports (`map@8.1.0`) against alias-stripped manifest keys (`map`), so it reported the alias as both missing and unused — adding it overwrote `map` with `8.1.0`, and a single run could remove the dependency entirely. Aliases are now matched verbatim and added under their own key.
