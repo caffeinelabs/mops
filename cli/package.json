@@ -86,6 +86,7 @@
   },
   "devDependencies": {
     "@dfinity/pic": "0.23.0",
+    "@jest/globals": "30.4.1",
     "@tsconfig/strictest": "2.0.5",
     "@types/debounce": "1.2.4",
     "@types/fs-extra": "11.0.4",
@@ -99,6 +100,7 @@
     "@types/tar": "7.0.87",
     "esbuild": "0.28.1",
     "eslint": "8.57.0",
+    "jest": "30.4.2",
     "npm-run-all": "4.1.5",
     "rexreplace": "7.1.13",
     "ts-jest": "29.4.5",

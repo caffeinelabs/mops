@@ -19,14 +19,21 @@ jobs:
   test:
     timeout-minutes: 45
     strategy:
-      max-parallel: 4
       fail-fast: false
       matrix:
-        mops-version:
-          [./cli/dist, ic-mops, "https://cli.mops.one/versions/latest.tgz"]
+        # Node coverage belongs on the CLI in this commit — that is the code a
+        # PR can break. The published CLI gets a single leg, to catch a v3
+        # `mops.toml` that 2.x can no longer read during the 3.x preview; its
+        # own Node support is already settled by having been released.
+        mops-version: [./cli/dist]
         moc-version: [0.14.13]
         node-version: [22, 24, 26]
         runner: [ubuntu-latest]
+        include:
+          - mops-version: ic-mops
+            moc-version: 0.14.13
+            node-version: 22
+            runner: ubuntu-latest
 
     runs-on: ${{ matrix.runner }}
     name: ${{ matrix.runner }}, node ${{ matrix.node-version }}, moc ${{ matrix.moc-version }}, ${{ matrix.mops-version }}
@@ -37,13 +44,15 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
+      # Namespaced separately from the CI workflow's cache: this job only ever
+      # installs the root manifest, so it must not be able to publish a cache
+      # that CI's fixture-heavy jobs would then restore as complete.
       - name: Cache mops packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
-          key: mops-packages-${{ runner.os }}-${{ hashFiles('mops.toml') }}
+          key: mops-repo-tests-${{ runner.os }}-${{ hashFiles('mops.toml') }}
           restore-keys: |
-            mops-packages-${{ runner.os }}-${{ hashFiles('mops.toml') }}
-            mops-packages-${{ runner.os }}
+            mops-repo-tests-${{ runner.os }}-
           path: |
             ~/.cache/mops
             ~/Library/Caches/mops
