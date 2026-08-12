@@ -333,9 +333,13 @@ program
   .command("cache")
   .description("Manage cache")
   .addArgument(new Argument("<sub>").choices(["size", "clean", "show"]))
-  .action(async (sub) => {
+  .option(
+    "--global",
+    "cache clean: clean only the global cache, keep the project's .mops directory",
+  )
+  .action(async (sub, options) => {
     if (sub == "clean") {
-      await cleanCache();
+      await cleanCache(options);
       console.log("Cache cleaned");
     } else if (sub == "size") {
       let size = await cacheSize();
@@ -799,8 +803,12 @@ program
   .command("sync")
   .description("Add missing packages and remove unused packages")
   .addOption(legacyLockOption())
-  .action(async () => {
-    await sync();
+  .option(
+    "--dry-run",
+    "Print what would be added and removed without changing mops.toml, the local cache or mops.lock",
+  )
+  .action(async (options) => {
+    await sync(options);
   });
 
 // outdated

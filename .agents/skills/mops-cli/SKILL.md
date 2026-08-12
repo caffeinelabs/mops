@@ -217,7 +217,10 @@ mops update core          # update specific package within caret bound
 mops update --major       # allow updates that cross major versions
 mops update --patch       # restrict to patch bumps only (mutually exclusive with --major)
 mops sync                 # add missing / remove unused packages
+mops sync --dry-run       # print what would change, write nothing
 ```
+
+`mops sync` needs a pinned `[toolchain] moc` — it reads imports with `moc --print-deps`. Packages imported only from `test`/`tests`/`bench`/`benchmark` directories are added to `[dev-dependencies]`; already-declared packages are never moved between sections.
 
 ## Other Commands
 
