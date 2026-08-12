@@ -13,6 +13,8 @@ Remove package and update mops.toml
 mops remove <package_name>
 ```
 
+The package is removed from whichever section declares it, so a `[dev-dependencies]` entry needs no flag. If both sections declare it, both entries are removed — use `--dev` to remove only the `[dev-dependencies]` one.
+
 ## Options
 
 ### `--dev`

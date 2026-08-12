@@ -112,9 +112,13 @@ Exits 1 with the offending files and a recovery hint. This is the replacement fo
 mops add core             # latest version
 mops add core@2.5.0       # specific version
 mops add --dev test       # dev dependency
+mops add org/repo         # GitHub shorthand (also accepts a full github.com url)
+mops add ./pkg            # local package directory
 ```
 
 Updates `mops.toml` and `mops.lock`.
+
+Adding a package that is already declared in the other section **moves** it rather than declaring it twice. `<pkg>@<version>` replaces the declared version and reports what it replaced; it leaves pinned aliases like `"core@1.0.0" = "1.0.0"` alone, and there is no flag to create one — write it by hand.
 
 ### `mops check`
 
@@ -213,8 +217,10 @@ When `check-limit` is set, `mops check-stable` (and the stable check inside `mop
 ### `mops remove <package>`
 
 ```bash
-mops remove base
+mops remove core
 ```
+
+Removes from whichever section declares the package; `--dev` limits it to `[dev-dependencies]`. A package declared in both sections is removed from both.
 
 ### Dependency Management
 

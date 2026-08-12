@@ -1,0 +1,5 @@
+[dependencies]
+one = "./packages/one"
+
+[dev-dependencies]
+one = "./packages/one"
