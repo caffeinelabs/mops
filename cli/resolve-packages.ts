@@ -77,8 +77,20 @@ export async function resolveDepsAndGraph({
   let lockGraph = readLockFileGraph();
   let graph: Record<string, Record<string, string>> = {};
 
+  // Child dep names of every resolved dependency, keyed by identity rather than
+  // by name: two versions of one package declare different deps, and which
+  // version wins is not known until the walk finishes. Unlike `graph` this also
+  // covers local `path` deps, which the lock deliberately never records.
+  let edges: Record<string, string[]> = {};
+  // Identities already recursed into: bounds a diamond to a single walk, and
+  // stops a local `path` dep cycle from recursing until the stack overflows.
+  let walked = new Set<string>();
+
   let rootDir = getRootDir();
-  let packages: Record<string, Dependency & { isRoot: boolean }> = {};
+  let packages: Record<
+    string,
+    Dependency & { isRoot: boolean; identity: string }
+  > = {};
   let versions: Record<
     string,
     Array<{
@@ -123,6 +135,19 @@ export async function resolveDepsAndGraph({
     for (const pkgDetails of allDeps) {
       const { name, repo, version } = pkgDetails;
 
+      // `{MOPS_ENV}` is expanded here because the identity has to name the
+      // directory actually read, not the placeholder.
+      let localNestedDir = pkgDetails.path
+        ? path
+            .resolve(configDir, pkgDetails.path)
+            .replaceAll("{MOPS_ENV}", process.env.MOPS_ENV || "local")
+        : "";
+      let identity = repo
+        ? `repo:${repo}`
+        : version
+          ? `mops:${getPackageId(name, version)}`
+          : `path:${localNestedDir}`;
+
       // take root dep version or bigger one
       if (
         isRoot ||
@@ -136,6 +161,7 @@ export async function resolveDepsAndGraph({
         let temp = {
           ...pkgDetails,
           isRoot,
+          identity,
         };
         packages[name] = temp;
 
@@ -149,13 +175,9 @@ export async function resolveDepsAndGraph({
       }
 
       let nestedConfig;
-      let localNestedDir = "";
 
       // read nested config (github deps have none)
       if (pkgDetails.path) {
-        localNestedDir = path
-          .resolve(configDir, pkgDetails.path)
-          .replaceAll("{MOPS_ENV}", process.env.MOPS_ENV || "local");
         let mopsToml = path.join(localNestedDir, "mops.toml");
         if (existsSync(mopsToml)) {
           nestedConfig = readConfig(mopsToml);
@@ -213,7 +235,13 @@ export async function resolveDepsAndGraph({
 
       // collect nested deps
       if (nestedConfig) {
-        await collectDeps(nestedConfig, localNestedDir, false);
+        edges[identity] = Object.values(nestedConfig.dependencies || {}).map(
+          (dep) => dep.name,
+        );
+        if (!walked.has(identity)) {
+          walked.add(identity);
+          await collectDeps(nestedConfig, localNestedDir, false);
+        }
       }
 
       if (!versions[name]) {
@@ -334,8 +362,32 @@ export async function resolveDepsAndGraph({
     }
   }
 
+  // The walk visits every declared edge, losers included, because the lock's
+  // `graph` needs their manifests. What gets installed is narrower: the closure
+  // of the *winners* only. Otherwise a package declared solely by a version that
+  // lost the comparison is still downloaded and handed to moc as `--package`,
+  // which is not what the manifest asked for.
+  let reachable = new Set<string>();
+  let queue = [
+    ...Object.values(config.dependencies || {}),
+    ...Object.values(config["dev-dependencies"] || {}),
+  ].map((dep) => dep.name);
+
+  while (queue.length) {
+    let name = queue.pop();
+    if (name === undefined || reachable.has(name)) {
+      continue;
+    }
+    reachable.add(name);
+    let winner = packages[name];
+    if (winner) {
+      queue.push(...(edges[winner.identity] ?? []));
+    }
+  }
+
   let deps = Object.fromEntries(
     Object.entries(packages)
+      .filter(([name]) => reachable.has(name))
       .map(([name, pkg]) => {
         let version: string;
         if (pkg.path) {
