@@ -116,15 +116,16 @@ jobs:
           if not next_heading:
               sys.exit("::error::No version heading after ## Next in CHANGELOG.md")
 
-          notes = after_next[: next_heading.start()]
-          bullets = [line for line in notes.splitlines() if line.startswith("- ")]
-          if not bullets:
+          # Keep the block verbatim — filtering to top-level "- " lines would
+          # drop nested bullets, code blocks and continuation lines.
+          notes = after_next[: next_heading.start()].strip("\n")
+          if not re.search(r"^- ", notes, re.M):
               sys.exit("::error::## Next has no changelog entries to release")
 
           rolled = (
               "## Next\n\n"
               f"## {version}\n"
-              + "\n".join(bullets)
+              + notes
               + "\n\n"
               + after_next[next_heading.start() :]
           )
