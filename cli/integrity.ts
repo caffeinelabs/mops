@@ -239,13 +239,28 @@ export async function updateLockFile({
   let rootDir = getRootDir();
   let lockFile = path.join(rootDir, "mops.lock");
   let isNew = !fs.existsSync(lockFile);
-  fs.writeFileSync(lockFile, JSON.stringify(lockFileJson, null, 2));
+  writeLockFileAtomic(lockFile, JSON.stringify(lockFileJson, null, 2));
   if (isNew) {
     console.log("mops.lock created.");
     console.log("  Applications: commit this file.");
     console.log("  Libraries: add mops.lock to .gitignore.");
   }
   return true;
+}
+
+// Stage into a sibling temp file and atomic-rename onto the lock, so a
+// concurrent `mops install` never reads a half-written lock.
+function writeLockFileAtomic(lockFile: string, content: string) {
+  let tmpFile = `${lockFile}.${process.pid}.tmp`;
+  fs.writeFileSync(tmpFile, content);
+  try {
+    fs.renameSync(tmpFile, lockFile);
+  } catch {
+    // Windows can refuse to replace a file another process holds open;
+    // fall back to a direct write rather than failing the command
+    fs.writeFileSync(lockFile, content);
+    fs.rmSync(tmpFile, { force: true });
+  }
 }
 
 // compare hashes of local files with hashes from the lock file
