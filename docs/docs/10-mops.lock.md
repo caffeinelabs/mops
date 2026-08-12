@@ -47,6 +47,8 @@ _It's only faster when there are no globally cached packages — for example whe
 
 The `graph` section lets Mops update the lock after `mops add`, `remove`, `update` or `sync` without re-downloading package manifests: published versions are immutable, so recorded dependencies never go stale. Local path dependencies are not recorded — their manifests are always read from disk. Locks written by older CLIs have no `graph`; Mops then falls back to reading manifests from the cache, downloading any that are missing.
 
+For the same reason, updating the lock after a dependency change carries file hashes of already-locked packages over and queries the registry only for packages new to the lock. `mops install --lock update` always refetches every hash from the registry, so it remains the recovery command for a lock with corrupt hashes.
+
 Local path dependencies are stored relative to the project root (e.g. `./packages/shared`, `../lib`) so the lockfile is portable across machines. A plain `mops install` will not rewrite an older lock that still has absolute paths — run `mops install --lock update` explicitly. `--lock check` also will not flag absolute local paths (it compares the lock to itself when the deps hash matches). After regenerating, use a CLI that includes this fix; older CLIs treat relative lock paths as cwd-relative and break when run from a subdirectory.
 
 ## CI environments
