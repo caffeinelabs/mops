@@ -88,7 +88,15 @@ Run after cloning or after manual `mops.toml` edits. `mops.lock` is always maint
 
 The `CI` env var no longer affects lockfile behavior (removed in v3). Commit `mops.lock` — for applications and libraries alike.
 
+A lock goes stale on more than `mops.toml` edits. `mopsTomlDepsHash` covers the root manifest's declared deps; `localDepsHash` additionally covers the `[dependencies]` of every local `path` dependency, transitively. Without it, a path dep gaining a dependency of its own would leave the lock looking fresh and the new dependency never installed. It is omitted when the project declares no path dependency, which keeps locks written before the field valid.
+
+`{MOPS_ENV}` in a `path` dependency expands to `$MOPS_ENV` (default `local`) and is expanded into the `localDepsHash` key, so the lock is environment-specific for projects that use the placeholder. Switching `MOPS_ENV` makes the lock stale: a plain `mops install` regenerates it, and `--locked` fails with a message naming `MOPS_ENV`. Do not commit a lock generated under a non-default `MOPS_ENV` and expect `--locked` to pass in CI under another.
+
 Integrity is verified at download time, so `mops install` no longer re-hashes `.mops/`: editing a dependency in place will not fail the next install. Use `mops verify` for the on-demand on-disk audit.
+
+Download-time verification treats `mops.lock` as the trust anchor. When the lock records a package's hashes, freshly downloaded bytes are checked against those — no network call at all, so a committed lock makes verification free. When the lock cannot answer (no lock, stale lock, a package new to the lock, a version that lost a conflict), the hashes come from the registry over a consensus call, made before the bytes are staged into the global cache. Either way nothing enters the cache unchecked, and this holds regardless of the command's lock policy — including `mops sources`, which skips lockfile maintenance entirely.
+
+Two consequences worth knowing: a corrupt or hand-edited `mops.lock` now fails a *download* (the error names `mops.lock` as a possible culprit; restore it — cache hits are unaffected), and a package the registry genuinely publishes no hashes for still installs, unverified, with a warning.
 
 ### `mops verify`
 
