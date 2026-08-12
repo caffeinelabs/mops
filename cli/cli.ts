@@ -813,7 +813,7 @@ program
 
 // outdated
 program
-  .command("outdated")
+  .command("outdated [pkg]")
   .description(
     "Print outdated dependencies in mops.toml within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
   )
@@ -829,8 +829,16 @@ program
       "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
-  .action(async (options) => {
-    await outdated(options);
+  .addHelpText(
+    "after",
+    "\nGitHub dependencies are checked against their branch head (one GitHub API call each).\n" +
+      "\nExit codes:\n" +
+      "  0  everything is up to date\n" +
+      "  1  updates are available\n" +
+      "  2  the check failed (no mops.toml, unknown [pkg], registry or GitHub lookup error)",
+  )
+  .action(async (pkg, options) => {
+    await outdated(pkg, options);
   });
 
 // update

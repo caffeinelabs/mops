@@ -2,17 +2,25 @@ import process from "node:process";
 import chalk from "chalk";
 import semver from "semver";
 import { mainActor } from "../api/actors.js";
+import { getGithubCommit, parseGithubURL } from "../mops.js";
 import { Config } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
 
 export type UpdateBound = "patch" | "caret" | "major";
 
+export type AvailableUpdatesOptions = {
+  // `mops outdated` reports registry failures itself, so it can exit with its own
+  // "lookup failed" code instead of the shared exit(1).
+  throwOnError?: boolean;
+};
+
 // [pkg, oldVersion, newVersion]
 export async function getAvailableUpdates(
   config: Config,
   pkg?: string,
   bound: UpdateBound = "caret",
+  { throwOnError }: AvailableUpdatesOptions = {},
 ): Promise<Array<[string, string, string]>> {
   let deps = Object.values(config.dependencies || {});
   let devDeps = Object.values(config["dev-dependencies"] || {});
@@ -25,6 +33,11 @@ export async function getAvailableUpdates(
       getDepName(dep.name) === dep.name ||
       getDepPinnedVersion(dep.name).split(".").length !== 3,
   );
+
+  // Nothing to resolve: skip the registry round-trip entirely.
+  if (depsToUpdate.length === 0) {
+    return [];
+  }
 
   let getCurrentVersion = (pkg: string, updateVersion: string) => {
     for (let dep of allDeps) {
@@ -62,6 +75,9 @@ export async function getAvailableUpdates(
   );
 
   if ("err" in res) {
+    if (throwOnError) {
+      throw new Error(res.err);
+    }
     console.log(chalk.red("Error:"), res.err);
     process.exit(1);
   }
@@ -69,4 +85,72 @@ export async function getAvailableUpdates(
   return res.ok
     .filter((dep) => dep[1] !== getCurrentVersion(dep[0], dep[1]))
     .map((dep) => [dep[0], getCurrentVersion(dep[0], dep[1]), dep[1]]);
+}
+
+export type GithubUpdate = {
+  name: string;
+  repo: string; // "org/name"
+  branch: string;
+  current: string; // pinned commit hash, empty when mops.toml pins only a branch
+  latest: string;
+};
+
+export type GithubUpdateError = {
+  name: string;
+  message: string;
+};
+
+export type GithubUpdates = {
+  updates: GithubUpdate[];
+  errors: GithubUpdateError[];
+};
+
+// `mops update` re-resolves GitHub branches, so anything reporting available updates
+// must check them too or it would call a dep up to date that `update` would move.
+export async function getAvailableGithubUpdates(
+  config: Config,
+  pkg?: string,
+): Promise<GithubUpdates> {
+  let deps = Object.values(config.dependencies || {});
+  let devDeps = Object.values(config["dev-dependencies"] || {});
+  let githubDeps = [...deps, ...devDeps].filter((dep) => dep.repo);
+  if (pkg) {
+    githubDeps = githubDeps.filter((dep) => dep.name === pkg);
+  }
+
+  // One unauthenticated GitHub API call per repo dep (60/h/IP), so run them
+  // concurrently and only for deps actually declared by repo.
+  let results = await Promise.all(
+    githubDeps.map(
+      async (dep): Promise<GithubUpdate | GithubUpdateError | undefined> => {
+        let { org, gitName, branch, commitHash } = parseGithubURL(
+          dep.repo || "",
+        );
+        try {
+          let commit = await getGithubCommit(`${org}/${gitName}`, branch);
+          if (commit.sha === commitHash) {
+            return undefined;
+          }
+          return {
+            name: dep.name,
+            repo: `${org}/${gitName}`,
+            branch,
+            current: commitHash,
+            latest: commit.sha,
+          };
+        } catch (err: any) {
+          return { name: dep.name, message: err.message };
+        }
+      },
+    ),
+  );
+
+  return {
+    updates: results.filter(
+      (res): res is GithubUpdate => !!res && "latest" in res,
+    ),
+    errors: results.filter(
+      (res): res is GithubUpdateError => !!res && "message" in res,
+    ),
+  };
 }
