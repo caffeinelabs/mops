@@ -104,6 +104,8 @@ Two consequences worth knowing: a corrupt or hand-edited `mops.lock` now fails a
 mops verify   # re-hash .mops/ against mops.lock, and mops.lock against the registry
 ```
 
+Covers GitHub dependencies as well as registry ones.
+
 Exits 1 with the offending files and a recovery hint. This is the replacement for anyone who relied on `mops install` failing when `.mops/` had been modified.
 
 ### `mops add <package>`

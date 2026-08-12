@@ -3,7 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
-import { getDependencyType, getRootDir, readConfig } from "./mops.js";
+import {
+  formatGithubDir,
+  getDependencyType,
+  getRootDir,
+  parseGithubURL,
+  readConfig,
+} from "./mops.js";
 import { mainActor } from "./api/actors.js";
 import { getEndpoint, getNetwork } from "./api/network.js";
 import { resolveDepsAndGraph } from "./resolve-packages.js";
@@ -23,6 +29,16 @@ type LockFileV2 = {
   hashes: Record<string, Record<string, string>>;
 };
 
+// Integrity of one `repo = "..."` dependency. GitHub serves no hashes, so the
+// lock is the only record of what was installed.
+type GithubDepLock = {
+  // the commit the archive was fetched from; a ref that names none (`#main`, a
+  // tag) is resolved once and pinned here, which is what makes it reproducible
+  resolved: string;
+  // sha256 over the extracted tree, see `hashGithubDir`
+  hash: string;
+};
+
 type LockFileV3 = {
   version: 3;
   mopsTomlDepsHash: string;
@@ -32,6 +48,12 @@ type LockFileV3 = {
   // is what keeps locks written before this field valid
   localDepsHash?: string;
   hashes: Record<string, Record<string, string>>;
+  // integrity of the `repo = "..."` dependencies, keyed by dependency name;
+  // omitted when the project declares none, which is what keeps locks written
+  // before this field valid. Deliberately not folded into `hashes`: that map is
+  // cross-checked against the registry packages in `deps`, so an extra key there
+  // reads as a corrupt lock to any CLI, including older ones.
+  github?: Record<string, GithubDepLock>;
   deps: Record<string, string>;
   // declared dependency edges per registry package version (losers included),
   // so a stale lock can be regenerated without those versions on disk;
@@ -139,7 +161,35 @@ function hasValidShape(lock: unknown): boolean {
     return false;
   }
 
+  // Same story for `github`: absent is valid for a project with no github deps,
+  // and for locks written by a CLI that predates the field.
+  if (
+    candidate["version"] === CURRENT_LOCK_VERSION &&
+    candidate["github"] !== undefined &&
+    !hasValidGithubShape(candidate["github"])
+  ) {
+    return false;
+  }
+
   return true;
+}
+
+function hasValidGithubShape(github: unknown): boolean {
+  if (!github || typeof github !== "object" || Array.isArray(github)) {
+    return false;
+  }
+  return Object.values(github).every((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return false;
+    }
+    let { resolved, hash } = entry as Record<string, unknown>;
+    return (
+      typeof resolved === "string" &&
+      resolved.length > 0 &&
+      typeof hash === "string" &&
+      hash.length > 0
+    );
+  });
 }
 
 function readLockFileState(): LockFileState {
@@ -199,7 +249,8 @@ type LockDefect =
   | { kind: "local-deps-hash" }
   | { kind: "absolute-paths" }
   | { kind: "deps-mismatch"; problems: string[] }
-  | { kind: "hashes-deps-mismatch"; detail: string };
+  | { kind: "hashes-deps-mismatch"; detail: string }
+  | { kind: "github-integrity"; detail: string };
 
 // The single source of truth for "is this lock usable". `checkLockFileLight`
 // (which decides whether we install from the lock) and
@@ -278,6 +329,14 @@ function inspectLockFile(): LockDefect | null {
     }
   }
 
+  // A github dep with no recorded commit is neither verifiable nor
+  // reproducible, so the lock is stale until an install records one. Locks
+  // written before the field only reach this in projects that declare one.
+  let githubProblem = checkLockedGithubDeps(lock);
+  if (githubProblem) {
+    return { kind: "github-integrity", detail: githubProblem };
+  }
+
   return null;
 }
 
@@ -352,6 +411,104 @@ function mopsPackageIds(deps: Record<string, string>): string[] {
         .filter(([, version]) => getDependencyType(version) === "mops")
         .map(([name, version]) => getPackageId(name, version)),
     ),
+  ];
+}
+
+function githubDepNames(deps: Record<string, string>): string[] {
+  return Object.entries(deps)
+    .filter(([, value]) => getDependencyType(value) === "github")
+    .map(([name]) => name);
+}
+
+// Offline agreement between `deps` and `github`: every github dep needs an
+// entry, an explicit `@sha` in the dep value must be the commit that was
+// recorded, and an entry with no dep is leftover.
+function checkLockedGithubDeps(lock: LockFileV3): string | null {
+  let names = githubDepNames(lock.deps);
+  let github = lock.github ?? {};
+  for (let name of names) {
+    let entry = github[name];
+    if (!entry) {
+      return `dependency ${name} has no recorded commit and content hash`;
+    }
+    let { commitHash } = parseGithubURL(lock.deps[name] as string);
+    if (commitHash && commitHash !== entry.resolved) {
+      return `dependency ${name} is pinned to commit ${commitHash} but mops.lock records ${entry.resolved}`;
+    }
+  }
+  for (let name of Object.keys(github)) {
+    if (!names.includes(name)) {
+      return `dependency ${name} has a recorded commit but is not a locked GitHub dependency`;
+    }
+  }
+  return null;
+}
+
+// Deterministic digest of an extracted GitHub archive: every file's
+// root-relative path and its content, sorted by path. Paths are part of the
+// digest so moving a file changes it. Nothing else about the tree can vary —
+// `extractGithubZip` writes plain files with no modes recorded, rejects
+// symlinks, and never leaves an empty directory behind — and `/` is hardcoded
+// so a Windows tree hashes to the same value.
+export function hashGithubDir(dir: string): string {
+  let files: Array<[string, string]> = [];
+  let walk = (current: string, prefix: string) => {
+    for (let entry of fs.readdirSync(current, { withFileTypes: true })) {
+      let rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      let full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        walk(full, rel);
+      } else if (entry.isFile()) {
+        files.push([rel, bytesToHex(sha256(fs.readFileSync(full)))]);
+      } else {
+        throw new Error(`Cannot hash ${full}: not a regular file`);
+      }
+    }
+  };
+  walk(dir, "");
+  files.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return bytesToHex(sha256(JSON.stringify(files)));
+}
+
+// What the lock says about a github dep. An entry only speaks for the dep value
+// it was recorded against, so a mops.toml that now names another ref or commit
+// gets no answer rather than a wrong one.
+export function readLockedGithubDep(
+  name: string,
+  repo: string,
+): GithubDepLock | undefined {
+  let lock = readLockFile();
+  if (lock?.version !== CURRENT_LOCK_VERSION || lock.deps[name] !== repo) {
+    return undefined;
+  }
+  return lock.github?.[name];
+}
+
+// What installs observed this run, for the lock written at the end of it.
+// Install records only a commit paired with the hash of that commit's own
+// content — a mismatched pair would be worse than no entry at all.
+const observedGithubDeps = new Map<string, GithubDepLock>();
+
+export function recordGithubDep(name: string, entry: GithubDepLock) {
+  observedGithubDeps.set(name, entry);
+}
+
+// A hash mismatch on a fetched archive has two causes with different fixes, so
+// name both. The archive of a commit is immutable, which is what rules out "the
+// ref moved" as an explanation for the bytes themselves.
+export function describeGithubHashMismatch(
+  name: string,
+  repo: string,
+  locked: GithubDepLock,
+  actual: string,
+): string[] {
+  return [
+    `integrity check failed for ${name} = "${repo}"`,
+    `  mops.lock records commit ${locked.resolved} with content hash ${locked.hash}`,
+    `  the downloaded archive for that commit hashes to ${actual}`,
+    "  The archive of a commit never changes, so either the download is corrupt or mops.lock is.",
+    `  If you re-pointed the ref yourself (a moved tag, a force-push), run \`mops update ${name}\` to re-pin it.`,
+    `  ${RESTORE_HINT}`,
   ];
 }
 
@@ -503,12 +660,32 @@ async function computeLockFile(): Promise<LockFileV3> {
   let missingIds = packageIds.filter((packageId) => !hashes[packageId]);
   Object.assign(hashes, await fetchRegistryFileHashes(missingIds));
 
+  // github deps: what this run installed, else what the old lock recorded for
+  // the same dep value — the archive of a commit is immutable, so a carried
+  // entry cannot go stale. A dep with neither (nothing installed it this run and
+  // its ref could not be resolved) is left out, which keeps the lock stale so
+  // the next install records it instead of blessing an unverified dependency.
+  let github: Record<string, GithubDepLock> = {};
+  let carriedGithub =
+    oldLock?.version === CURRENT_LOCK_VERSION ? oldLock : undefined;
+  for (let name of githubDepNames(resolvedDeps)) {
+    let entry =
+      observedGithubDeps.get(name) ??
+      (carriedGithub?.deps[name] === resolvedDeps[name]
+        ? carriedGithub?.github?.[name]
+        : undefined);
+    if (entry) {
+      github[name] = entry;
+    }
+  }
+
   return {
     version: CURRENT_LOCK_VERSION,
     mopsTomlDepsHash: getMopsTomlDepsHash(),
     localDepsHash: getLocalDepsHash(),
     deps: resolvedDeps,
     graph,
+    github: Object.keys(github).length ? github : undefined,
     hashes,
   };
 }
@@ -625,6 +802,12 @@ function describeLockDefect(defect: LockDefect): string[] {
         `  ${defect.detail}`,
         REGENERATE_HINT,
       ];
+    case "github-integrity":
+      return [
+        "mops.lock does not record the integrity of a GitHub dependency, but --locked was passed.",
+        `  ${defect.detail}`,
+        REGENERATE_HINT,
+      ];
   }
 }
 
@@ -681,6 +864,11 @@ function checkLockedDeps(lock: LockFileV3): string[] {
 // directory by design and carries no hashes.
 async function checkLockConsistency(lock: LockFileV3): Promise<string[]> {
   let problems = checkLockedDeps(lock);
+
+  let githubProblem = checkLockedGithubDeps(lock);
+  if (githubProblem) {
+    problems.push(githubProblem);
+  }
 
   let packageIds = mopsPackageIds(lock.deps);
   for (let packageId of packageIds) {
@@ -947,6 +1135,36 @@ export async function verifyIntegrity(): Promise<VerifyResult> {
     );
   }
 
+  // github deps carry no per-file hashes, so the audit is one digest per
+  // dependency directory, computed the same way install computed it.
+  if (lock.version === CURRENT_LOCK_VERSION) {
+    for (let [name, entry] of Object.entries(lock.github ?? {})) {
+      let repo = lock.deps[name];
+      if (!repo) {
+        // reported by checkLockConsistency below
+        continue;
+      }
+      let dir = formatGithubDir(name, repo);
+      let relDir = path.relative(getRootDir(), dir);
+      if (!fs.existsSync(dir)) {
+        errors.push(
+          `${relDir} is missing from .mops/.`,
+          "Run `mops install` first.",
+        );
+        continue;
+      }
+      let actual = hashGithubDir(dir);
+      if (actual !== entry.hash) {
+        errors.push(
+          `${relDir} does not match mops.lock`,
+          `  Locked hash: ${entry.hash}`,
+          `  Actual hash: ${actual}`,
+          `  Delete the \`${relDir}\` directory and run \`mops install\` to restore it.`,
+        );
+      }
+    }
+  }
+
   if (lock.version === CURRENT_LOCK_VERSION) {
     let problems = await checkLockConsistency(lock);
     if (problems.length) {
@@ -964,7 +1182,13 @@ export async function verifyIntegrity(): Promise<VerifyResult> {
   }
 
   return {
-    packages: Object.keys(lock.hashes).length,
+    // github deps count as packages but contribute no files: their integrity is
+    // one digest per dependency, not one hash per file.
+    packages:
+      Object.keys(lock.hashes).length +
+      (lock.version === CURRENT_LOCK_VERSION
+        ? Object.keys(lock.github ?? {}).length
+        : 0),
     files: fileCount,
     errors,
   };
