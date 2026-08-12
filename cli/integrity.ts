@@ -73,11 +73,17 @@ export async function checkIntegrity(
 async function getFileHashesFromRegistry(): Promise<
   [string, [string, Uint8Array | number[]][]][]
 > {
-  let packageIds = await getResolvedMopsPackageIds();
+  return getFileHashesByPackageIds(await getResolvedMopsPackageIds());
+}
+
+async function getFileHashesByPackageIds(
+  packageIds: string[],
+): Promise<[string, [string, Uint8Array | number[]][]][]> {
+  if (packageIds.length === 0) {
+    return [];
+  }
   let actor = await mainActor();
-  let fileHashesByPackageIds =
-    await actor.getFileHashesByPackageIds(packageIds);
-  return fileHashesByPackageIds;
+  return actor.getFileHashesByPackageIds(packageIds);
 }
 
 async function getResolvedMopsPackageIds(): Promise<string[]> {
@@ -166,20 +172,25 @@ export function readLockFile(): LockFile | null {
   return null;
 }
 
-// Declared dependency edges from the lock. Tolerates a missing, corrupt or
-// pre-graph lock (unlike readLockFile, which exits on corruption) — the graph
-// is an optimization and its absence must never block regeneration.
-export function readLockFileGraph(): Record<string, Record<string, string>> {
+// Parsed v3 lock, tolerating a missing, corrupt or older-version lock
+// (unlike readLockFile, which exits on corruption). For optimizations that
+// must never block regeneration.
+function readLockFileTolerant(): LockFileV3 | null {
   let lockFile = path.join(getRootDir(), "mops.lock");
   try {
     let lock = JSON.parse(fs.readFileSync(lockFile).toString());
-    if (lock?.version === 3 && lock.graph) {
-      return lock.graph;
+    if (lock?.version === 3) {
+      return lock as LockFileV3;
     }
   } catch {
     // fall through
   }
-  return {};
+  return null;
+}
+
+// Declared dependency edges from the lock; empty for pre-graph locks.
+export function readLockFileGraph(): Record<string, Record<string, string>> {
+  return readLockFileTolerant()?.graph ?? {};
 }
 
 // check if lock file exists and integrity of mopsTomlDepsHash
@@ -214,26 +225,46 @@ export async function updateLockFile({
     skipLock: true,
   });
 
-  let fileHashes = await getFileHashesFromRegistry();
+  let packageIds = [
+    ...new Set(
+      Object.entries(resolvedDeps)
+        .filter(([_, version]) => getDependencyType(version) === "mops")
+        .map(([name, version]) => getPackageId(name, version)),
+    ),
+  ];
+
+  // Hashes of packages already in the lock are carried over: published
+  // versions are immutable, so their file hashes never change. Explicit
+  // `--lock update` refetches everything, so it remains the recovery
+  // command for a lock with corrupt hashes.
+  let hashes: Record<string, Record<string, string>> = {};
+  if (!force) {
+    let oldHashes = readLockFileTolerant()?.hashes ?? {};
+    for (let packageId of packageIds) {
+      let carried = oldHashes[packageId];
+      if (carried) {
+        hashes[packageId] = carried;
+      }
+    }
+  }
+
+  let missingIds = packageIds.filter((packageId) => !hashes[packageId]);
+  let fileHashes = await getFileHashesByPackageIds(missingIds);
+  for (let [packageId, packageFileHashes] of fileHashes) {
+    hashes[packageId] = Object.fromEntries(
+      packageFileHashes.map(([fileId, hash]) => [
+        fileId,
+        bytesToHex(new Uint8Array(hash)),
+      ]),
+    );
+  }
 
   let lockFileJson: LockFileV3 = {
     version: 3,
     mopsTomlDepsHash: getMopsTomlDepsHash(),
     deps: resolvedDeps,
     graph,
-    hashes: fileHashes.reduce(
-      (acc, [packageId, fileHashes]) => {
-        acc[packageId] = fileHashes.reduce(
-          (acc, [fileId, hash]) => {
-            acc[fileId] = bytesToHex(new Uint8Array(hash));
-            return acc;
-          },
-          {} as Record<string, string>,
-        );
-        return acc;
-      },
-      {} as Record<string, Record<string, string>>,
-    ),
+    hashes,
   };
 
   let rootDir = getRootDir();
@@ -390,10 +421,10 @@ export async function checkLockFile(force = false, regenerated = false) {
         console.error(`Locked hash: ${lockedHash}`);
         console.error(`Actual hash: ${localHash}`);
         console.error("");
-        if (regenerated) {
-          // The lock was just rewritten from the registry, so the only way
-          // for a per-file hash to still differ is that .mops/<file> was
-          // edited locally. Point users at the actual fix.
+        if (regenerated && force) {
+          // The lock was just rewritten entirely from the registry, so the
+          // only way for a per-file hash to still differ is that
+          // .mops/<file> was edited locally. Point users at the actual fix.
           let pkgDir = fileId.split("/")[0];
           console.error(
             `.mops/${fileId} differs from the registry — your local copy has been modified.`,
@@ -403,6 +434,17 @@ export async function checkLockFile(force = false, regenerated = false) {
           );
           console.error(
             "To keep custom changes, use a `repo` or `path` entry in mops.toml instead of editing .mops/ directly.",
+          );
+        } else if (regenerated) {
+          // implicit regeneration carries hashes over from the previous
+          // lock, so the mismatch can also be a corrupt carried hash
+          let pkgDir = fileId.split("/")[0];
+          console.error(`.mops/${fileId} does not match the lock.`);
+          console.error(
+            "If you have not modified files under .mops/, a hash carried over from the previous lock may be corrupt.",
+          );
+          console.error(
+            `Run \`mops install --lock update\` to refresh hashes from the registry, or delete the \`.mops/${pkgDir}\` directory and run \`mops install\` to restore the package.`,
           );
         } else {
           console.error(

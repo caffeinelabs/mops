@@ -108,6 +108,46 @@ describe("global cache resilience", () => {
     }
   });
 
+  test("stale-lock regeneration carries hashes over; --lock update refetches them", async () => {
+    const cwd = await makeTempFixture("success");
+    const cacheHome = await makeTempCacheHome();
+    const env = { CI: undefined, XDG_CACHE_HOME: cacheHome };
+    const lockFile = path.join(cwd, "mops.lock");
+    const tampered = "0".repeat(64);
+
+    try {
+      rmSync(lockFile, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+
+      const first = await cli(["install"], { cwd, env });
+      expect(first.exitCode).toBe(0);
+
+      // corrupt one hash in the lock; the deps hash stays valid
+      const lock = JSON.parse(readFileSync(lockFile, "utf8"));
+      const fileId = Object.keys(lock.hashes["core@1.0.0"])[0] as string;
+      const original = lock.hashes["core@1.0.0"][fileId];
+      lock.hashes["core@1.0.0"][fileId] = tampered;
+      writeFileSync(lockFile, JSON.stringify(lock, null, 2));
+
+      // implicit regeneration (add) carries the corrupt hash over instead of
+      // silently refetching it, and the integrity check reports it loudly
+      const add = await cli(["add", "base@0.16.0"], { cwd, env });
+      expect(add.exitCode).toBe(1);
+      expect(add.stderr).toMatch(/carried over from the previous lock/);
+      const carried = JSON.parse(readFileSync(lockFile, "utf8"));
+      expect(carried.hashes["core@1.0.0"][fileId]).toBe(tampered);
+      expect(carried.hashes["base@0.16.0"]).toBeDefined();
+
+      // explicit --lock update refetches every hash from the registry
+      const recover = await cli(["install", "--lock", "update"], { cwd, env });
+      expect(recover.exitCode).toBe(0);
+      const refreshed = JSON.parse(readFileSync(lockFile, "utf8"));
+      expect(refreshed.hashes["core@1.0.0"][fileId]).toBe(original);
+    } finally {
+      rmSync(cacheHome, { recursive: true, force: true });
+    }
+  });
+
   test("empty global cache dir counts as a miss and is re-downloaded", async () => {
     const cwd = await makeTempFixture("success");
     const cacheHome = await makeTempCacheHome();
