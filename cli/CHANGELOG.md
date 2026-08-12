@@ -2,6 +2,8 @@
 
 ## Next
 
+- Temporary compatibility shim: `mops add`, `remove`, `install`, `sync` and `update` again accept the removed 2.x flag `--lock <check|update|ignore>` instead of failing to parse. The value is ignored — including `check`, which is **not** treated as `--locked` — so v2 call sites keep working during the 3.x rollout. Migrate to `mops install --locked` for CI enforcement; the flag will be removed.
+
 ## 3.0.0 (unreleased)
 
 ### Migrating from 2.x
