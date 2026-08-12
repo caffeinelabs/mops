@@ -5,7 +5,12 @@ import { pipeline } from "node:stream";
 import chalk from "chalk";
 import { createLogUpdate } from "log-update";
 import got from "got";
-import { getRootDir, parseGithubURL, progressBar } from "../../mops.js";
+import {
+  getGithubCommit,
+  getRootDir,
+  parseGithubURL,
+  progressBar,
+} from "../../mops.js";
 import { extractGithubZip } from "../../helpers/extract-github-zip.js";
 import {
   commitStagingDir,
@@ -15,15 +20,23 @@ import {
   isDepCached,
   sweepStaleStagingDirs,
 } from "../../cache.js";
+import {
+  describeGithubHashMismatch,
+  hashGithubDir,
+  readLockedGithubDep,
+  recordGithubDep,
+} from "../../integrity.js";
 
 export const downloadFromGithub = async (
   repo: string,
   dest: string,
   onProgress: any,
+  // the commit to fetch, when the caller resolved one the repo url does not name
+  ref?: string,
 ) => {
   const { branch, org, gitName, commitHash } = parseGithubURL(repo);
 
-  const zipFile = `https://github.com/${org}/${gitName}/archive/${commitHash || branch}.zip`;
+  const zipFile = `https://github.com/${org}/${gitName}/archive/${ref || commitHash || branch}.zip`;
   const readStream = got.stream(zipFile);
 
   const promise = new Promise((resolve, reject) => {
@@ -58,7 +71,7 @@ export const downloadFromGithub = async (
       const tmpDir = mkdtempSync(path.join(parentTmp, ".staging-github-dl-"));
       const tmpFile = path.resolve(
         tmpDir,
-        `${gitName}@${(commitHash || branch).replaceAll("/", "___")}.zip`,
+        `${gitName}@${(ref || commitHash || branch).replaceAll("/", "___")}.zip`,
       );
       const cleanup = () => rmSync(tmpDir, { recursive: true, force: true });
 
@@ -96,11 +109,54 @@ export const installFromGithub = async (
 
   let cacheName = getGithubDepCacheName(name, repo);
   let cacheDir = getDepCacheDir(cacheName);
+  let { org, gitName, branch, commitHash } = parseGithubURL(repo);
 
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
-  if (isDepCached(cacheName)) {
+  let locked = readLockedGithubDep(name, repo);
+
+  // A ref that names no commit (`#main`, a tag) is only reproducible once it is
+  // pinned: take the lock's commit, else resolve it once through the GitHub API.
+  // Nothing asks the API when mops.toml or mops.lock already names a commit, so
+  // the steady state costs zero requests against the 60/h anonymous limit.
+  let resolved = commitHash || locked?.resolved || "";
+  if (!resolved) {
+    try {
+      resolved = (await getGithubCommit(`${org}/${gitName}`, branch)).sha;
+    } catch (err: any) {
+      // Nothing honest to record without a commit: install as before and leave
+      // mops.lock for a later run rather than pairing a hash with a guess.
+      logUpdate.clear();
+      console.warn(
+        chalk.yellow("Warning: ") +
+          `could not resolve ${repo} to a commit, so mops.lock cannot pin it: ${err.message}`,
+      );
+    }
+  }
+
+  let cached = isDepCached(cacheName);
+  let cachedHash = cached && locked ? hashGithubDir(cacheDir) : "";
+
+  // What a cache hit is worth depends on what is known about it:
+  //   locked      trust it only if the tree hashes to the locked hash
+  //   not locked  re-fetch, and hash that. A cache entry says nothing about how
+  //               it was produced: one written by an older CLI does not
+  //               necessarily match a fresh archive of the same commit, even
+  //               when the cache name pins that commit. Hashing it would record
+  //               a value no other machine reproduces, so the first CI run on
+  //               the resulting lockfile would fail.
+  let useCache = cached;
+  if (cached && locked) {
+    useCache = cachedHash === locked.hash;
+  } else if (cached && resolved) {
+    useCache = false;
+  }
+
+  if (useCache) {
     silent || logUpdate(`Installing ${repo} (cache)`);
+    if (resolved) {
+      recordGithubDep(name, { resolved, hash: cachedHash });
+    }
   } else {
     let progress = (step: number, total: number) => {
       silent || logUpdate(`Installing ${repo} ${progressBar(step, total)}`);
@@ -112,10 +168,46 @@ export const installFromGithub = async (
     // before download made empty dirs look cached to peers.
     let stagingDir = createStagingDir(cacheDir);
     try {
-      await downloadFromGithub(repo, stagingDir, progress);
+      await downloadFromGithub(repo, stagingDir, progress, resolved);
+
+      // Integrity is checked here, on the tree that just arrived and before the
+      // rename that publishes it, so a bad download cannot poison the cache.
+      let hash = hashGithubDir(stagingDir);
+      if (locked && hash !== locked.hash) {
+        rmSync(stagingDir, { recursive: true, force: true });
+        logUpdate.clear();
+        let lines = describeGithubHashMismatch(name, repo, locked, hash);
+        console.error(chalk.red("Error: ") + lines[0]);
+        for (let line of lines.slice(1)) {
+          console.error(line);
+        }
+        return false;
+      }
+
+      // The cache entry being replaced was keyed by a ref, not a commit, so it
+      // may hold another commit's content; rename cannot overwrite it.
+      if (cached) {
+        rmSync(cacheDir, { recursive: true, force: true });
+      }
       commitStagingDir(stagingDir, cacheDir);
+      // The project copy is derived from the cache entry, and syncLocalCache
+      // only copies when it is absent — so a replaced entry has to invalidate it.
+      rmSync(path.join(getRootDir(), ".mops", cacheName), {
+        recursive: true,
+        force: true,
+      });
+      if (resolved) {
+        recordGithubDep(name, { resolved, hash });
+      }
     } catch (err) {
       rmSync(stagingDir, { recursive: true, force: true });
+      // The commit came from the lock, so a failed fetch of it is worth naming:
+      // a force-push or a deleted branch can garbage-collect it upstream.
+      if (locked && !commitHash) {
+        console.error(
+          `mops.lock pins ${name} to commit ${locked.resolved}. If that commit is gone from the repository, run \`mops update ${name}\` to re-pin it.`,
+        );
+      }
       return false;
     }
   }

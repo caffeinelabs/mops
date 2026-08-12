@@ -19,6 +19,7 @@ It checks that:
 - `mops.lock` pins every dependency declared in `mops.toml` to the same value
 - `mops.lock`'s `deps` and `hashes` sections agree on the set of registry packages
 - every file hash in `mops.lock` matches the Mops registry
+- every GitHub dependency's directory under `.mops/_github/` still hashes to the tree `mops.lock` recorded for the pinned commit
 
 On success it prints the number of packages and files verified and exits `0`. On failure it prints each problem with the recovery step and exits `1`.
 
@@ -33,7 +34,7 @@ Integrity verified 6 package(s), 842 file(s)
 - **As a tamper gate.** If a pipeline relied on `mops install` failing when `.mops/` had been modified, run `mops verify` instead.
 - **When a build behaves unexpectedly** and you want to rule out a modified dependency.
 
-Only Mops registry packages carry file hashes, so only those are file-verified. GitHub (`repo`) and local (`path`) dependencies are not — local paths point at live directories by design.
+Registry packages are verified file by file, against the per-file hashes the registry publishes. GitHub (`repo`) dependencies are verified as a whole tree instead — GitHub publishes no hashes, so `mops.lock` records one `sha256` over the extracted directory and that is what gets re-checked. Local (`path`) dependencies are not verified at all: they point at live directories by design.
 
 ## Recovering
 
