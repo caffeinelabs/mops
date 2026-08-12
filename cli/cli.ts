@@ -863,7 +863,7 @@ program
 program
   .command("update [pkg]")
   .description(
-    "Update dependencies in mops.toml to the highest semver-compatible version within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
+    "Rewrite the versions in mops.toml to the highest semver-compatible ones within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
   )
   .addOption(
     new Option(
@@ -878,6 +878,14 @@ program
     ),
   )
   .addOption(legacyLockOption())
+  .addHelpText(
+    "after",
+    "\nRewrites the new versions into mops.toml, and keeps mops.lock in sync.\n" +
+      "GitHub dependencies are re-pinned to their branch head (one GitHub API call each).\n" +
+      "\nExit codes:\n" +
+      "  0  mops.toml is up to date\n" +
+      "  2  the update could not be run (no mops.toml, unknown [pkg])",
+  )
   .action(async (pkg, options) => {
     await update(pkg, options);
   });

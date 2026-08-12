@@ -96,7 +96,7 @@ Integrity is verified at download time, so `mops install` no longer re-hashes `.
 
 Downloaded files are always checked before anything enters the cache — against `mops.lock` when it already records the package, otherwise against the registry. A committed lock therefore makes verification free, which is why a clean checkout installs without asking the registry about hashes.
 
-Two consequences worth knowing: a corrupt or hand-edited `mops.lock` now fails a *download* (the error names `mops.lock` as a possible culprit — restore it from version control; already-cached packages are unaffected), and a package the registry publishes no hashes for still installs, unverified, with a warning.
+Two consequences worth knowing: a corrupt or hand-edited `mops.lock` now fails a _download_ (the error names `mops.lock` as a possible culprit — restore it from version control; already-cached packages are unaffected), and a package the registry publishes no hashes for still installs, unverified, with a warning.
 
 ### `mops verify`
 
@@ -229,13 +229,15 @@ Removes from whichever section declares the package; `--dev` limits it to `[dev-
 ```bash
 mops outdated             # list outdated deps (caret-bound); exit 1 if any, 2 if the check failed
 mops outdated core        # check a single package
-mops update               # update all within caret bound (no major-version crossing)
+mops update               # rewrite mops.toml versions within caret bound (no major-version crossing)
 mops update core          # update specific package within caret bound
 mops update --major       # allow updates that cross major versions
 mops update --patch       # restrict to patch bumps only (mutually exclusive with --major)
 mops sync                 # add missing / remove unused packages
 mops sync --dry-run       # print what would change, write nothing
 ```
+
+`mops update` rewrites `mops.toml` in place (like `cargo upgrade`, not `cargo update`) and re-pins GitHub dependencies to their branch head. Like `mops outdated`, it exits `2` when it cannot run at all — no `mops.toml`, or a package that is not declared.
 
 `mops sync` needs a pinned `[toolchain] moc` — it reads imports with `moc --print-deps`. Packages imported only from `test`/`tests`/`bench`/`benchmark` directories are added to `[dev-dependencies]`; already-declared packages are never moved between sections.
 

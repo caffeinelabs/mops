@@ -2,6 +2,10 @@
 
 ## Next
 
+- `mops update` now exits `2` for an unknown package or a missing `mops.toml`, matching `mops outdated`. It previously exited `0` after printing `Package "<name>" is not installed!`, so a typo in a scripted update looked like success.
+- `mops update` and `mops outdated` now share one rule for deciding when a `repo = "..."` dependency is out of date, so the two commands cannot disagree about it.
+- `mops update --help` and its doc page now state that the command rewrites `mops.toml` — it is `cargo upgrade` semantics, not `cargo update` — and list its exit codes.
+
 - `mops install` no longer crashes with a raw `RangeError: Maximum call stack size exceeded` when two local `path` dependencies require each other, or when one requires itself. The install walk now skips a local package it has already visited in the same run, naming neither a cycle nor an error — the packages install normally.
 
 - Fixed `mops remove <pkg>` crashing with `Invalid dependency value ""` when the dependency is a local path dep.
@@ -24,13 +28,13 @@
 - Registry file hashes are fetched at most once per process, so a package downloaded during an install costs nothing further when the lockfile is written.
 - A hash mismatch now names its source. If the expectation came from `mops.lock`, the message says so and points at restoring or regenerating the lockfile, rather than suggesting a retry that cannot succeed.
 - **GitHub dependencies are now covered by the lockfile.** `mops.lock` records the resolved commit and a content hash for every `repo = "..."` dependency, and an install verifies the fetched archive against them before it enters the cache. A ref carrying no commit — a bare `#main`, or a tag — is resolved once and pinned, so a moved tag or a force-push can no longer silently change what you build; the archive is always fetched by commit, never by ref. `mops verify` audits GitHub dependencies on disk too. This is **not** a lockfile format bump: the record is an optional `github` section, so projects without GitHub dependencies keep their existing lockfile. A lockfile written by an older CLI **for a project that has one** counts as stale — `mops install` regenerates it, and `--locked` fails until the result is committed. Note GitHub dependencies are often transitive, so this can apply to a project whose own `mops.toml` declares none.
-- **Behaviour change**: plain `mops install` now fails when it has to *download* a package whose hashes disagree with the committed lockfile. It remains true that files already on disk under `.mops/` are not re-hashed by an install — `mops verify` is still the command that audits those.
+- **Behaviour change**: plain `mops install` now fails when it has to _download_ a package whose hashes disagree with the committed lockfile. It remains true that files already on disk under `.mops/` are not re-hashed by an install — `mops verify` is still the command that audits those.
 
 ### Fixed
 
 - **A local `path` dependency's own `mops.toml` no longer goes unnoticed.** Adding or bumping a dependency inside a local package left `mops.lock` judged fresh, so `mops install` exited 0, installed nothing, and never passed the new dependency to the compiler — the package then failed to build against a dependency mops had reported as installed. `mops.lock` now records a hash of the `[dependencies]` of every path dependency it reaches, transitively, so editing any of them makes the lockfile stale.
 - **Changing `MOPS_ENV` no longer leaves `mops.lock` pinned to the previous environment.** `{MOPS_ENV}` paths are stored expanded in the lockfile, but the freshness check compared the unexpanded string, so a full `mops install` under a new environment exited 0 and kept building against the old environment's directories. `mops install` now re-resolves, `mops sources` reports the current environment, and `mops install --locked` fails rather than silently using the wrong paths. Note that a committed lockfile now only satisfies `--locked` for the `MOPS_ENV` it was generated under.
-- **Breaking**: only the winning versions and their own dependencies are installed. When two versions of a package were in the graph, the resolver picked a winner but still walked the loser's manifest into the result, so a package declared *only* by the version that lost was downloaded, written to `mops.lock`, and passed to `moc` as `--package`. Cargo and pnpm install the closure of the winners. If a project was compiling against such a package without declaring it, that build now fails with an unresolved import — add the dependency to `mops.toml`. Dependency edges for losing versions are still recorded in the lockfile, so regenerating a lock does not need those versions back on disk.
+- **Breaking**: only the winning versions and their own dependencies are installed. When two versions of a package were in the graph, the resolver picked a winner but still walked the loser's manifest into the result, so a package declared _only_ by the version that lost was downloaded, written to `mops.lock`, and passed to `moc` as `--package`. Cargo and pnpm install the closure of the winners. If a project was compiling against such a package without declaring it, that build now fails with an unresolved import — add the dependency to `mops.toml`. Dependency edges for losing versions are still recorded in the lockfile, so regenerating a lock does not need those versions back on disk.
 - **`mops outdated` is now usable as a CI gate.** It exited `0` whether or not anything was outdated. It now exits `1` when updates are available and `2` when the check itself could not be completed (no `mops.toml`, unknown package, registry or GitHub lookup error), so a partial report can never be mistaken for a clean bill of health. `1` for "found something" matches `npm outdated` and `pnpm outdated`.
 - **`mops outdated` and `mops update` no longer disagree.** `outdated` skipped GitHub dependencies while `mops update` updates them, so it could print "All dependencies are up to date!" for a project where `mops update` would rewrite a GitHub pin. GitHub dependencies whose branch has moved past the pinned commit are now reported, using the same rule `mops update` applies.
 - `mops add <pkg> --dev` now **moves** an existing `[dependencies]` entry into `[dev-dependencies]` instead of declaring the package twice; a plain `mops add <pkg>` moves it back.
@@ -109,7 +113,7 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
   - The removed re-hash was paid on every install, proportional to the whole tree (~136 ms for an 842-file tree on a warm SSD, worse on cold caches or networked filesystems).
 - **Breaking**: `mops build`, `check`, `check-candid`, `check-stable`, `test`, `bench` and `generate candid` no longer silently ignore `mops.lock` when installing implicitly — they follow the same lock flow as `mops install`, and a download that fails its integrity check aborts them with exit code 1 (previously they carried on against a partially-populated `.mops/`).
 - `mops install` also self-heals what it previously ignored: a structurally-wrong lock (missing/non-object `deps` or `hashes`) is regenerated instead of throwing a `TypeError`; a `deps` entry that disagrees with `mops.toml` (previously installed as-is — the wrong version, silently) and a `hashes` section inconsistent with `deps` are both detected offline and repaired.
-- Known limitation, by design: hand-edited file *hash values* in `mops.lock` are not repaired by `mops install` — detecting them costs a ~1.2 s registry call that would outweigh the re-hash this release removes. They are consumed only by `--locked` and `mops verify` (never by the build), and both report the mismatch with the recovery that works: restore `mops.lock` from version control, or delete and reinstall.
+- Known limitation, by design: hand-edited file _hash values_ in `mops.lock` are not repaired by `mops install` — detecting them costs a ~1.2 s registry call that would outweigh the re-hash this release removes. They are consumed only by `--locked` and `mops verify` (never by the build), and both report the mismatch with the recovery that works: restore `mops.lock` from version control, or delete and reinstall.
 - **Breaking (guidance)**: commit `mops.lock`, for libraries as well as applications. A library's lock has no effect on consumers (they resolve their own graph) and makes the library's own CI reproducible. The old gitignore advice is gone from the `mops.lock created.` message and the docs.
 - `mops.lock` records the declared dependencies of every registry package version in the graph (`graph` section), including versions that lost a conflict. Regenerating a stale lock (`mops add`/`remove`/`update`/`sync`, or after editing `mops.toml`) resolves from these recorded edges instead of reading manifests of packages that were never installed. This closes the crash where those commands died with a raw `ENOENT: ... mops.toml` after a lock-driven install on a graph with version conflicts; with a pre-graph lock the missing manifests are now downloaded on demand instead of crashing. Locks without `graph` keep working; older CLIs ignore the field.
 - Regenerating a stale lock no longer refetches file hashes for the whole graph: hashes of already-locked packages are carried over (published versions are immutable), and only packages new to the lock are queried. `mops remove` updates the lock without any registry queries. Deleting `mops.lock` remains the way to rebuild every hash from the registry.
@@ -141,6 +145,7 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - **Breaking**: Node.js >= 20 is required (`engines` bump from >= 18); installs on Node 18 fail with an engines error. (#288)
 
 ## 2.21.0
+
 - Security: GitHub dependencies (`repo = "..."`) are now extracted with a purpose-built unzipper instead of the `decompress` package, which has two unfixed advisories ([GHSA-mp2f-45pm-3cg9](https://github.com/advisories/GHSA-mp2f-45pm-3cg9), [GHSA-h39j-r5qq-r9mm](https://github.com/advisories/GHSA-h39j-r5qq-r9mm)) allowing a malicious archive to write files outside the install directory. Entries that would escape the target directory now fail the whole extraction, and symlinks are written as plain files instead of being created. `npm audit` on the CLI is clean again. One behavior change: a GitHub dependency whose repo contains symlinks gets those as regular files holding the link target.
 - `mops self update` no longer crosses major versions on its own, since a new major contains breaking changes. It prints the release-notes link and asks for confirmation in a terminal; in non-interactive environments it skips the update with a notice and exits successfully, so scripted updates keep working and stay on their major. Pass `--major` to update across majors. Updates within the same major are unchanged.
 - Add opt-in static Wasm analysis with `mops build --check-wasm` and `[build].check-wasm = true`, independently controlled from PocketIC deployment checks. It analyzes the final Wasm and reports stable, actionable `MOPS-WASM-COMPLEXITY` diagnostics, including the three largest per-function contributors. Complexity from 750,000 emits an early warning and from 900,000 a critical warning. Use `--no-check-wasm` to skip configured analysis for one build. The estimate never fails the build; PocketIC remains authoritative for IC0505 and IC0539 validation.
@@ -149,6 +154,7 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Fix `moc-wrapper` caching a failed compiler lookup. In a project with no `[toolchain] moc` and no `dfx` on `PATH`, it wrote an empty `.mops/moc-<host>-<hash>` file and then ran the empty string, so every later invocation failed with `--version: command not found` instead of naming the problem. It now leaves no cache entry when the lookup fails and reports `could not resolve moc`, pointing at `mops toolchain use moc <version>`. Projects that pin `[toolchain] moc`, and anyone with dfx installed, are unaffected.
 
 ## 2.20.0
+
 - Fix `mops bench` (and `mops sync`, `mops watch`) ignoring `[toolchain] moc` and always resolving the compiler via `DFX_MOC_PATH` / `dfx cache show`, unlike `mops build`/`test`/`check`/`check-stable`/`generate`/`docs`. A pinned `[toolchain] moc` is now the compiler these commands invoke, regardless of `DFX_MOC_PATH`.
 - `.tar.xz` toolchain archives (`lintoko`, `wasmtime`) are now unpacked with `tar` plus a standalone xz decompressor instead of `decompress` and its `decomp-tarxz` plugin. Extraction output is unchanged — same files, same permissions — but `decompress` is unmaintained, with two open critical advisories and no fixed version, so the toolchain download path no longer depends on it. Failures during unpacking now surface as errors instead of being swallowed and reported later as a missing-directory copy error, and the temporary download directory is always cleaned up. `decomp-tarxz` is no longer a runtime dependency of the published CLI.
 - `mops publish --dry-run` runs the same local publish steps as a real publish (packaging checks, docs, changelog, tests, benchmarks) and prints the final file list, without contacting the registry or uploading. Honors `--no-docs` / `--no-test` / `--no-bench`. Does not run canister config validation or prove registry acceptance.
@@ -220,9 +226,11 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Add `mops generate candid [canisters...]` to (re)generate the curated `.did` file from current Motoko source. With `[canisters.<name>].candid` set, overwrites that file in place; otherwise writes `<name>.did` next to `main` and sets the field in `mops.toml`. `--output, -o <path>` writes to an arbitrary path (single-canister only) without modifying `mops.toml`. `moc` is invoked with the same packages, `[moc].args`, `[build].args`, per-canister `args`, and migration flags as `mops build`, so the generated interface always satisfies `mops build`'s subtype check.
 
 ## 2.14.1
+
 - Speed up `mops check <files...>` (e.g. `mops check src/**/*.mo`) on packages with many files. Previously each file was checked in its own `moc` invocation, so every shared transitive import was re-parsed and re-type-checked once per file. All files are now passed to a single `moc --check` call, which loads and type-checks each import only once — on motoko-core (53 files) this drops a full check from ~27s to ~1.6s. The per-file `✓` confirmations now print only when the whole check passes.
 
 ## 2.14.0
+
 - Fix `mops check --fix` crashing with `TypeError: Cannot read properties of undefined (reading 'split')` when `moc` produces no output (e.g. it fails to spawn or is killed by the OOM killer in a memory-constrained container). The autofix pass now treats missing `moc` output as "no fixes to apply" and lets the regular check report the real failure, instead of aborting the whole command with an unhandled exception.
 
 - Fix `mops check --fix` and `mops lint --fix` corrupting source files when two `mops` processes run concurrently in the same project (e.g. two coding agents on the same checkout). Concurrent runs could apply stale `moc` byte offsets to a sibling's already-mutated file, leaving source like `let nat = identity` (with the type-arg and call dropped) or `list.sortInPlace(` with an unclosed paren. `--fix` invocations now acquire a project-root advisory lock at `.mops/fix.lock` and serialize, cargo-style ("Waiting for another `mops --fix` run to finish..."). Read-only `mops check` and `mops lint` are unchanged.
@@ -242,32 +250,40 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Replace `@iarna/toml` with `smol-toml` for parsing and writing `mops.toml` (faster, actively maintained, spec-compliant TOML parser). Config reformat behavior on `add`/`remove`/`bump`/`toolchain` is unchanged — both libraries round-trip through a plain object.
 
 ## 2.13.2
+
 - Fix race conditions when two `mops` processes run on the same project (e.g. an editor watcher and `caffeine check --fix`, or back-to-back invocations). `mops check-stable` used a shared `.mops/.check-stable/` scratch dir and `mops check`/`build`/`check-stable` used a shared `<parent>/.migrations-<canister>/` staging dir; concurrent runs would clobber each other and surface as misleading errors like `.mops/.check-stable/new.most: No such file or directory` or `EEXIST: file already exists, symlink ...`. Both directories are now per-invocation (created via `mkdtemp` and removed when the command finishes).
 - Deprecate `skipIfMissing` in `[canisters.<name>.check-stable]`. Behavior is unchanged for now, but `mops check`/`check-stable` print a warning when it is set. For initial deployments, commit a `.most` file at the configured `path` containing an empty actor (`// Version: 1.0.0\nactor { };`) instead — the stable check then runs against an empty baseline.
 - Drop the "you may need a migration" hint after a failed stable compatibility check in `mops check`/`check-stable`. The hint guessed at whether the user needed a new migration or a fix to an existing one, and `moc`'s underlying compatibility error already links to the migration docs.
 - The missing-chain-directory error from `mops check`/`build`/`check-stable` now points at adding a `.mo` file to the `chain` directory instead of running the experimental `mops migrate new <Name>` command.
 
 ## 2.13.1
+
 - `mops lint` now honors `[canisters.<name>.migrations].check-limit`, skipping trimmed chain migrations so projects with large migration histories lint as fast as they type-check. Pass an explicit filter (`mops lint <name>`) to opt back in for a one-off lint of a trimmed file.
 
 ## 2.13.0
+
 - Fix `mops update` and `mops outdated` jumping across major versions (or pre-1.0 minor versions) — they are now caret-bound by default, matching `cargo update`. For example, `core = "2.0.0"` now updates within `2.x.y` instead of jumping to a future `3.0.0`. Use `--major` to opt into cross-major updates.
 
 ## 2.12.3
+
 - Fix `mops install --lock update` silently no-op'ing on a corrupt lockfile (#515)
 - `mops publish` no longer rejects unknown `mops.toml` sections, `package.*` keys, or `requirements.*` entries — these typo guards were the only place in the CLI that complained about unknown keys, drifted from the docs/types, and blocked publish on harmless local-only config like `[moc]`, `[canisters]`, `[build]`, and `[lint]` (#512)
 
 ## 2.12.2
+
 - Fix `mops install` (and any `--lock check` flow) failing with "Mismatched number of resolved packages" when a project's resolved dependencies include multiple aliases (e.g. `base`, `base@0`, `base@0.16`) that pin to the same `name@version`
 
 ## 2.12.1
+
 - `mops check`/`build`/`check-stable` skip migration staging when only the pending `next` migration is needed, so `moc` diagnostics reference the real `next-migration/<file>` path.
 
 ## 2.12.0
+
 - Migration staging directory moved from `.mops/.migrations/<canister>/` to `<parent-of-chain>/.migrations-<canister>/`, so migration files can import shared modules from sibling folders (e.g. a `types/` folder next to `migrations/`) — relative imports now resolve to the same target whether moc reads the original chain dir or the staged one. The staged dir self-stamps a `.gitignore` so it doesn't pollute `git status`; `mops init` now also adds `.migrations-*/` to the project `.gitignore`
 - `[canisters.<name>.migrations]` now requires `chain` and `next` to share the same parent directory (any layout where the parents differed is rejected with a clear error). The default layout `chain = "migrations"` + `next = "next-migration"` already satisfies this. For per-canister setups, use sibling subdirectories, e.g. `chain = "src/backend/migrations"` + `next = "src/backend/next-migration"`
 
 ## 2.11.0
+
 - Add `mops migrate new <Name>` and `mops migrate freeze` commands for managing enhanced migration chains
 - Add `[canisters.<name>.migrations]` config section with `chain`, `next`, `check-limit`, and `build-limit` fields
 - `mops check`, `mops build`, and `mops check-stable` now auto-inject `--enhanced-migration` when `[migrations]` is configured
@@ -275,12 +291,14 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Migration chain trimming: only the last N migrations are passed to `moc` based on `check-limit`/`build-limit` settings
 
 ## 2.10.0
+
 - `mops check` and `mops check-stable` now apply per-canister `[canisters.<name>].args` (previously only `mops build` applied them)
 - `mops check` now accepts canister names as arguments (e.g. `mops check backend`) to check a specific canister
 - `mops check-stable` now works without arguments, checking all canisters with `[check-stable]` configured
 - `mops check-stable` now accepts canister names as arguments (e.g. `mops check-stable backend`)
 
 ## 2.9.0
+
 - Add `mops info <pkg>` command to show detailed package metadata from the registry
 - Add `[lint.extra]` config for applying additional lint rules to specific files via glob patterns
 
@@ -310,6 +328,7 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Fix `mops docs coverage` crashing with out-of-memory on packages with many source files (replaced JSDOM with a lightweight adoc parser)
 
 ## 2.5.1
+
 - Fix `mops test` and `mops watch` breaking when dependency paths contain spaces
 - Fix `mops sync` incorrectly reporting version-pinned dependencies as missing/unused
 - Fix `mops update --lock ignore` not respecting the lock option during intermediate installs
@@ -325,23 +344,28 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Document `baseDir`, `readme`, and `dfx` fields in `[package]` config
 
 ## 2.5.0
+
 - Add support for `MOPS_REGISTRY_HOST` and `MOPS_REGISTRY_CANISTER_ID` environment variables for custom registry endpoints
 - Fix `mops build` crashing with `__wbindgen_malloc` error in bundled CLI distribution
 - Fix `parallel()` swallowing errors from concurrent tasks (e.g. `mops publish` uploads), which could hang or leave failures unreported
 
 ## 2.4.0
+
 - Support `[build].outputDir` config in `mops.toml` for custom build output directory
 - Fix `mops build --output` CLI option being silently ignored
 - Warn when canister `args` contain flags managed by `mops build` (e.g. `-o`, `-c`, `--idl`)
 - Support pocket-ic versions beyond 9.x.x (fixes #410)
 
 ## 2.3.2
+
 - Fix `mops check`, `mops build`, and `mops check-stable` failing to find canister entrypoints when run from a subdirectory
 
 ## 2.3.1
+
 - Fix `mops build` and `mops check-candid` failing with "Wasm bindings have not been set" when installed via `npm i -g ic-mops`
 
 ## 2.3.0
+
 - Add `mops check-stable` command for stable variable compatibility checking
 - `mops check` now falls back to canister entrypoints from `mops.toml` when no files are specified
 - `mops check` automatically runs stable compatibility when `[canisters.<name>.check-stable]` is configured
@@ -351,15 +375,18 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Add docs canister deployment step to release process
 
 ## 2.2.1
+
 - Fix `mops toolchain` when toolchain version is a local file path with subdirectories.
 - Update Motoko formatter (`prettier-plugin-motoko`).
 
 ## 2.2.0
+
 - Add `[moc]` config section for global `moc` compiler flags (applied to `check`, `build`, `test`, `bench`, `watch`)
 - Add `mops moc-args` command to print global `moc` flags from `[moc]` config section
 - Fix `mops check --fix` crash on overlapping diagnostic edits (e.g., nested function calls)
 
 ## 2.1.0
+
 - Add `mops check --fix` subcommand (for Motoko files) with autofix logic
 - Add `mops check` subcommand for type-checking Motoko files
 - Warn for `dfx` projects instead of requiring `mops toolchain init`
@@ -368,72 +395,89 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Improve bench-canister Bench type to be less restrictive (by @timohanke)
 
 ## 2.0.1
+
 - Patch vulnerability in `tar` dependency
 
 # 2.0.0
+
 - `mops publish` add support for subheadings in changelog (by @f0i)
 - `mops toolchain` now downloads `moc.js` in addition to `moc` binary
 - New `mops build` subcommand (alternative to `dfx build`)
 - `core` package used in place of `base` for benchmarks
 
 ## 1.12.0
+
 - Add pinned dependencies support to `mops update` and `mops outdated` commands
 - Add support for pocket-ic v9
 - Migrate from `@dfinity/*` packages to `@icp-sdk/core` package
 - `mops test` now runs replica tests sequentially
 
 ## 1.11.1
+
 - Fix `Cannot find module 'simple-cbor'` error
 
 ## 1.11.0
+
 - Fix `mops bench` to work with moc >= 0.15.0
 - `mops test` now detects persistent actor to run in replica mode
-- `mops watch` now includes all *.mo files
+- `mops watch` now includes all \*.mo files
 - Update `@dfinity` packages to v3
 - Create agent with `shouldSyncTime` flag
 - Show user-friendly error message for invalid identity password
 
 ## 1.10.0
+
 - Enable `memory64` for `wasi` testing (by @ggreif)
 - Add support for arm64 `moc` binaries (for `moc` >= 0.14.6)
 - Deploy benchmarks with `optimize: "cycles"` dfx setting
 - Show warning when publishing packages with GitHub dependencies
 
 ## 1.9.0
+
 - Add `mops docs generate` command for generating package documentation ([docs](https://docs.mops.one/cli/mops-docs-generate))
 - Add `mops docs coverage` command for analyzing documentation coverage ([docs](https://docs.mops.one/cli/mops-docs-coverage))
 
 ## 1.8.1
+
 - Exclude `node_modules` from publish command file patterns
 
 ## 1.8.0
+
 - Add `mops format` command for formatting Motoko source files with Prettier and Motoko plugin ([docs](https://docs.mops.one/cli/mops-format))
 - Add `--format` flag to `mops watch` command to enable automatic formatting during watch mode ([docs](https://docs.mops.one/cli/mops-watch#--format))
 
 ## 1.7.2
+
 - Fix replica termination in `mops test` command
 
 ## 1.7.1
+
 - Fix `mops install` for local dependencies
 
 ## 1.7.0
+
 - Add support for `actor class` detection to run replica tests in `mops test` command
 
 ## 1.6.1
+
 - Fix `mops i` alias for `mops install` command (was broken in 1.3.0)
 
 ## 1.6.0
+
 - Add support for `.bash_profile` and `.zprofile` files to `mops toolchain init` command
 
 ## 1.5.1
+
 - Collapsible output of `mops bench` in a CI environment
 - Fix regression in `mops bench` without `dfx.json` file (by @rvanasa)
 
 ## 1.5.0
+
 - Compile benchmarks with `--release` flag by default
 - Respect `profile` field in `dfx.json` for benchmarks
 
 ## 1.4.0
+
 - Update `mops bench` command output:
   - Print only final results if benchmarks run in a CI environment or there is no vertical space to progressively print the results
   - Hide "Stable Memory" table if it has no data
@@ -442,12 +486,14 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - CLI now fails if excess arguments are passed to it
 
 ## 1.3.0
+
 - Show error on `mops install <pkg>` command. Use `mops add <pkg>` instead.
 - Added support for pocket-ic replica that comes with dfx in `mops bench` command. To activate it, remove `pocket-ic` from `mops.toml` and run `mops bench --replica pocket-ic`. Requires dfx 0.24.1 or higher.
 - `mops init` now pre-fills package name with current directory name in kebab-case
 - Updated non-major npm dependencies
 
 ## 1.2.0
+
 - Removed `mops transfer-ownership` command
 - Added `mops owner` command to manage package owners ([docs](https://docs.mops.one/cli/mops-owner))
 - Added `mops maintainer` command to manage package maintainers ([docs](https://docs.mops.one/cli/mops-maintainer))
@@ -457,13 +503,16 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Fixed bug with local dependencies without `mops.toml` file
 
 ## 1.1.2
+
 - Fixed `{MOPS_ENV}` substitution in local package path
 
 ## 1.1.1
+
 - `moc-wrapper` now adds hostname to the moc path cache(`.mops/moc-*` filename) to avoid errors when running in Dev Containers
 - `mops watch` now deploys canisters with the `--yes` flag to skip data loss confirmation
 
 ## 1.1.0
+
 - New `mops watch` command to check for syntax errors, show warnings, run tests, generate declarations and deploy canisters ([docs](https://docs.mops.one/cli/mops-watch))
 - New flag `--no-toolchain` in `mops install` command to skip toolchain installation
 - New lock file format v3 ([docs](https://docs.mops.one/mops.lock))
@@ -473,9 +522,11 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Fixed `mops test` Github Action template
 
 ## 1.0.1
+
 - Fixed `mops user *` commands
 
 ## 1.0.0
+
 - `mops cache clean` now cleans local cache too (`.mops` folder)
 - Conflicting dependencies are now reported on `mops add/install/sources`
 - New `--conflicts <action>` option in `mops sources` command ([docs](https://docs.mops.one/cli/mops-sources#--conflicts))
@@ -486,6 +537,7 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Fixed bug with GitHub dependency with branch name containing `/`
 
 **Breaking changes**:
+
 - Default replica in `mops bench` and `mops test` commands now is `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section and `dfx` otherwise
 - The only supported version of `pocket-ic` is `4.0.0`
 - Dropped support for `wasmtime` version `< 14.0.0`
@@ -493,16 +545,19 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Renamed `mops import-identity` command to `mops user import`
 - Renamed `mops whoami` command to `mops user get-principal`
 - Removed the ability to install a specific package with `mops install <pkg>` command. Use `mops add <pkg>` instead.
-- Removed legacy folders migration code. If you are using Mops CLI  `<= 0.21.0`, you need first to run `npm i -g ic-mops@0.45.3` to migrate your legacy folders. After that, you can run `mops self update` to update your Mops CLI to the latest version.
+- Removed legacy folders migration code. If you are using Mops CLI `<= 0.21.0`, you need first to run `npm i -g ic-mops@0.45.3` to migrate your legacy folders. After that, you can run `mops self update` to update your Mops CLI to the latest version.
 - Removed `--verbose` flag from `mops sources` command
 
 ## 0.45.3
+
 - Fixed bug with missing `tar` package
 
 ## 0.45.2
+
 - Updated npm dependencies
 
 ## 0.45.0
+
 - Updated npm dependencies
 - Added `--no-install` flag to `mops sources` command
 - Added `--verbose` flag to `mops publish` command
@@ -512,20 +567,25 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Fixed cache folder delete on github install error
 
 ## 0.44.1
+
 - Fixed fallback to dfx moc if there is no mops.toml
 
 ## 0.44.0
+
 - Optimized `moc` toolchain resolving (~30% faster builds)
 
 ## 0.43.0
+
 - Add `mops cache show` command
 - Fix github legacy deps install
 
 ## 0.42.1
+
 - Fix package requirements check from subdirectories
 - Fix local and global cache inconsistency
 
 ## 0.42.0
+
 - Package requirements support ([docs](https://docs.mops.one/mops.toml#requirements))
 - Refactor `mops install` command
 - Reduce install threads to 12 (was 16)
@@ -533,11 +593,14 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 - Install dependencies directly to global cache, copy to local cache only final resolved dependencies
 
 ## 0.41.1
+
 - Fix bin path for npm
 
 ## 0.41.0
+
 - Add `mops self update` command to update the CLI to the latest version
 - Add `mops self uninstall` command to uninstall the CLI
 
 ## 0.40.0
+
 - Publish package benchmarks
