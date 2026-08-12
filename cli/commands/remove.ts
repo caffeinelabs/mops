@@ -14,12 +14,18 @@ import path from "node:path";
 import { syncLocalCache } from "./install/sync-local-cache.js";
 import { getPackageId } from "../helpers/get-package-id.js";
 
+type DepsSection = "dependencies" | "dev-dependencies";
+
 type RemoveOptions = {
   verbose?: boolean;
   dev?: boolean;
   dryRun?: boolean;
   // Internal: see `AddOptions.lock`.
   lock?: LockPolicy;
+  // Only the interactive `mops remove` searches both sections. `mops sync`
+  // removes a dual-declared package with one call per section, so a search
+  // across both would clear it on the first call and error on the second.
+  anySection?: boolean;
 };
 
 export async function remove(
@@ -29,19 +35,23 @@ export async function remove(
     verbose = false,
     dryRun = false,
     lock = "maintain",
+    anySection = false,
   }: RemoveOptions = {},
 ) {
   if (!checkConfigFile()) {
     return;
   }
 
-  function getTransitiveDependencies(config: Config, exceptPkgId: string) {
+  function getTransitiveDependencies(
+    config: Config,
+    exceptPkgIds: Set<string>,
+  ) {
     let deps = Object.values(config.dependencies || {});
     let devDeps = Object.values(config["dev-dependencies"] || {});
     return [...deps, ...devDeps]
       .filter((dep) => {
         let depId = getPackageId(dep.name, dep.version || "");
-        return depId !== exceptPkgId;
+        return !exceptPkgIds.has(depId);
       })
       .map((dep) => {
         return [
@@ -81,22 +91,32 @@ export async function remove(
   }
 
   let config = readConfig();
-  let deps = dev ? config["dev-dependencies"] : config.dependencies;
-  deps = deps || {};
-  let pkgDetails = deps[name];
 
-  if (!pkgDetails) {
+  // `npm uninstall` and `cargo remove` drop the dependency wherever it is
+  // declared; `--dev` narrows the search to [dev-dependencies].
+  let sections: DepsSection[] =
+    dev || !anySection
+      ? [dev ? "dev-dependencies" : "dependencies"]
+      : ["dependencies", "dev-dependencies"];
+  let targets = sections
+    .map((section) => ({ section, dep: (config[section] || {})[name] }))
+    .filter((target): target is { section: DepsSection; dep: Dependency } =>
+      Boolean(target.dep),
+    );
+
+  if (!targets.length) {
     return console.log(
       chalk.red("Error: ") +
         `No ${dev ? "dev " : ""}dependency to remove "${name}"`,
     );
   }
 
-  let version = pkgDetails.version;
-  let packageId = getPackageId(name, version || "");
+  let packageIds = new Set(
+    targets.map(({ dep }) => getPackageId(name, dep.version || "")),
+  );
 
   // transitive deps ignoring deps of this package
-  let transitiveDeps = getTransitiveDependencies(config, packageId);
+  let transitiveDeps = getTransitiveDependencies(config, packageIds);
   let transitiveDepIds = new Set(
     transitiveDeps.map((dep) => {
       return getPackageId(dep.name, dep.version || "");
@@ -104,10 +124,10 @@ export async function remove(
   );
 
   // transitive deps of this package (including itself)
-  let transitiveDepsOfPackage = [
-    pkgDetails,
-    ...getTransitiveDependenciesOf(name, version, pkgDetails.repo),
-  ];
+  let transitiveDepsOfPackage = targets.flatMap(({ dep }) => [
+    dep,
+    ...getTransitiveDependenciesOf(name, dep.version, dep.repo),
+  ]);
 
   // remove local cache
   for (let dep of transitiveDepsOfPackage) {
@@ -137,19 +157,22 @@ export async function remove(
   }
 
   // remove from config
-  if (!dev && config.dependencies) {
-    delete config.dependencies[name];
+  for (let { section } of targets) {
+    let deps = config[section];
+    if (deps) {
+      delete deps[name];
+    }
   }
-  if (dev && config["dev-dependencies"]) {
-    delete config["dev-dependencies"][name];
-  }
+
   // A dry run must not touch mops.toml, the local cache or mops.lock — the
   // lockfile is rewritten by `checkIntegrity` even when it was only stale.
   if (dryRun) {
-    console.log(
-      chalk.yellow("Would remove package ") +
-        `${name} = "${pkgDetails.repo || pkgDetails.path || version}"`,
-    );
+    for (let { section, dep } of targets) {
+      console.log(
+        chalk.yellow("Would remove package ") +
+          `${name} = "${dep.repo || dep.path || dep.version}" from [${section}]`,
+      );
+    }
     return;
   }
 
@@ -158,8 +181,10 @@ export async function remove(
   await syncLocalCache();
   await checkIntegrity(lock);
 
-  console.log(
-    chalk.green("Package removed ") +
-      `${name} = "${pkgDetails.repo || pkgDetails.path || version}"`,
-  );
+  for (let { section, dep } of targets) {
+    console.log(
+      chalk.green("Package removed ") +
+        `${name} = "${dep.repo || dep.path || dep.version}" from [${section}]`,
+    );
+  }
 }

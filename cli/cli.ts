@@ -147,14 +147,30 @@ program
 program
   .command("add <pkg>")
   .description("Install the package and save it to mops.toml")
-  .option("--dev", "Add to [dev-dependencies] section")
+  .option(
+    "--dev",
+    "Add to [dev-dependencies] section (moves an existing dependency)",
+  )
   .option("--verbose", "Show more information")
   .addOption(legacyLockOption())
+  .addHelpText(
+    "after",
+    `
+Accepted <pkg> forms:
+  core                          latest version from the mops registry
+  core@1.0.0                    specific version
+  org/repo[#branch|tag|sha]     GitHub repository
+  https://github.com/org/repo   GitHub repository url
+  ./pkg                         local package directory
+`,
+  )
   .action(async (pkg, options) => {
     if (!checkConfigFile()) {
       process.exit(1);
     }
-    await add(pkg, options);
+    // Moving between sections is interactive-only: `mops update` and
+    // `mops sync` call add() for a package they already located in one section.
+    await add(pkg, { ...options, moveSections: true });
   });
 
 // remove
@@ -162,7 +178,7 @@ program
   .command("remove <pkg>")
   .alias("rm")
   .description("Remove package and update mops.toml")
-  .option("--dev", "Remove from dev-dependencies instead of dependencies")
+  .option("--dev", "Only remove from [dev-dependencies]")
   .option("--verbose", "Show more information")
   .option("--dry-run", "Do not actually remove anything")
   .addOption(legacyLockOption())
@@ -170,7 +186,9 @@ program
     if (!checkConfigFile()) {
       process.exit(1);
     }
-    await remove(pkg, options);
+    // Searching both sections is interactive-only: `mops sync` removes a
+    // dual-declared package with one call per section.
+    await remove(pkg, { ...options, anySection: true });
   });
 
 // install
