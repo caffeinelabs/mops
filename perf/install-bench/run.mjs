@@ -3,27 +3,27 @@
 // build, on a project depending on every caffeine registry package.
 // See README.md for scenarios and usage. Hits the live IC registry.
 
-import {execFileSync, spawnSync} from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {fileURLToPath} from "node:url";
-import {parseArgs} from "node:util";
+import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 
 const benchDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(benchDir, "..", "..");
 
-const {values: opts} = parseArgs({
+const { values: opts } = parseArgs({
   options: {
-    iterations: {type: "string", default: "3"},
-    scenarios: {type: "string", default: ""},
-    targets: {type: "string", default: "v2,v3"},
-    target: {type: "string", multiple: true, default: []},
-    "v2-version": {type: "string", default: "2"},
-    workdir: {type: "string", default: ""},
-    out: {type: "string", default: ""},
-    verbose: {type: "boolean", default: false},
-    help: {type: "boolean", default: false},
+    iterations: { type: "string", default: "3" },
+    scenarios: { type: "string", default: "" },
+    targets: { type: "string", default: "v2,v3" },
+    target: { type: "string", multiple: true, default: [] },
+    "v2-version": { type: "string", default: "2" },
+    workdir: { type: "string", default: "" },
+    out: { type: "string", default: "" },
+    verbose: { type: "boolean", default: false },
+    help: { type: "boolean", default: false },
   },
 });
 
@@ -52,12 +52,21 @@ const iterations = Math.max(1, parseInt(opts.iterations, 10) || 3);
 const workdir = opts.workdir
   ? path.resolve(opts.workdir)
   : fs.mkdtempSync(path.join(os.tmpdir(), "mops-install-bench-"));
-fs.mkdirSync(workdir, {recursive: true});
+fs.mkdirSync(workdir, { recursive: true });
 
 const fixtures = {
-  full: fs.readFileSync(path.join(benchDir, "fixtures", "project.toml"), "utf8"),
-  aged: fs.readFileSync(path.join(benchDir, "fixtures", "project-aged.toml"), "utf8"),
-  stale: fs.readFileSync(path.join(benchDir, "fixtures", "project-stale.toml"), "utf8"),
+  full: fs.readFileSync(
+    path.join(benchDir, "fixtures", "project.toml"),
+    "utf8",
+  ),
+  aged: fs.readFileSync(
+    path.join(benchDir, "fixtures", "project-aged.toml"),
+    "utf8",
+  ),
+  stale: fs.readFileSync(
+    path.join(benchDir, "fixtures", "project-stale.toml"),
+    "utf8",
+  ),
 };
 
 // ---------------------------------------------------------------- targets
@@ -65,7 +74,7 @@ const fixtures = {
 function makeTarget(name, cliJs) {
   const dir = path.join(workdir, `target-${name}`);
   const proj = path.join(dir, "project");
-  fs.mkdirSync(proj, {recursive: true});
+  fs.mkdirSync(proj, { recursive: true });
   return {
     name,
     cliJs,
@@ -79,16 +88,26 @@ function makeTarget(name, cliJs) {
 function setupV2() {
   const dir = path.join(workdir, "v2-npm");
   const pkgJson = path.join(dir, "package.json");
-  fs.mkdirSync(dir, {recursive: true});
+  fs.mkdirSync(dir, { recursive: true });
   if (!fs.existsSync(path.join(dir, "node_modules", "ic-mops"))) {
-    fs.writeFileSync(pkgJson, JSON.stringify({name: "bench-v2", private: true}));
+    fs.writeFileSync(
+      pkgJson,
+      JSON.stringify({ name: "bench-v2", private: true }),
+    );
     console.log(`· installing ic-mops@${opts["v2-version"]} from npm ...`);
-    execFileSync("npm", ["install", `ic-mops@${opts["v2-version"]}`, "--no-audit", "--no-fund"], {
-      cwd: dir,
-      stdio: opts.verbose ? "inherit" : "pipe",
-    });
+    execFileSync(
+      "npm",
+      ["install", `ic-mops@${opts["v2-version"]}`, "--no-audit", "--no-fund"],
+      {
+        cwd: dir,
+        stdio: opts.verbose ? "inherit" : "pipe",
+      },
+    );
   }
-  return makeTarget("v2", path.join(dir, "node_modules", "ic-mops", "dist", "cli.js"));
+  return makeTarget(
+    "v2",
+    path.join(dir, "node_modules", "ic-mops", "dist", "cli.js"),
+  );
 }
 
 function setupV3() {
@@ -104,24 +123,31 @@ function setupV3() {
 }
 
 const targets = [];
-for (const t of opts.targets.split(",").map((s) => s.trim()).filter(Boolean)) {
+for (const t of opts.targets
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)) {
   if (t === "v2") targets.push(setupV2());
   else if (t === "v3") targets.push(setupV3());
-  else throw new Error(`unknown built-in target "${t}" (use --target name=path for custom ones)`);
+  else
+    throw new Error(
+      `unknown built-in target "${t}" (use --target name=path for custom ones)`,
+    );
 }
 for (const spec of opts.target) {
   const eq = spec.indexOf("=");
   if (eq < 1) throw new Error(`--target expects name=path, got "${spec}"`);
   const name = spec.slice(0, eq);
   const cliJs = path.resolve(spec.slice(eq + 1));
-  if (!fs.existsSync(cliJs)) throw new Error(`target "${name}": ${cliJs} does not exist`);
+  if (!fs.existsSync(cliJs))
+    throw new Error(`target "${name}": ${cliJs} does not exist`);
   targets.push(makeTarget(name, cliJs));
 }
 if (targets.length === 0) throw new Error("no targets selected");
 
 // ------------------------------------------------------------------ mops
 
-function mops(target, args, {cwd = target.proj} = {}) {
+function mops(target, args, { cwd = target.proj } = {}) {
   const t0 = performance.now();
   const res = spawnSync(process.execPath, [target.cliJs, ...args], {
     cwd,
@@ -136,17 +162,21 @@ function mops(target, args, {cwd = target.proj} = {}) {
   });
   const ms = performance.now() - t0;
   if (res.status !== 0) {
-    const out = opts.verbose ? "" : `\n--- stdout\n${res.stdout}\n--- stderr\n${res.stderr}`;
-    throw new Error(`[${target.name}] mops ${args.join(" ")} exited ${res.status}${out}`);
+    const out = opts.verbose
+      ? ""
+      : `\n--- stdout\n${res.stdout}\n--- stderr\n${res.stderr}`;
+    throw new Error(
+      `[${target.name}] mops ${args.join(" ")} exited ${res.status}${out}`,
+    );
   }
-  return {ms, stdout: res.stdout ?? ""};
+  return { ms, stdout: res.stdout ?? "" };
 }
 
 function rmrf(p) {
-  fs.rmSync(p, {recursive: true, force: true});
+  fs.rmSync(p, { recursive: true, force: true });
 }
 
-function setState(target, {toml, lock = null, keepMops = false}) {
+function setState(target, { toml, lock = null, keepMops = false }) {
   fs.writeFileSync(path.join(target.proj, "mops.toml"), toml);
   if (!keepMops) rmrf(path.join(target.proj, ".mops"));
   const lockPath = path.join(target.proj, "mops.lock");
@@ -176,23 +206,27 @@ function mopsCount(target) {
 
 function sideProject(target, name, toml) {
   const dir = path.join(path.dirname(target.proj), `prime-${name}`);
-  fs.mkdirSync(dir, {recursive: true});
+  fs.mkdirSync(dir, { recursive: true });
   if (toml !== undefined) fs.writeFileSync(path.join(dir, "mops.toml"), toml);
   return dir;
 }
 
 function prime(target) {
-  console.log(`\n=== setup ${target.name}: priming cache and capturing lockfiles`);
-  const version = mops(target, ["--version"]).stdout.trim().replace(/\s+/g, " ");
+  console.log(
+    `\n=== setup ${target.name}: priming cache and capturing lockfiles`,
+  );
+  const version = mops(target, ["--version"])
+    .stdout.trim()
+    .replace(/\s+/g, " ");
   target.version = version || "unknown";
   console.log(`· ${target.name} = ${target.version}`);
 
-  setState(target, {toml: fixtures.full});
+  setState(target, { toml: fixtures.full });
   mops(target, ["install", "--no-toolchain"]);
   target.locks.valid = readLock(target);
   console.log(`· full install ok (${mopsCount(target)} packages in .mops)`);
 
-  setState(target, {toml: fixtures.stale});
+  setState(target, { toml: fixtures.stale });
   mops(target, ["install", "--no-toolchain"]);
   target.locks.stale = readLock(target);
 
@@ -207,15 +241,17 @@ function prime(target) {
     "add",
     '[package]\nname = "prime-add"\nversion = "0.0.1"\n\n[dependencies]\ncore = "2.6.1"\n',
   );
-  mops(target, ["install", "--no-toolchain"], {cwd: addProj});
-  mops(target, ["add", "map"], {cwd: addProj});
-  mops(target, ["add", "datetime"], {cwd: addProj});
+  mops(target, ["install", "--no-toolchain"], { cwd: addProj });
+  mops(target, ["add", "map"], { cwd: addProj });
+  mops(target, ["add", "datetime"], { cwd: addProj });
 }
 
 // untimed warm-up: re-download anything a cold scenario evicted
 function ensureWarm(target) {
   for (const name of ["full", "stale", "aged", "add"]) {
-    mops(target, ["install", "--no-toolchain"], {cwd: sideProject(target, name)});
+    mops(target, ["install", "--no-toolchain"], {
+      cwd: sideProject(target, name),
+    });
   }
 }
 
@@ -228,7 +264,7 @@ const scenarios = [
     name: "install-cold-nolock",
     prepare(t) {
       rmrf(t.cache);
-      setState(t, {toml: fixtures.full});
+      setState(t, { toml: fixtures.full });
     },
     run: (t) => mops(t, ["install", "--no-toolchain"]).ms,
   },
@@ -236,7 +272,7 @@ const scenarios = [
     name: "install-cold-validlock",
     prepare(t) {
       rmrf(t.cache);
-      setState(t, {toml: fixtures.full, lock: t.locks.valid});
+      setState(t, { toml: fixtures.full, lock: t.locks.valid });
     },
     run: (t) => mops(t, ["install", "--no-toolchain"]).ms,
   },
@@ -244,7 +280,7 @@ const scenarios = [
     name: "install-cold-stalelock",
     prepare(t) {
       rmrf(t.cache);
-      setState(t, {toml: fixtures.full, lock: t.locks.stale});
+      setState(t, { toml: fixtures.full, lock: t.locks.stale });
     },
     run: (t) => mops(t, ["install", "--no-toolchain"]).ms,
   },
@@ -252,7 +288,7 @@ const scenarios = [
     name: "install-warm-nolock",
     prepare(t) {
       ensureWarm(t);
-      setState(t, {toml: fixtures.full});
+      setState(t, { toml: fixtures.full });
     },
     run: (t) => mops(t, ["install", "--no-toolchain"]).ms,
   },
@@ -260,7 +296,7 @@ const scenarios = [
     name: "install-warm-validlock",
     prepare(t) {
       ensureWarm(t);
-      setState(t, {toml: fixtures.full, lock: t.locks.valid});
+      setState(t, { toml: fixtures.full, lock: t.locks.valid });
     },
     run: (t) => mops(t, ["install", "--no-toolchain"]).ms,
   },
@@ -268,7 +304,7 @@ const scenarios = [
     name: "install-warm-stalelock",
     prepare(t) {
       ensureWarm(t);
-      setState(t, {toml: fixtures.full, lock: t.locks.stale});
+      setState(t, { toml: fixtures.full, lock: t.locks.stale });
     },
     run: (t) => mops(t, ["install", "--no-toolchain"]).ms,
   },
@@ -276,7 +312,7 @@ const scenarios = [
     name: "add-two",
     prepare(t) {
       ensureWarm(t);
-      setState(t, {toml: fixtures.full, lock: t.locks.valid});
+      setState(t, { toml: fixtures.full, lock: t.locks.valid });
       mops(t, ["install", "--no-toolchain"]);
     },
     run(t) {
@@ -289,7 +325,7 @@ const scenarios = [
     name: "update-few",
     prepare(t) {
       ensureWarm(t);
-      setState(t, {toml: fixtures.aged});
+      setState(t, { toml: fixtures.aged });
       mops(t, ["install", "--no-toolchain"]);
     },
     run(t) {
@@ -304,29 +340,36 @@ const scenarios = [
     name: "update-all",
     prepare(t) {
       ensureWarm(t);
-      setState(t, {toml: fixtures.aged});
+      setState(t, { toml: fixtures.aged });
       mops(t, ["install", "--no-toolchain"]);
     },
     run: (t) => mops(t, ["update"]).ms,
   },
 ];
 
-const filter = opts.scenarios.split(",").map((s) => s.trim()).filter(Boolean);
+const filter = opts.scenarios
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const selected = filter.length
   ? scenarios.filter((s) => filter.some((f) => s.name.includes(f)))
   : scenarios;
-if (selected.length === 0) throw new Error(`no scenarios match "${opts.scenarios}"`);
+if (selected.length === 0)
+  throw new Error(`no scenarios match "${opts.scenarios}"`);
 
 // -------------------------------------------------------------------- run
 
-const fmt = (ms) => (ms >= 10_000 ? `${(ms / 1000).toFixed(1)}s` : `${(ms / 1000).toFixed(2)}s`);
+const fmt = (ms) =>
+  ms >= 10_000 ? `${(ms / 1000).toFixed(1)}s` : `${(ms / 1000).toFixed(2)}s`;
 const median = (xs) => {
   const s = [...xs].sort((a, b) => a - b);
   const mid = s.length >> 1;
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
 
-console.log(`mops install benchmark — ${iterations} iteration(s), workdir ${workdir}`);
+console.log(
+  `mops install benchmark — ${iterations} iteration(s), workdir ${workdir}`,
+);
 console.log(`targets: ${targets.map((t) => t.name).join(", ")}`);
 console.log(`scenarios: ${selected.map((s) => s.name).join(", ")}`);
 
@@ -337,7 +380,9 @@ for (const scenario of selected) {
   for (const target of targets) {
     const times = [];
     for (let i = 0; i < iterations; i++) {
-      process.stdout.write(`${scenario.name} [${target.name}] ${i + 1}/${iterations} ... `);
+      process.stdout.write(
+        `${scenario.name} [${target.name}] ${i + 1}/${iterations} ... `,
+      );
       scenario.prepare(target);
       try {
         const ms = scenario.run(target);
@@ -366,11 +411,17 @@ for (const scenario of selected) {
 const names = targets.map((t) => t.name);
 const base = names[0];
 console.log(`\n## Results (median of ${iterations}, seconds)\n`);
-const header = ["scenario", ...names, ...names.slice(1).map((n) => `${n} vs ${base}`)];
+const header = [
+  "scenario",
+  ...names,
+  ...names.slice(1).map((n) => `${n} vs ${base}`),
+];
 const rows = [header, header.map(() => "---")];
 for (const scenario of selected) {
   const byTarget = Object.fromEntries(
-    results.filter((r) => r.scenario === scenario.name).map((r) => [r.target, r]),
+    results
+      .filter((r) => r.scenario === scenario.name)
+      .map((r) => [r.target, r]),
   );
   const row = [scenario.name];
   for (const n of names) {
@@ -393,7 +444,11 @@ console.log(
 if (opts.out) {
   fs.writeFileSync(
     path.resolve(opts.out),
-    JSON.stringify({date: new Date().toISOString(), iterations, results}, null, 2),
+    JSON.stringify(
+      { date: new Date().toISOString(), iterations, results },
+      null,
+      2,
+    ),
   );
   console.log(`\nraw results written to ${opts.out}`);
 }
