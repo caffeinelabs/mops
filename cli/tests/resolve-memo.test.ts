@@ -211,6 +211,29 @@ describe("resolve memoization", () => {
     expect(walked(await resolvePackages.resolveDepsAndGraph())).toBe(true);
   });
 
+  test("a caller sharing an in-flight walk re-checks local manifests", async () => {
+    let noDeps = `[package]\nname = "a"\nversion = "1.0.0"\n\n[dependencies]\n`;
+    // The local dep comes first: the walk reads its manifest synchronously,
+    // before the first suspension point, so the edit below always lands
+    // after that read — and the second call, made in the same tick, always
+    // finds the first walk still in flight and shares its promise.
+    let dir = project({
+      "mops.toml": root('a = "./a"\ntest = "1.0.0"\n'),
+      "a/mops.toml": noDeps,
+    });
+
+    let first = resolvePackages.resolveDepsAndGraph();
+    write(dir, {
+      "a/mops.toml": `[package]\nname = "a"\nversion = "1.0.0"\n\n[dependencies]\nc = "./c"\n`,
+    });
+    let second = resolvePackages.resolveDepsAndGraph();
+
+    // the first walk read the pre-edit manifest ...
+    expect((await first).deps.c).toBeUndefined();
+    // ... so the sharer must detect the edit on settle and walk again
+    expect((await second).deps.c).toBe("./a/c");
+  });
+
   test("a walk that threw is not served to the next caller", async () => {
     let good = `[package]\nname = "a"\nversion = "1.0.0"\n\n[dependencies]\n`;
     let dir = project({
