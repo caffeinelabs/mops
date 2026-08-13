@@ -236,6 +236,7 @@ describe("mops update github dependencies", () => {
     await update();
 
     expect(output()).toMatch("Failed to update mydep: API rate limit exceeded");
+    expect(process.exitCode).toBe(2);
     expect(add).toHaveBeenCalledWith(
       "core@1.2.0",
       { dev: false, lock: "skip" },
@@ -251,5 +252,6 @@ describe("mops update github dependencies", () => {
     await update();
 
     expect(output()).toMatch("Failed to update mydep: download failed");
+    expect(process.exitCode).toBe(2);
   });
 });
