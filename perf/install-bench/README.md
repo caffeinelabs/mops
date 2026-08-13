@@ -86,6 +86,14 @@ docker run --rm --cpus 1 -m 512m mops-install-bench --iterations 1 --scenarios w
 
 Arguments after the image name are passed to `run.mjs`.
 
+## Tracking runs
+
+The most recent meaningful run is committed in [RESULTS.md](RESULTS.md) —
+replace it wholesale when you re-run, and move the old headline numbers into
+its history table. This is deliberately manual: runs are only comparable
+within one host and network, so a committed run documents a point of
+reference, not a CI gate.
+
 ## Reading the results
 
 The script prints per-iteration times, then a markdown table of medians with a
