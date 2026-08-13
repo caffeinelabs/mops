@@ -101,7 +101,7 @@ Updates `mops.toml` and `mops.lock` (even when `CI` is set).
 
 Primary correctness command — runs moc check, then check-stable (if configured), then lint (if lintoko is in toolchain).
 
-On moc 1.12.0+, canisters with `[migrations]` and a committed `.most` baseline get stricter upgrade diagnostics: a field the initial actor requires that no migration produces fails as an `M0267` error instead of only warning (`M0254`), and compat errors carry a source location. Older moc pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
+On moc 1.12.0+, canisters with `[migrations]` and a committed `.most` baseline get stricter upgrade diagnostics: a field the initial actor requires that no migration produces fails as an `M0267` error instead of only warning (`M0254`), and compat errors carry a source location. Older moc pins, canisters without `[migrations]`, and `.mo` baselines are unaffected. On this path moc reports a failing stable variable twice (`M0170`, same location, once naming the migration and once as "the previous version") — it's one problem, not two, and one fix clears both.
 
 ```bash
 mops check                # all canisters

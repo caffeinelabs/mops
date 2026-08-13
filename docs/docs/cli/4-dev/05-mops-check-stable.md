@@ -110,6 +110,18 @@ On `moc` 1.12.0 or newer, two diagnostics improve for canisters that have `[migr
 
 Older `moc` pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
 
+### Known issue: compatibility errors are reported twice
+
+A stable variable that fails the compatibility check produces two `M0170` errors instead of one — the same source location and the same explanation, differing only in whether the message names the migration it clashes with or calls it "the previous version":
+
+```
+src/main.mo:3.1-13.2: Compatibility error [M0170], stable variable `e` is not compatible with version `20250401_000000_AddE`.
+...
+src/main.mo:3.1-13.2: Compatibility error [M0170], stable variable `e` is not compatible with the previous version.
+```
+
+Both describe one problem, and fixing it clears both. This comes from `moc` itself, not mops — mops passes the compiler's output through unchanged rather than pattern-matching its text, so the duplicate will disappear on its own once `moc` stops emitting it. The three-invocation path on older `moc` pins reports the error once.
+
 ## Passing flags to the Motoko compiler
 
 Any arguments after `--` are forwarded to `moc` when generating stable type signatures.
