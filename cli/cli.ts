@@ -226,10 +226,18 @@ program
       process.exit(1);
     }
 
-    let compatible = await checkApiCompatibility();
-    if (!compatible) {
-      return;
-    }
+    // Fired here, awaited below: the check costs a registry round trip the
+    // install would otherwise serialize behind, and the two share no state.
+    // Settled into a thunk so a rejection during the install cannot surface
+    // as an unhandled rejection; awaiting the thunk rethrows it where the
+    // serial code used to throw. `mops publish` keeps its check serial — it
+    // writes immutable registry state.
+    let compatibility = checkApiCompatibility().then(
+      (compatible) => () => compatible,
+      (err) => () => {
+        throw err;
+      },
+    );
 
     let ok = await installAll({
       ...options,
@@ -240,6 +248,13 @@ program
     // manifests that a failed install may never have written.
     if (!ok) {
       process.exit(1);
+    }
+
+    // An incompatible CLI now completes the install before this error
+    // surfaces — accepted, since build/test/sources never check at all.
+    let compatible = (await compatibility)();
+    if (!compatible) {
+      return;
     }
 
     if (options.toolchain) {
@@ -293,6 +308,8 @@ program
       await publish(options);
       return;
     }
+    // Deliberately serial (unlike `mops install`): publishing writes
+    // immutable registry state, so the version gate must hold it back.
     let compatible = await checkApiCompatibility();
     if (compatible) {
       await publish(options);
