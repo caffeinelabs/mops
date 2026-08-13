@@ -2,6 +2,8 @@
 
 ## Next
 
+- Fixed `mops check-stable` applying 2.23.0's stricter moc 1.12.0+ upgrade check to `.mo` baselines. 2.23.0 said the change was limited to canisters with `[migrations]` and a committed `.most` baseline, but a `.mo` baseline got it too once mops had compiled it to a scratch `.most` — so an upgrade a forgotten migration left incomplete flipped from a warning (`M0254`) to a failing `M0267`, and a previously green `mops check` / `mops check-stable` started failing. `.mo` baselines are back on the three-step path, as documented. Committed `.most` baselines are unaffected.
+
 ## 2.23.0
 - All deprecation warnings, error hints, and doc examples that suggested `mops toolchain use pocket-ic 12.0.0` now suggest `15.0.0`, the current PocketIC release.
 - On moc 1.12.0+, `mops check` and `mops check-stable` check upgrade compatibility faster and report it better for canisters with `[migrations]` and a committed `.most` baseline: compatibility errors now point at your source (`src/main.mo:3.1-11.2`) instead of `(unknown location)`, and a field the initial actor requires that no migration produces now fails as an `M0267` error rather than only warning (`M0254`) — a forgotten migration that previously slipped through as a warning will now fail the check. Older moc pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
