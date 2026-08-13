@@ -127,7 +127,7 @@ PocketIC 9.0.0 or newer, or a local PocketIC binary path, must be pinned in
 `[toolchain]`. Mops cannot verify compatibility for a path pin.
 ```toml
 [toolchain]
-pocket-ic = "12.0.0"
+pocket-ic = "15.0.0"
 ```
 
 To check deployment with a non-default Wasm memory limit, configure the limit in

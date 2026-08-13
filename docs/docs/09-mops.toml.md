@@ -63,7 +63,7 @@ See [toolchain management](./cli/5-toolchain/01-toolchain-overview.md) page for 
 | -------------------- | ------------------------------------------------ |
 | moc                  | Motoko compiler version (e.g. `1.0.0`) or file path (e.g. `./tools/moc`, `/usr/local/bin/moc`)   |
 | wasmtime             | WASM runtime version (e.g. `41.0.0`) or file path used to run [tests](./cli/4-dev/01-mops-test.md#--mode) in `wasi` mode   |
-| pocket-ic            | Local IC replica version (e.g. `12.0.0`) or file path used to run [benchmarks](./cli/4-dev/02-mops-bench.md#--replica). Versions below `9.0.0` are deprecated and will no longer be supported in mops v3   |
+| pocket-ic            | Local IC replica version (e.g. `15.0.0`) or file path used to run [benchmarks](./cli/4-dev/02-mops-bench.md#--replica). Versions below `9.0.0` are deprecated and will no longer be supported in mops v3   |
 | lintoko              | Linter version (e.g. `0.7.0`) or file path for Motoko linting   |
 | wasm-opt             | Binaryen version (e.g. `131`) or file path used for `[optimize]` post-build Wasm optimization   |
 
