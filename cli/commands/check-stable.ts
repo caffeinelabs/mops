@@ -235,13 +235,15 @@ export function reportStableCheckOutcome(
   );
 }
 
-/** One `moc --check --stable-baseline` covering typecheck + upgrade compat. */
+/**
+ * One `moc --check --stable-baseline` covering typecheck + upgrade compat.
+ * `baselinePath` is always a committed `.most` — see `runStableCheck`.
+ */
 async function runFoldedStableCheck(params: {
   canisterMain: string;
   canisterName: string;
   mocPath: string;
   baselinePath: string;
-  baselineIsMostFile: boolean;
   sources: string[];
   globalMocArgs: string[];
   canisterArgs: string[];
@@ -278,7 +280,7 @@ async function runFoldedStableCheck(params: {
   reportStableCheckOutcome(params.canisterName, {
     migrations: params.migrations,
     oldMostPath: params.baselinePath,
-    baselineIsMostFile: params.baselineIsMostFile,
+    baselineIsMostFile: true,
     checkLimit: params.options.checkLimit,
     exitCode: result.exitCode,
     stderr: result.stderr,
@@ -305,14 +307,16 @@ export async function runStableCheck(
     cliError(`File not found: ${oldFile}`);
   }
 
-  // Fast path: .most baseline + moc 1.12.0+ → one --check, no scratch dir.
+  // Committed .most baseline + moc 1.12.0+ → one --check, no scratch dir.
+  // A .mo baseline keeps the 3-step path: the scratch .most compiled from it is
+  // only an approximation of what is deployed, and the folded check is stricter
+  // (a field no migration produces fails as M0267 rather than warning M0254).
   if (isOldMostFile && canUseStableBaselineCheck(canisterArgs)) {
     await runFoldedStableCheck({
       canisterMain,
       canisterName,
       mocPath,
       baselinePath: oldFile,
-      baselineIsMostFile: true,
       sources,
       globalMocArgs,
       canisterArgs,
@@ -338,22 +342,6 @@ export async function runStableCheck(
           canisterArgs,
           options,
         );
-
-    if (canUseStableBaselineCheck(canisterArgs)) {
-      await runFoldedStableCheck({
-        canisterMain,
-        canisterName,
-        mocPath,
-        baselinePath: oldMostPath,
-        baselineIsMostFile: isOldMostFile,
-        sources,
-        globalMocArgs,
-        canisterArgs,
-        migrations: params.migrations,
-        options,
-      });
-      return;
-    }
 
     const newMostPath = await generateStableTypes(
       mocPath,
