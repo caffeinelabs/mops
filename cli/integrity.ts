@@ -16,6 +16,7 @@ import { resolveDepsAndGraph } from "./resolve-packages.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { normalizeLocalDepPath } from "./helpers/normalize-local-path.js";
 import { Dependency } from "./types.js";
+import { cliError } from "./error.js";
 
 type LockFileV1 = {
   version: 1;
@@ -765,11 +766,8 @@ export async function updateLockFile({
 }
 
 function failLocked(lines: string[]): never {
-  console.error("Error: " + lines[0]);
-  for (let line of lines.slice(1)) {
-    console.error(line);
-  }
-  process.exit(1);
+  let [first, ...rest] = lines;
+  cliError(["Error: " + first, ...rest].join("\n"));
 }
 
 // Use only for defects that a plain `mops install` actually repairs — i.e. the

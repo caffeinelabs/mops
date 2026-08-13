@@ -14,9 +14,7 @@ import { resolvePackages } from "../resolve-packages.js";
 export async function sourcesArgs({ cwd = process.cwd() } = {}): Promise<
   string[][]
 > {
-  if (!checkConfigFile()) {
-    return [];
-  }
+  checkConfigFile();
 
   let rootDir = getRootDir();
   let resolvedPackages = await resolvePackages();

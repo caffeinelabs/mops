@@ -175,7 +175,7 @@ describe("add/remove ergonomics", () => {
       const res = await cli(["add", "packages/one"], { cwd, env: { CI: "1" } });
 
       expect(res.exitCode).toBe(1);
-      expect(res.stdout).toMatch(
+      expect(res.stderr).toMatch(
         /"packages\/one" exists locally — add a local package as \.\/packages\/one/,
       );
       expect(toml(cwd)).toBe('[dependencies]\none = "./packages/one"\n');
@@ -189,7 +189,7 @@ describe("add/remove ergonomics", () => {
         const res = await cli(["add", arg], { cwd, env: { CI: "1" } });
 
         expect(res.exitCode).toBe(1);
-        expect(res.stdout).toMatch(new RegExp(`Cannot add "${arg}"`));
+        expect(res.stderr).toMatch(new RegExp(`Cannot add "${arg}"`));
         expect(res.stdout + res.stderr).not.toMatch(/ERR_INVALID_URL/);
         expect(toml(cwd)).toBe("[dependencies]\n");
       },

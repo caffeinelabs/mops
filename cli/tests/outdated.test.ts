@@ -133,10 +133,11 @@ describe("mops outdated exit codes", () => {
     );
     process.chdir(root);
 
-    await outdated();
-
-    expect(output()).toMatch("mops.toml' not found");
-    expect(process.exitCode).toBe(2);
+    await expect(outdated()).rejects.toMatchObject({
+      name: "CliError",
+      exitCode: 2,
+      message: expect.stringContaining("mops.toml' not found"),
+    });
   });
 
   test("does not call the registry when there is nothing to check", async () => {

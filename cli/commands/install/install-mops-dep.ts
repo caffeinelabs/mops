@@ -56,9 +56,7 @@ export async function installMopsDep(
   threads = threads || fileThreadsPerPackage(1);
   let depName = getDepName(pkg);
 
-  if (!checkConfigFile()) {
-    return false;
-  }
+  checkConfigFile();
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
   // progress
@@ -138,6 +136,7 @@ export async function installMopsDep(
       let stagingDir = createStagingDir(cacheDir);
       let onSigInt = () => {
         fs.rmSync(stagingDir, { recursive: true, force: true });
+        // eslint-disable-next-line no-restricted-properties
         process.exit(130);
       };
       process.on("SIGINT", onSigInt);

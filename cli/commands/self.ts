@@ -5,6 +5,7 @@ import prompts from "prompts";
 import { version, globalConfigDir } from "../mops.js";
 import { cleanCache } from "../cache.js";
 import { classifySelfUpdate } from "../helpers/self-update-kind.js";
+import { CliError, cliAbort, cliError } from "../error.js";
 
 let url = "https://x344g-ziaaa-aaaap-abl7a-cai.icp0.io";
 
@@ -14,8 +15,7 @@ function detectPackageManager() {
     res = execSync("which mops").toString();
   } catch (e) {}
   if (!res) {
-    console.error(chalk.red("Couldn't detect package manager"));
-    process.exit(1);
+    cliError("Couldn't detect package manager");
   }
   if (res.includes("pnpm/")) {
     return "pnpm";
@@ -64,8 +64,7 @@ async function confirmMajorUpdate(latest: string): Promise<boolean> {
     },
     {
       onCancel() {
-        console.log("aborted");
-        process.exit(0);
+        cliAbort();
       },
     },
   );
@@ -83,11 +82,9 @@ export async function update({ major = false } = {}) {
     // An unparseable tag means the release server is serving something
     // broken — refuse rather than npm-install whatever it said.
     if (kind === "invalid") {
-      console.error(
-        chalk.red("Error: ") +
-          `expected a version from ${url}/tags/latest, got ${JSON.stringify(latest)}.`,
+      cliError(
+        `Error: expected a version from ${url}/tags/latest, got ${JSON.stringify(latest)}.`,
       );
-      process.exit(1);
     }
 
     console.log("Current version: " + chalk.yellow(current));
@@ -101,18 +98,21 @@ export async function update({ major = false } = {}) {
     let pm = detectPackageManager();
     let npmArgs = pm === "npm" ? ["--no-fund", "--silent"] : [];
 
-    let proc = child_process.spawn(
-      pm,
-      ["add", "-g", ...npmArgs, `${url}/versions/${latest}.tgz`],
-      { stdio: "inherit", detached: false },
-    );
+    await new Promise<void>((resolve, reject) => {
+      let proc = child_process.spawn(
+        pm,
+        ["add", "-g", ...npmArgs, `${url}/versions/${latest}.tgz`],
+        { stdio: "inherit", detached: false },
+      );
 
-    proc.on("exit", (res) => {
-      if (res !== 0) {
-        console.log(chalk.red("Failed to update."));
-        process.exit(1);
-      }
-      console.log(chalk.green("Success"));
+      proc.on("exit", (res) => {
+        if (res !== 0) {
+          reject(new CliError("Failed to update."));
+          return;
+        }
+        console.log(chalk.green("Success"));
+        resolve();
+      });
     });
   }
 }

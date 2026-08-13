@@ -48,7 +48,7 @@ describe("pocket-ic", () => {
     expect(result.stderr).toContain(
       `pocket-ic 4.0.0 is no longer supported. mops 3.0.0 removed the legacy PocketIC client, so pins below ${MIN_POCKET_IC_VERSION} no longer work.`,
     );
-    expect(result.stdout).toContain(
+    expect(result.stderr).toContain(
       `mops toolchain use pocket-ic ${DEFAULT_POCKET_IC_VERSION}`,
     );
     expect(result.exitCode).toBe(1);

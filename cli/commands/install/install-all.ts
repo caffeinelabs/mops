@@ -13,6 +13,7 @@ import { installDeps } from "./install-deps.js";
 import { checkRequirements } from "../../check-requirements.js";
 import { syncLocalCache } from "./sync-local-cache.js";
 import { notifyInstalls } from "../../notify-installs.js";
+import { cliError } from "../../error.js";
 
 type InstallAllOptions = {
   verbose?: boolean;
@@ -29,9 +30,7 @@ export async function installAll({
   concurrency,
   lock = "maintain",
 }: InstallAllOptions = {}): Promise<boolean> {
-  if (!checkConfigFile()) {
-    return false;
-  }
+  checkConfigFile();
 
   // Fail before downloading anything: a missing or stale lock under `--locked`
   // is not going to become valid by installing.
@@ -42,11 +41,10 @@ export async function installAll({
     // install by re-resolving mops.toml instead of from the lock, which is
     // exactly what `--locked` exists to prevent. Fail loudly instead.
     if (!checkLockFileLight()) {
-      console.error(
-        "Error: mops.lock passed the --locked checks but is not usable for installation.",
+      cliError(
+        "Error: mops.lock passed the --locked checks but is not usable for installation.\n" +
+          "This is a bug in mops; please report it.",
       );
-      console.error("This is a bug in mops; please report it.");
-      process.exit(1);
     }
   }
 

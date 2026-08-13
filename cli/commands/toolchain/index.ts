@@ -18,6 +18,7 @@ import * as wasmtime from "./wasmtime.js";
 import * as lintoko from "./lintoko.js";
 import * as wasmOpt from "./wasm-opt.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
+import { cliError } from "../../error.js";
 import * as toolchainUtils from "./toolchain-utils.js";
 import { DEFAULT_POCKET_IC_VERSION } from "./pocket-ic-versions.js";
 import type { ReleaseInfo } from "./release-tags.js";
@@ -49,8 +50,7 @@ function getToolUtils(tool: Tool) {
   } else if (tool === "wasm-opt") {
     return wasmOpt;
   } else {
-    console.error(`Unknown tool '${tool}'`);
-    process.exit(1);
+    cliError(`Unknown tool '${tool}'`);
   }
 }
 
@@ -204,10 +204,9 @@ async function update(tool?: Tool) {
 
   for (let tool of tools) {
     if (!config.toolchain[tool]) {
-      console.error(
+      cliError(
         `Tool '${tool}' is not defined in [toolchain] section in mops.toml`,
       );
-      process.exit(1);
     }
 
     let toolUtils = getToolUtils(tool);
@@ -233,8 +232,7 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   let toolUtils = getToolUtils(tool);
 
   if (options.all && !options.versions) {
-    console.error("--all requires --versions");
-    process.exit(1);
+    cliError("--all requires --versions");
   }
 
   if (options.versions) {
@@ -299,12 +297,7 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
 
 // return current version from mops.toml
 async function bin(tool: Tool): Promise<string> {
-  let hasConfig = getClosestConfigFile();
-
-  if (!hasConfig) {
-    checkConfigFile();
-    process.exit(1);
-  }
+  checkConfigFile();
 
   let config = readConfig();
   let version = config.toolchain?.[tool];
@@ -339,16 +332,13 @@ async function bin(tool: Tool): Promise<string> {
       return path.join(globalCacheDir, tool, version, tool);
     }
   } else {
-    // Both lines go to stderr: stdout is the tool path, and callers command-
+    // Raised, not printed: stdout is the tool path, and callers command-
     // substitute it. A hint printed there would be read back as the binary.
-    console.error(
-      `Tool '${tool}' is not defined in [toolchain] section in mops.toml`,
-    );
-    console.error(
-      `Run ${chalk.green(`mops toolchain use ${tool} <version>`)} to install it ` +
+    cliError(
+      `Tool '${tool}' is not defined in [toolchain] section in mops.toml\n` +
+        `Run ${chalk.green(`mops toolchain use ${tool} <version>`)} to install it ` +
         `(${chalk.green(`mops toolchain info ${tool} --versions`)} lists the available versions)`,
     );
-    process.exit(1);
   }
 }
 

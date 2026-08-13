@@ -5,7 +5,7 @@ import { execa } from "execa";
 
 import { readConfig } from "../mops.js";
 import type { Config } from "../types.js";
-import { cliError } from "../error.js";
+import { CliError, cliError } from "../error.js";
 import { toolchain } from "../commands/toolchain/index.js";
 import {
   formatOptimizePipeline,
@@ -127,6 +127,9 @@ export async function optimizeWasm(
     return true;
   } catch (err: any) {
     await fs.remove(tmpPath).catch(() => {});
+    if (err instanceof CliError) {
+      throw err;
+    }
     failOptimize(wasmPath, err?.message);
   }
 }

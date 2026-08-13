@@ -105,10 +105,11 @@ describe("mops update exit codes", () => {
     );
     process.chdir(root);
 
-    await update();
-
-    expect(output()).toMatch("mops.toml' not found");
-    expect(process.exitCode).toBe(2);
+    await expect(update()).rejects.toMatchObject({
+      name: "CliError",
+      exitCode: 2,
+      message: expect.stringContaining("mops.toml' not found"),
+    });
   });
 
   test("exits 0 when everything is up to date", async () => {

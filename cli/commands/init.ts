@@ -8,6 +8,7 @@ import { writeConfig } from "../mops.js";
 import { Config } from "../types.js";
 import { template } from "./template.js";
 import { kebabCase } from "change-case";
+import { cliAbort } from "../error.js";
 
 export async function init({ yes = false } = {}) {
   let configFile = path.join(process.cwd(), "mops.toml");
@@ -34,8 +35,7 @@ export async function init({ yes = false } = {}) {
 
   let promptsConfig = {
     onCancel() {
-      console.log("aborted");
-      process.exit(0);
+      cliAbort();
     },
   };
 
