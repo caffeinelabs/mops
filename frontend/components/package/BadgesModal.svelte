@@ -6,7 +6,9 @@
 
 	function badgeUrl(badgeName : string) {
 		if (process.env.NODE_ENV === "development") {
-			return `http://localhost:4943/badge/${badgeName}/${packageName}?canisterId=2d2zu-vaaaa-aaaak-qb6pq-cai`;
+			// Local canister ids are allocated by the replica, not fixed like
+			// dfx's specified_id. vite.config.ts injects the deployed one.
+			return `http://localhost:4943/badge/${badgeName}/${packageName}?canisterId=${process.env.CANISTER_ID_MAIN}`;
 		}
 		else {
 			return `https://oknww-riaaa-aaaam-qaf6a-cai.raw.ic0.app/badge/${badgeName}/${packageName}`;

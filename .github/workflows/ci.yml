@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - v3
   pull_request:
 
 permissions:
@@ -22,8 +23,6 @@ jobs:
         moc-version: [0.14.13]
         node-version: [22]
         include:
-          - mops-version: ic-mops@1.0.0
-            test-global: false
           - mops-version: ./cli/dist
             test-global: false
           - mops-version: ./cli/dist
@@ -38,7 +37,15 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-      - uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
+      # No setup-dfx on purpose — this job runs entirely on icp-cli and mops.
+      # dfx is still installed by release.yml and by the old-CLI matrices in
+      # mops-test.yml / setup-mops.yml.
+
+      # Pinned on purpose. icp-cli is still changing its manifest schema
+      # between minor versions, so an unpinned install breaks icp.yaml
+      # without a commit touching it.
+      - name: Install icp-cli
+        run: npm install -g @icp-sdk/icp-cli@1.2.0 @icp-sdk/ic-wasm@0.11.1
 
       - uses: ./.github/actions/cache-rust-wasm
 
@@ -73,6 +80,9 @@ jobs:
       - name: Deploy backend
         run: npm run deploy-local
 
+      - name: Generate declarations
+        run: npm run decl
+
       - name: Build frontend
         run: npm run build-frontend
 
@@ -100,6 +110,9 @@ jobs:
           (cd cli/tests/check/fix-utf8 && mops install)
           (cd cli/tests/build/success && mops install)
           (cd cli/tests/build/error && mops install)
+          (cd cli/tests/build/custom-output && mops install)
+          (cd cli/tests/build/optimize && mops install)
+          (cd cli/tests/build/optimize-fail && mops install)
 
       - name: Run CLI tests
         if: ${{ !matrix.test-global }}

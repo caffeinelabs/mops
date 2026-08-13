@@ -76,7 +76,7 @@ mops check-stable <old-file> [canister]
 - **`[canister]`** — Name of the canister to check against. When omitted, auto-detected if exactly one canister is defined; errors if multiple canisters exist.
 
 :::tip
-`mops build` generates a `.most` file for each canister alongside `.wasm` and `.did`. Use [`mops deployed`](/cli/mops-deployed) as a post-deploy hook to promote that `.most` into a committed `deployed/<name>.most` baseline, and configure `[canisters.<name>.check-stable]` in `mops.toml` so `mops check-stable` (and `mops check`) verify upgrade safety automatically on every run.
+`mops build` generates a `.most` file for each canister alongside `.wasm` and `.did`. Use [`mops deployed`](./09-mops-deployed.md) as a post-deploy hook to promote that `.most` into a committed `deployed/<name>.most` baseline, and configure `[canisters.<name>.check-stable]` in `mops.toml` so `mops check-stable` (and `mops check`) verify upgrade safety automatically on every run.
 :::
 
 ## Options
@@ -87,7 +87,7 @@ Show detailed output including the `moc` commands being run and the intermediate
 
 ### `--no-check-limit`
 
-Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](/cli/mops-migrate#chain-trimming). Also suppresses the pending-migration warning that runs when `check-limit` is set.
+Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](./08-mops-migrate.md#chain-trimming). Also suppresses the pending-migration warning that runs when `check-limit` is set.
 
 ## Pending migration diagnostic
 
@@ -119,5 +119,5 @@ mops check-stable -- --experimental-stable-memory=1
 ```
 
 :::tip
-Global `moc` flags configured in `[moc].args` and per-canister flags in `[canisters.<name>].args` are automatically applied. See [`mops.toml` reference](/mops.toml#moc).
+Global `moc` flags configured in `[moc].args` and per-canister flags in `[canisters.<name>].args` are automatically applied. See [`mops.toml` reference](../../09-mops.toml.md#moc).
 :::

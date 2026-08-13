@@ -6,7 +6,7 @@ This file provides guidance to AI coding agents when working with code in this r
 
 - **Always create a PR.** Never push directly to `main`.
 - **CLI design philosophy**: Follow conventions of established package managers (npm, cargo) — naming, flag style, UX patterns. Related commands must stay consistent: if `mops build` works without arguments (all canisters), then `mops check` and `mops check-stable` must too. When changing a command, review its siblings for consistency.
-- **Keep docs in sync.** CLI command docs live in `docs/docs/cli/` and config reference in `docs/docs/09-mops.toml.md`. The same feature often appears in both — update all relevant pages.
+- **Keep docs in sync.** CLI command docs live in `docs/docs/cli/` and config reference in `docs/docs/09-mops.toml.md`. The same feature often appears in both — update all relevant pages. `docs/docs/` is the in-development 3.x line, served at `docs.mops.one/next/` during the 3.x preview; `docs/versioned_docs/version-2.x/` is the released line, served at the site root, and is a frozen snapshot — back-port only correctness fixes for behavior that also exists in 2.x. The two swap back at the 3.0.0 GA.
 - **Keep `--help` in sync with the docs.** A command's `--help` should be a concise summary of its doc page: every option and accepted argument (including the `-- <tool flags>` passthrough, via `.addHelpText`) must appear in `--help`, each with a non-empty description. Don't bloat it with prose — link-level detail stays in the docs.
 - **Update the changelog.** Add entries under `## Next` in `cli/CHANGELOG.md` for any user-facing CLI changes.
 - **Keep skills up to date.** When changing CLI commands or workflows, update `.agents/skills/mops-cli/SKILL.md` to match.
@@ -47,7 +47,7 @@ npm run lint            # ESLint
 npm run fix             # Prettier + ESLint fix
 npm run check           # TypeScript check for CLI + Frontend (parallel)
 npm test                # mops test (Motoko) + CLI Jest tests
-npm start               # Start local dfx replica + deploy + all frontends
+npm start               # Start local icp replica + deploy + all frontends
 ```
 
 ### CLI (`cd cli/`)
@@ -87,8 +87,10 @@ Svelte 5 + Vite 8, queries the main canister. Staging canister: `ogp6e-diaaa-aaa
 
 ## Key constraints
 
+- **dfx is not needed for local development or CI.** `npm run replica` and `npm run deploy-local` use `icp` (config in `icp.yaml`), and `npm run decl` uses `mops` + `icp-bindgen`. `dfx.json` is still kept around for the production deploy path (`deploy-staging`, `deploy-ic`, `release.yml`).
 - **dfx version**: pinned in `dfx.json` via `dfxvm`. Do not run `dfxvm update/install/default` to change it.
-- **Declarations must be regenerated** after backend changes: `npm run decl` (requires local dfx running).
+- **icp-cli version**: pinned in `.github/workflows/ci.yml`; the `icp.yaml` recipes are pinned by version and sha256, and the local network pins its `icp-cli-network-launcher` `version` (unpinned, every cold start asks api.github.com for the newest release — an anonymous request that gets rate-limited on CI runners, and an unpinned replica under the tests). icp-cli still makes breaking manifest changes between minor versions, so do not unpin anything and do not run `icp network update`. To move versions, bump the CI pin, the recipes and the launcher pin together and re-run the local pipeline.
+- **Declarations must be regenerated** after backend changes: `npm run decl` (no replica needed). Two steps per canister: `mops generate candid` writes the `.did` from Motoko source with the pinned `[toolchain] moc`, then [`icp-bindgen`](https://www.npmjs.com/package/@icp-sdk/bindgen) turns it into `*.did.js` / `*.did.d.ts`. The `index.js` / `index.d.ts` actor factories next to them are hand-maintained — nothing regenerates those; add them by hand when adding a canister.
 - **API version** in `cli/mops.ts` (`apiVersion`) and `backend/main/main-canister.mo` (`API_VERSION`) must match.
 
 ## High-risk areas (extra scrutiny)

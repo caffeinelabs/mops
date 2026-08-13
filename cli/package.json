@@ -1,6 +1,6 @@
 {
   "name": "ic-mops",
-  "version": "2.19.2",
+  "version": "2.22.0",
   "type": "module",
   "bin": {
     "mops": "dist/bin/mops.js",
@@ -8,15 +8,10 @@
     "moc-wrapper": "bin/moc-wrapper.sh"
   },
   "files": [
-    "*",
-    "!network.txt",
-    "!Dockerfile",
-    "!verify.sh",
-    "!build.sh",
-    "!DEVELOPMENT.md",
-    "!.mops",
-    "/templates",
-    "/wasm"
+    "/dist",
+    "!/dist/tests",
+    "/bin",
+    "/CHANGELOG.md"
   ],
   "homepage": "https://mops.one",
   "repository": {
@@ -41,7 +36,8 @@
     "bundle:package-json": "tsx bundle-package-json.ts",
     "bundle:tar": "rm -f bundle/cli.tgz && touch -t 200101010101 bundle/cli.tgz && find bundle -exec touch -d '1970-01-01 00:00:00' {} + && tar --sort name --exclude bundle/cli.tgz -cvf - bundle | gzip -n > bundle/cli.tgz",
     "copy": "cp -r commands/bench dist/commands && cp -r declarations templates package.json bin dist | true",
-    "prepare": "rm -rf dist && run-s dist copy fix-dist",
+    "prepare": "rm -rf dist && run-s dist copy vendor:pic fix-dist",
+    "vendor:pic": "esbuild vendor/pic-entry.mjs --bundle --platform=node --format=esm --outfile=dist/vendor/pic.mjs --banner:js=\"import{fileURLToPath as __vfu}from 'node:url';import{dirname as __vdn}from 'node:path';import{createRequire as __vcr}from 'node:module';const require=__vcr(import.meta.url);const __filename=__vfu(import.meta.url);const __dirname=__vdn(__filename);\"",
     "fix-dist": "tsx ./fix-dist.ts",
     "release": "tsx release-cli.ts",
     "check": "tsc --project tsconfig.json --noEmit",
@@ -50,7 +46,6 @@
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
   },
   "dependencies": {
-    "smol-toml": "1.6.1",
     "@icp-sdk/core": "4.0.2",
     "@noble/hashes": "1.8.0",
     "as-table": "1.0.55",
@@ -60,11 +55,10 @@
     "chokidar": "3.6.0",
     "commander": "13.1.0",
     "debounce": "2.2.0",
-    "decomp-tarxz": "0.1.1",
-    "decompress": "4.2.1",
     "del": "8.0.0",
     "dhall-to-json-cli": "1.7.6",
     "execa": "9.3.1",
+    "fflate": "0.8.3",
     "filesize": "10.1.6",
     "fs-extra": "11.2.0",
     "get-folder-size": "5.0.0",
@@ -80,23 +74,24 @@
     "ncp": "2.0.0",
     "octokit": "4.1.4",
     "pic-ic": "0.5.4",
-    "pic-js-mops": "0.14.8",
     "prettier": "3.5.3",
     "prettier-plugin-motoko": "0.13.0",
     "promisify-child-process": "4.1.2",
     "prompts": "2.4.2",
     "proper-lockfile": "4.1.2",
     "semver": "7.7.1",
+    "smol-toml": "1.6.1",
     "stream-to-promise": "3.0.0",
     "string-width": "7.2.0",
-    "tar": "7.5.16",
+    "tar": "7.5.22",
     "terminal-size": "4.0.0",
-    "vscode-languageserver-textdocument": "1.0.12"
+    "vscode-languageserver-textdocument": "1.0.12",
+    "xz-decompress": "0.2.3"
   },
   "devDependencies": {
+    "@dfinity/pic": "0.23.0",
     "@tsconfig/strictest": "2.0.5",
     "@types/debounce": "1.2.4",
-    "@types/decompress": "4.2.7",
     "@types/fs-extra": "11.0.4",
     "@types/jsdom": "28.0.0",
     "@types/ncp": "2.0.8",

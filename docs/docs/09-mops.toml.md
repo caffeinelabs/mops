@@ -44,9 +44,9 @@ Make sure there is no `/tree/main/` in the URL.
 GitHub dependencies are not allowed in `[dependencies]`. Please publish the dependency to the Mops registry instead.
 :::
 
-Learn how Mops resolves dependencies [here](/how-dependency-resolution-works).
+Learn how Mops resolves dependencies [here](./articles/01-how-dependecy-resolution-works.md).
 
-Learn about version pinning [here](/dependency-version-pinning).
+Learn about version pinning [here](./articles/00-dependency-version-pinning.md).
 
 
 ## [dev-dependencies]
@@ -57,13 +57,13 @@ Same structure as `[dependencies]`, with the exception that GitHub dependencies 
 
 
 ## [toolchain]
-See [toolchain management](/cli/toolchain) page for more details.
+See [toolchain management](./cli/5-toolchain/01-toolchain-overview.md) page for more details.
 
 | Field                | Description                                      |
 | -------------------- | ------------------------------------------------ |
 | moc                  | Motoko compiler version (e.g. `1.0.0`) or file path (e.g. `./tools/moc`, `/usr/local/bin/moc`)   |
-| wasmtime             | WASM runtime version (e.g. `41.0.0`) or file path used to run [tests](/cli/mops-test#--mode) in `wasi` mode   |
-| pocket-ic            | Local IC replica version (e.g. `12.0.0`) or file path used to run [benchmarks](/cli/mops-bench#--replica)   |
+| wasmtime             | WASM runtime version (e.g. `41.0.0`) or file path used to run [tests](./cli/4-dev/01-mops-test.md#--mode) in `wasi` mode   |
+| pocket-ic            | Local IC replica version (e.g. `12.0.0`) or file path used to run [benchmarks](./cli/4-dev/02-mops-bench.md#--replica). Versions below `9.0.0` are deprecated and will no longer be supported in mops v3   |
 | lintoko              | Linter version (e.g. `0.7.0`) or file path for Motoko linting   |
 | wasm-opt             | Binaryen version (e.g. `131`) or file path used for `[optimize]` post-build Wasm optimization   |
 
@@ -91,7 +91,7 @@ Use `mops moc-args` to print the moc flags defined in `mops.toml` (useful when i
 
 ## [canisters]
 
-Define Motoko canisters for [`mops build`](/cli/mops-build), [`mops check`](/cli/mops-check), and [`mops check-stable`](/cli/mops-check-stable).
+Define Motoko canisters for [`mops build`](./cli/4-dev/03-mops-build.md), [`mops check`](./cli/4-dev/04-mops-check.md), and [`mops check-stable`](./cli/4-dev/05-mops-check-stable.md).
 
 Each canister entry specifies the entrypoint file and optional compiler settings.
 
@@ -101,6 +101,7 @@ Each canister entry specifies the entrypoint file and optional compiler settings
 | args     | Array of additional `moc` arguments for this canister (optional). Applied after `[moc].args` in `check`, `check-stable`, and `build`. |
 | candid   | Path to a Candid interface file (optional). `mops build` subtype-checks the generated interface against this file and embeds it into the wasm as `candid:service` metadata. `mops generate candid` writes the regenerated `.did` to this path. |
 | initArg  | Candid-encoded initialization arguments (optional)              |
+| wasmMemoryLimit | Positive integer Wasm memory limit in bytes applied by `mops build --check-deploy` (optional). Invalid values are rejected by every command that resolves canisters. |
 
 Example:
 ```toml
@@ -125,7 +126,7 @@ main = "src/frontend/main.mo"
 
 ### `[canisters.<name>.check-stable]`
 
-Configure automatic stable variable compatibility checking for a canister. When set, [`mops check`](/cli/mops-check) will verify that the current canister is compatible with the deployed version.
+Configure automatic stable variable compatibility checking for a canister. When set, [`mops check`](./cli/4-dev/04-mops-check.md) will verify that the current canister is compatible with the deployed version.
 
 | Field         | Description                                                     |
 | ------------- | --------------------------------------------------------------- |
@@ -137,19 +138,19 @@ Example:
 path = "deployed/backend.most"
 ```
 
-For a new project with no prior deployment, run [`mops deployed init`](/cli/mops-deployed) — it commits an empty-actor `.most` at the configured path so the check passes against an empty baseline. After every successful deploy, run [`mops deployed`](/cli/mops-deployed) to promote the just-built `.most` into this file.
+For a new project with no prior deployment, run [`mops deployed init`](./cli/4-dev/09-mops-deployed.md) — it commits an empty-actor `.most` at the configured path so the check passes against an empty baseline. After every successful deploy, run [`mops deployed`](./cli/4-dev/09-mops-deployed.md) to promote the just-built `.most` into this file.
 
 ### `[canisters.<name>.migrations]`
 
 Configure managed enhanced migration chains for a canister. When set, `mops check`, `mops build`, and `mops check-stable` auto-inject `--enhanced-migration` for the canister. Create migration files directly in the `chain` directory.
 
-After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run [`mops build`](/cli/mops-build) to produce the wasm artifact.
+After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run [`mops build`](./cli/4-dev/03-mops-build.md) to produce the wasm artifact.
 
 | Field       | Description                                                     |
 | ----------- | --------------------------------------------------------------- |
 | chain       | Path to the directory containing migration files (required) |
 | check-limit | Max number of recent migrations to pass to `moc` during `mops check` and `mops check-stable`, and to `lintoko` during `mops lint` (optional). Useful when the chain grows long and re-checking every old migration slows feedback down. When set, the stable check reports if more migrations are pending (relative to the deployed `.most` baseline) than the limit allows — as an error if compat failed, otherwise a warning. Override per run with `--no-check-limit` |
-| next        | Path to the directory for a pending migration (optional, **experimental**). Required for the experimental [`mops migrate`](/cli/mops-migrate) workflow. Must contain 0 or 1 `.mo` files. Must share the same parent directory as `chain` |
+| next        | Path to the directory for a pending migration (optional, **experimental**). Required for the experimental [`mops migrate`](./cli/4-dev/08-mops-migrate.md) workflow. Must contain 0 or 1 `.mo` files. Must share the same parent directory as `chain` |
 | build-limit | Max number of recent migrations to pass to `moc` during `mops build` (optional, **experimental**) |
 
 Example:
@@ -180,18 +181,22 @@ backend = "src/main.mo"
 
 ## [build]
 
-Global build settings used by [`mops build`](/cli/mops-build).
+Global build settings used by [`mops build`](./cli/4-dev/03-mops-build.md).
 
 | Field     | Description                                                     |
 | --------- | --------------------------------------------------------------- |
 | outputDir | Output directory for compiled Wasm and Candid files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
 | args      | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
+| check-wasm | Analyze each final Wasm for likely IC0505 function-complexity risks without starting PocketIC (default `false`). Override for one build with `--check-wasm` or `--no-check-wasm`. |
+| check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Requires `pocket-ic` 9.0.0 or newer in `[toolchain]`. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. Incompatible canisters are skipped with `MOPS-CHECK-DEPLOY-SKIPPED`; eligible siblings are still checked. Override for one build with `--check-deploy` or `--no-check-deploy`. |
 
 Example:
 ```toml
 [build]
 outputDir = "dist"
 args = ["--release", "--ai-errors"]
+check-wasm = true
+check-deploy = true
 ```
 
 These flags are applied after `[moc].args` and before per-canister `[canisters.<name>].args`.
@@ -224,7 +229,7 @@ Pin Binaryen via `[toolchain] wasm-opt` (e.g. `"131"`). If `[optimize]` is set a
 
 If `wasm-opt` fails, mops warns and keeps the unoptimized Wasm (same soft-fail behavior as dfx). Use `--verbose` for full `wasm-opt` output.
 
-Pass `--no-optimize` to [`mops build`](/cli/mops-build#--no-optimize) or [`mops bench`](/cli/mops-bench#--no-optimize) to skip this pass for a single run without editing `mops.toml`.
+Pass `--no-optimize` to [`mops build`](./cli/4-dev/03-mops-build.md#--no-optimize) or [`mops bench`](./cli/4-dev/02-mops-bench.md#--no-optimize) to skip this pass for a single run without editing `mops.toml`.
 
 :::note
 Deploy recipes (e.g. icp-cli) that also run `wasm-opt` should skip that step when mops already optimized the artifact — avoid stacking passes. Actor-class Wasm embedded inside Motoko modules is not recursively optimized.
@@ -233,7 +238,7 @@ Deploy recipes (e.g. icp-cli) that also run `wasm-opt` should skip that step whe
 
 ## [deployed]
 
-Settings for [`mops deployed`](/cli/mops-deployed).
+Settings for [`mops deployed`](./cli/4-dev/09-mops-deployed.md).
 
 | Field | Description                                                                                                                          |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -250,7 +255,7 @@ All canisters share one directory; per-canister overrides are not supported.
 
 ## [lint]
 
-Settings for [`mops lint`](/cli/mops-lint).
+Settings for [`mops lint`](./cli/4-dev/07-mops-lint.md).
 
 | Field   | Description                                                                                                                                                                         |
 | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -298,4 +303,4 @@ Use when your package will not work with older versions of the `moc` compiler or
 
 ## Advanced Configuration
 
-For additional configuration options including registry endpoint overrides, see [Environment Variables](/cli/environment-variables).
+For additional configuration options including registry endpoint overrides, see [Environment Variables](./cli/7-misc/06-environment-variables.md).

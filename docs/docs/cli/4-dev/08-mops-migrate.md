@@ -6,7 +6,7 @@ sidebar_label: mops migrate
 # `mops migrate`
 
 :::warning Experimental
-`mops migrate` is **experimental** and not recommended for general use yet — its commands and configuration may change. The recommended workflow is to create migration files directly in your `chain` directory; see [`[canisters.<name>.migrations]`](/mops.toml#canistersnamemigrations).
+`mops migrate` is **experimental** and not recommended for general use yet — its commands and configuration may change. The recommended workflow is to create migration files directly in your `chain` directory; see [`[canisters.<name>.migrations]`](../../09-mops.toml.md#canistersnamemigrations).
 :::
 
 Manage enhanced migration chains.
@@ -67,7 +67,7 @@ build-limit = 100
 
 `moc` diagnostics may point to a staged path under `.migrations-<canister>/`, which mops removes when the command finishes.
 
-See [`mops.toml` reference](/mops.toml#canistersnamemigrations) for all fields.
+See [`mops.toml` reference](../../09-mops.toml.md#canistersnamemigrations) for all fields.
 
 ## Typical workflow
 
@@ -93,6 +93,6 @@ The limits count the full virtual chain (frozen + pending next migration). This 
 
 Already-applied migrations are skipped at runtime by the Motoko RTS, so trimming is safe. When trimming is active, M0254 warnings are automatically suppressed.
 
-On moc 1.12.0+ that suppression covers fields the deployed `.most` baseline already provides — the normal trimming case. A field that the baseline does not provide and no migration in the chain produces fails as an M0267 error instead of warning. See [diagnostics on moc 1.12.0+](/cli/mops-check-stable#diagnostics-on-moc-1120).
+On moc 1.12.0+ that suppression covers fields the deployed `.most` baseline already provides — the normal trimming case. A field that the baseline does not provide and no migration in the chain produces fails as an M0267 error instead of warning. See [diagnostics on moc 1.12.0+](./05-mops-check-stable.md#diagnostics-on-moc-1120).
 
 When `check-limit` is set, `mops check-stable` (and the stable check inside `mops check`) compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, mops reports a diagnostic suggesting to fold all changes into the latest pending migration. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. Only runs when `check-limit` is configured and the baseline is a committed `.most` file (not a `.mo` source passed on the command line).

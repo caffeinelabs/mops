@@ -94,9 +94,23 @@ export let getDepCacheDir = (cacheName: string) => {
   return path.join(getGlobalCacheDir(), "packages", cacheName);
 };
 
+// Staged writes commit via atomic rename, so a present dir is normally a
+// complete package. Empty or manifest-less dirs are leftovers from
+// interrupted pre-staging runs (or a bad shared volume) — treat them as a
+// miss and remove them so the caller re-downloads.
 export let isDepCached = (cacheName: string) => {
   let dir = getDepCacheDir(cacheName);
-  return fs.existsSync(dir);
+  if (!fs.existsSync(dir)) {
+    return false;
+  }
+  let complete = cacheName.startsWith("_github/")
+    ? fs.readdirSync(dir).length > 0
+    : fs.existsSync(path.join(dir, "mops.toml"));
+  if (!complete) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    return false;
+  }
+  return true;
 };
 
 export function getDepCacheName(name: string, version: string) {

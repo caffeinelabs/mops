@@ -5,32 +5,62 @@ import chalk from "chalk";
 import {
   checkConfigFile,
   getRootDir,
+  parseDepValue,
   parseGithubURL,
   readConfig,
 } from "./mops.js";
-import { VesselConfig, readVesselConfig } from "./vessel.js";
+import { VesselConfig, installFromGithub, readVesselConfig } from "./vessel.js";
 import { Config, Dependency } from "./types.js";
-import { getDepCacheDir, getDepCacheName } from "./cache.js";
+import { getDepCacheDir, getDepCacheName, isDepCached } from "./cache.js";
+import { installMopsDep } from "./commands/install/install-mops-dep.js";
+import { getDepName } from "./helpers/get-dep-name.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { normalizeLocalDepPath } from "./helpers/normalize-local-path.js";
-import { checkLockFileLight, readLockFile } from "./integrity.js";
+import {
+  checkLockFileLight,
+  readLockFile,
+  readLockFileGraph,
+} from "./integrity.js";
 
-export async function resolvePackages({
-  conflicts = "ignore" as "warning" | "error" | "ignore",
+type ResolveOptions = {
+  conflicts?: "warning" | "error" | "ignore";
   // Bypass a valid lock so `--lock update` can rewrite absolute local paths.
+  skipLock?: boolean;
+};
+
+export async function resolvePackages(
+  options: ResolveOptions = {},
+): Promise<Record<string, string>> {
+  return (await resolveDepsAndGraph(options)).deps;
+}
+
+// Resolves winners and collects the declared dependency edges of every
+// registry package version visited (losers included), so the lock can be
+// regenerated later without those versions on disk.
+export async function resolveDepsAndGraph({
+  conflicts = "ignore",
   skipLock = false,
-} = {}): Promise<Record<string, string>> {
+}: ResolveOptions = {}): Promise<{
+  deps: Record<string, string>;
+  graph: Record<string, Record<string, string>>;
+}> {
   if (!checkConfigFile()) {
-    return {};
+    return { deps: {}, graph: {} };
   }
 
   if (!skipLock && checkLockFileLight()) {
     let lockFileJson = readLockFile();
 
     if (lockFileJson && lockFileJson.version === 3) {
-      return lockFileJson.deps;
+      return { deps: lockFileJson.deps, graph: lockFileJson.graph ?? {} };
     }
   }
+
+  // edges from the previous lock (even a stale one) substitute for manifests
+  // of versions absent from the cache; published versions are immutable,
+  // so recorded edges never go stale
+  let lockGraph = readLockFileGraph();
+  let graph: Record<string, Record<string, string>> = {};
 
   let rootDir = getRootDir();
   let packages: Record<string, Dependency & { isRoot: boolean }> = {};
@@ -127,6 +157,14 @@ export async function resolvePackages({
       // read nested config
       if (repo) {
         let cacheDir = getDepCacheName(name, repo);
+        if (!isDepCached(cacheDir)) {
+          // best effort: an uncached github dep would otherwise silently
+          // drop its nested deps from resolution
+          await installFromGithub(name, repo, {
+            silent: true,
+            ignoreTransitive: true,
+          });
+        }
         nestedConfig =
           (await readVesselConfig(getDepCacheDir(cacheDir), {
             silent: true,
@@ -140,10 +178,54 @@ export async function resolvePackages({
           nestedConfig = readConfig(mopsToml);
         }
       } else if (version) {
-        let cacheDir = getDepCacheName(name, version);
-        nestedConfig = readConfig(
-          path.join(getDepCacheDir(cacheDir), "mops.toml"),
-        );
+        let pkgId = getPackageId(name, version);
+        let lockedEdges = lockGraph[pkgId];
+        if (lockedEdges) {
+          nestedConfig = {
+            package: { name: getDepName(name), version },
+            dependencies: Object.fromEntries(
+              Object.entries(lockedEdges).map(([depName, depValue]) => [
+                depName,
+                parseDepValue(depName, depValue),
+              ]),
+            ),
+          };
+        } else {
+          let cacheDir = getDepCacheName(name, version);
+          // a lock-driven install only caches winning versions, so a re-walk
+          // with a pre-graph lock can hit versions absent from the cache —
+          // fetch them instead of crashing
+          if (!isDepCached(cacheDir)) {
+            let ok = await installMopsDep(name, version, {
+              silent: true,
+              ignoreTransitive: true,
+            });
+            if (!ok) {
+              console.error(
+                chalk.red("Error: ") +
+                  `Package ${name}@${version} is not in the cache and could not be downloaded`,
+              );
+              process.exit(1);
+            }
+          }
+          nestedConfig = readConfig(
+            path.join(getDepCacheDir(cacheDir), "mops.toml"),
+          );
+        }
+
+        // local path deps are mutable, so a package declaring one is never
+        // recorded — its manifest is always read live
+        if (!(pkgId in graph)) {
+          let nestedDeps = Object.values(nestedConfig.dependencies || {});
+          if (nestedDeps.every((dep) => dep.version || dep.repo)) {
+            graph[pkgId] = Object.fromEntries(
+              nestedDeps.map((dep) => [
+                dep.name,
+                dep.version || dep.repo || "",
+              ]),
+            );
+          }
+        }
       }
 
       // collect nested deps
@@ -214,7 +296,7 @@ export async function resolvePackages({
     process.exit(1);
   }
 
-  return Object.fromEntries(
+  let deps = Object.fromEntries(
     Object.entries(packages)
       .map(([name, pkg]) => {
         let version: string;
@@ -235,4 +317,6 @@ export async function resolvePackages({
       })
       .filter(([, version]) => version !== ""),
   );
+
+  return { deps, graph };
 }

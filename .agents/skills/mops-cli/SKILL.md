@@ -43,6 +43,8 @@ path = "deployed/backend.most"
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
+check-wasm = true    # optional: analyze final Wasm complexity
+check-deploy = true  # optional: verify fresh PocketIC installation after build
 
 # Opt-in Wasm optimization (Binaryen wasm-opt) for build + bench
 [optimize]
@@ -119,12 +121,18 @@ mops check -- -Werror     # treat warnings as errors
 mops build                # all canisters
 mops build backend        # single canister
 mops build --verbose      # show compiler commands
+mops build --check-wasm   # analyze final Wasm complexity without PocketIC
+mops build --no-check-wasm # skip configured [build].check-wasm once
+mops build --check-deploy  # verify fresh installation on PocketIC
+mops build --no-check-deploy # skip configured [build].check-deploy once
 mops build -- --ai-errors # pass extra moc flags
 ```
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
 
 With `[optimize]` in `mops.toml`, runs `wasm-opt` after candid metadata (default `-O3 -g`). Pin Binaryen with `mops toolchain use wasm-opt 131` (or let auto-pin write latest on first build). Soft-fails to unoptimized Wasm on error. Pass `--no-optimize` (on `build` or `bench`) to skip the pass for a single run without editing `mops.toml`.
+
+When `--check-wasm` or `[build].check-wasm = true` is enabled, Mops runs fast Walrus analysis on the final Wasm without starting PocketIC. Per-function IC0505 complexity below 750,000 is quiet, 750,000 through 899,999 emits an early warning, and 900,000 or more emits a critical warning. `MOPS-WASM-COMPLEXITY` output includes actionable function metrics, the three largest complexity contributors, and Motoko correction guidance. The estimate never fails the build. Use `--no-check-wasm` to skip configured analysis once.
 
 ### `mops deployed`
 
@@ -154,7 +162,7 @@ mops generate candid backend -o <path>   # single canister, ad-hoc path
 mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.10.0    # pin specific version
-mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the bundled pic-js client doesn't support)
+mops toolchain use pocket-ic 12.0.0  # pin for replica tests / benchmarks (pin a specific version; `latest` may resolve to one the vendored `@dfinity/pic` client doesn't support)
 mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
@@ -163,6 +171,8 @@ mops toolchain info <tool> --versions # list recent stable releases, newest firs
 mops toolchain info <tool> --versions --all # full stable history (cache warming)
 mops toolchain bin moc               # print path to binary
 ```
+
+**`pocket-ic` versions**: `9.0.0` and newer run on the vendored `@dfinity/pic` client. Pins below `9.0.0` still work on the legacy `pic-ic` client but print a deprecation warning and are removed in mops v3 — pin `9.0.0` or newer.
 
 **Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
 
@@ -173,6 +183,8 @@ When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, 
 Create migration files directly in the `chain` directory.
 
 After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run `mops build` to produce the wasm artifact.
+
+Use `mops build --check-deploy`, or set `[build].check-deploy = true` for every build, to install each built Wasm on a fresh PocketIC canister and catch module validation, initialization, and installation failures. Pin pocket-ic 9.0.0 or newer, or a local PocketIC binary path, in `[toolchain]` first. Use `--no-check-deploy` to skip configured validation once. The command uses each canister's `initArg`, or `()` when omitted. Set `wasmMemoryLimit` to a positive integer byte limit on a canister to check deployment under that limit. PocketIC errors are reported as provided by the client, and installation failures are collected across canisters. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. If moc reports incompatibility, Mops emits `MOPS-CHECK-DEPLOY-SKIPPED` with the compiler diagnostic and does not check that canister on fresh PocketIC. Eligible siblings are still checked; validate the skipped upgrade against representative baseline state.
 
 `check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 
@@ -281,3 +293,7 @@ mops add core
 Then configure `[moc].args`, `[canisters]`, and `[build]` in `mops.toml`.
 
 To update tools later: `mops toolchain update moc` or `mops toolchain update` (all tools).
+
+## Editing the mops docs site
+
+Edits go to `docs/docs/` — the in-development line, served at the root of docs.mops.one. `docs/versioned_docs/version-2.x/` is a frozen snapshot; back-port only correctness fixes for behavior that also exists in 2.x.

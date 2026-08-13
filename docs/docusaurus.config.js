@@ -46,6 +46,16 @@ const config = {
 				docs: {
 					routeBasePath: '/',
 					sidebarPath: './sidebars.js',
+					// The released line is served at the root; the in-development line
+					// lives under /next. Flip back to 'current' at the 3.0.0 GA.
+					// Keep this in step with `v3`, which is the only branch that
+					// deploys the docs canister — this config shapes local previews
+					// here, but what docs.mops.one serves is built from v3.
+					lastVersion: '2.x',
+					versions: {
+						current: {label: '3.x (unreleased)', path: 'next'},
+						'2.x': {label: '2.x', path: ''},
+					},
 					// Please change this to your repo.
 					// Remove this to remove the "edit this page" links.
 					editUrl: 'https://github.com/caffeinelabs/mops/edit/main/docs/',
@@ -70,6 +80,10 @@ const config = {
 					{
 						type: 'html',
 						value: '<mops-navbar></mops-navbar>',
+					},
+					{
+						type: 'docsVersionDropdown',
+						position: 'right',
 					},
 				],
 			},
