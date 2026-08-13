@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- All deprecation warnings, error hints, and doc examples that suggested `mops toolchain use pocket-ic 12.0.0` now suggest `15.0.0`, the current PocketIC release.
 
 ## 2.22.0
 - Updating the lock after a dependency change no longer refetches file hashes for the whole graph from the registry: hashes of packages already in the lock are carried over (published versions are immutable), and only packages new to the lock are queried. `mops remove` now updates the lock without any registry queries. Explicit `mops install --lock update` still refreshes every hash from the registry, so it remains the recovery command for a lock with corrupt hashes.

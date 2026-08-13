@@ -13,7 +13,7 @@ export function warnLegacyPocketIc(version: string): void {
   console.log(
     chalk.yellow(
       `\`pocket-ic\` is pinned to ${version} in \`[toolchain]\`. Support for \`pocket-ic\` below 9.0.0 is deprecated and will be removed in mops v3.\n` +
-        "Run `mops toolchain use pocket-ic 12.0.0` to move to a supported version and silence this warning.",
+        "Run `mops toolchain use pocket-ic 15.0.0` to move to a supported version and silence this warning.",
     ),
   );
 }

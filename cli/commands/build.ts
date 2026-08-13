@@ -65,7 +65,7 @@ export async function build(
     const pocketIcVersion = config.toolchain?.["pocket-ic"];
     if (!pocketIcVersion) {
       cliError(
-        "PocketIC deployment check requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 12.0.0` to pin it.",
+        "PocketIC deployment check requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 15.0.0` to pin it.",
       );
     }
     try {

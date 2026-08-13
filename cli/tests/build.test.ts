@@ -383,7 +383,7 @@ describe("build", () => {
     try {
       const result = await cli(["build", "foo", "--check-deploy"], { cwd });
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("mops toolchain use pocket-ic 12.0.0");
+      expect(result.stderr).toMatch("mops toolchain use pocket-ic 15.0.0");
     } finally {
       cleanFixture(cwd);
     }
