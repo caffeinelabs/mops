@@ -1,4 +1,4 @@
-import { Argument, Command, Option } from "commander";
+import { Argument, Command, InvalidArgumentError, Option } from "commander";
 import chalk from "chalk";
 import events from "node:events";
 import process from "node:process";
@@ -104,6 +104,16 @@ async function installAllOrExit(options: { locked?: boolean }): Promise<void> {
   }
 }
 
+// Validates `--concurrency`; MOPS_CONCURRENCY is parsed in
+// install-concurrency.ts because the env var must work without the flag.
+function parseConcurrency(value: string): number {
+  let parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new InvalidArgumentError("expected an integer >= 1");
+  }
+  return parsed;
+}
+
 // Shared `--help` section describing the enhanced migration `check-limit`
 // trimming and its override flag, so the limit behaviour is discoverable
 // from `--help`. `withFix` appends the `--fix` hint for commands that support it.
@@ -198,6 +208,12 @@ program
   .description("Install all dependencies specified in mops.toml")
   .option("--no-toolchain", "Do not install toolchain")
   .option("--verbose", "Show more information")
+  .addOption(
+    new Option(
+      "--concurrency <n>",
+      "Max simultaneous registry requests (default: derived from the CPU count, 4–16; env var MOPS_CONCURRENCY works on every command)",
+    ).argParser(parseConcurrency),
+  )
   .addOption(
     new Option(
       "--locked",

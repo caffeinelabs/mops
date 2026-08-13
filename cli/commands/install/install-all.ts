@@ -19,12 +19,14 @@ type InstallAllOptions = {
   silent?: boolean;
   lock?: LockPolicy;
   threads?: number;
+  concurrency?: number;
 };
 
 export async function installAll({
   verbose = false,
   silent = false,
   threads,
+  concurrency,
   lock = "maintain",
 }: InstallAllOptions = {}): Promise<boolean> {
   if (!checkConfigFile()) {
@@ -70,6 +72,7 @@ export async function installAll({
         silent,
         verbose,
         threads,
+        concurrency,
         ignoreTransitive: true,
       });
       if (!ok) {
@@ -79,7 +82,12 @@ export async function installAll({
   }
 
   if (!installedFromLockFile) {
-    let ok = await installDeps(allDeps, { silent, verbose, threads });
+    let ok = await installDeps(allDeps, {
+      silent,
+      verbose,
+      threads,
+      concurrency,
+    });
     if (!ok) {
       return false;
     }

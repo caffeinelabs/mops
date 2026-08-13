@@ -60,6 +60,17 @@ mops install            # dev: keep the lockfile in sync
 
 `mops sources` deliberately has no `--locked`: it is invoked as a packtool in the middle of another tool's build, and its stdout is machine-parsed. Enforce the lockfile with a preceding `mops install --locked` step instead.
 
+### `--concurrency <n>`
+
+Maximum number of simultaneous registry requests (an integer ≥ 1). The default is derived from the CPU count (2 × cores, clamped to 4–16), so a small container gets a budget it can survive and a big machine saturates the registry.
+
+The same limit can be set with the [`MOPS_CONCURRENCY`](../7-misc/06-environment-variables.md#mops_concurrency) environment variable, which also covers every other command that installs packages (`mops build`, `mops test`, `mops sources`, ...) and works where the command line cannot be edited — Docker builds, prebuilt CI images. The flag wins over the environment variable.
+
+```bash
+mops install --concurrency 4
+MOPS_CONCURRENCY=1 mops build   # fully serial downloads
+```
+
 ### `--no-toolchain`
 
 Do not install toolchain.

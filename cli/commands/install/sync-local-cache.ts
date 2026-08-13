@@ -7,9 +7,16 @@ import {
   sweepStaleStagingDirs,
 } from "../../cache.js";
 import { getDependencyType, getRootDir } from "../../mops.js";
+import { parallel } from "../../parallel.js";
 import { resolvePackages } from "../../resolve-packages.js";
 import { installFromGithub } from "./install-from-github.js";
 import { installMopsDep } from "./install-mops-dep.js";
+import { fileThreadsPerPackage } from "./install-concurrency.js";
+
+// Each task is a recursive directory copy, so a graph-wide fan-out runs out
+// of file descriptors. On the repair path below a task also downloads, hence
+// the matching share of the request budget.
+const COPY_CONCURRENCY = 8;
 
 export async function syncLocalCache({ verbose = false } = {}): Promise<
   Record<string, string>
@@ -18,13 +25,16 @@ export async function syncLocalCache({ verbose = false } = {}): Promise<
 
   let resolvedPackages = await resolvePackages();
   let rootDir = getRootDir();
+  let repairThreads = fileThreadsPerPackage(COPY_CONCURRENCY);
 
   verbose && console.log("Syncing local cache...");
 
   let installedDeps: Record<string, string> = {};
 
-  await Promise.all(
-    Object.entries(resolvedPackages).map(async ([name, value]) => {
+  await parallel(
+    COPY_CONCURRENCY,
+    Object.entries(resolvedPackages),
+    async ([name, value]) => {
       let depType = getDependencyType(value);
 
       if (depType === "mops" || depType === "github") {
@@ -43,6 +53,7 @@ export async function syncLocalCache({ verbose = false } = {}): Promise<
                 ? await installMopsDep(name, value, {
                     silent: true,
                     ignoreTransitive: true,
+                    threads: repairThreads,
                   })
                 : await installFromGithub(name, value, { silent: true });
             if (!ok) {
@@ -54,7 +65,7 @@ export async function syncLocalCache({ verbose = false } = {}): Promise<
           await copyCache(cacheName, dest);
         }
       }
-    }),
+    },
   ).catch((err) => {
     // ncp rejects with an array of errors
     throw Array.isArray(err) ? err[0] : err;

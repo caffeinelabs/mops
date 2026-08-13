@@ -21,8 +21,13 @@ import {
   getPackageFilesInfo,
 } from "../../api/downloadPackageFiles.js";
 import { installDeps } from "./install-deps.js";
+import { fileThreadsPerPackage } from "./install-concurrency.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
 import { verifyDownloadedPackageFiles } from "../../integrity.js";
+
+// Each task holds one file descriptor, so an unbounded fan-out over a large
+// package can hit the FD soft limit; pnpm bounds its fs pools the same way.
+const FS_WRITE_CONCURRENCY = 16;
 
 type InstallMopsDepOptions = {
   verbose?: boolean;
@@ -43,7 +48,9 @@ export async function installMopsDep(
     ignoreTransitive,
   }: InstallMopsDepOptions = {},
 ): Promise<boolean> {
-  threads = threads || 12;
+  // Direct calls install a single package, so it gets the whole budget;
+  // installDeps passes each pool member its share instead.
+  threads = threads || fileThreadsPerPackage(1);
   let depName = getDepName(pkg);
 
   if (!checkConfigFile()) {
@@ -86,17 +93,12 @@ export async function installMopsDep(
   }
   // download
   else {
-    // GitHub Actions fails with "fetch failed" if there are multiple concurrent actions
-    if (process.env.GITHUB_ENV) {
-      threads = 4;
-    }
-
     try {
       let { storageId, fileIds } = await getPackageFilesInfo(depName, version);
 
       total = fileIds.length + 2;
 
-      let filesData = new Map();
+      let filesData = new Map<string, Uint8Array>();
       let storage = await storageActor(storageId);
 
       await parallel(threads, fileIds, async (fileId: string) => {
@@ -138,8 +140,10 @@ export async function installMopsDep(
       process.on("SIGINT", onSigInt);
 
       try {
-        await Promise.all(
-          Array.from(filesData.entries()).map(async ([filePath, data]) => {
+        await parallel(
+          FS_WRITE_CONCURRENCY,
+          Array.from(filesData.entries()),
+          async ([filePath, data]) => {
             await fs.promises.mkdir(
               path.join(stagingDir, path.dirname(filePath)),
               { recursive: true },
@@ -148,7 +152,7 @@ export async function installMopsDep(
               path.join(stagingDir, filePath),
               Buffer.from(data),
             );
-          }),
+          },
         );
         commitStagingDir(stagingDir, cacheDir);
       } catch (err) {
