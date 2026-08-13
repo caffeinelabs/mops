@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 2.23.0
 - All deprecation warnings, error hints, and doc examples that suggested `mops toolchain use pocket-ic 12.0.0` now suggest `15.0.0`, the current PocketIC release.
 - On moc 1.12.0+, `mops check` and `mops check-stable` check upgrade compatibility faster and report it better for canisters with `[migrations]` and a committed `.most` baseline: compatibility errors now point at your source (`src/main.mo:3.1-11.2`) instead of `(unknown location)`, and a field the initial actor requires that no migration produces now fails as an `M0267` error rather than only warning (`M0254`) — a forgotten migration that previously slipped through as a warning will now fail the check. Older moc pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
 
