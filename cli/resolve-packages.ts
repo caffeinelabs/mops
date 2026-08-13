@@ -66,11 +66,16 @@ export type ResolveResult = {
 // both, not their paths.
 type ResolveCacheEntry = {
   key: string;
+  // Local `path` dep manifests the walk read: filled in while it runs,
+  // complete once `promise` settles. They are live directories rather than
+  // immutable published versions, so every hit awaits the promise and then
+  // re-checks them instead of trusting the key alone. Checking after settle
+  // is what makes sharing an in-flight walk safe — an edit landing after the
+  // walk read a manifest is caught on resume, not served stale. Parallel
+  // installs (#745) made concurrency in this codebase real; the memo must
+  // not assume callers arrive one at a time.
+  localInputs: Map<string, string>;
   promise: Promise<ResolveResult>;
-  // Local `path` dep manifests the walk read. Unknown until it finishes, and
-  // they are live directories rather than immutable published versions, so a
-  // hit re-checks them instead of trusting the key alone.
-  localInputs: Map<string, string> | null;
 };
 
 let resolveCache: ResolveCacheEntry | null = null;
@@ -131,28 +136,28 @@ export async function resolveDepsAndGraph({
   let key = resolveCacheKey(rootDir, usesLock);
 
   let cached = resolveCache;
-  if (
-    cached &&
-    cached.key === key &&
-    // null means the walk is still running: a concurrent caller shares it.
-    (cached.localInputs === null ||
-      [...cached.localInputs].every(([file, hash]) => fileHash(file) === hash))
-  ) {
-    return copyResult(await cached.promise);
+  if (cached && cached.key === key) {
+    // Completed and in-flight walks alike: settle first, verify after. A
+    // mismatch means an edit landed after the walk read a manifest — fall
+    // through and walk again rather than serve the stale read.
+    let result = await cached.promise;
+    if (
+      [...cached.localInputs].every(([file, hash]) => fileHash(file) === hash)
+    ) {
+      return copyResult(result);
+    }
   }
 
   let localInputs = new Map<string, string>();
   let entry: ResolveCacheEntry = {
     key,
-    localInputs: null,
+    localInputs,
     promise: resolveUncached(usesLock, rootDir, localInputs),
   };
   resolveCache = entry;
 
   try {
-    let result = await entry.promise;
-    entry.localInputs = localInputs;
-    return copyResult(result);
+    return copyResult(await entry.promise);
   } catch (err) {
     // A failed walk must not be served to the next caller.
     if (resolveCache === entry) {
