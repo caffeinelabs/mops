@@ -81,4 +81,41 @@ describe("parallel", () => {
     ).rejects.toBe(boom);
     expect(started).toEqual([1, 2]);
   });
+
+  test("a failure waits for in-flight tasks to settle before rejecting", async () => {
+    let resolvers: Array<() => void> = [];
+    let boom = new Error("boom");
+    let settled = false;
+    let done = parallel(3, [1, 2, 3], async (item) => {
+      if (item === 2) {
+        throw boom;
+      }
+      await new Promise<void>((resolve) => resolvers.push(resolve));
+    });
+    done.catch(() => {
+      settled = true;
+    });
+
+    // items 1 and 3 are still running after item 2 failed
+    await setImmediate();
+    expect(settled).toBe(false);
+
+    resolvers.shift()?.();
+    await setImmediate();
+    expect(settled).toBe(false);
+
+    resolvers.shift()?.();
+    await setImmediate();
+    expect(settled).toBe(true);
+    await expect(done).rejects.toBe(boom);
+  });
+
+  test("the first error wins when several tasks fail", async () => {
+    let first = new Error("first");
+    await expect(
+      parallel(2, [1, 2], async (item) => {
+        throw item === 1 ? first : new Error("second");
+      }),
+    ).rejects.toBe(first);
+  });
 });

@@ -13,6 +13,7 @@ import {
 import { getHighestVersion } from "../api/getHighestVersion.js";
 import { installMopsDep } from "./install/install-mops-dep.js";
 import { installFromGithub } from "./install/install-from-github.js";
+import { installWithRetry } from "./install/install-concurrency.js";
 import { checkIntegrity, LockPolicy } from "../integrity.js";
 import { checkRequirements } from "../check-requirements.js";
 import { syncLocalCache } from "./install/sync-local-cache.js";
@@ -154,16 +155,21 @@ export async function add(
   }
 
   if (pkgDetails.repo) {
-    let res = await installFromGithub(pkgDetails.name, pkgDetails.repo, {
-      verbose: verbose,
-    });
+    let res = await installWithRetry(() =>
+      installFromGithub(pkgDetails.name, pkgDetails.repo, {
+        verbose: verbose,
+      }),
+    );
     if (!res) {
       cliError();
     }
   } else if (!pkgDetails.path) {
-    let res = await installMopsDep(pkgDetails.name, pkgDetails.version, {
-      verbose: verbose,
-    });
+    let res = await installWithRetry((threads) =>
+      installMopsDep(pkgDetails.name, pkgDetails.version, {
+        verbose: verbose,
+        threads,
+      }),
+    );
     if (res === false) {
       return;
     }

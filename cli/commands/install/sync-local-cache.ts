@@ -12,17 +12,14 @@ import { resolvePackages } from "../../resolve-packages.js";
 import { installFromGithub } from "./install-from-github.js";
 import { installMopsDep } from "./install-mops-dep.js";
 import {
+  copyConcurrency,
   createInstallScope,
   fileThreadsPerPackage,
+  getInstallScope,
   nextRetryBudget,
   requestBudget,
   runInInstallScope,
 } from "./install-concurrency.js";
-
-// Each task is a recursive directory copy, so a graph-wide fan-out runs out
-// of file descriptors. On the repair path below a task also downloads, hence
-// the matching share of the request budget.
-const COPY_CONCURRENCY = 8;
 
 export async function syncLocalCache({ verbose = false } = {}): Promise<
   Record<string, string>
@@ -56,6 +53,8 @@ export async function syncLocalCache({ verbose = false } = {}): Promise<
             // a resolved package can be missing from the global cache
             // (pruned cache, interrupted install) — restore it before copying
             if (!isDepCached(cacheName)) {
+              let scope = getInstallScope();
+              let seenErrors = scope?.transientErrors.length ?? 0;
               let ok =
                 depType === "mops"
                   ? await installMopsDep(name, value, {
@@ -65,8 +64,13 @@ export async function syncLocalCache({ verbose = false } = {}): Promise<
                     })
                   : await installFromGithub(name, value, { silent: true });
               if (!ok) {
+                // Failed installs swallow their error and note transient ones
+                // on the scope; carrying that note in the message lets the
+                // retry loop classify this wrapper, and names the real cause.
+                let transient = scope?.transientErrors[seenErrors];
                 throw Error(
-                  `Package ${name} = "${value}" is not in the cache and could not be downloaded`,
+                  `Package ${name} = "${value}" is not in the cache and could not be downloaded` +
+                    (transient ? ` (${transient})` : ""),
                 );
               }
             }
@@ -84,9 +88,9 @@ export async function syncLocalCache({ verbose = false } = {}): Promise<
   // the repair path retries with the budget halved instead of aborting.
   let budget = requestBudget();
   for (let attempt = 1; ; attempt++) {
-    let copyPool = Math.min(COPY_CONCURRENCY, budget);
-    // The scope carries transient errors out of the repair installs, which
-    // report failure as the thrown "could not be downloaded" above.
+    let copyPool = copyConcurrency(budget);
+    // The scope carries transient errors out of the repair installs; the
+    // thrown "could not be downloaded" above names the one it wraps.
     let scope = createInstallScope(fileThreadsPerPackage(copyPool, budget));
     try {
       await runInInstallScope(scope, () =>

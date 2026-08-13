@@ -14,6 +14,7 @@ import {
 import { Config, Dependency } from "./types.js";
 import { getDepCacheDir, getDepCacheName, isDepCached } from "./cache.js";
 import { installMopsDep } from "./commands/install/install-mops-dep.js";
+import { installWithRetry } from "./commands/install/install-concurrency.js";
 import { getDepName } from "./helpers/get-dep-name.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { normalizeLocalDepPath } from "./helpers/normalize-local-path.js";
@@ -315,10 +316,13 @@ async function resolveUncached(
           // with a pre-graph lock can hit versions absent from the cache —
           // fetch them instead of crashing
           if (!isDepCached(cacheDir)) {
-            let ok = await installMopsDep(name, version, {
-              silent: true,
-              ignoreTransitive: true,
-            });
+            let ok = await installWithRetry((threads) =>
+              installMopsDep(name, version, {
+                silent: true,
+                ignoreTransitive: true,
+                threads,
+              }),
+            );
             if (!ok) {
               cliError(
                 `Error: Package ${name}@${version} is not in the cache and could not be downloaded`,
