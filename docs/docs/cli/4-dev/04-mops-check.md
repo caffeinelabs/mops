@@ -138,7 +138,7 @@ On `moc` 1.12.0+, canisters with `[migrations]` configured and a `.most` baselin
 
 For more details, see [`mops check-stable`](./05-mops-check-stable.md).
 
-When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. Only applies when the baseline is a committed `.most` file configured via `[check-stable].path` (not a `.mo` source passed on the command line). See [chain trimming](./08-mops-migrate.md#chain-trimming).
+When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. See [chain trimming](./08-mops-migrate.md#chain-trimming).
 
 ## Enhanced migration support
 

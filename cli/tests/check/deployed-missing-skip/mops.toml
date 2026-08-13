@@ -8,5 +8,5 @@ args = ["--default-persistent-actors"]
 main = "Ok.mo"
 
 [canisters.backend.check-stable]
-path = "nonexistent.mo"
+path = "nonexistent.most"
 skipIfMissing = true
