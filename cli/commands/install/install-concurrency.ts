@@ -11,13 +11,47 @@ const MAX_REQUEST_BUDGET = 16;
 const MAX_PACKAGE_CONCURRENCY = 4;
 // installMopsDep's historical thread count, which a single package still gets.
 const MAX_FILE_THREADS = 12;
+// An in-flight request holds a socket, and the install holds more fds around
+// it (staged writes, cache copies, node's own baseline), so a request may
+// claim at most this fraction of the fd soft limit. The usual limits pass
+// untouched: macOS's default 256 still allows the full budget of 16.
+const FDS_PER_REQUEST = 16;
+
+// EMFILE is enforced against the soft limit, which node only exposes through
+// the diagnostic report (~15 ms). Read it once, and only on the install path.
+let cachedFdSoftLimit: number | undefined;
+
+export function fdSoftLimit(): number {
+  if (cachedFdSoftLimit === undefined) {
+    try {
+      let report = process.report?.getReport() as unknown as
+        | { userLimits?: { open_files?: { soft?: unknown } } }
+        | undefined;
+      let soft = report?.userLimits?.open_files?.soft;
+      // "unlimited" comes through as a string; absent on Windows.
+      cachedFdSoftLimit =
+        typeof soft === "number" && soft > 0 ? soft : Infinity;
+    } catch {
+      cachedFdSoftLimit = Infinity;
+    }
+  }
+  return cachedFdSoftLimit;
+}
 
 // pnpm derives its download concurrency from the CPU count and clamps it;
 // same mechanism here, with smaller numbers because registry requests are
 // heavier than tarball fetches. A 1-CPU container lands on the floor, which
 // replaces the old `GITHUB_ENV` brand check with an actual constraint.
-export function deriveRequestBudget(cpus: number): number {
-  return Math.min(MAX_REQUEST_BUDGET, Math.max(MIN_REQUEST_BUDGET, cpus * 2));
+// The fd soft limit caps the result separately: CPUs say nothing about
+// EMFILE, and a many-core box with a low `ulimit -n` must not get the full
+// budget.
+export function deriveRequestBudget(cpus: number, fdLimit = Infinity): number {
+  let cpuBudget = Math.min(
+    MAX_REQUEST_BUDGET,
+    Math.max(MIN_REQUEST_BUDGET, cpus * 2),
+  );
+  let fdBudget = Math.max(1, Math.floor(fdLimit / FDS_PER_REQUEST));
+  return Math.min(cpuBudget, fdBudget);
 }
 
 let warnedInvalidEnv = false;
@@ -44,7 +78,7 @@ export function requestBudget(explicit?: number): number {
       );
     }
   }
-  return deriveRequestBudget(os.availableParallelism());
+  return deriveRequestBudget(os.availableParallelism(), fdSoftLimit());
 }
 
 // How many packages may install at once. An explicit per-package thread count
@@ -65,11 +99,70 @@ export function fileThreadsPerPackage(
   return Math.max(1, Math.min(MAX_FILE_THREADS, Math.floor(budget / packages)));
 }
 
+// The failures worth a retry: connection-level fetch errors and fd
+// exhaustion, where the cause is usually the aggregate concurrency rather
+// than the one request that lost. A registry answer ("Package not found") is
+// never transient. Checked against the whole cause chain, because undici
+// reports every network failure as a bare "fetch failed" TypeError with the
+// syscall error nested under `cause`.
+const TRANSIENT_ERROR_PATTERN =
+  /fetch failed|failed to fetch|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE|EMFILE|ENFILE|EAI_AGAIN|UND_ERR_|socket hang up|other side closed|network socket disconnected/i;
+
+export function isTransientNetworkError(err: unknown, depth = 0): boolean {
+  if (err == null || depth > 5) {
+    return false;
+  }
+  if (typeof err === "string") {
+    return TRANSIENT_ERROR_PATTERN.test(err);
+  }
+  if (typeof err !== "object") {
+    return false;
+  }
+  let e = err as {
+    message?: unknown;
+    code?: unknown;
+    cause?: unknown;
+    errors?: unknown;
+  };
+  // Strings only: the agent's AgentError carries an ErrorCode *object* in
+  // `code` whose toString() can itself throw, so nothing here may stringify
+  // a non-string property.
+  try {
+    let text =
+      (typeof e.message === "string" ? e.message : "") +
+      " " +
+      (typeof e.code === "string" ? e.code : "");
+    if (TRANSIENT_ERROR_PATTERN.test(text)) {
+      return true;
+    }
+    // AggregateError, and ncp's array-of-errors rejections
+    if (
+      Array.isArray(e.errors) &&
+      e.errors.some((inner) => isTransientNetworkError(inner, depth + 1))
+    ) {
+      return true;
+    }
+    return isTransientNetworkError(e.cause, depth + 1);
+  } catch {
+    // a throwing getter is not a network error
+    return false;
+  }
+}
+
+function errorText(err: unknown): string {
+  let text = err instanceof Error ? err.message : String(err);
+  return text.split("\n")[0] ?? text;
+}
+
 // One install run. The top-level call decides `threads`; transitive levels
 // inherit it because they cannot see how wide the pool above them is.
+// `transientErrors` collects what individual package installs swallowed —
+// they report failure as `false`, so this is the only way the run can tell
+// a dead network from a package that does not exist.
 export type InstallScope = {
   threads: number;
   inFlight: Map<string, Promise<boolean>>;
+  transientErrors: string[];
 };
 
 const scopeStorage = new AsyncLocalStorage<InstallScope>();
@@ -79,7 +172,46 @@ export function getInstallScope(): InstallScope | undefined {
 }
 
 export function createInstallScope(threads: number): InstallScope {
-  return { threads, inFlight: new Map() };
+  return { threads, inFlight: new Map(), transientErrors: [] };
+}
+
+export function noteTransientNetworkError(err: unknown): void {
+  let scope = getInstallScope();
+  if (scope && isTransientNetworkError(err)) {
+    scope.transientErrors.push(errorText(err));
+  }
+}
+
+// Attempts an install run may make before giving up: the initial one and the
+// retries after it.
+export const MAX_INSTALL_ATTEMPTS = 3;
+
+// Whether a failed attempt earned a retry, and the budget to retry with.
+// Only transient failures qualify — noted by a package install or thrown
+// through the pool. The budget halves so an environment that cannot sustain
+// the concurrency degrades to a slower install instead of a broken one;
+// per-request retries cannot do that, because the other requests are still
+// holding the same ceiling. Returns undefined when the run should fail.
+export function nextRetryBudget(
+  scope: InstallScope,
+  thrown: unknown,
+  attempt: number,
+  budget: number,
+): number | undefined {
+  let transient =
+    scope.transientErrors[0] ??
+    (thrown !== undefined && isTransientNetworkError(thrown)
+      ? errorText(thrown)
+      : undefined);
+  if (transient === undefined || attempt >= MAX_INSTALL_ATTEMPTS) {
+    return undefined;
+  }
+  let next = Math.max(1, Math.floor(budget / 2));
+  console.warn(
+    chalk.yellow("Warning: ") +
+      `network error (${transient}); retrying with concurrency ${next} (attempt ${attempt + 1}/${MAX_INSTALL_ATTEMPTS})`,
+  );
+  return next;
 }
 
 export function runInInstallScope<T>(

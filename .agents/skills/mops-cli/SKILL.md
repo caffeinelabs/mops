@@ -98,7 +98,7 @@ Downloaded files are always checked before anything enters the cache — against
 
 Two consequences worth knowing: a corrupt or hand-edited `mops.lock` now fails a _download_ (the error names `mops.lock` as a possible culprit — restore it from version control; already-cached packages are unaffected), and a package the registry publishes no hashes for still installs, unverified, with a warning.
 
-Packages download in parallel through a bounded pool. `mops install --concurrency <n>` or the `MOPS_CONCURRENCY` env var (works on every installing command) caps simultaneous registry requests; the default derives from the CPU count (4–16). Set `MOPS_CONCURRENCY=1` in constrained environments (1-CPU containers, egress proxies) if installs hit connection errors.
+Packages download in parallel through a bounded pool. `mops install --concurrency <n>` or the `MOPS_CONCURRENCY` env var (works on every installing command) caps simultaneous registry requests; the default derives from the CPU count and the file-descriptor soft limit (4–16). Transient network errors (`fetch failed`, `ECONNRESET`, `EMFILE`) retry automatically with the concurrency halved, up to twice. Set `MOPS_CONCURRENCY=1` only if installs still fail after the retries (an egress proxy capping connections, for example).
 
 ### `mops verify`
 

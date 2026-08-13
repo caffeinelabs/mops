@@ -62,7 +62,7 @@ mops install            # dev: keep the lockfile in sync
 
 ### `--concurrency <n>`
 
-Maximum number of simultaneous registry requests (an integer ≥ 1). The default is derived from the CPU count (2 × cores, clamped to 4–16), so a small container gets a budget it can survive and a big machine saturates the registry.
+Maximum number of simultaneous registry requests (an integer ≥ 1). The default is derived from the CPU count (2 × cores, clamped to 4–16) and capped by the file-descriptor soft limit (`ulimit -n`), so a small container gets a budget it can survive and a big machine saturates the registry.
 
 The same limit can be set with the [`MOPS_CONCURRENCY`](../7-misc/06-environment-variables.md#mops_concurrency) environment variable, which also covers every other command that installs packages (`mops build`, `mops test`, `mops sources`, ...) and works where the command line cannot be edited — Docker builds, prebuilt CI images. The flag wins over the environment variable.
 
@@ -70,6 +70,8 @@ The same limit can be set with the [`MOPS_CONCURRENCY`](../7-misc/06-environment
 mops install --concurrency 4
 MOPS_CONCURRENCY=1 mops build   # fully serial downloads
 ```
+
+When an install hits a transient network or file-descriptor error (`fetch failed`, `ECONNRESET`, `EMFILE`, ...), it retries up to twice with the concurrency halved — already downloaded packages come from the cache, so only the failures are re-fetched. The halving applies even when the limit was set explicitly.
 
 ### `--no-toolchain`
 

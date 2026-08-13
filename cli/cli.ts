@@ -211,7 +211,7 @@ program
   .addOption(
     new Option(
       "--concurrency <n>",
-      "Max simultaneous registry requests (default: derived from the CPU count, 4–16; env var MOPS_CONCURRENCY works on every command)",
+      "Max simultaneous registry requests (default: derived from the CPU count and open-file limit, 4–16; env var MOPS_CONCURRENCY works on every command)",
     ).argParser(parseConcurrency),
   )
   .addOption(

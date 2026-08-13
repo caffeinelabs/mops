@@ -138,6 +138,8 @@ describe("parallel install", () => {
       expect(result.stderr + result.stdout).toMatch(/nonexistent/);
       expect(result.stderr).not.toMatch(/UnhandledPromiseRejection/);
       expect(result.stderr).not.toMatch(/ERR_UNHANDLED_REJECTION/);
+      // a registry answer is a permanent failure — no transient-error retry
+      expect(result.stderr).not.toMatch(/retrying with concurrency/);
 
       // siblings that were in flight alongside the failure still committed
       // whole packages to the global cache
@@ -150,6 +152,37 @@ describe("parallel install", () => {
           entry.startsWith(".staging"),
         ),
       ).toEqual([]);
+    } finally {
+      rmSync(cacheHome, { recursive: true, force: true });
+    }
+  });
+
+  test("transient network failures retry with the concurrency halved", async () => {
+    // 127.0.0.1:9 refuses connections, so every registry request fails with
+    // undici's "fetch failed" — the transient case. No real network involved,
+    // which keeps this test alive during registry or GitHub incidents.
+    // `mops sources` rather than `mops install`: it installs the same way but
+    // performs no API compatibility check, which needs the same dead registry.
+    const cwd = await makeTempFixture("graph");
+    const cacheHome = await makeTempCacheHome();
+
+    try {
+      const result = await cli(["sources"], {
+        cwd,
+        env: {
+          CI: undefined,
+          XDG_CACHE_HOME: cacheHome,
+          MOPS_REGISTRY_HOST: "http://127.0.0.1:9",
+          MOPS_CONCURRENCY: "16",
+        },
+      });
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr).toMatch(
+        /retrying with concurrency 8 \(attempt 2\/3\)/,
+      );
+      expect(result.stderr).toMatch(
+        /retrying with concurrency 4 \(attempt 3\/3\)/,
+      );
     } finally {
       rmSync(cacheHome, { recursive: true, force: true });
     }

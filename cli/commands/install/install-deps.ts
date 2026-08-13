@@ -7,6 +7,7 @@ import {
   dedupeInstall,
   fileThreadsPerPackage,
   getInstallScope,
+  nextRetryBudget,
   packageConcurrency,
   requestBudget,
   runInInstallScope,
@@ -45,48 +46,76 @@ export async function installDeps(
   // recursion below carries one along.
   visitedLocalDeps: Set<string> = new Set(),
 ): Promise<boolean> {
+  let installLevel = async (
+    poolSize: number,
+    depThreads: number,
+    visited: Set<string>,
+  ): Promise<boolean> => {
+    let ok = true;
+
+    // A failed dependency does not abort the rest, same as the sequential loop
+    // this replaced — every package gets its own error message.
+    let install = async (dep: Dependency) => {
+      let run = () =>
+        installDep(
+          dep,
+          { verbose, silent, threads: depThreads, ignoreTransitive },
+          parentPkgPath,
+          visited,
+        );
+      // Local deps stay outside the dedupe map: their cycle guard lives inside
+      // installLocalDep, and awaiting a pending promise of your own ancestor
+      // would turn a manifest cycle into a deadlock.
+      let res = dep.path
+        ? await run()
+        : await dedupeInstall(depKey(dep, ignoreTransitive), run);
+      if (!res) {
+        ok = false;
+      }
+    };
+
+    await parallel(poolSize, deps, install);
+    return ok;
+  };
+
   let scope = getInstallScope();
-  let poolSize: number;
-  let depThreads: number;
   if (scope) {
     // Transitive levels install one package at a time: every branch of the
     // graph is then a single chain, so the top-level pool alone bounds how
     // many packages are in flight however deep the graph goes.
-    poolSize = 1;
-    depThreads = threads ?? scope.threads;
-  } else {
-    let budget = requestBudget(concurrency);
-    poolSize = packageConcurrency(deps.length, budget, threads);
-    depThreads = threads ?? fileThreadsPerPackage(poolSize, budget);
+    return installLevel(1, threads ?? scope.threads, visitedLocalDeps);
   }
 
-  let ok = true;
-
-  // A failed dependency does not abort the rest, same as the sequential loop
-  // this replaced — every package gets its own error message.
-  let install = async (dep: Dependency) => {
-    let run = () =>
-      installDep(
-        dep,
-        { verbose, silent, threads: depThreads, ignoreTransitive },
-        parentPkgPath,
-        visitedLocalDeps,
+  // The top level owns the retry: a transient network failure (connection
+  // reset, fd exhaustion) is retried with the budget halved, so already
+  // downloaded packages come from the cache and only the failures rerun.
+  let budget = requestBudget(concurrency);
+  for (let attempt = 1; ; attempt++) {
+    let poolSize = packageConcurrency(deps.length, budget, threads);
+    let depThreads = threads ?? fileThreadsPerPackage(poolSize, budget);
+    let attemptScope = createInstallScope(depThreads);
+    let ok = false;
+    let thrown: unknown = undefined;
+    try {
+      // A fresh visited-set per attempt: an already visited local dep is
+      // skipped entirely, which would hide its failed registry deps from
+      // the retry.
+      ok = await runInInstallScope(attemptScope, () =>
+        installLevel(poolSize, depThreads, new Set(visitedLocalDeps)),
       );
-    // Local deps stay outside the dedupe map: their cycle guard lives inside
-    // installLocalDep, and awaiting a pending promise of your own ancestor
-    // would turn a manifest cycle into a deadlock.
-    let res = dep.path
-      ? await run()
-      : await dedupeInstall(depKey(dep, ignoreTransitive), run);
-    if (!res) {
-      ok = false;
+    } catch (err) {
+      thrown = err;
     }
-  };
-
-  let run = () => parallel(poolSize, deps, install);
-  await (scope
-    ? run()
-    : runInInstallScope(createInstallScope(depThreads), run));
-
-  return ok;
+    if (ok) {
+      return true;
+    }
+    let retryBudget = nextRetryBudget(attemptScope, thrown, attempt, budget);
+    if (retryBudget === undefined) {
+      if (thrown !== undefined) {
+        throw thrown;
+      }
+      return false;
+    }
+    budget = retryBudget;
+  }
 }
