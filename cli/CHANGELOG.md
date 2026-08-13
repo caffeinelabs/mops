@@ -18,6 +18,7 @@
 - File metadata and the first chunk of each file are now fetched concurrently rather than chained, halving per-file round trips for the single-chunk case that covers essentially every Motoko source file.
 - Chunk concatenation is no longer quadratic. **Breaking for programmatic consumers of the `ic-mops` package**: `downloadFile` and `downloadPackageFiles` now return `Uint8Array` instead of `Array<number>`.
 - `mops outdated` and `mops update` no longer make a registry call when a project has no registry dependencies to check.
+- **Dependency resolution runs once per command instead of three to five times.** A command resolves at several points (local cache sync, lockfile write, requirements check, `mops sources`), each of which used to re-walk the whole dependency graph. The walk is now memoized in-process on the *content* of `mops.toml` and `mops.lock` plus every local `path` dependency manifest it reads, so a command that rewrites its own inputs — `mops install` writing the lockfile, `mops add` writing `mops.toml` — still re-walks and cannot act on a stale graph.
 
 ### Integrity
 
