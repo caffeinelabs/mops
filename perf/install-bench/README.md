@@ -72,10 +72,13 @@ node perf/install-bench/run.mjs \
 
 ## Run in Docker
 
-Useful to sanity-check constrained environments (CPU/memory limits). Build
-from the repo root:
+Useful to sanity-check constrained environments (CPU/memory limits). The
+image does not carry the Rust/wasm toolchain, so build the v3 CLI on the host
+first; the Dockerfile copies `cli/dist` in and installs runtime deps with
+scripts disabled. From the repo root:
 
 ```bash
+cd cli && npm ci && npm run prepare && cd ..
 docker build -f perf/install-bench/Dockerfile -t mops-install-bench .
 docker run --rm mops-install-bench
 docker run --rm --cpus 1 -m 512m mops-install-bench --iterations 1 --scenarios warm

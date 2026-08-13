@@ -1,0 +1,5 @@
+# BuildKit picks this up for perf/install-bench/Dockerfile builds only.
+# cli/dist is built on the host and must come along; node_modules must not.
+cli/node_modules
+cli/bundle
+cli/.mops
