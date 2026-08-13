@@ -99,6 +99,16 @@ export function fileThreadsPerPackage(
   return Math.max(1, Math.min(MAX_FILE_THREADS, Math.floor(budget / packages)));
 }
 
+// Each cache-copy task is a recursive directory copy, and on the repair path
+// also a download. Half the budget bounds the pool, so every repair keeps at
+// least two requests to itself and a halved retry budget shrinks the number
+// of concurrent copies with it.
+const MAX_COPY_CONCURRENCY = 8;
+
+export function copyConcurrency(budget: number): number {
+  return Math.max(1, Math.min(MAX_COPY_CONCURRENCY, Math.floor(budget / 2)));
+}
+
 // The failures worth a retry: connection-level fetch errors and fd
 // exhaustion, where the cause is usually the aggregate concurrency rather
 // than the one request that lost. A registry answer ("Package not found") is
@@ -150,8 +160,14 @@ export function isTransientNetworkError(err: unknown, depth = 0): boolean {
 }
 
 function errorText(err: unknown): string {
-  let text = err instanceof Error ? err.message : String(err);
-  return text.split("\n")[0] ?? text;
+  try {
+    let text = err instanceof Error ? err.message : String(err);
+    return text.split("\n")[0] ?? text;
+  } catch {
+    // a throwing toString or message getter must not break the caller's
+    // staging cleanup
+    return "unprintable error";
+  }
 }
 
 // One install run. The top-level call decides `threads`; transitive levels
@@ -198,11 +214,13 @@ export function nextRetryBudget(
   attempt: number,
   budget: number,
 ): number | undefined {
+  // A deterministic thrown error fails the run outright, even when a
+  // sibling noted a transient one — no retry can fix a parse error.
+  if (thrown !== undefined && !isTransientNetworkError(thrown)) {
+    return undefined;
+  }
   let transient =
-    scope.transientErrors[0] ??
-    (thrown !== undefined && isTransientNetworkError(thrown)
-      ? errorText(thrown)
-      : undefined);
+    thrown !== undefined ? errorText(thrown) : scope.transientErrors[0];
   if (transient === undefined || attempt >= MAX_INSTALL_ATTEMPTS) {
     return undefined;
   }
@@ -219,6 +237,42 @@ export function runInInstallScope<T>(
   fn: () => Promise<T>,
 ): Promise<T> {
   return scopeStorage.run(scope, fn);
+}
+
+// The self-healing retry for a single-package install that runs outside an
+// install run (`mops add`, the fetch-on-miss repair in resolvePackages).
+// Inside an existing scope the surrounding run owns the retry, so the
+// install runs once with the scope's thread share.
+export async function installWithRetry(
+  install: (threads: number) => Promise<boolean>,
+): Promise<boolean> {
+  let existing = getInstallScope();
+  if (existing) {
+    return install(existing.threads);
+  }
+  let budget = requestBudget();
+  for (let attempt = 1; ; attempt++) {
+    let threads = fileThreadsPerPackage(1, budget);
+    let scope = createInstallScope(threads);
+    let ok = false;
+    let thrown: unknown = undefined;
+    try {
+      ok = await runInInstallScope(scope, () => install(threads));
+    } catch (err) {
+      thrown = err;
+    }
+    if (ok) {
+      return true;
+    }
+    let retryBudget = nextRetryBudget(scope, thrown, attempt, budget);
+    if (retryBudget === undefined) {
+      if (thrown !== undefined) {
+        throw thrown;
+      }
+      return false;
+    }
+    budget = retryBudget;
+  }
 }
 
 // Share one install between branches of the graph that request the same

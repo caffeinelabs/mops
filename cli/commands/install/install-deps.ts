@@ -91,8 +91,11 @@ export async function installDeps(
   // downloaded packages come from the cache and only the failures rerun.
   let budget = requestBudget(concurrency);
   for (let attempt = 1; ; attempt++) {
-    let poolSize = packageConcurrency(deps.length, budget, threads);
-    let depThreads = threads ?? fileThreadsPerPackage(poolSize, budget);
+    // An explicit thread count still submits to the budget, so a halved
+    // retry lowers real pressure even when `mops sources` pins 6 threads.
+    let cappedThreads = threads ? Math.min(threads, budget) : undefined;
+    let poolSize = packageConcurrency(deps.length, budget, cappedThreads);
+    let depThreads = cappedThreads ?? fileThreadsPerPackage(poolSize, budget);
     let attemptScope = createInstallScope(depThreads);
     let ok = false;
     let thrown: unknown = undefined;

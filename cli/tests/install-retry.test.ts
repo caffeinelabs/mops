@@ -102,4 +102,38 @@ describe("installDeps transient-failure retry", () => {
     await expect(installDeps([dep], { silent: true })).rejects.toThrow("boom");
     expect(installDepMock).toHaveBeenCalledTimes(1);
   });
+
+  test("a thrown permanent error is not retried even when a sibling noted a transient one", async () => {
+    let other: Dependency = { name: "map", version: "1.0.0" };
+    installDepMock.mockImplementation(async (d: Dependency) => {
+      if (d.name === "core") {
+        noteTransientNetworkError(new TypeError("fetch failed"));
+        return false;
+      }
+      throw new Error("Invalid config file");
+    });
+
+    await expect(installDeps([dep, other], { silent: true })).rejects.toThrow(
+      "Invalid config file",
+    );
+    expect(installDepMock).toHaveBeenCalledTimes(2);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  test("an explicit thread count is capped by the halved budget", async () => {
+    let failures = 2;
+    installDepMock.mockImplementation(async () => {
+      if (failures-- > 0) {
+        noteTransientNetworkError(new TypeError("fetch failed"));
+        return false;
+      }
+      return true;
+    });
+
+    await expect(
+      installDeps([dep], { silent: true, threads: 6 }),
+    ).resolves.toBe(true);
+    // budget descends 16 -> 8 -> 4; the pinned 6 threads submit to it
+    expect(threadsPassed()).toEqual([6, 6, 4]);
+  });
 });

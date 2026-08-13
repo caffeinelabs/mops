@@ -12,8 +12,8 @@ import path from "node:path";
 import process from "node:process";
 
 // syncLocalCache's repair path reports a transient download failure as a
-// thrown "could not be downloaded" — the retry must see through that via the
-// scope note, not the thrown message.
+// thrown "could not be downloaded" naming the transient cause — the retry
+// must classify that wrapper as transient, and only that wrapper.
 jest.unstable_mockModule("../resolve-packages", () => ({
   resolvePackages: jest.fn(async () => ({ core: "1.0.0" })),
 }));
@@ -73,6 +73,7 @@ describe("syncLocalCache transient-failure retry", () => {
     expect(copyCache).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(String(warn.mock.calls[0]?.[0])).toMatch(/retrying/);
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/fetch failed/);
   });
 
   test("a permanent repair failure throws without a retry", async () => {

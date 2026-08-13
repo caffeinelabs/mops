@@ -6,15 +6,16 @@ export async function parallel<T>(
   return new Promise<void>((resolve, reject) => {
     let busyThreads = 0;
     let failed = false;
+    let firstError: unknown;
     items = items.slice();
 
     let loop = () => {
-      if (failed) {
-        return;
-      }
-      if (!items.length) {
+      if (failed || !items.length) {
+        // Settles only once every started task has: callers retry on
+        // rejection, and a task still running from the failed round would
+        // race the retry's view of the cache and `.mops/`.
         if (busyThreads === 0) {
-          resolve();
+          failed ? reject(firstError) : resolve();
         }
         return;
       }
@@ -29,8 +30,11 @@ export async function parallel<T>(
         },
         (err) => {
           busyThreads--;
-          failed = true;
-          reject(err);
+          if (!failed) {
+            failed = true;
+            firstError = err;
+          }
+          loop();
         },
       );
       loop();
