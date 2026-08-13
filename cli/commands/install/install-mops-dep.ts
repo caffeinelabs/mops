@@ -21,7 +21,10 @@ import {
   getPackageFilesInfo,
 } from "../../api/downloadPackageFiles.js";
 import { installDeps } from "./install-deps.js";
-import { fileThreadsPerPackage } from "./install-concurrency.js";
+import {
+  fileThreadsPerPackage,
+  noteTransientNetworkError,
+} from "./install-concurrency.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
 import { verifyDownloadedPackageFiles } from "../../integrity.js";
 
@@ -140,8 +143,10 @@ export async function installMopsDep(
       process.on("SIGINT", onSigInt);
 
       try {
+        // A halved-budget retry after EMFILE must lower write pressure too,
+        // so the pool follows the package's thread share down.
         await parallel(
-          FS_WRITE_CONCURRENCY,
+          Math.min(FS_WRITE_CONCURRENCY, threads * 4),
           Array.from(filesData.entries()),
           async ([filePath, data]) => {
             await fs.promises.mkdir(
@@ -156,6 +161,7 @@ export async function installMopsDep(
         );
         commitStagingDir(stagingDir, cacheDir);
       } catch (err) {
+        noteTransientNetworkError(err);
         console.error(chalk.red("Error: ") + err);
         fs.rmSync(stagingDir, { recursive: true, force: true });
         return false;
@@ -163,6 +169,7 @@ export async function installMopsDep(
         process.off("SIGINT", onSigInt);
       }
     } catch (err) {
+      noteTransientNetworkError(err);
       console.error(chalk.red("Error: ") + err);
       return false;
     }

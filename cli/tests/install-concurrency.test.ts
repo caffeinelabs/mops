@@ -1,9 +1,21 @@
-import { afterEach, beforeEach, describe, expect, test } from "@jest/globals";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  jest,
+  test,
+} from "@jest/globals";
 import os from "node:os";
 import process from "node:process";
 import {
+  createInstallScope,
   deriveRequestBudget,
+  fdSoftLimit,
   fileThreadsPerPackage,
+  isTransientNetworkError,
+  MAX_INSTALL_ATTEMPTS,
+  nextRetryBudget,
   packageConcurrency,
   requestBudget,
 } from "../commands/install/install-concurrency";
@@ -16,6 +28,149 @@ describe("deriveRequestBudget", () => {
     expect(deriveRequestBudget(4)).toBe(8);
     expect(deriveRequestBudget(8)).toBe(16);
     expect(deriveRequestBudget(64)).toBe(16);
+  });
+
+  test("a low fd soft limit caps the budget below the CPU-derived floor", () => {
+    // macOS's default 256 and anything above it change nothing
+    expect(deriveRequestBudget(8, 256)).toBe(16);
+    expect(deriveRequestBudget(8, 1048576)).toBe(16);
+    // a constrained ulimit -n bites regardless of core count
+    expect(deriveRequestBudget(64, 128)).toBe(8);
+    expect(deriveRequestBudget(64, 64)).toBe(4);
+    expect(deriveRequestBudget(64, 32)).toBe(2);
+    expect(deriveRequestBudget(64, 20)).toBe(1);
+    // the CPU clamp still applies when fds are plentiful
+    expect(deriveRequestBudget(1, 1048576)).toBe(4);
+  });
+
+  test("fdSoftLimit reports a positive number or Infinity", () => {
+    let limit = fdSoftLimit();
+    expect(limit).toBeGreaterThan(0);
+    expect(fdSoftLimit()).toBe(limit);
+  });
+});
+
+describe("isTransientNetworkError", () => {
+  test("matches the connection-level failure modes", () => {
+    expect(isTransientNetworkError(new TypeError("fetch failed"))).toBe(true);
+    expect(
+      isTransientNetworkError(
+        Object.assign(new Error("connect ECONNRESET 1.2.3.4:443"), {
+          code: "ECONNRESET",
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isTransientNetworkError(
+        new Error("EMFILE: too many open files, open 'lib.mo'"),
+      ),
+    ).toBe(true);
+    expect(isTransientNetworkError("socket hang up")).toBe(true);
+  });
+
+  test("walks the cause chain undici buries syscall errors in", () => {
+    let syscall = Object.assign(new Error("connect ECONNREFUSED"), {
+      code: "ECONNREFUSED",
+    });
+    expect(
+      isTransientNetworkError(
+        new TypeError("request failed", { cause: syscall }),
+      ),
+    ).toBe(true);
+    expect(
+      isTransientNetworkError(new AggregateError([syscall], "all failed")),
+    ).toBe(true);
+  });
+
+  test("rejects registry answers and unrelated errors", () => {
+    expect(isTransientNetworkError("Package not found")).toBe(false);
+    expect(isTransientNetworkError(new Error("integrity check failed"))).toBe(
+      false,
+    );
+    expect(isTransientNetworkError(undefined)).toBe(false);
+    expect(isTransientNetworkError(null)).toBe(false);
+    expect(isTransientNetworkError(42)).toBe(false);
+  });
+
+  test("an agent error with an object code whose toString throws is classified by message", () => {
+    // @icp-sdk/core's AgentError: message carries the text, `code` is an
+    // ErrorCode object whose toString() can throw (seen live against a dead
+    // registry endpoint)
+    let code = {
+      toString() {
+        throw new Error("Uint8Array expected");
+      },
+    };
+    let agentError = Object.assign(
+      new Error("Failed to fetch HTTP request: TypeError: fetch failed"),
+      { code },
+    );
+    expect(isTransientNetworkError(agentError)).toBe(true);
+    expect(
+      isTransientNetworkError(
+        Object.assign(new Error("reject code 4"), { code }),
+      ),
+    ).toBe(false);
+  });
+
+  test("a self-referential cause chain terminates", () => {
+    let err: any = new Error("boring");
+    err.cause = err;
+    expect(isTransientNetworkError(err)).toBe(false);
+  });
+});
+
+describe("nextRetryBudget", () => {
+  let warn: ReturnType<typeof jest.spyOn>;
+
+  beforeEach(() => {
+    warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warn.mockRestore();
+  });
+
+  test("halves the budget when the scope noted a transient error", () => {
+    let scope = createInstallScope(8);
+    scope.transientErrors.push("fetch failed");
+    expect(nextRetryBudget(scope, undefined, 1, 16)).toBe(8);
+    expect(nextRetryBudget(scope, undefined, 2, 8)).toBe(4);
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/fetch failed/);
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/concurrency 8/);
+  });
+
+  test("a transient thrown error qualifies without a scope note", () => {
+    expect(
+      nextRetryBudget(
+        createInstallScope(8),
+        new TypeError("fetch failed"),
+        1,
+        4,
+      ),
+    ).toBe(2);
+  });
+
+  test("permanent failures and exhausted attempts do not retry", () => {
+    let noted = createInstallScope(8);
+    noted.transientErrors.push("ECONNRESET");
+    expect(nextRetryBudget(createInstallScope(8), undefined, 1, 16)).toBe(
+      undefined,
+    );
+    expect(
+      nextRetryBudget(createInstallScope(8), new Error("boom"), 1, 16),
+    ).toBe(undefined);
+    expect(nextRetryBudget(noted, undefined, MAX_INSTALL_ATTEMPTS, 16)).toBe(
+      undefined,
+    );
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  test("the budget floors at 1", () => {
+    let scope = createInstallScope(1);
+    scope.transientErrors.push("EMFILE");
+    expect(nextRetryBudget(scope, undefined, 1, 1)).toBe(1);
   });
 });
 
@@ -35,9 +190,9 @@ describe("requestBudget", () => {
     }
   });
 
-  test("defaults derive from available parallelism", () => {
+  test("defaults derive from available parallelism and the fd limit", () => {
     expect(requestBudget()).toBe(
-      deriveRequestBudget(os.availableParallelism()),
+      deriveRequestBudget(os.availableParallelism(), fdSoftLimit()),
     );
   });
 

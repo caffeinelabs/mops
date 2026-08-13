@@ -26,6 +26,7 @@ import {
   readLockedGithubDep,
   recordGithubDep,
 } from "../../integrity.js";
+import { noteTransientNetworkError } from "./install-concurrency.js";
 
 export const downloadFromGithub = async (
   repo: string,
@@ -200,6 +201,7 @@ export const installFromGithub = async (
         recordGithubDep(name, { resolved, hash });
       }
     } catch (err) {
+      noteTransientNetworkError(err);
       rmSync(stagingDir, { recursive: true, force: true });
       // The commit came from the lock, so a failed fetch of it is worth naming:
       // a force-push or a deleted branch can garbage-collect it upstream.

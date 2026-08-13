@@ -2,6 +2,8 @@
 
 ## Next
 
+- **Installs self-heal on transient network failures.** A `fetch failed`, `ECONNRESET` or `EMFILE` during an install no longer aborts the command: the install retries up to twice with the request concurrency halved, so an environment that cannot sustain the default parallelism degrades to a slower install instead of a broken one. Packages that already downloaded come from the cache on retry, and only the failures are re-fetched. Registry answers such as "Package not found" are never retried.
+- The default request concurrency is now capped by the file-descriptor soft limit as well as the CPU count, so a many-core machine with a low `ulimit -n` no longer gets a budget wide enough to exhaust its own descriptors. The usual limits (macOS's default 256 and up) leave the budget unchanged.
 - `mops update` now exits `2` for an unknown package or a missing `mops.toml`, matching `mops outdated`. It previously exited `0` after printing `Package "<name>" is not installed!`, so a typo in a scripted update looked like success.
 - `mops update` and `mops outdated` now share one rule for deciding when a `repo = "..."` dependency is out of date, so the two commands cannot disagree about it.
 - `mops update --help` and its doc page now state that the command rewrites `mops.toml` — it is `cargo upgrade` semantics, not `cargo update` — and list its exit codes.
