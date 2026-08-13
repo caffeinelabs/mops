@@ -51,9 +51,12 @@ actor  {
 exports[`migrate check check fails without next migration, passes with it 1`] = `
 {
   "exitCode": 1,
-  "stderr": "src/main.mo:3.1-11.2: Compatibility error [M0169], the stable variable \`a\` of version \`20250301_000000_AddEmail\` cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
-migrations/20250101_000000_Init.mo:0.1: warning [M0254], initial actor requires field \`id\` of type
-  Nat
+  "stderr": "src/main.mo:3.1-11.2: Compatibility error [M0169], stable variable \`a\` of version \`20250301_000000_AddEmail\` cannot be implicitly discarded. The variable can only be dropped by an explicit migration function.
+See https://docs.internetcomputer.org/languages/motoko/fundamentals/actors/enhanced-multi-migration/
+src/main.mo:4.7-4.9: type error [M0267], initial actor requires field \`id\` of type
+  Nat; not found in the previous version — write a migration that produces it
+src/main.mo:3.1-11.2: Compatibility error [M0169], stable variable \`a\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function.
+See https://docs.internetcomputer.org/languages/motoko/fundamentals/actors/enhanced-multi-migration/
 ✗ Check failed for canister backend (exit code: 1)",
   "stdout": "",
 }
@@ -75,12 +78,8 @@ exports[`migrate check check with trimming shows reduced chain 1`] = `
   "stdout": "check Using --all-libs for richer diagnostics
 migrations Prepared 2 migration(s) for backend (trimmed from 3)
 check Checking canister backend:
-<CACHE>moc-wrapper ["src/main.mo","--check","--all-libs","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
+<CACHE>moc-wrapper ["src/main.mo","--check","--all-libs","--stable-baseline","deployed.most","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
 ✓ backend
-check-stable Generating stable types for src/main.mo
-<CACHE>moc-wrapper ["--stable-types","-o",".mops/.check-stable/new.wasm","src/main.mo","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
-check-stable Comparing deployed.most ↔ .mops/.check-stable/new.most
-<CACHE>moc-wrapper ["--stable-compatible","deployed.most",".mops/.check-stable/new.most"]
 ✓ Stable compatibility check passed for canister 'backend'",
 }
 `;
@@ -146,9 +145,11 @@ exports[`migrate migrate new creates a migration file with timestamp and templat
 exports[`migrate stable check stable check fails when deployed.most is incompatible 1`] = `
 {
   "exitCode": 1,
-  "stderr": "(unknown location): Compatibility error [M0169], the stable variable \`a\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
-(unknown location): Compatibility error [M0169], the stable variable \`name\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function, please see https://internetcomputer.org/docs/motoko/fundamentals/actors/compatibility#explicit-migration-using-a-migration-function
-✗ Stable compatibility check failed for canister 'backend'",
-  "stdout": "✓ backend",
+  "stderr": "src/main.mo:3.1-11.2: Compatibility error [M0169], stable variable \`a\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function.
+See https://docs.internetcomputer.org/languages/motoko/fundamentals/actors/enhanced-multi-migration/
+src/main.mo:3.1-11.2: Compatibility error [M0169], stable variable \`name\` of the previous version cannot be implicitly discarded. The variable can only be dropped by an explicit migration function.
+See https://docs.internetcomputer.org/languages/motoko/fundamentals/actors/enhanced-multi-migration/
+✗ Check failed for canister backend (exit code: 1)",
+  "stdout": "",
 }
 `;
