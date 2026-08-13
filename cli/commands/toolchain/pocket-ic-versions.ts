@@ -1,9 +1,9 @@
 // Split out of `pocket-ic.ts` so the tests can assert against the constants:
 // that module reaches `mops.js` for the cache dir, and jest's ESM resolver
 // cannot follow its `.js` specifiers.
-import process from "node:process";
 import chalk from "chalk";
 import semver from "semver";
+import { cliError } from "../../error.js";
 
 // The server version used when `[toolchain] pocket-ic` is unset. A fixed
 // constant, never a "latest" lookup: a cache warmed at image build time has to
@@ -27,13 +27,9 @@ export function assertMinimumVersion(version: string): void {
   if (!semver.valid(version) || semver.gte(version, MIN_POCKET_IC_VERSION)) {
     return;
   }
-  console.error(
-    chalk.red("Error: ") +
-      `pocket-ic ${version} is no longer supported. mops 3.0.0 removed the legacy ` +
-      `PocketIC client, so pins below ${MIN_POCKET_IC_VERSION} no longer work.`,
+  cliError(
+    `Error: pocket-ic ${version} is no longer supported. mops 3.0.0 removed the legacy ` +
+      `PocketIC client, so pins below ${MIN_POCKET_IC_VERSION} no longer work.\n` +
+      `Run ${chalk.green(`mops toolchain use pocket-ic ${DEFAULT_POCKET_IC_VERSION}`)} to move to a supported version.`,
   );
-  console.log(
-    `Run ${chalk.green(`mops toolchain use pocket-ic ${DEFAULT_POCKET_IC_VERSION}`)} to move to a supported version.`,
-  );
-  process.exit(1);
 }

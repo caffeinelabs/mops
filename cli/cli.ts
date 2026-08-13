@@ -4,6 +4,7 @@ import events from "node:events";
 import process from "node:process";
 
 import { resolve } from "node:path";
+import { cliError, handleCliError } from "./error.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
 import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
@@ -91,16 +92,17 @@ function parseExtraArgs(variadicArgs?: string[]): {
   return { extraArgs, args };
 }
 
-// Implicit install for build/check/test/bench/generate. Exits on failure:
-// a download that fails its integrity check, or any other install error, must
-// not let the command carry on against a half-populated `.mops/`.
+// Implicit install for build/check/test/bench/generate. Fails on any install
+// error: a download that fails its integrity check must not let the command
+// carry on against a half-populated `.mops/`. installAll already reported the
+// error, so the CliError carries no message.
 async function installAllOrExit(options: { locked?: boolean }): Promise<void> {
   let ok = await installAll({
     silent: true,
     lock: options.locked ? "locked" : "maintain",
   });
   if (!ok) {
-    process.exit(1);
+    cliError();
   }
 }
 
@@ -175,9 +177,7 @@ Accepted <pkg> forms:
 `,
   )
   .action(async (pkg, options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     // Moving between sections is interactive-only: `mops update` and
     // `mops sync` call add() for a package they already located in one section.
     await add(pkg, { ...options, moveSections: true });
@@ -193,9 +193,7 @@ program
   .option("--dry-run", "Do not actually remove anything")
   .addOption(legacyLockOption())
   .action(async (pkg, options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     // Searching both sections is interactive-only: `mops sync` removes a
     // dual-declared package with one call per section.
     await remove(pkg, { ...options, anySection: true });
@@ -222,9 +220,7 @@ program
   )
   .addOption(legacyLockOption())
   .action(async (options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
 
     // Fired here, awaited below: the check costs a registry round trip the
     // install would otherwise serialize behind, and the two share no state.
@@ -247,7 +243,7 @@ program
     // Bail before the conflicts check: it re-resolves, which reads dependency
     // manifests that a failed install may never have written.
     if (!ok) {
-      process.exit(1);
+      cliError();
     }
 
     // An incompatible CLI now completes the install before this error
@@ -272,14 +268,10 @@ program
     "Audit installed dependencies against mops.lock: re-hash every file under .mops/ and confirm the lock still matches mops.toml and the registry",
   )
   .action(async () => {
-    checkConfigFile(true);
+    checkConfigFile();
     let result = await verifyIntegrity();
     if (result.errors.length) {
-      console.error(chalk.red("Integrity check failed"));
-      for (let line of result.errors) {
-        console.error(line);
-      }
-      process.exit(1);
+      cliError(["Integrity check failed", ...result.errors].join("\n"));
     }
     console.log(
       chalk.green("Integrity verified ") +
@@ -300,9 +292,7 @@ program
   )
   .option("--verbose", "Show more information")
   .action(async (options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     // dry-run is local-only — skip registry API compatibility check
     if (options.dryRun) {
       await publish(options);
@@ -332,9 +322,7 @@ program
       .default("warning"),
   )
   .action(async (options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     // Before installAll: that resolves too, and --conflicts governs the whole
     // command, not just the final resolve that produces the sources.
     setConflictPolicy(options.conflicts);
@@ -354,7 +342,7 @@ program
   .command("moc-args")
   .description("Print global moc compiler flags from [moc] config section")
   .action(async () => {
-    checkConfigFile(true);
+    checkConfigFile();
     let config = readConfig();
     let args = getGlobalMocArgs(config);
     if (args.length) {
@@ -455,7 +443,7 @@ program
     ),
   )
   .action(async (canisters, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(canisters);
     await installAllOrExit(options);
     await build(args.length ? args : undefined, {
@@ -505,7 +493,7 @@ program
     ),
   )
   .action(async (args, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args: argList } = parseExtraArgs(args);
     await installAllOrExit(options);
     await check(argList, {
@@ -525,7 +513,7 @@ program
     ),
   )
   .action(async (newCandid, originalCandid, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await installAllOrExit(options);
     await checkCandid(newCandid, originalCandid);
   });
@@ -555,7 +543,7 @@ program
     ),
   )
   .action(async (args, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args: argList } = parseExtraArgs(args);
     await installAllOrExit(options);
     await checkStable(argList, {
@@ -583,7 +571,7 @@ const deployedCommand = new Command("deployed")
     ),
   )
   .action(async (canisters: string[], options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await deployed(canisters.length ? canisters : undefined, options);
   });
 
@@ -599,7 +587,7 @@ deployedCommand
     ),
   )
   .action(async (canisters: string[], options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await deployedInit(canisters.length ? canisters : undefined, options);
   });
 
@@ -632,7 +620,7 @@ program
     ),
   )
   .action(async (filterArr, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
     await installAllOrExit(options);
@@ -696,7 +684,7 @@ program
     ),
   )
   .action(async (filterArr, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
     await installAllOrExit(options);
@@ -708,9 +696,7 @@ program
   .command("template")
   .description("Apply template")
   .action(async () => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await template();
   });
 
@@ -917,7 +903,8 @@ program
       "GitHub dependencies are re-pinned to their branch head (one GitHub API call each).\n" +
       "\nExit codes:\n" +
       "  0  mops.toml is up to date\n" +
-      "  2  the update could not be run (no mops.toml, unknown [pkg])",
+      "  2  the update could not be run or completed (no mops.toml, unknown [pkg],\n" +
+      "     or a GitHub dependency failed to re-pin)",
   )
   .action(async (pkg, options) => {
     await update(pkg, options);
@@ -941,9 +928,7 @@ toolchainCommand
     ),
   )
   .action(async (tool, version) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await toolchain.use(tool, version);
   });
 
@@ -959,9 +944,7 @@ toolchainCommand
     ).choices(TOOLCHAINS),
   )
   .action(async (tool?: Tool) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await toolchain.update(tool);
   });
 
@@ -1001,7 +984,7 @@ migrateCommand
   .command("new <name> [canister]")
   .description("Create a new migration file in the next-migration directory")
   .action(async (name, canister) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await migrateNew(name, canister);
   });
 
@@ -1009,7 +992,7 @@ migrateCommand
   .command("freeze [canister]")
   .description("Move the next migration into the frozen chain")
   .action(async (canister) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await migrateFreeze(canister);
   });
 
@@ -1043,7 +1026,7 @@ generateCommand
     ),
   )
   .action(async (canisters, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(canisters);
     await installAllOrExit(options);
     await generateCandid(args.length ? args : undefined, {
@@ -1096,7 +1079,7 @@ program
       "  $ mops watch -tw    # errors + tests + warnings",
   )
   .action(async (options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await watch(options);
   });
 
@@ -1109,10 +1092,10 @@ program
     new Option("--check", "Check code formatting (do not change source files)"),
   )
   .action(async (filter, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     let { ok } = await format(filter, options);
     if (!ok) {
-      process.exit(1);
+      cliError();
     }
   });
 
@@ -1140,7 +1123,7 @@ program
   )
   .addHelpText("after", enhancedMigrationHelp({ withFix: true }))
   .action(async (filterArr, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     // Variadic filter only to absorb the `--` passthrough operands (Commander
     // counts them against the declared arity); a single filter is supported.
     const { extraArgs, args } = parseExtraArgs(filterArr);
@@ -1167,7 +1150,7 @@ docsCommand
       .choices(["md", "adoc", "html"]),
   )
   .action(async (options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await docs(options);
   });
 
@@ -1192,9 +1175,14 @@ docsCommand
     ).default(70),
   )
   .action(async (options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await docsCoverage(options);
   });
 program.addCommand(docsCommand);
 
-program.parse();
+// Safety net for CliErrors raised where no await can catch them — debounced
+// watch runs, resolve-only promise chains — routed to the single handler
+// instead of Node's unhandled-rejection crash banner.
+process.on("unhandledRejection", handleCliError);
+
+program.parseAsync().catch(handleCliError);

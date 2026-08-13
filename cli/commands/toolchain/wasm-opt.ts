@@ -9,6 +9,7 @@ import { globalCacheDir } from "../../mops.js";
 import * as toolchainUtils from "./toolchain-utils.js";
 import type { ReleaseInfo } from "./release-tags.js";
 import { normalizeBinaryenVersion } from "../../helpers/binaryen-version.js";
+import { cliError } from "../../error.js";
 
 export { normalizeBinaryenVersion } from "../../helpers/binaryen-version.js";
 
@@ -29,8 +30,7 @@ export let getLatestReleaseTag = async () => {
       headers: { "X-GitHub-Api-Version": "2022-11-28" },
     });
     if (res.status !== 200) {
-      console.error("Releases fetch error");
-      process.exit(1);
+      cliError("Releases fetch error");
     }
     if (res.data.length === 0) {
       break;
@@ -44,8 +44,7 @@ export let getLatestReleaseTag = async () => {
       break;
     }
   }
-  console.error(`Failed to fetch latest release tag for ${repo}`);
-  process.exit(1);
+  cliError(`Failed to fetch latest release tag for ${repo}`);
 };
 
 export let getReleases = async (): Promise<ReleaseInfo[]> => {
@@ -68,12 +67,10 @@ export let download = async (
   { silent = false, verbose = false } = {},
 ) => {
   if (!version) {
-    console.error("version is not defined");
-    process.exit(1);
+    cliError("version is not defined");
   }
   if (process.platform === "win32") {
-    console.error("wasm-opt toolchain is not supported on Windows");
-    process.exit(1);
+    cliError("wasm-opt toolchain is not supported on Windows");
   }
   if (isCached(version)) {
     if (verbose) {
@@ -111,10 +108,7 @@ export let download = async (
   let nestedBin = path.join(nestedRoot, "bin", "wasm-opt");
   if (!fs.existsSync(nestedBin)) {
     await fs.remove(stagingDir);
-    console.error(
-      `wasm-opt binary not found in Binaryen archive: ${nestedBin}`,
-    );
-    process.exit(1);
+    cliError(`wasm-opt binary not found in Binaryen archive: ${nestedBin}`);
   }
   try {
     await fs.move(path.join(nestedRoot, "bin"), path.join(destDir, "bin"));
@@ -131,9 +125,8 @@ export let download = async (
   } catch (err: any) {
     await fs.remove(destDir);
     await fs.remove(stagingDir);
-    console.error(
+    cliError(
       `wasm-opt ${version} failed to install${err?.message ? `: ${err.message}` : ""}`,
     );
-    process.exit(1);
   }
 };

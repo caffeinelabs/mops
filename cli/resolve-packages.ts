@@ -18,6 +18,7 @@ import { getDepName } from "./helpers/get-dep-name.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { normalizeLocalDepPath } from "./helpers/normalize-local-path.js";
 import { compareVersions, majorVersion } from "./helpers/compare-versions.js";
+import { cliError } from "./error.js";
 import {
   checkLockFileLight,
   readLockFile,
@@ -127,9 +128,7 @@ export async function resolveDepsAndGraph({
   // absolute local paths from older CLIs get rewritten root-relative).
   skipLock = false,
 } = {}): Promise<ResolveResult> {
-  if (!checkConfigFile()) {
-    return { deps: {}, graph: {} };
-  }
+  checkConfigFile();
 
   let rootDir = getRootDir();
   let usesLock = !skipLock && checkLockFileLight();
@@ -321,11 +320,9 @@ async function resolveUncached(
               ignoreTransitive: true,
             });
             if (!ok) {
-              console.error(
-                chalk.red("Error: ") +
-                  `Package ${name}@${version} is not in the cache and could not be downloaded`,
+              cliError(
+                `Error: Package ${name}@${version} is not in the cache and could not be downloaded`,
               );
-              process.exit(1);
             }
           }
           nestedConfig = readConfig(
@@ -527,10 +524,8 @@ function reportCrossMajorConflicts(
   // The report above is always a warning, so escalation is a separate line
   // rather than a relabelled duplicate of a report an earlier pass printed.
   if (conflictPolicy === "error" && hasConflicts) {
-    console.error(
-      chalk.reset("") + chalk.redBright("Error!"),
-      "Cross-major dependency conflicts found, failing because --conflicts error was requested",
+    cliError(
+      "Error! Cross-major dependency conflicts found, failing because --conflicts error was requested",
     );
-    process.exit(1);
   }
 }

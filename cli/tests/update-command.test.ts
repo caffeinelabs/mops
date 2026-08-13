@@ -105,10 +105,11 @@ describe("mops update exit codes", () => {
     );
     process.chdir(root);
 
-    await update();
-
-    expect(output()).toMatch("mops.toml' not found");
-    expect(process.exitCode).toBe(2);
+    await expect(update()).rejects.toMatchObject({
+      name: "CliError",
+      exitCode: 2,
+      message: expect.stringContaining("mops.toml' not found"),
+    });
   });
 
   test("exits 0 when everything is up to date", async () => {
@@ -235,6 +236,7 @@ describe("mops update github dependencies", () => {
     await update();
 
     expect(output()).toMatch("Failed to update mydep: API rate limit exceeded");
+    expect(process.exitCode).toBe(2);
     expect(add).toHaveBeenCalledWith(
       "core@1.2.0",
       { dev: false, lock: "skip" },
@@ -250,5 +252,6 @@ describe("mops update github dependencies", () => {
     await update();
 
     expect(output()).toMatch("Failed to update mydep: download failed");
+    expect(process.exitCode).toBe(2);
   });
 });

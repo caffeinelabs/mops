@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { globSync } from "glob";
 import path from "node:path";
-import { cliError } from "../error.js";
+import { cliError, cliErrorFrom } from "../error.js";
 import {
   formatDir,
   formatGithubDir,
@@ -167,10 +167,8 @@ async function runLintoko(
     });
 
     return result.exitCode === 0;
-  } catch (err: any) {
-    cliError(
-      `Error while running lintoko${err?.message ? `\n${err.message}` : ""}`,
-    );
+  } catch (err) {
+    cliErrorFrom(err, "Error while running lintoko");
   }
 }
 

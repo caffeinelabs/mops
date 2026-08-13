@@ -18,10 +18,7 @@ export async function outdated(
   pkg?: string,
   { major, patch }: { major?: boolean; patch?: boolean } = {},
 ) {
-  if (!checkConfigFile()) {
-    process.exitCode = EXIT_ERROR;
-    return;
-  }
+  checkConfigFile(EXIT_ERROR);
   let config = readConfig();
 
   if (

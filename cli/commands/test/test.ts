@@ -31,6 +31,7 @@ import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
+import { cliExit } from "../../error.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
 
@@ -65,9 +66,12 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
     replica.ttl = 60 * 15; // 15 minutes
 
     let sigint = false;
+    // Signal handler: a throw cannot propagate from here, so exiting
+    // directly is the only option.
     process.on("SIGINT", () => {
       if (sigint) {
         console.log("Force exit");
+        // eslint-disable-next-line no-restricted-properties
         process.exit(0);
       }
       sigint = true;
@@ -75,9 +79,11 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       if (replicaStartPromise) {
         console.log("Stopping replica...");
         replica.stop(true).then(() => {
+          // eslint-disable-next-line no-restricted-properties
           process.exit(0);
         });
       } else {
+        // eslint-disable-next-line no-restricted-properties
         process.exit(0);
       }
     });
@@ -133,7 +139,7 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       extraArgs,
     );
     if (!passed) {
-      process.exit(maxMocExit >= 2 ? 2 : 1);
+      cliExit(maxMocExit >= 2 ? 2 : 1);
     }
   }
 }
@@ -353,6 +359,9 @@ export async function testWithReporter(
                   "Minimum wasmtime version is 14.0.0. Please update wasmtime to the latest version",
                 ),
               );
+              // This promise chain only propagates resolution (`.then(resolve)`),
+              // so a throw here would be an unhandled rejection, not an exit.
+              // eslint-disable-next-line no-restricted-properties
               process.exit(1);
             }
 

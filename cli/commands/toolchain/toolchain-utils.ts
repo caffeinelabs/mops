@@ -1,4 +1,3 @@
-import process from "node:process";
 import path from "node:path";
 import { Buffer } from "node:buffer";
 import { unzipSync } from "node:zlib";
@@ -11,6 +10,7 @@ import { Octokit } from "octokit";
 import { extract as extractTar } from "tar";
 
 import { getRootDir } from "../../mops.js";
+import { cliError } from "../../error.js";
 import { stableReleaseTags, type ReleaseInfo } from "./release-tags.js";
 
 export type { ReleaseInfo } from "./release-tags.js";
@@ -44,8 +44,7 @@ export let downloadAndExtract = async (
   let res = await fetch(url);
 
   if (res.status !== 200) {
-    console.error(`ERROR ${res.status} ${url}`);
-    process.exit(1);
+    cliError(`ERROR ${res.status} ${url}`);
   }
 
   let arrayBuffer = await res.arrayBuffer();
@@ -134,8 +133,7 @@ let fetchReleasePages = async (
       },
     });
     if (res.status !== 200) {
-      console.error("Releases fetch error");
-      process.exit(1);
+      cliError("Releases fetch error");
     }
     if (res.data.length === 0) {
       break;
@@ -184,8 +182,7 @@ export let getLatestReleaseTag = async (repo: string): Promise<string> => {
       },
     });
     if (res.status !== 200) {
-      console.error("Releases fetch error");
-      process.exit(1);
+      cliError("Releases fetch error");
     }
     if (res.data.length === 0) {
       break;
@@ -200,8 +197,7 @@ export let getLatestReleaseTag = async (repo: string): Promise<string> => {
     }
   }
 
-  console.error(`Failed to fetch latest release tag for ${repo}`);
-  process.exit(1);
+  cliError(`Failed to fetch latest release tag for ${repo}`);
 };
 
 export let getReleases = async (repo: string): Promise<ReleaseInfo[]> => {
@@ -213,8 +209,7 @@ export let getReleases = async (repo: string): Promise<ReleaseInfo[]> => {
     },
   });
   if (res.status !== 200) {
-    console.error("Releases fetch error");
-    process.exit(1);
+    cliError("Releases fetch error");
   }
   return res.data.map(mapRelease);
 };

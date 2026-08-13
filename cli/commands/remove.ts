@@ -38,9 +38,7 @@ export async function remove(
     anySection = false,
   }: RemoveOptions = {},
 ) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   function getTransitiveDependencies(
     config: Config,

@@ -20,6 +20,7 @@ import { notifyInstalls } from "../notify-installs.js";
 import { Config, Dependency } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { getPackageId } from "../helpers/get-package-id.js";
+import { cliError } from "../error.js";
 
 type AddOptions = {
   verbose?: boolean;
@@ -53,9 +54,7 @@ export async function add(
   }: AddOptions = {},
   asName?: string,
 ) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let config = readConfig();
   if (dev) {
@@ -95,14 +94,11 @@ export async function add(
       // a typo in the repo or branch is a user error, not a crash
       let commit = await getGithubCommit(`${org}/${gitName}`, branch).catch(
         (err: Error) => {
-          console.log(chalk.red("Error: ") + err.message);
           // `org/repo` and `org/repo/..` are indistinguishable without the `./`
-          if (fs.existsSync(name)) {
-            console.log(
-              `"${name}" exists locally — add a local package as ${chalk.green(`./${name}`)}`,
-            );
-          }
-          process.exit(1);
+          let hint = fs.existsSync(name)
+            ? `\n"${name}" exists locally — add a local package as ${chalk.green(`./${name}`)}`
+            : "";
+          cliError("Error: " + err.message + hint);
         },
       );
       if (!commit.sha) {
@@ -120,13 +116,11 @@ export async function add(
   // A slash means the argument was meant as a path or a repo, not a package
   // name — without this it reaches `new URL` and throws ERR_INVALID_URL.
   else if (name.includes("/")) {
-    console.log(
-      chalk.red("Error: ") +
-        `Cannot add "${name}". Expected a package name (${chalk.green("core")}), ` +
+    cliError(
+      `Error: Cannot add "${name}". Expected a package name (${chalk.green("core")}), ` +
         `a GitHub repo (${chalk.green("org/repo")} or ${chalk.green("https://github.com/org/repo")}) ` +
         `or a local path (${chalk.green("./pkg")})`,
     );
-    process.exit(1);
   }
   // mops package
   else {
@@ -135,8 +129,7 @@ export async function add(
     if (!ver) {
       let versionRes = await getHighestVersion(depName);
       if ("err" in versionRes) {
-        console.log(chalk.red("Error: ") + versionRes.err);
-        return;
+        cliError("Error: " + versionRes.err);
       }
       ver = versionRes.ok;
     }
@@ -165,7 +158,7 @@ export async function add(
       verbose: verbose,
     });
     if (!res) {
-      process.exit(1);
+      cliError();
     }
   } else if (!pkgDetails.path) {
     let res = await installMopsDep(pkgDetails.name, pkgDetails.version, {

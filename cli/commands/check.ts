@@ -1,7 +1,7 @@
 import path from "node:path";
 import chalk from "chalk";
 import { execa } from "execa";
-import { cliError, cliExit } from "../error.js";
+import { cliError, cliErrorFrom, cliExit } from "../error.js";
 import {
   getGlobalMocArgs,
   getRootDir,
@@ -217,10 +217,8 @@ async function checkCanisters(
         }
 
         console.log(chalk.green(`✓ ${canisterName}`));
-      } catch (err: any) {
-        cliError(
-          `Error while checking canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
-        );
+      } catch (err) {
+        cliErrorFrom(err, `Error while checking canister ${canisterName}`);
       }
 
       const stablePath = resolveStablePath(canister, canisterName);
@@ -295,10 +293,8 @@ async function checkFiles(
       }
 
       console.log(chalk.green(`✓ ${file}`));
-    } catch (err: any) {
-      cliError(
-        `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,
-      );
+    } catch (err) {
+      cliErrorFrom(err, `Error while checking ${file}`);
     }
   }
 }

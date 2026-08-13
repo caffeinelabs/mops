@@ -32,9 +32,7 @@ export type SyncPlan = {
 const DEV_SOURCE_PATTERNS = ["**/test?(s)/**/*.mo", "**/bench?(mark)/**/*.mo"];
 
 export async function sync({ dryRun = false }: SyncOptions = {}) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   let used = await getUsedPackages();
   let config = readConfig();

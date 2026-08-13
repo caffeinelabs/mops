@@ -23,10 +23,7 @@ export async function update(
   pkg?: string,
   { major, patch }: UpdateOptions = {},
 ) {
-  if (!checkConfigFile()) {
-    process.exitCode = EXIT_ERROR;
-    return;
-  }
+  checkConfigFile(EXIT_ERROR);
   let config = readConfig();
 
   if (
@@ -42,8 +39,10 @@ export async function update(
   // update github packages
   let github = await getAvailableGithubUpdates(config, pkg);
 
+  // An update that silently skipped a dep must not exit 0 (see EXIT_ERROR).
   let reportGithubFailure = (name: string, message: string) => {
     console.log(chalk.red("Error: ") + `Failed to update ${name}: ${message}`);
+    process.exitCode = EXIT_ERROR;
   };
 
   for (let dep of github.updates) {
@@ -55,7 +54,11 @@ export async function update(
         dep.name,
       );
     } catch (err: any) {
-      reportGithubFailure(dep.name, err.message);
+      // add() raises CliError with an optional message and an "Error: " prefix
+      // of its own; strip that, and never report an empty reason.
+      let reason =
+        (err?.message || "").replace(/^Error: /, "") || "install failed";
+      reportGithubFailure(dep.name, reason);
     }
   }
 

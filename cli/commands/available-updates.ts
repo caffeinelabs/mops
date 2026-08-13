@@ -1,11 +1,10 @@
-import process from "node:process";
-import chalk from "chalk";
 import semver from "semver";
 import { mainActor } from "../api/actors.js";
 import { getGithubCommit, parseGithubURL } from "../mops.js";
 import { Config } from "../types.js";
 import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
+import { cliError } from "../error.js";
 
 export type UpdateBound = "patch" | "caret" | "major";
 
@@ -78,8 +77,7 @@ export async function getAvailableUpdates(
     if (throwOnError) {
       throw new Error(res.err);
     }
-    console.log(chalk.red("Error:"), res.err);
-    process.exit(1);
+    cliError("Error: " + res.err);
   }
 
   return res.ok
