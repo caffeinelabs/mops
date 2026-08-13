@@ -690,6 +690,44 @@ async function computeLockFile(): Promise<LockFileV3> {
   };
 }
 
+// Plain code-unit sort. `localeCompare` would order keys differently depending
+// on the machine's locale, which is exactly the churn this removes.
+function sortKeys<T>(record: Record<string, T>): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(record).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+  );
+}
+
+function sortNestedKeys<T>(
+  record: Record<string, Record<string, T>>,
+): Record<string, Record<string, T>> {
+  return sortKeys(
+    Object.fromEntries(
+      Object.entries(record).map(
+        ([key, inner]): [string, Record<string, T>] => [key, sortKeys(inner)],
+      ),
+    ),
+  );
+}
+
+// `mops.lock` is committed, diffed and merged like source, so its key order must
+// depend only on content — never on resolution or traversal order, which shift
+// for reasons unrelated to what was installed. Only what gets written is sorted:
+// an already-committed unsorted lock stays valid and is reordered whenever
+// something legitimately rewrites it, so this churns nobody's lock on upgrade.
+function serializeLockFile(lock: LockFileV3): string {
+  // Re-assigning an existing key keeps its original position, so the top-level
+  // field order of `computeLockFile`'s literal survives the spread.
+  let sorted: LockFileV3 = {
+    ...lock,
+    deps: sortKeys(lock.deps),
+    hashes: sortNestedKeys(lock.hashes),
+    ...(lock.graph && { graph: sortNestedKeys(lock.graph) }),
+    ...(lock.github && { github: sortKeys(lock.github) }),
+  };
+  return JSON.stringify(sorted, null, 2);
+}
+
 // Stage into a sibling temp file and atomic-rename onto the lock, so a
 // concurrent `mops install` never reads a half-written lock.
 function writeLockFileAtomic(lockFile: string, content: string) {
@@ -719,7 +757,7 @@ export async function updateLockFile({
   let lockFileJson = await computeLockFile();
   let lockFile = getLockFilePath();
   let isNew = !fs.existsSync(lockFile);
-  writeLockFileAtomic(lockFile, JSON.stringify(lockFileJson, null, 2));
+  writeLockFileAtomic(lockFile, serializeLockFile(lockFileJson));
   if (isNew && !silent) {
     console.log("mops.lock created. Commit this file.");
   }

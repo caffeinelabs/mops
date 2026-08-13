@@ -5,21 +5,23 @@
 - `mops update` now exits `2` for an unknown package or a missing `mops.toml`, matching `mops outdated`. It previously exited `0` after printing `Package "<name>" is not installed!`, so a typo in a scripted update looked like success.
 - `mops update` and `mops outdated` now share one rule for deciding when a `repo = "..."` dependency is out of date, so the two commands cannot disagree about it.
 - `mops update --help` and its doc page now state that the command rewrites `mops.toml` — it is `cargo upgrade` semantics, not `cargo update` — and list its exit codes.
-
+- `mops.lock` is now written with all keys sorted — dependencies, packages, per-file hashes, graph entries and GitHub entries — so unrelated installs no longer produce diff churn or spurious merge conflicts. The lockfile format is unchanged: an existing lockfile with unsorted keys stays valid, still passes `mops install --locked`, and is reordered only the next time something legitimately updates it.
 - `mops install` no longer crashes with a raw `RangeError: Maximum call stack size exceeded` when two local `path` dependencies require each other, or when one requires itself. The install walk now skips a local package it has already visited in the same run, naming neither a cycle nor an error — the packages install normally.
-
 - Fixed `mops remove <pkg>` crashing with `Invalid dependency value ""` when the dependency is a local path dep.
 - `mops remove` now echoes the dependency value it removed for GitHub and local path deps, instead of an empty version.
 - Temporary compatibility shim: `mops add`, `remove`, `install`, `sync` and `update` again accept the removed 2.x flag `--lock <check|update|ignore>` instead of failing to parse. The value is ignored — including `check`, which is **not** treated as `--locked` — so v2 call sites keep working during the 3.x rollout. Migrate to `mops install --locked` for CI enforcement; the flag will be removed.
 
 ### Performance
 
+- **Parallel package installs.** Packages now download through a bounded pool instead of one at a time, sharing a fixed request budget so the package pool and the per-package file downloads cannot multiply (a cold install of 8 root packages plus transitives measured 19.7 s → 13.2 s). Branches of the graph requesting the same package share one download. New `mops install --concurrency <n>` flag and `MOPS_CONCURRENCY` environment variable cap simultaneous registry requests; the env var covers every command that installs packages. The default derives from the CPU count (2 × cores, clamped to 4–16 — the same mechanism pnpm uses for `network-concurrency`). The undocumented heuristic that quietly capped download threads whenever `GITHUB_ENV` was set is removed: it detected a brand, not a constraint.
+- Writing a downloaded package's files to disk and copying packages from the global cache into `.mops/` now run through bounded pools instead of unbounded fan-outs, so a large dependency graph can no longer exhaust file descriptors.
 - **Faster CLI startup.** The agent no longer eagerly synchronises time on every invocation, which cost three `read_state` requests against the ICP ledger canister — a canister mops never otherwise talks to, on a different subnet. Clock skew still self-heals: the agent re-syncs against the mops canister and retries once when a replica rejects an expired ingress expiry.
 - **Install telemetry no longer blocks.** `notifyInstalls` is submitted as an ingress message and acknowledged on acceptance instead of waiting for a certified reply (~125 ms rather than ~1.1 s). Delivery is unchanged — the method is `oneway` and never had a stronger guarantee.
 - Together those remove roughly 1.5 s of fixed cost from a warm-cache `mops install && mops update` in a fresh directory, none of it dependent on how many packages a project has.
 - File metadata and the first chunk of each file are now fetched concurrently rather than chained, halving per-file round trips for the single-chunk case that covers essentially every Motoko source file.
 - Chunk concatenation is no longer quadratic. **Breaking for programmatic consumers of the `ic-mops` package**: `downloadFile` and `downloadPackageFiles` now return `Uint8Array` instead of `Array<number>`.
 - `mops outdated` and `mops update` no longer make a registry call when a project has no registry dependencies to check.
+- **Dependency resolution runs once per command instead of three to five times.** A command resolves at several points (local cache sync, lockfile write, requirements check, `mops sources`), each of which used to re-walk the whole dependency graph. The walk is now memoized in-process on the *content* of `mops.toml` and `mops.lock` plus every local `path` dependency manifest it reads, so a command that rewrites its own inputs — `mops install` writing the lockfile, `mops add` writing `mops.toml` — still re-walks and cannot act on a stale graph.
 
 ### Integrity
 

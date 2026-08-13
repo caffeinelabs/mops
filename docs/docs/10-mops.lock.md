@@ -134,6 +134,12 @@ For the same reason, updating a stale lock carries file hashes of already-locked
 
 Local path dependencies are stored relative to the project root (e.g. `./packages/shared`, `../lib`) so the lockfile is portable across machines. A lockfile that still carries absolute paths from an older CLI is treated as stale and rewritten by a plain `mops install`. After regenerating, use a CLI that includes this fix; older CLIs treat relative lock paths as cwd-relative and break when run from a subdirectory.
 
+## Key ordering
+
+Every key Mops writes to `mops.lock` is sorted — the dependencies, the packages in `hashes`, the per-file hashes within each package, the `graph` entries and the `github` entries. Ordering never depends on how `mops.toml` lists dependencies or on the order resolution happened to visit them, so unrelated installs produce no diff churn and the file merges cleanly.
+
+Ordering is not a correctness property: a lockfile written by an older CLI with unsorted keys stays valid, passes `mops install --locked`, and is not rewritten just for being unsorted. It is reordered the next time something legitimately updates it.
+
 ## `{MOPS_ENV}` path dependencies
 
 A local `path` dependency may contain `{MOPS_ENV}`, which expands to the value of the `MOPS_ENV` environment variable (`local` when it is unset):

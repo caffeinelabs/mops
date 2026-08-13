@@ -24,6 +24,19 @@ export MOPS_NETWORK="local"
 mops install
 ```
 
+## Install Tuning
+
+### `MOPS_CONCURRENCY`
+
+Cap the number of simultaneous registry requests during package installs (an integer ≥ 1). Applies to every command that installs packages — `mops install`, `mops add`, `mops build`, `mops test`, `mops sources`, and so on. Equivalent to [`mops install --concurrency <n>`](../1-deps/02-mops-install.md#--concurrency-n); the flag wins when both are set.
+
+The default is derived from the CPU count (2 × cores, clamped to 4–16). Set a low value in constrained environments — a 1-CPU container, an egress proxy capping concurrent connections, a low file-descriptor limit:
+
+```bash
+export MOPS_CONCURRENCY=2
+mops install
+```
+
 ## Registry Configuration
 
 ### `MOPS_REGISTRY_HOST`
