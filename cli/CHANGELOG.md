@@ -2,6 +2,8 @@
 
 ## Next
 
+- On moc 1.12.0+, `mops check` and `mops check-stable` check upgrade compatibility faster and report it better for canisters with `[migrations]` and a committed `.most` baseline: compatibility errors now point at your source (`src/main.mo:3.1-11.2`) instead of `(unknown location)`, and a field the initial actor requires that no migration produces now fails as an `M0267` error rather than only warning (`M0254`) — a forgotten migration that previously slipped through as a warning will now fail the check. Older moc pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
+
 - **Installs self-heal on transient network failures.** A `fetch failed`, `ECONNRESET` or `EMFILE` during an install no longer aborts the command: the install retries up to twice with the request concurrency halved, so an environment that cannot sustain the default parallelism degrades to a slower install instead of a broken one. Packages that already downloaded come from the cache on retry, and only the failures are re-fetched. Registry answers such as "Package not found" are never retried. Every path that downloads a package self-heals the same way, including `mops add` and the cache-repair fetch during dependency resolution; a failed attempt is fully settled before the retry starts, and a retry lowers the real download pressure even where a command pins its own thread count.
 - The default request concurrency is now capped by the file-descriptor soft limit as well as the CPU count, so a many-core machine with a low `ulimit -n` no longer gets a budget wide enough to exhaust its own descriptors. The usual limits (macOS's default 256 and up) leave the budget unchanged.
 - **Error messages now go to stderr.** Failures used to be printed with `console.log`, so `mops <cmd> > out.txt` swallowed them; every error now reaches the terminal even when stdout is redirected or machine-parsed. Exit codes are unchanged. Internally the CLI no longer calls `process.exit()` at ~100 call sites — errors are raised as a `CliError` and handled once at the entry point — so cleanup that used to be skipped (build and `--fix` lock release, temp dirs) now runs reliably on failure, and an ESLint rule keeps new `process.exit()` calls out.
@@ -151,6 +153,9 @@ mops neither invokes dfx nor supports projects that deploy with it. `dfx` does n
 ### Runtime
 
 - **Breaking**: Node.js >= 20 is required (`engines` bump from >= 18); installs on Node 18 fail with an engines error. (#288)
+## 2.23.0
+- All deprecation warnings, error hints, and doc examples that suggested `mops toolchain use pocket-ic 12.0.0` now suggest `15.0.0`, the current PocketIC release.
+- On moc 1.12.0+, `mops check` and `mops check-stable` check upgrade compatibility faster and report it better for canisters with `[migrations]` and a committed `.most` baseline: compatibility errors now point at your source (`src/main.mo:3.1-11.2`) instead of `(unknown location)`, and a field the initial actor requires that no migration produces now fails as an `M0267` error rather than only warning (`M0254`) — a forgotten migration that previously slipped through as a warning will now fail the check. Older moc pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
 
 ## 2.22.0
 - Updating the lock after a dependency change no longer refetches file hashes for the whole graph from the registry: hashes of packages already in the lock are carried over (published versions are immutable), and only packages new to the lock are queried. `mops remove` now updates the lock without any registry queries. Explicit `mops install --lock update` still refreshes every hash from the registry, so it remains the recovery command for a lock with corrupt hashes.

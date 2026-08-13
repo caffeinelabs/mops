@@ -12,14 +12,14 @@ export function assertDfinityClientSupportsPocketIc(
   if (!version || semver.valid(version) === null) {
     throw new Error(
       `PocketIC version ${JSON.stringify(version)} is invalid for deployment checks. ` +
-        "Use an exact semantic version. Run `mops toolchain use pocket-ic 12.0.0` to pin a supported version.",
+        "Use an exact semantic version. Run `mops toolchain use pocket-ic 14.0.0` to pin a supported version.",
     );
   }
   if (semver.lt(version, MIN_DFINITY_CLIENT_POCKET_IC_VERSION)) {
     throw new Error(
       `PocketIC ${version} is incompatible with deployment checks. ` +
         `\`mops build --check-deploy\` requires pocket-ic ${MIN_DFINITY_CLIENT_POCKET_IC_VERSION} or newer. ` +
-        "Run `mops toolchain use pocket-ic 12.0.0` to pin a supported version.",
+        "Run `mops toolchain use pocket-ic 14.0.0` to pin a supported version.",
     );
   }
 }
