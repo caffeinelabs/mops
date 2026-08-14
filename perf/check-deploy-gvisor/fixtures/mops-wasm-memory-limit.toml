@@ -1,0 +1,25 @@
+# Same manifest as mops.toml, with a per-canister wasmMemoryLimit (256 MiB)
+# applied by `mops build --check-deploy` at canister creation. Used to answer
+# whether limiting the canister's Wasm heap bounds the memory the check
+# commits under gVisor.
+
+[dependencies]
+base = "0.14.14"
+time-consts = "1.0.1"
+map = "9.0.1"
+ic = "3.2.0"
+backup = "3.0.0"
+sha2 = "0.1.0"
+vector = "0.4.0"
+http-types = "1.0.1"
+datetime = "1.0.0"
+principal-ext = "0.1.0"
+telegram-bot = "0.1.1"
+
+[canisters.main]
+main = "backend/main/main-canister.mo"
+wasmMemoryLimit = 268435456
+
+[toolchain]
+moc = "/opt/moc/moc"
+pocket-ic = "/opt/pocket-ic"

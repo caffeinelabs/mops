@@ -1,0 +1,27 @@
+# Manifest for the check-deploy gVisor repro (perf/check-deploy-gvisor).
+#
+# Dependencies mirror the repo root mops.toml so backend/main (the production
+# mops.one registry canister) builds unchanged. moc and pocket-ic are
+# binary-path pins (a supported [toolchain] form): mops 2.x downloads
+# dfinity-release builds of both tools for x86_64 only, and this repro also
+# runs on arm64 hosts — the Dockerfile fetches the right binaries instead.
+
+[dependencies]
+base = "0.14.14"
+time-consts = "1.0.1"
+map = "9.0.1"
+ic = "3.2.0"
+backup = "3.0.0"
+sha2 = "0.1.0"
+vector = "0.4.0"
+http-types = "1.0.1"
+datetime = "1.0.0"
+principal-ext = "0.1.0"
+telegram-bot = "0.1.1"
+
+[canisters]
+main = "backend/main/main-canister.mo"
+
+[toolchain]
+moc = "/opt/moc/moc"
+pocket-ic = "/opt/pocket-ic"

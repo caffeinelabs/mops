@@ -1,0 +1,4 @@
+*
+!backend
+!perf/check-deploy-gvisor/fixtures
+!perf/check-deploy-gvisor/container-run.sh

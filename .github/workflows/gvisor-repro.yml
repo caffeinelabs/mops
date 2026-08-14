@@ -1,0 +1,57 @@
+# Runs the perf/check-deploy-gvisor harness on an x86_64 runner — the
+# incident's architecture, which cannot be exercised from an arm64 machine
+# (gVisor has no binfmt support). Manual via workflow_dispatch, plus
+# automatically on PRs that touch the harness. Results land in the job log
+# as a markdown table to paste into perf/check-deploy-gvisor/RESULTS.md.
+name: gvisor-repro
+
+on:
+  workflow_dispatch:
+    inputs:
+      memory:
+        description: "container memory cap (memory-swap is set equal)"
+        required: false
+        default: "4g"
+      scenarios:
+        description: "comma-separated scenario filter (default: all)"
+        required: false
+        default: ""
+  pull_request:
+    paths:
+      - "perf/check-deploy-gvisor/**"
+      - "!perf/check-deploy-gvisor/RESULTS.md"
+      - ".github/workflows/gvisor-repro.yml"
+
+concurrency:
+  group: gvisor-repro-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gVisor and register runsc with docker
+        run: |
+          arch=$(uname -m)
+          url=https://storage.googleapis.com/gvisor/releases/release/latest/${arch}
+          sudo curl -fsSL -o /usr/local/bin/runsc ${url}/runsc
+          sudo curl -fsSL -o /usr/local/bin/containerd-shim-runsc-v1 ${url}/containerd-shim-runsc-v1
+          sudo chmod +x /usr/local/bin/runsc /usr/local/bin/containerd-shim-runsc-v1
+          echo '{"runtimes":{"runsc":{"path":"/usr/local/bin/runsc"}}}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
+          runsc --version
+          docker info --format '{{range $k, $v := .Runtimes}}{{$k}} {{end}}'
+
+      - name: Run repro harness
+        # PR runs use a 2g cap: an x86_64 runsc deploy climbs past 2.8 GiB but
+        # takes >15 min to get there, so 4g mostly measures the harness
+        # timeout — 2g (still 3× the runc peak) reaches a true cgroup OOM
+        # within the budget. Dispatch runs choose their own cap.
+        run: |
+          args=(--memory 2g --timeout 1500)
+          [ -n "${{ inputs.memory }}" ] && args=(--memory "${{ inputs.memory }}" --timeout 1500)
+          [ -n "${{ inputs.scenarios }}" ] && args+=(--scenarios "${{ inputs.scenarios }}")
+          sudo perf/check-deploy-gvisor/run.sh "${args[@]}"
