@@ -162,6 +162,6 @@ describe("build check-deploy", () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch("pins below 9.0.0 no longer work");
-    expect(result.stderr).toMatch("mops toolchain use pocket-ic 14.0.0");
+    expect(result.stderr).toMatch("mops toolchain use pocket-ic 15.0.0");
   });
 });

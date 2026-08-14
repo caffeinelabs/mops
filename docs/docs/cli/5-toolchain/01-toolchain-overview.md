@@ -24,7 +24,7 @@ You can use [`mops toolchain use`](./03-mops-toolchain-use.md) command to instal
 ```
 mops toolchain use moc 0.10.3
 mops toolchain use wasmtime 16.0.0
-mops toolchain use pocket-ic 12.0.0
+mops toolchain use pocket-ic 15.0.0
 mops toolchain use lintoko 0.7.0
 mops toolchain use wasm-opt 131
 ```
@@ -40,7 +40,7 @@ You can manually edit `mops.toml` file to specify exact versions of each tool.
 moc = "0.10.3"
 wasmtime = "16.0.0"
 lintoko = "0.7.0"
-pocket-ic = "12.0.0"
+pocket-ic = "15.0.0"
 wasm-opt = "131"
 ```
 
@@ -48,11 +48,11 @@ You need to run `mops install` command when you edit `mops.toml` file manually.
 
 ### `pocket-ic` versions {#pocket-ic-versions}
 
-`pocket-ic` is the one tool with a default: if `[toolchain]` has no `pocket-ic` entry, `mops test --mode replica` and `mops bench` download and run **`14.0.0`**. The default is a fixed constant baked into the CLI, never a "latest" lookup, so warming the cache ahead of time (in a Docker image build, for example) is enough to keep later runs off the network entirely.
+Replica tests, benchmarks, `--check-deploy`, and `mops toolchain bin pocket-ic` all require an explicit `[toolchain] pocket-ic` pin — there is no default. Unpinned, they error naming `mops toolchain use pocket-ic 15.0.0`. The version in that hint is not a runtime fallback; it can move when a newer server is the one to recommend.
 
 Any version from `9.0.0` up can be pinned, `latest` included. Mops keeps no list of blessed versions — as with `moc`, `wasmtime` and `lintoko`, the version you pin is the version you get.
 
-Pins **below `9.0.0`** are rejected with a migration message. They worked in Mops 2.x through a second, legacy PocketIC client, which 3.0.0 removed; without the check, upgrading with an old pin would fail with an opaque timeout from the client instead. Run `mops toolchain use pocket-ic 14.0.0`.
+Pins **below `9.0.0`** are rejected with a migration message. They worked in Mops 2.x through a second, legacy PocketIC client, which 3.0.0 removed; without the check, upgrading with an old pin would fail with an opaque timeout from the client instead. Run `mops toolchain use pocket-ic 15.0.0`.
 
 ### Option 3: Use explicit file paths
 

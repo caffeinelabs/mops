@@ -9,7 +9,7 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 
 ## Key Principles
 
-1. **No dfx** — mops neither invokes nor supports `dfx`. There is no `mops toolchain init`, no `moc-wrapper`, and no `mops watch --generate` / `--deploy`. Always pin `moc` in `[toolchain]`; every command that compiles requires it. Use the newest `moc` version. Pin `pocket-ic` too if you have replica tests or benchmarks — with no pin, `mops test --mode replica`, `mops bench` and `mops watch --test` download and run the mops default (`14.0.0`).
+1. **No dfx** — mops neither invokes nor supports `dfx`. There is no `mops toolchain init`, no `moc-wrapper`, and no `mops watch --generate` / `--deploy`. Always pin `moc` in `[toolchain]`; every command that compiles requires it. Use the newest `moc` version. Pin `pocket-ic` too if you have replica tests, benchmarks, or `--check-deploy` — with no pin those commands error, naming `mops toolchain use pocket-ic 15.0.0`.
 2. **No `mo:base`** — it is deprecated. Always use `mo:core` (`import Array "mo:core/Array"`).
 3. **All config in `mops.toml`** — canisters, moc flags, toolchain versions, build settings.
 4. **Canister-centric workflow** — define all canisters in `[canisters]`; never pass file paths to `mops check`. Exception: library packages (no `[canisters]`) use file paths directly: `mops check src/**/*.mo`.
@@ -22,7 +22,7 @@ Opinionated guide for Motoko projects. Covers project config, dependency managem
 [toolchain]
 moc = "1.7.0"
 lintoko = "0.10.0"
-pocket-ic = "14.0.0"  # optional; defaults to 14.0.0 for replica tests / benchmarks
+pocket-ic = "15.0.0"  # required for replica tests / benchmarks / --check-deploy
 
 [dependencies]
 core = "2.5.0"
@@ -188,7 +188,7 @@ mops generate candid backend -o <path>   # single canister, ad-hoc path
 mops toolchain use moc 1.7.0         # pin specific version
 mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.10.0    # pin specific version
-mops toolchain use pocket-ic 14.0.0  # pin for replica tests / benchmarks (optional; defaults to 14.0.0)
+mops toolchain use pocket-ic 15.0.0  # pin for replica tests / benchmarks / --check-deploy
 mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
@@ -198,7 +198,7 @@ mops toolchain info <tool> --versions --all # full stable history (cache warming
 mops toolchain bin moc               # print path to binary
 ```
 
-**`pocket-ic` versions**: pin anything from `9.0.0` up, `latest` included — mops keeps no list of blessed versions. Pins below `9.0.0` error with a migration message (they ran on the legacy client that mops 3.0.0 removed). With no pin, mops uses `14.0.0` — a fixed constant, never a network lookup, so a warmed cache keeps runtime offline.
+**`pocket-ic` versions**: pin anything from `9.0.0` up, `latest` included — mops keeps no list of blessed versions. Pins below `9.0.0` error with a migration message (they ran on the legacy client that mops 3.0.0 removed). With no pin, replica tests / `mops bench` / `--check-deploy` / `mops toolchain bin pocket-ic` error naming `mops toolchain use pocket-ic 15.0.0`. That version is a hint, not a fallback.
 
 **Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
 
@@ -210,7 +210,7 @@ Create migration files directly in the `chain` directory.
 
 After `mops check --fix` (or `mops check <canister>`) confirms the chain compiles, run `mops build` to produce the wasm artifact.
 
-Use `mops build --check-deploy`, or set `[build].check-deploy = true` for every build, to install each built Wasm on a fresh PocketIC canister and catch module validation, initialization, and installation failures. No `pocket-ic` pin is required (the default version is used when unpinned); a version from `9.0.0` up or a local binary path can be pinned in `[toolchain]`. Use `--no-check-deploy` to skip configured validation once. The command uses each canister's `initArg`, or `()` when omitted. Set `wasmMemoryLimit` to a positive integer byte limit on a canister to check deployment under that limit. PocketIC errors are reported as provided by the client, and installation failures are collected across canisters. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. If moc reports incompatibility, Mops emits `MOPS-CHECK-DEPLOY-SKIPPED` with the compiler diagnostic and does not check that canister on fresh PocketIC. Eligible siblings are still checked; validate the skipped upgrade against representative baseline state.
+Use `mops build --check-deploy`, or set `[build].check-deploy = true` for every build, to install each built Wasm on a fresh PocketIC canister and catch module validation, initialization, and installation failures. Requires `[toolchain] pocket-ic` (a version from `9.0.0` up, or a local binary path). Unpinned, the build errors naming `mops toolchain use pocket-ic 15.0.0`. Use `--no-check-deploy` to skip configured validation once. The command uses each canister's `initArg`, or `()` when omitted. Set `wasmMemoryLimit` to a positive integer byte limit on a canister to check deployment under that limit. PocketIC errors are reported as provided by the client, and installation failures are collected across canisters. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. If moc reports incompatibility, Mops emits `MOPS-CHECK-DEPLOY-SKIPPED` with the compiler diagnostic and does not check that canister on fresh PocketIC. Eligible siblings are still checked; validate the skipped upgrade against representative baseline state.
 
 `check-limit` (optional) caps how many recent chain files `mops check` and `mops lint` consider — useful when the chain grows long and re-checking every old migration slows feedback down. `mops build` is unaffected by `check-limit`. When the limit kicks in, mops stages the included files into `.migrations-<canister>/` next to the `chain` directory (auto-`.gitignore`d). `moc` diagnostics may then print paths there — the real file lives in the `chain` directory with the same name.
 
@@ -269,7 +269,7 @@ mops test --watch                 # re-run on file changes
 mops test -- -Werror              # pass extra moc flags
 ```
 
-Replica tests (actor files or `// @testmode replica`) run on PocketIC — the `pocket-ic` version from `[toolchain]`, or `14.0.0` when unpinned. Same for `mops bench` and `mops watch --test`. There is no `--replica` flag and no dfx replica.
+Replica tests (actor files or `// @testmode replica`) run on PocketIC — the `pocket-ic` version from `[toolchain]`. Unpinned, they error naming `mops toolchain use pocket-ic 15.0.0`. Same for `mops bench` and `mops watch --test`. There is no `--replica` flag and no dfx replica.
 
 ### `mops bench`
 

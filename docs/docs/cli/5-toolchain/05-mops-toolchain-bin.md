@@ -28,7 +28,7 @@ Print path to the `pocket-ic` binary:
 mops toolchain bin pocket-ic
 ```
 
-With no `pocket-ic` entry in `[toolchain]` this prints the path to the [default version](./01-toolchain-overview.md#pocket-ic-versions), downloading it first if it is not cached. Every other tool must be pinned; `mops toolchain bin` exits with an error otherwise.
+Every tool must be pinned in `[toolchain]`; `mops toolchain bin` exits with an error otherwise. For `pocket-ic` the error names `mops toolchain use pocket-ic 15.0.0`.
 
 Print path to the `lintoko` binary:
 ```

@@ -3,7 +3,7 @@ import path from "path";
 import { readFile, writeFile } from "node:fs/promises";
 import { cli, useTempFixtures } from "./helpers";
 import {
-  DEFAULT_POCKET_IC_VERSION,
+  RECOMMENDED_POCKET_IC_VERSION,
   MIN_POCKET_IC_VERSION,
 } from "../commands/toolchain/pocket-ic-versions";
 
@@ -28,15 +28,19 @@ describe("pocket-ic", () => {
     expect(result.exitCode).toBe(0);
   }, 300_000);
 
-  // With no `[toolchain] pocket-ic`, mops downloads and runs
-  // DEFAULT_POCKET_IC_VERSION rather than reaching for a dfx-provided replica.
-  test("runs replica tests with no pocket-ic pin", async () => {
+  // Replica tests need an explicit pin, same as moc. No silent default.
+  test("replica tests fail without a pocket-ic pin", async () => {
     const cwd = path.join(fixturesDir, "pocket-ic-default");
     const result = await cli(["test", "--reporter", "verbose"], { cwd });
 
-    expect(result.stderr).not.toContain("is not supported");
-    expect(result.exitCode).toBe(0);
-  }, 300_000);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain(
+      "Tool 'pocket-ic' is not defined in [toolchain] section in mops.toml",
+    );
+    expect(result.stderr).toContain(
+      `mops toolchain use pocket-ic ${RECOMMENDED_POCKET_IC_VERSION}`,
+    );
+  });
 
   // A `< 9.0.0` pin worked in 2.x through the legacy client this release
   // removes, so it has to fail with a migration message rather than the
@@ -49,7 +53,7 @@ describe("pocket-ic", () => {
       `pocket-ic 4.0.0 is no longer supported. mops 3.0.0 removed the legacy PocketIC client, so pins below ${MIN_POCKET_IC_VERSION} no longer work.`,
     );
     expect(result.stderr).toContain(
-      `mops toolchain use pocket-ic ${DEFAULT_POCKET_IC_VERSION}`,
+      `mops toolchain use pocket-ic ${RECOMMENDED_POCKET_IC_VERSION}`,
     );
     expect(result.exitCode).toBe(1);
   }, 120_000);

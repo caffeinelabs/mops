@@ -23,12 +23,12 @@ Some `mops` commands prompt for input and hang in non-TTY environments (CI, agen
 | `mops init` | `mops init --yes` |
 | `mops bump` | `mops bump <major\|minor\|patch>` |
 | `mops template` | `mops template <name>` (see `mops template --help` for names) |
-| `mops toolchain use <tool>` | `mops toolchain use <tool> <version>` (e.g. `pocket-ic 12.0.0`). `latest` works but may resolve to a version incompatible with the shipped client. |
+| `mops toolchain use <tool>` | `mops toolchain use <tool> <version>` (e.g. `pocket-ic 15.0.0`). `latest` works but may resolve to a version incompatible with the shipped client. |
 | `mops owner add\|rm <principal>` | `mops owner add\|rm <principal> --yes` |
 | `mops maintainer add\|rm <principal>` | `mops maintainer add\|rm <principal> --yes` |
 | `mops publish` (missing recommended `[package]` field, `CI` env unset) | Fill the field in `[package]`, or run with `CI=1` |
 
-When adding a new command or option, prefer non-interactive (accept the value as an argument or flag). Reserve prompts for purely human-facing flows like `mops init`, and at any deprecation/missing-arg site recommend the non-interactive command verbatim (e.g. ``mops toolchain use pocket-ic 12.0.0``, not ``mops toolchain use pocket-ic``).
+When adding a new command or option, prefer non-interactive (accept the value as an argument or flag). Reserve prompts for purely human-facing flows like `mops init`, and at any deprecation/missing-arg site recommend the non-interactive command verbatim (e.g. ``mops toolchain use pocket-ic 15.0.0``, not ``mops toolchain use pocket-ic``).
 
 ## What this repo is
 
