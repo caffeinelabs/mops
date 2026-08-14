@@ -11,7 +11,7 @@ Show release information about a toolchain tool from GitHub.
 mops toolchain info <tool>
 ```
 
-`<tool>` is one of `moc`, `lintoko`, `wasmtime`, or `pocket-ic`.
+`<tool>` is one of `moc`, `lintoko`, `wasmtime`, `pocket-ic`, or `wasm-opt`.
 
 Works without a `mops.toml` — useful for scripts that warm tool caches.
 

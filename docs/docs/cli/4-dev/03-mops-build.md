@@ -175,6 +175,8 @@ Each canister configuration supports:
 - `args` - Additional compiler arguments for this specific canister (optional)
 - `initArg` - Candid-encoded initialization arguments (optional)
 - `candid` - Path to the Candid interface file (optional, for compatibility checking)
+- `wasmMemoryLimit` - Wasm memory limit in bytes applied by [`--check-deploy`](#--check-deploy) (optional)
+- `[canisters.<name>.migrations]` and `[canisters.<name>.check-stable]` subtables — see the [`mops.toml` reference](../../09-mops.toml.md#canisters)
 
 You can also set global build settings:
 ```toml
