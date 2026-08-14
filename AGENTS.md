@@ -6,13 +6,39 @@ This file provides guidance to AI coding agents when working with code in this r
 
 - **Always create a PR.** Never push directly to `main`.
 - **CLI design philosophy**: Follow conventions of established package managers (npm, cargo) — naming, flag style, UX patterns. Related commands must stay consistent: if `mops build` works without arguments (all canisters), then `mops check` and `mops check-stable` must too. When changing a command, review its siblings for consistency.
-- **Keep docs in sync.** CLI command docs live in `docs/docs/cli/` and config reference in `docs/docs/09-mops.toml.md`. The same feature often appears in both — update all relevant pages. `docs/docs/` is the in-development 3.x line, served at `docs.mops.one/next` during the 3.x preview; `docs/versioned_docs/version-2.x/` is the released line, served at the site root, and is a frozen snapshot — back-port only correctness fixes for behavior that also exists in 2.x. The two swap back at the 3.0.0 GA.
+- **Keep docs in sync.** CLI command docs live in `docs/docs/cli/` and config reference in `docs/docs/09-mops.toml.md`. The same feature often appears in both — update all relevant pages. Dual-tree / dual-branch rules: see **Docs (2.x / 3.x)** below.
 - **Keep `--help` in sync with the docs.** A command's `--help` should be a concise summary of its doc page: every option and accepted argument (including the `-- <tool flags>` passthrough, via `.addHelpText`) must appear in `--help`, each with a non-empty description. Don't bloat it with prose — link-level detail stays in the docs.
 - **Update the changelog.** Add entries under `## Next` in `cli/CHANGELOG.md` for any user-facing CLI changes.
 - **Keep skills up to date.** When changing CLI commands or workflows, update `.agents/skills/mops-cli/SKILL.md` to match.
 - **`base` is deprecated.** Use `core` for all new code, examples, and docs.
 - **Pre-commit hook** runs `lint-staged + npm run check` via husky — fix TypeScript/lint errors before committing.
 - **Snapshot testing strategy**: Use Jest snapshots (`cliSnapshot` / `toMatchSnapshot`) for the main use cases so the full CLI output is committed and reviewable. Corner-case and error-path tests should use targeted assertions (`toMatch`, `toBe`) without snapshots to avoid cluttering the snapshot file.
+
+## Docs (2.x / 3.x)
+
+Until 3.0.0 GA, Docusaurus serves two trees. Only the `v3` branch deploys `docs.mops.one` — its build is a superset of `main`'s (same 2.x snapshot at the root, plus 3.x under `/next`). A deploy from `main` would clobber `/next`.
+
+| Tree | Path in repo | Served at |
+|---|---|---|
+| 3.x (current) | `docs/docs/` | https://docs.mops.one/next |
+| 2.x | `docs/versioned_docs/version-2.x/` | https://docs.mops.one (site root) |
+
+Doc edits on `main` go live only after they are merged into `v3` and `v3` redeploys (a `cli-v3.0.0-beta.*` preview tag, or from a v3 checkout: `icp deploy docs -e ic --identity mops --no-create --yes`). At GA, flip `lastVersion` in `docs/docusaurus.config.js` back to `'current'` so 3.x is the site root and 2.x stays the versioned snapshot.
+
+### Which files to edit
+
+- **PR to `main` (ships in 2.x):** edit **both** trees. `versioned_docs` is what 2.x users read; `docs/docs/` carries the feature forward so the next `main`→`v3` sync can port it. Only 3.x-exclusive behavior stays out of `versioned_docs`. Do not treat the 2.x tree as frozen.
+- **PR to `v3` (3.x-only):** edit `docs/docs/` only. Do not rewrite `versioned_docs` to describe v3 behavior (no dfx, required pocket-ic pin, lock model, …) — that would publish 3.x semantics at the 2.x site root.
+
+### Merging `main` into `v3`
+
+`git merge origin/main` is not enough for docs. `docs/docs/` has diverged: on `main` it is a 3.x preview still written in 2.x terms; on `v3` it is actual 3.x.
+
+- **`docs/versioned_docs/version-2.x/`** — take `main`'s. `v3` must not independently evolve the 2.x snapshot.
+- **`docs/docs/`** — keep `v3`'s pages as the base. Port any *new* 2.x-feature docs from main (from `docs/docs/` or `versioned_docs`) into the v3 page, rewritten for v3 semantics. Never resolve a `docs/docs/` conflict by taking `main`'s copy wholesale — that restores dfx fallbacks, optional pocket-ic, old lock flags, etc. onto `/next`.
+- **`docs/docusaurus.config.js`** — keep `v3`'s `lastVersion: '2.x'` / `/next` setup until GA.
+
+The pre-GA audit in `NEXT-MAJOR.md` is the catch-up pass for every docs change on both branches since the v3 branch (docs versioning in #687).
 
 ## Interactive commands (caution for agents)
 
