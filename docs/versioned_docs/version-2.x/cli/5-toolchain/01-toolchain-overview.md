@@ -24,7 +24,7 @@ You can use [`mops toolchain use`](./03-mops-toolchain-use.md) command to instal
 ```
 mops toolchain use moc 0.10.3
 mops toolchain use wasmtime 16.0.0
-mops toolchain use pocket-ic 12.0.0
+mops toolchain use pocket-ic 15.0.0
 mops toolchain use lintoko 0.7.0
 mops toolchain use wasm-opt 131
 ```
@@ -40,7 +40,7 @@ You can manually edit `mops.toml` file to specify exact versions of each tool.
 moc = "0.10.3"
 wasmtime = "16.0.0"
 lintoko = "0.7.0"
-pocket-ic = "12.0.0"
+pocket-ic = "15.0.0"
 wasm-opt = "131"
 ```
 
