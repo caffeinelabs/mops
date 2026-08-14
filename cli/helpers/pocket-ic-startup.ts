@@ -102,6 +102,7 @@ export async function stopPocketIc(
 
 const attachedClients = new Set<{ tearDown(): Promise<void> }>();
 let attachedSignalInstalled = false;
+let attachedShuttingDown = false;
 
 export function trackAttachedPocketIc(client: {
   tearDown(): Promise<void>;
@@ -113,6 +114,10 @@ export function trackAttachedPocketIc(client: {
   attachedSignalInstalled = true;
   // A SIGINT listener replaces Node's default exit; after DELETE we must exit ourselves.
   const onSignal = (signal: NodeJS.Signals) => {
+    if (attachedShuttingDown) {
+      return;
+    }
+    attachedShuttingDown = true;
     void (async () => {
       const clients = [...attachedClients];
       attachedClients.clear();
