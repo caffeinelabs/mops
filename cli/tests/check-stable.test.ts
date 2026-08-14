@@ -47,7 +47,6 @@ describe("check-stable", () => {
     expect(result.stderr).toMatch(
       /\[canisters\.backend\.check-stable\]\.path must be a \.most file, got: deployed\.mo/,
     );
-    expect(result.stderr).toMatch(/mops deployed init <canister>/);
   });
 
   test("rejects a .mo baseline passed as an argument", async () => {
@@ -57,7 +56,6 @@ describe("check-stable", () => {
     expect(result.stderr).toMatch(
       /Baseline must be a \.most file, got: new\.mo/,
     );
-    expect(result.stderr).toMatch(/mops deployed init <canister>/);
   });
 
   test("old file in subdirectory (.old/src/ pattern)", async () => {

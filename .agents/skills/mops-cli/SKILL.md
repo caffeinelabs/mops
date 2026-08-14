@@ -130,7 +130,7 @@ Primary correctness command — runs moc check, then check-stable (if configured
 
 On moc 1.12.0+, canisters with `[migrations]` get stricter upgrade diagnostics: a field the initial actor requires that no migration produces fails as an `M0267` error instead of only warning (`M0254`), and compat errors carry a source location. Older moc pins and canisters without `[migrations]` are unaffected.
 
-The `check-stable` baseline is always a `.most` file — as `[canisters.<name>.check-stable].path` or as the `mops check-stable <baseline.most>` argument. A `.mo` source is rejected; run `mops deployed init <canister>` to create a baseline and `mops deployed` to refresh it after each deploy.
+The `check-stable` baseline is always a `.most` file — as `[canisters.<name>.check-stable].path` or as the `mops check-stable <baseline.most>` argument. A `.mo` source is rejected. See [`mops deployed`](#mops-deployed) for where the baseline comes from — that differs between a fresh project and an already-deployed canister.
 
 ```bash
 mops check                # all canisters

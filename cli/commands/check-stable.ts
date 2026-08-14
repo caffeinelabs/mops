@@ -49,7 +49,8 @@ export interface CheckStableOptions {
 
 // A baseline compiled from a `.mo` source only approximates what is deployed:
 // it is whatever that source says today, not what the running canister holds.
-// `mops build` writes the real thing and `mops deployed` commits it.
+// Deliberately no "run X" hint here: how a baseline gets produced depends on
+// who deploys, and naming one command would be wrong for the others.
 export function requireMostBaseline(
   baselinePath: string,
   origin: string,
@@ -59,9 +60,7 @@ export function requireMostBaseline(
   }
   cliError(
     `${origin} must be a .most file, got: ${baselinePath}\n` +
-      "A .mo source is only an approximation of what is deployed.\n" +
-      "  mops deployed init <canister>   create an empty-actor baseline and wire it up\n" +
-      "  mops deployed                   refresh it after every deploy",
+      "A .mo source is only an approximation of what is deployed.",
   );
 }
 
