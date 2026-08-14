@@ -4,6 +4,7 @@ import {
   type PocketIcServer,
   startPocketIc,
 } from "../helpers/pocket-ic-client.js";
+import { stopPocketIc } from "../helpers/pocket-ic-startup.js";
 import { idlFactory } from "../declarations/bench/index.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -23,21 +24,24 @@ export class BenchReplica {
       console.log("Starting pocket-ic replica...");
     }
 
-    let pocketIcBin = await toolchain.bin("pocket-ic");
-
-    // `@dfinity/pic` omits the flag when `ttl` is unset and lets the server
-    // default apply. Passed explicitly so the lifetime of an orphaned server
-    // doesn't depend on the pocket-ic default.
-    let pic = await startPocketIc({ binPath: pocketIcBin, ttl: 60 });
+    let pic = await startPocketIc(async () => ({
+      binPath: await toolchain.bin("pocket-ic"),
+      // `@dfinity/pic` omits the flag when `ttl` is unset and lets the
+      // server default apply. Passed explicitly so the lifetime of an
+      // orphaned server doesn't depend on the pocket-ic default.
+      ttl: 60,
+    }));
     this.pocketIcServer = pic.server;
     this.pocketIc = pic.client;
   }
 
   async stop() {
-    if (this.pocketIc && this.pocketIcServer) {
-      await this.pocketIc.tearDown();
-      await this.pocketIcServer.stop();
-    }
+    await stopPocketIc({
+      client: this.pocketIc,
+      server: this.pocketIcServer,
+    });
+    this.pocketIc = undefined;
+    this.pocketIcServer = undefined;
   }
 
   async deploy(name: string, wasm: string, cwd: string = process.cwd()) {

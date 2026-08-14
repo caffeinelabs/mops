@@ -48,6 +48,21 @@ describe("build check-deploy", () => {
     }
   });
 
+  test("--check-deploy warns when MOPS_POCKET_IC_URL ignores a pin", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-deploy");
+    try {
+      const result = await cli(["build", "--check-deploy"], {
+        cwd,
+        env: { MOPS_POCKET_IC_URL: "http://127.0.0.1:1" },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout + result.stderr).toMatch("MOPS_POCKET_IC_URL");
+      expect(result.stdout + result.stderr).toMatch("ignored");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
   test("build without check-deploy config does not check deployment", async () => {
     const cwd = path.join(import.meta.dirname, "build/check-deploy");
     try {

@@ -125,6 +125,8 @@ check-deploy = true
 
 PocketIC 9.0.0 or newer, or a local PocketIC binary path, must be pinned in
 `[toolchain]`. Mops cannot verify compatibility for a path pin.
+Set `MOPS_POCKET_IC_URL` to use an already-running PocketIC server instead;
+the pin is then ignored.
 ```toml
 [toolchain]
 pocket-ic = "15.0.0"
@@ -173,6 +175,8 @@ Each canister configuration supports:
 - `args` - Additional compiler arguments for this specific canister (optional)
 - `initArg` - Candid-encoded initialization arguments (optional)
 - `candid` - Path to the Candid interface file (optional, for compatibility checking)
+- `wasmMemoryLimit` - Wasm memory limit in bytes applied by [`--check-deploy`](#--check-deploy) (optional)
+- `[canisters.<name>.migrations]` and `[canisters.<name>.check-stable]` subtables — see the [`mops.toml` reference](../../09-mops.toml.md#canisters)
 
 You can also set global build settings:
 ```toml

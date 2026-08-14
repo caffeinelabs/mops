@@ -22,8 +22,8 @@ When you run `mops install` command, Mops will install the specified version of 
 
 You can use [`mops toolchain use`](./03-mops-toolchain-use.md) command to install specific tool version and update `mops.toml` file.
 ```
-mops toolchain use moc 0.10.3
-mops toolchain use wasmtime 16.0.0
+mops toolchain use moc 1.0.0
+mops toolchain use wasmtime 41.0.0
 mops toolchain use pocket-ic 15.0.0
 mops toolchain use lintoko 0.7.0
 mops toolchain use wasm-opt 131
@@ -37,8 +37,8 @@ You can manually edit `mops.toml` file to specify exact versions of each tool.
 
 ```toml
 [toolchain]
-moc = "0.10.3"
-wasmtime = "16.0.0"
+moc = "1.0.0"
+wasmtime = "41.0.0"
 lintoko = "0.7.0"
 pocket-ic = "15.0.0"
 wasm-opt = "131"

@@ -128,7 +128,9 @@ check-deploy = true
 ```
 
 Requires a `[toolchain] pocket-ic` pin — with no pin the build fails and names
-`mops toolchain use pocket-ic 15.0.0`:
+`mops toolchain use pocket-ic 15.0.0`. Set
+[`MOPS_POCKET_IC_URL`](../7-misc/06-environment-variables.md#mops_pocket_ic_url)
+to use an already-running PocketIC server instead; the pin is then ignored.
 ```toml
 [toolchain]
 pocket-ic = "15.0.0"

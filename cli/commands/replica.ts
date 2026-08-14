@@ -9,6 +9,10 @@ import {
   startPocketIc,
   serverStderr,
 } from "../helpers/pocket-ic-client.js";
+import {
+  stopPocketIc,
+  warnAttachedCanisterLogsUnavailable,
+} from "../helpers/pocket-ic-startup.js";
 import { toolchain } from "./toolchain/index.js";
 
 type StartOptions = {
@@ -31,19 +35,20 @@ export class Replica {
 
     silent || console.log("Starting pocket-ic replica...");
 
-    let pocketIcBin = await toolchain.bin("pocket-ic");
-
-    let pic = await startPocketIc({
-      binPath: pocketIcBin,
+    let pic = await startPocketIc(async () => ({
+      binPath: await toolchain.bin("pocket-ic"),
       showRuntimeLogs: false,
       showCanisterLogs: false,
       ttl: this.ttl,
-    });
+    }));
     this.pocketIcServer = pic.server;
     this.pocketIc = pic.client;
 
-    // process canister logs
-    this._attachCanisterLogHandler(serverStderr(this.pocketIcServer));
+    if (pic.server) {
+      this._attachCanisterLogHandler(serverStderr(pic.server));
+    } else {
+      warnAttachedCanisterLogsUnavailable();
+    }
   }
 
   _attachCanisterLogHandler(stderr: Readable | null) {
@@ -74,12 +79,12 @@ export class Replica {
   }
 
   async stop(sigint = false) {
-    if (this.pocketIc && this.pocketIcServer) {
-      if (!sigint) {
-        await this.pocketIc.tearDown(); // error 'fetch failed' if run on SIGINT
-      }
-      await this.pocketIcServer.stop();
-    }
+    await stopPocketIc(
+      { client: this.pocketIc, server: this.pocketIcServer },
+      { sigint },
+    );
+    this.pocketIc = undefined;
+    this.pocketIcServer = undefined;
   }
 
   async deploy(

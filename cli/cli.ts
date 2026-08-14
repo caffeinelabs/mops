@@ -60,6 +60,7 @@ import { setConflictPolicy } from "./resolve-packages.js";
 import { verifyIntegrity } from "./integrity.js";
 import { Tool } from "./types.js";
 import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
+import { getPocketIcUrl } from "./helpers/pocket-ic-startup.js";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -142,6 +143,17 @@ function enhancedMigrationHelp(
 }
 
 program.name("mops");
+
+// Environment validation happens once here, so a malformed MOPS_POCKET_IC_URL
+// fails every command with the same clean error instead of surfacing as a raw
+// stack from whichever code path happens to read it first.
+program.hook("preAction", () => {
+  try {
+    getPocketIcUrl();
+  } catch (err) {
+    cliError(err instanceof Error ? err.message : String(err));
+  }
+});
 
 // --version
 program.version(`CLI ${version()}\nAPI ${apiVersion}`, "-v --version");
