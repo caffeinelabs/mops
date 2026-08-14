@@ -68,7 +68,9 @@ export async function bench(
   let dfxJson = readDfxJson();
 
   let defaultOptions: BenchOptions = {
-    replica: config.toolchain?.["pocket-ic"] ? "pocket-ic" : "dfx",
+    replica: hasPocketIcSource(config.toolchain?.["pocket-ic"])
+      ? "pocket-ic"
+      : "dfx",
     replicaVersion: "",
     compiler: "moc",
     compilerVersion: getMocVersion(true),
@@ -88,11 +90,6 @@ export async function bench(
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
 
   let replicaType: ReplicaName = options.replica;
-  if (!optionsArg.replica) {
-    replicaType = hasPocketIcSource(config.toolchain?.["pocket-ic"])
-      ? "pocket-ic"
-      : "dfx";
-  }
   if (
     replicaType === "pocket-ic" &&
     !hasPocketIcSource(config.toolchain?.["pocket-ic"])
@@ -119,8 +116,12 @@ export async function bench(
   if (replicaType == "dfx") {
     options.replicaVersion = getDfxVersion();
   } else if (replicaType == "pocket-ic") {
-    options.replicaVersion =
-      getPocketIcUrl() || config.toolchain?.["pocket-ic"] || "";
+    // Attached mode records no version: the URL would leak environment
+    // details into saved baselines and published benchmark metadata, and the
+    // remote server's version is unknown to mops.
+    options.replicaVersion = getPocketIcUrl()
+      ? ""
+      : config.toolchain?.["pocket-ic"] || "";
   }
 
   warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");

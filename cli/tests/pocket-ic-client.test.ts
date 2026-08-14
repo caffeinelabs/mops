@@ -120,11 +120,13 @@ describe("MOPS_POCKET_IC_URL", () => {
     expect(() => getPocketIcUrl()).toThrow("not a valid URL");
   });
 
-  test("warns once when a pin is ignored", () => {
+  test("warns once when a pin is ignored, and stops reading the pin after", () => {
     const log = jest.spyOn(console, "log").mockImplementation(() => {});
-    warnIgnoredPocketIcPin("15.0.0");
-    warnIgnoredPocketIcPin("15.0.0");
+    const getVersion = jest.fn(() => "15.0.0");
+    warnIgnoredPocketIcPin(getVersion);
+    warnIgnoredPocketIcPin(getVersion);
     expect(log).toHaveBeenCalledTimes(1);
+    expect(getVersion).toHaveBeenCalledTimes(1);
     expect(log.mock.calls[0]?.[0]).toMatch("MOPS_POCKET_IC_URL");
     expect(log.mock.calls[0]?.[0]).toMatch("15.0.0");
     log.mockRestore();
@@ -163,6 +165,12 @@ describe("stopPocketIc", () => {
       server: { stop } as never,
     });
     expect(tearDown).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  test("stops a server that has no client (failed client creation)", async () => {
+    const stop = jest.fn(async () => {});
+    await stopPocketIc({ server: { stop } as never });
     expect(stop).toHaveBeenCalledTimes(1);
   });
 });

@@ -21,7 +21,10 @@ import {
   serverStderr,
   addCycles,
 } from "../helpers/pocket-ic-client.js";
-import { getPocketIcUrl, stopPocketIc } from "../helpers/pocket-ic-startup.js";
+import {
+  stopPocketIc,
+  warnAttachedCanisterLogsUnavailable,
+} from "../helpers/pocket-ic-startup.js";
 import { toolchain } from "./toolchain/index.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 
@@ -115,21 +118,19 @@ export class Replica {
           });
       }
     } else {
-      let pic = await startPocketIc(
-        getPocketIcUrl()
-          ? {}
-          : {
-              binPath: await toolchain.bin("pocket-ic"),
-              showRuntimeLogs: false,
-              showCanisterLogs: false,
-              ttl: this.ttl,
-            },
-      );
+      let pic = await startPocketIc(async () => ({
+        binPath: await toolchain.bin("pocket-ic"),
+        showRuntimeLogs: false,
+        showCanisterLogs: false,
+        ttl: this.ttl,
+      }));
       this.pocketIcServer = pic.server;
       this.pocketIc = pic.client;
 
       if (pic.server) {
         this._attachCanisterLogHandler(serverStderr(pic.server));
+      } else {
+        warnAttachedCanisterLogsUnavailable();
       }
     }
   }

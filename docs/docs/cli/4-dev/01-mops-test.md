@@ -71,14 +71,14 @@ You can also specify `wasi` mode for a specific test file by adding the line bel
 
 Which replica to use to run actor tests.
 
-Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section, otherwise `dfx` (deprecated, see below).
+Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section or `MOPS_POCKET_IC_URL` points at an already-running PocketIC server, otherwise `dfx` (deprecated, see below).
 
 Possible values:
 - `pocket-ic` - use [PocketIC](https://github.com/dfinity/pocketic) light replica via [pic.js](https://github.com/dfinity/pic-js). Recommended.
 - `dfx` - **deprecated**. Uses `dfx` local replica. Will be removed in a future release. Run `mops toolchain use pocket-ic 15.0.0` to pin a PocketIC version and `mops test` will use it directly.
 
 :::info
-If you run `mops test --replica pocket-ic` AND `pocket-ic` is not specified in `mops.toml` in `[toolchain]` section, Mops will use pocket-ic replica that comes with dfx (`dfx start --pocketic`). This fallback path is also deprecated.
+If you run `mops test --replica pocket-ic` AND neither `pocket-ic` in `[toolchain]` nor `MOPS_POCKET_IC_URL` is set, Mops will use the pocket-ic replica that comes with dfx (`dfx start --pocketic`). This fallback path is also deprecated.
 :::
 
 ### `--verbose`

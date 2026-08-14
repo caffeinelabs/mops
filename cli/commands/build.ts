@@ -64,25 +64,19 @@ export async function build(
     options.checkWasm ?? config.build?.["check-wasm"] ?? false;
   const checkDeployEnabled =
     options.checkDeploy ?? config.build?.["check-deploy"] ?? false;
-  if (checkDeployEnabled) {
-    let externalUrl: string | undefined;
+  // A malformed MOPS_POCKET_IC_URL is rejected by the preAction hook in
+  // cli.ts before any command runs, so getPocketIcUrl() cannot throw here.
+  if (checkDeployEnabled && !getPocketIcUrl()) {
+    const pocketIcVersion = config.toolchain?.["pocket-ic"];
+    if (!pocketIcVersion) {
+      cliError(
+        "PocketIC deployment check requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 15.0.0` to pin it.",
+      );
+    }
     try {
-      externalUrl = getPocketIcUrl();
+      assertDfinityClientSupportsPocketIc(pocketIcVersion);
     } catch (err) {
       cliError(err instanceof Error ? err.message : String(err));
-    }
-    if (!externalUrl) {
-      const pocketIcVersion = config.toolchain?.["pocket-ic"];
-      if (!pocketIcVersion) {
-        cliError(
-          "PocketIC deployment check requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 15.0.0` to pin it.",
-        );
-      }
-      try {
-        assertDfinityClientSupportsPocketIc(pocketIcVersion);
-      } catch (err) {
-        cliError(err instanceof Error ? err.message : String(err));
-      }
     }
   }
   let outputDir = resolveBuildOutputDir(config, options.outputDir);

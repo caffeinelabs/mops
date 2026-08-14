@@ -31,6 +31,7 @@ import { SilentReporter } from "./reporters/silent-reporter.js";
 import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
+import { cliError } from "../../error.js";
 import { getDfxVersion } from "../../helpers/get-dfx-version.js";
 import { warnIfDfxReplica } from "../../helpers/deprecate-dfx-replica.js";
 import { hasPocketIcSource } from "../../helpers/pocket-ic-startup.js";
@@ -53,8 +54,14 @@ let replicaStartPromise: Promise<void> | undefined;
 
 async function startReplicaOnce(replica: Replica, type: ReplicaName) {
   if (!replicaStartPromise) {
-    replicaStartPromise = new Promise((resolve) => {
-      replica.start({ type, silent: true }).then(resolve);
+    // A start failure must settle this promise — every replica test file (and
+    // the watch SIGINT handler) awaits it — and surface as a clean error, not
+    // an unhandled rejection.
+    replicaStartPromise = replica.start({ type, silent: true }).catch((err) => {
+      cliError(
+        `Failed to start the ${type} replica:`,
+        err instanceof Error ? err.message : String(err),
+      );
     });
   }
   return replicaStartPromise;
@@ -107,11 +114,17 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
 
       if (replicaStartPromise) {
         console.log("Stopping replica...");
-        replicaStartPromise
-          .then(() => replica.stop(true))
-          .then(() => {
-            process.exit(0);
-          });
+        // Wait for a settled start so the attached instance exists to be
+        // deleted — but bounded, so a stalled start cannot hold the exit.
+        let stopped = Promise.allSettled([replicaStartPromise]).then(() =>
+          replica.stop(true),
+        );
+        let deadline = new Promise<void>((resolve) => {
+          setTimeout(resolve, 10_000).unref();
+        });
+        void Promise.race([stopped, deadline]).then(() => {
+          process.exit(0);
+        });
       } else {
         process.exit(0);
       }

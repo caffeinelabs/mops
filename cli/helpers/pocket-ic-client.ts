@@ -56,15 +56,22 @@ function legacyVersion(): string | undefined {
   return undefined;
 }
 
+// Server options may be a thunk so the spawn-only work behind them (resolving
+// `toolchain.bin("pocket-ic")` downloads the binary) is never paid in attached
+// mode, where the whole object is unused.
+export type StartServerOptionsSource =
+  | StartServerOptions
+  | (() => Promise<StartServerOptions>);
+
 export function startPocketIc(
-  options: StartServerOptions,
+  options: StartServerOptionsSource,
   clientOptions: { client: "dfinity" },
 ): Promise<{ server?: PocketIcServer; client: PocketIc }>;
 export function startPocketIc(
-  options: StartServerOptions,
+  options: StartServerOptionsSource,
 ): Promise<PocketIcResult>;
 export async function startPocketIc(
-  options: StartServerOptions,
+  optionsSource: StartServerOptionsSource,
   {
     client: clientName = "versioned",
   }: {
@@ -73,13 +80,26 @@ export async function startPocketIc(
 ): Promise<PocketIcResult | { server?: PocketIcServer; client: PocketIc }> {
   const url = getPocketIcUrl();
   if (url) {
-    warnIgnoredPocketIcPin(pinnedPocketIcVersion());
+    warnIgnoredPocketIcPin(pinnedPocketIcVersion);
     const { PocketIc } = await import("@dfinity/pic");
-    const client = await PocketIc.create(url);
+    let client: PocketIc;
+    try {
+      client = await PocketIc.create(url);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Cannot connect to the PocketIC server at MOPS_POCKET_IC_URL (${url}): ${message}\n` +
+          "Check that the server is running, the URL points at the PocketIC control API " +
+          "(not the IC HTTP gateway), and the server version is compatible with the bundled `@dfinity/pic` client.",
+        { cause: error },
+      );
+    }
     trackAttachedPocketIc(client);
     return { client };
   }
 
+  const options =
+    typeof optionsSource === "function" ? await optionsSource() : optionsSource;
   const version = pinnedPocketIcVersion();
   if (clientName === "dfinity") {
     assertDfinityClientSupportsPocketIc(version);
@@ -126,7 +146,7 @@ export async function addCycles(
   canisterId: LegacyPrincipal | ModernPrincipal,
   amount: bigint,
 ): Promise<void> {
-  if (legacyVersion() && !getPocketIcUrl()) {
+  if (!getPocketIcUrl() && legacyVersion()) {
     // 1e12 cycles is well inside Number.MAX_SAFE_INTEGER.
     await (client as PocketIcLegacy).addCycles(
       canisterId as LegacyPrincipal,
