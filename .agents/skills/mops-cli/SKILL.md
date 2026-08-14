@@ -341,7 +341,3 @@ mops add core
 Then configure `[moc].args`, `[canisters]`, and `[build]` in `mops.toml`.
 
 To update tools later: `mops toolchain update moc` or `mops toolchain update` (all tools).
-
-## Editing the mops docs site
-
-A 2.x change is documented in **both** `docs/docs/` (3.x line, `docs.mops.one/next`) and `docs/versioned_docs/version-2.x/` (2.x, site root). 3.x-only edits go in `docs/docs/` only. Do not treat the 2.x tree as frozen. Deploy ownership and `main`→`v3` merge rules: repo `AGENTS.md`, **Docs (2.x / 3.x)**.
