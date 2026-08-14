@@ -7,6 +7,7 @@
 
 ## 1. Prerequisites
 - [Node.js](https://nodejs.org/) >= 20.0.0
+- macOS or Linux. On Windows, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) — the Motoko toolchain has no native Windows builds.
 
 Mops downloads and manages the Motoko toolchain itself — `moc`, `pocket-ic`, `wasmtime`, `lintoko`, `wasm-opt`. It does not need `dfx` installed, and does not support it.
 
