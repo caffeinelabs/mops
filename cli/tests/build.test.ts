@@ -5,6 +5,7 @@ import { appendFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import path from "path";
 import { cleanFixture } from "./build-helpers";
 import { cli, cliSnapshot } from "./helpers";
+import { RECOMMENDED_POCKET_IC_VERSION } from "../commands/toolchain/pocket-ic-versions";
 
 const distBin = path.resolve(import.meta.dirname, "../dist/bin/mops.js");
 
@@ -144,12 +145,17 @@ describe("build", () => {
   // `build/success`, and this file owns that fixture. Every test in it calls
   // `cleanFixture`, which removes `.mops` — from a parallel worker that would
   // delete a build another test is still using.
-  test("--check-deploy works without a PocketIC pin (default version)", async () => {
+  test("--check-deploy requires a PocketIC pin", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
     try {
       const result = await cli(["build", "foo", "--check-deploy"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toMatch("check deploy canister foo");
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        "Tool 'pocket-ic' is not defined in [toolchain] section in mops.toml",
+      );
+      expect(result.stderr).toMatch(
+        `mops toolchain use pocket-ic ${RECOMMENDED_POCKET_IC_VERSION}`,
+      );
     } finally {
       cleanFixture(cwd);
     }

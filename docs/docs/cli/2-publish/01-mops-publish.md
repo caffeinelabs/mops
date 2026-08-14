@@ -18,7 +18,7 @@ Documentation for the package will be generated automatically from the source co
 
 ### Benchmarks
 
-Benchmarks will be run on the PocketIC replica — the `pocket-ic` version pinned in `mops.toml` under `[toolchain]`, or the [default](../5-toolchain/01-toolchain-overview.md#pocket-ic-versions) when there is no pin.
+Benchmarks will be run on the PocketIC replica — the `pocket-ic` version pinned in `mops.toml` under `[toolchain]`. There is no default; pin one with [`mops toolchain use pocket-ic 15.0.0`](../5-toolchain/03-mops-toolchain-use.md).
 
 Benchmark results will be published to the registry.
 

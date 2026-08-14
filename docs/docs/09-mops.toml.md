@@ -63,7 +63,7 @@ See [toolchain management](./cli/5-toolchain/01-toolchain-overview.md) page for 
 | -------------------- | ------------------------------------------------ |
 | moc                  | Motoko compiler version (e.g. `1.0.0`) or file path (e.g. `./tools/moc`, `/usr/local/bin/moc`)   |
 | wasmtime             | WASM runtime version (e.g. `41.0.0`) or file path used to run [tests](./cli/4-dev/01-mops-test.md#--mode) in `wasi` mode   |
-| pocket-ic            | [PocketIC](https://github.com/dfinity/pocketic) replica version (e.g. `14.0.0`) or file path, used to run [benchmarks](./cli/4-dev/02-mops-bench.md) and [replica tests](./cli/4-dev/01-mops-test.md#replica-tests). Optional — with no pin Mops uses a [default version](./cli/5-toolchain/01-toolchain-overview.md#pocket-ic-versions). Versions below `9.0.0` are no longer supported. See [`pocket-ic` versions](./cli/5-toolchain/01-toolchain-overview.md#pocket-ic-versions)   |
+| pocket-ic            | [PocketIC](https://github.com/dfinity/pocketic) replica version (e.g. `15.0.0`) or file path, used to run [benchmarks](./cli/4-dev/02-mops-bench.md) and [replica tests](./cli/4-dev/01-mops-test.md#replica-tests). Required when those commands (or `--check-deploy`) run — there is no default. Versions below `9.0.0` are no longer supported. See [`pocket-ic` versions](./cli/5-toolchain/01-toolchain-overview.md#pocket-ic-versions)   |
 | lintoko              | Linter version (e.g. `0.7.0`) or file path for Motoko linting   |
 | wasm-opt             | Binaryen version (e.g. `131`) or file path used for `[optimize]` post-build Wasm optimization   |
 
@@ -188,7 +188,7 @@ Global build settings used by [`mops build`](./cli/4-dev/03-mops-build.md).
 | outputDir | Output directory for compiled Wasm and Candid files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
 | args      | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
 | check-wasm | Analyze each final Wasm for likely IC0505 function-complexity risks without starting PocketIC (default `false`). Override for one build with `--check-wasm` or `--no-check-wasm`. |
-| check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Runs on the pinned `[toolchain] pocket-ic`, or the default version when unpinned; pins below 9.0.0 are rejected. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. Incompatible canisters are skipped with `MOPS-CHECK-DEPLOY-SKIPPED`; eligible siblings are still checked. Override for one build with `--check-deploy` or `--no-check-deploy`. |
+| check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Requires a `[toolchain] pocket-ic` pin (below 9.0.0 rejected). Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. Incompatible canisters are skipped with `MOPS-CHECK-DEPLOY-SKIPPED`; eligible siblings are still checked. Override for one build with `--check-deploy` or `--no-check-deploy`. |
 
 Example:
 ```toml

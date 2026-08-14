@@ -125,7 +125,7 @@ Make sure your actor has `runTests` method.
 
 See example [here](https://github.com/caffeinelabs/mops/blob/main/test/storage-actor.test.mo).
 
-Replica tests run on [PocketIC](https://github.com/dfinity/pocketic), which Mops downloads and manages itself — `dfx` is not involved and does not need to be installed. Pin a version with [`mops toolchain use pocket-ic <version>`](../5-toolchain/03-mops-toolchain-use.md); with no pin, Mops uses the default version it ships with. See [supported versions](../5-toolchain/01-toolchain-overview.md#pocket-ic-versions).
+Replica tests run on [PocketIC](https://github.com/dfinity/pocketic), which Mops downloads and manages itself — `dfx` is not involved and does not need to be installed. Pin a version with [`mops toolchain use pocket-ic 15.0.0`](../5-toolchain/03-mops-toolchain-use.md). There is no default: an unpinned project errors. See [supported versions](../5-toolchain/01-toolchain-overview.md#pocket-ic-versions).
 
 Under the hood, Mops will:
 - Start a PocketIC server on an ephemeral port

@@ -126,12 +126,11 @@ Enable the same validation for every plain `mops build` invocation:
 check-deploy = true
 ```
 
-No `[toolchain] pocket-ic` pin is required — with no pin, Mops uses its default
-version. Pinning is still recommended for reproducibility (Mops cannot verify
-compatibility for a path pin):
+Requires a `[toolchain] pocket-ic` pin — with no pin the build fails and names
+`mops toolchain use pocket-ic 15.0.0`:
 ```toml
 [toolchain]
-pocket-ic = "14.0.0"
+pocket-ic = "15.0.0"
 ```
 
 To check deployment with a non-default Wasm memory limit, configure the limit in
