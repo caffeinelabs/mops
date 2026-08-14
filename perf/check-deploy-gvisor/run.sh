@@ -15,7 +15,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 IMAGE=mops-check-deploy-gvisor
 MEMORY=4g
 TIMEOUT=900
-SCENARIOS=probe-runc,probe-runsc,deploy-runc,deploy-runsc,deploy-runsc-limit,rounds-runc,rounds-runsc
+SCENARIOS=probe-runc,probe-runsc,deploy-runc,deploy-runsc,deploy-runsc-limit,deploy-eop-runc,deploy-eop-runsc,rounds-runc,rounds-runsc
 BUILD=1
 
 while [[ $# -gt 0 ]]; do
@@ -123,6 +123,8 @@ run_scenario() {
 [[ ",$SCENARIOS," == *,deploy-runc,* ]] && run_scenario deploy-runc runc plain
 [[ ",$SCENARIOS," == *,deploy-runsc,* ]] && run_scenario deploy-runsc runsc plain
 [[ ",$SCENARIOS," == *,deploy-runsc-limit,* ]] && run_scenario deploy-runsc-limit runsc wasm-memory-limit
+[[ ",$SCENARIOS," == *,deploy-eop-runc,* ]] && run_scenario deploy-eop-runc runc eop
+[[ ",$SCENARIOS," == *,deploy-eop-runsc,* ]] && run_scenario deploy-eop-runsc runsc eop
 [[ ",$SCENARIOS," == *,rounds-runc,* ]] && run_scenario rounds-runc runc rounds
 [[ ",$SCENARIOS," == *,rounds-runsc,* ]] && run_scenario rounds-runsc runsc rounds
 

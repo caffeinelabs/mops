@@ -27,6 +27,15 @@ RUN mkdir /opt/moc && arch="$(uname -m)" \
   | tar -xz -C /opt/moc \
   && /opt/moc/moc --version
 
+# moc for the EOP/wasm64 variant project (fixtures/eop): a 1.x compiler with
+# enhanced orthogonal persistence, fetched from the caffeinelabs fork, which
+# publishes Linux builds for both architectures.
+ARG MOC_EOP_VERSION=1.12.0
+RUN mkdir /opt/moc-eop && arch="$(uname -m)" \
+  && curl -fsSL "https://github.com/caffeinelabs/motoko/releases/download/${MOC_EOP_VERSION}/motoko-Linux-${arch}-${MOC_EOP_VERSION}.tar.gz" \
+  | tar -xz -C /opt/moc-eop \
+  && /opt/moc-eop/moc --version
+
 # pocket-ic: fetched directly for the same reason (mops 2.x hardcodes
 # x86_64-linux); the fixture pins it as a binary path, which check-deploy
 # supports. 15.0.0 is the current PocketIC release.
@@ -40,7 +49,8 @@ RUN arch="$(uname -m)" && case "$arch" in aarch64) picarch=arm64 ;; *) picarch="
 WORKDIR /project
 COPY perf/check-deploy-gvisor/fixtures/ fixtures/
 COPY backend/ backend/
-RUN cp fixtures/mops.toml mops.toml && mops install
+RUN cp fixtures/mops.toml mops.toml && mops install \
+  && (cd fixtures/eop && mops install)
 
 COPY perf/check-deploy-gvisor/container-run.sh /usr/local/bin/container-run.sh
 ENTRYPOINT ["/usr/local/bin/container-run.sh"]

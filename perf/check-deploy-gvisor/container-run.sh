@@ -12,6 +12,9 @@ case "${VARIANT:-plain}" in
   wasm-memory-limit)
     cp fixtures/mops-wasm-memory-limit.toml mops.toml
     ;;
+  eop)
+    cd fixtures/eop
+    ;;
   rounds)
     # Four replica test files, each deploying a fresh canister to the shared
     # PocketIC server and awaiting an empty self-call 150 times. Kept small

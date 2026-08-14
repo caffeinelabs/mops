@@ -1,0 +1,16 @@
+# EOP/wasm64 variant project: a persistent actor on mo:core compiled with
+# moc 1.x (enhanced orthogonal persistence, 64-bit main memory) — the shape
+# of a current-generation Motoko backend. The repo's registry canister
+# cannot be used here without a full EOP migration (its dependencies and
+# actor declarations predate moc 1.x), so this is a compact representative
+# canister instead.
+
+[dependencies]
+core = "2.6.1"
+
+[canisters]
+main = "main.mo"
+
+[toolchain]
+moc = "/opt/moc-eop/moc"
+pocket-ic = "/opt/pocket-ic"

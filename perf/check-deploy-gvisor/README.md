@@ -44,6 +44,7 @@ self-contained.
 | probe-runc / probe-runsc | both | read 1 GiB untouched anonymous memory (culprit demonstration) |
 | deploy-runc / deploy-runsc | both | `mops build main --check-deploy` on the registry canister ([fixtures/mops.toml](fixtures/mops.toml)) |
 | deploy-runsc-limit | runsc | same, with `wasmMemoryLimit = 256 MiB` on the canister ([fixtures/mops-wasm-memory-limit.toml](fixtures/mops-wasm-memory-limit.toml)) |
+| deploy-eop-runc / deploy-eop-runsc | both | `mops build main --check-deploy` on an **EOP/wasm64** canister (moc 1.12, `persistent actor` + mo:core — [fixtures/eop](fixtures/eop)); the registry canister predates moc 1.x, so this variant uses a compact representative backend instead |
 | rounds-runc / rounds-runsc | both | replica-mode `mops test`: 4 canisters × 150 awaited self-calls on one PocketIC server |
 
 ## Requirements
