@@ -2,6 +2,7 @@
 
 ## Next
 
+- Add `MOPS_POCKET_IC_URL` to attach to an already-running PocketIC server instead of spawning `[toolchain] pocket-ic`. Applies to `mops build --check-deploy`, `mops test --mode replica`, `mops bench`, and `mops watch`. Mops still creates a PocketIC instance for the run and deletes that instance on exit (including SIGINT); it never starts or stops the remote server. A `[toolchain] pocket-ic` pin is ignored with a warning, and the binary is not downloaded. `--replica dfx` is unchanged.
 - Fixed `mops check-stable` applying 2.23.0's stricter moc 1.12.0+ upgrade check to `.mo` baselines. 2.23.0 said the change was limited to canisters with `[migrations]` and a committed `.most` baseline, but a `.mo` baseline got it too once mops had compiled it to a scratch `.most` — so an upgrade a forgotten migration left incomplete flipped from a warning (`M0254`) to a failing `M0267`, and a previously green `mops check` / `mops check-stable` started failing. `.mo` baselines are back on the three-step path, as documented. Committed `.most` baselines are unaffected.
 
 ## 2.23.0

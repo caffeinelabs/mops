@@ -23,6 +23,10 @@ import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 import { warnIfDfxReplica } from "../helpers/deprecate-dfx-replica.js";
+import {
+  getPocketIcUrl,
+  hasPocketIcSource,
+} from "../helpers/pocket-ic-startup.js";
 import { toolchain } from "./toolchain/index.js";
 import {
   formatOptimizePipeline,
@@ -64,7 +68,9 @@ export async function bench(
   let dfxJson = readDfxJson();
 
   let defaultOptions: BenchOptions = {
-    replica: config.toolchain?.["pocket-ic"] ? "pocket-ic" : "dfx",
+    replica: hasPocketIcSource(config.toolchain?.["pocket-ic"])
+      ? "pocket-ic"
+      : "dfx",
     replicaVersion: "",
     compiler: "moc",
     compilerVersion: getMocVersion(true),
@@ -85,8 +91,13 @@ export async function bench(
 
   let replicaType =
     options.replica ??
-    (config.toolchain?.["pocket-ic"] ? "pocket-ic" : ("dfx" as ReplicaName));
-  if (replicaType === "pocket-ic" && !config.toolchain?.["pocket-ic"]) {
+    (hasPocketIcSource(config.toolchain?.["pocket-ic"])
+      ? "pocket-ic"
+      : ("dfx" as ReplicaName));
+  if (
+    replicaType === "pocket-ic" &&
+    !hasPocketIcSource(config.toolchain?.["pocket-ic"])
+  ) {
     let dfxVersion = getDfxVersion();
     if (!dfxVersion || new SemVer(dfxVersion).compare("0.24.1") < 0) {
       console.log(
@@ -109,7 +120,8 @@ export async function bench(
   if (replicaType == "dfx") {
     options.replicaVersion = getDfxVersion();
   } else if (replicaType == "pocket-ic") {
-    options.replicaVersion = config.toolchain?.["pocket-ic"] || "";
+    options.replicaVersion =
+      getPocketIcUrl() || config.toolchain?.["pocket-ic"] || "";
   }
 
   warnIfDfxReplica(replicaType, optionsArg.replica === "dfx");
@@ -202,48 +214,38 @@ export async function bench(
 
   await replica.start({ silent: options.silent });
 
-  let globalMocArgs = getGlobalMocArgs(config);
+  try {
+    let globalMocArgs = getGlobalMocArgs(config);
 
-  if (!process.env.CI && !options.silent) {
-    console.log("Deploying canisters...");
-  }
+    if (!process.env.CI && !options.silent) {
+      console.log("Deploying canisters...");
+    }
 
-  await parallel(os.cpus().length, files, async (file: string) => {
-    try {
+    await parallel(os.cpus().length, files, async (file: string) => {
       await deployBenchFile(file, options, replica, globalMocArgs);
-    } catch (err) {
-      console.error("Unexpected error. Stopping replica...");
-      await replica.stop();
-      throw err;
-    }
-  });
+    });
 
-  let benchResults: Benchmarks = [];
+    let benchResults: Benchmarks = [];
 
-  await parallel(1, files, async (file: string) => {
-    if (!options.silent && !process.env.CI) {
-      console.log("\n" + "-".repeat(50));
-      console.log(`\nRunning ${chalk.gray(absToRel(file))}...`);
-      console.log("");
-    }
-    try {
+    await parallel(1, files, async (file: string) => {
+      if (!options.silent && !process.env.CI) {
+        console.log("\n" + "-".repeat(50));
+        console.log(`\nRunning ${chalk.gray(absToRel(file))}...`);
+        console.log("");
+      }
       let benchResult = await runBenchFile(file, options, replica);
       benchResults.push(benchResult);
-    } catch (err) {
-      console.error("Unexpected error. Stopping replica...");
-      await replica.stop();
-      throw err;
+    });
+
+    if (!process.env.CI && !options.silent) {
+      console.log("Stopping replica...");
     }
-  });
 
-  if (!process.env.CI && !options.silent) {
-    console.log("Stopping replica...");
+    return benchResults;
+  } finally {
+    await replica.stop();
+    fs.rmSync(benchDir, { recursive: true, force: true });
   }
-  await replica.stop();
-
-  fs.rmSync(benchDir, { recursive: true, force: true });
-
-  return benchResults;
 }
 
 function computeDiff(

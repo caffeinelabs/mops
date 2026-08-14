@@ -1,6 +1,11 @@
-import { describe, expect, jest, test } from "@jest/globals";
-const { assertDfinityClientSupportsPocketIc, createClientOrStopServer } =
-  await import("../helpers/pocket-ic-startup");
+import { afterEach, describe, expect, jest, test } from "@jest/globals";
+const {
+  assertDfinityClientSupportsPocketIc,
+  createClientOrStopServer,
+  getPocketIcUrl,
+  stopPocketIc,
+  warnIgnoredPocketIcPin,
+} = await import("../helpers/pocket-ic-startup");
 
 describe("PocketIC client compatibility", () => {
   test.each(["4.0.0", "8.9.9"])(
@@ -71,5 +76,90 @@ describe("PocketIC client startup", () => {
       createClientOrStopServer({ stop }, async () => client),
     ).resolves.toBe(client);
     expect(stop).not.toHaveBeenCalled();
+  });
+});
+
+describe("MOPS_POCKET_IC_URL", () => {
+  const original = process.env.MOPS_POCKET_IC_URL;
+
+  afterEach(() => {
+    if (original === undefined) {
+      delete process.env.MOPS_POCKET_IC_URL;
+    } else {
+      process.env.MOPS_POCKET_IC_URL = original;
+    }
+  });
+
+  test("is unset when the env var is missing or blank", () => {
+    delete process.env.MOPS_POCKET_IC_URL;
+    expect(getPocketIcUrl()).toBeUndefined();
+    process.env.MOPS_POCKET_IC_URL = "  ";
+    expect(getPocketIcUrl()).toBeUndefined();
+  });
+
+  test("trims and strips a trailing slash", () => {
+    process.env.MOPS_POCKET_IC_URL = " http://127.0.0.1:8001/ ";
+    expect(getPocketIcUrl()).toBe("http://127.0.0.1:8001");
+  });
+
+  test("accepts https", () => {
+    process.env.MOPS_POCKET_IC_URL = "https://pocket-ic.example:443";
+    expect(getPocketIcUrl()).toBe("https://pocket-ic.example:443");
+  });
+
+  test("rejects a non-http URL", () => {
+    process.env.MOPS_POCKET_IC_URL = "ftp://example.com";
+    expect(() => getPocketIcUrl()).toThrow("must be an http or https URL");
+  });
+
+  test("rejects garbage", () => {
+    process.env.MOPS_POCKET_IC_URL = "not a url";
+    expect(() => getPocketIcUrl()).toThrow("not a valid URL");
+  });
+
+  test("warns once when a pin is ignored", () => {
+    const log = jest.spyOn(console, "log").mockImplementation(() => {});
+    warnIgnoredPocketIcPin("15.0.0");
+    warnIgnoredPocketIcPin("15.0.0");
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0]?.[0]).toMatch("MOPS_POCKET_IC_URL");
+    expect(log.mock.calls[0]?.[0]).toMatch("15.0.0");
+    log.mockRestore();
+  });
+});
+
+describe("stopPocketIc", () => {
+  test("deletes an attached instance and does not stop a server", async () => {
+    const tearDown = jest.fn(async () => {});
+    await stopPocketIc({ client: { tearDown } as never });
+    expect(tearDown).toHaveBeenCalledTimes(1);
+  });
+
+  test("deletes an attached instance on SIGINT", async () => {
+    const tearDown = jest.fn(async () => {});
+    await stopPocketIc({ client: { tearDown } as never }, { sigint: true });
+    expect(tearDown).toHaveBeenCalledTimes(1);
+  });
+
+  test("skips tearDown on SIGINT when mops spawned the server", async () => {
+    const tearDown = jest.fn(async () => {});
+    const stop = jest.fn(async () => {});
+    await stopPocketIc(
+      { client: { tearDown } as never, server: { stop } as never },
+      { sigint: true },
+    );
+    expect(tearDown).not.toHaveBeenCalled();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  test("tears down then stops a spawned server on a normal stop", async () => {
+    const tearDown = jest.fn(async () => {});
+    const stop = jest.fn(async () => {});
+    await stopPocketIc({
+      client: { tearDown } as never,
+      server: { stop } as never,
+    });
+    expect(tearDown).toHaveBeenCalledTimes(1);
+    expect(stop).toHaveBeenCalledTimes(1);
   });
 });

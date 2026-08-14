@@ -12,7 +12,10 @@ import {
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { optimizeWasm } from "../helpers/optimize-wasm.js";
-import { assertDfinityClientSupportsPocketIc } from "../helpers/pocket-ic-startup.js";
+import {
+  assertDfinityClientSupportsPocketIc,
+  getPocketIcUrl,
+} from "../helpers/pocket-ic-startup.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
@@ -62,16 +65,24 @@ export async function build(
   const checkDeployEnabled =
     options.checkDeploy ?? config.build?.["check-deploy"] ?? false;
   if (checkDeployEnabled) {
-    const pocketIcVersion = config.toolchain?.["pocket-ic"];
-    if (!pocketIcVersion) {
-      cliError(
-        "PocketIC deployment check requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 15.0.0` to pin it.",
-      );
-    }
+    let externalUrl: string | undefined;
     try {
-      assertDfinityClientSupportsPocketIc(pocketIcVersion);
+      externalUrl = getPocketIcUrl();
     } catch (err) {
       cliError(err instanceof Error ? err.message : String(err));
+    }
+    if (!externalUrl) {
+      const pocketIcVersion = config.toolchain?.["pocket-ic"];
+      if (!pocketIcVersion) {
+        cliError(
+          "PocketIC deployment check requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 15.0.0` to pin it.",
+        );
+      }
+      try {
+        assertDfinityClientSupportsPocketIc(pocketIcVersion);
+      } catch (err) {
+        cliError(err instanceof Error ? err.message : String(err));
+      }
     }
   }
   let outputDir = resolveBuildOutputDir(config, options.outputDir);

@@ -33,6 +33,7 @@ import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
 import { getDfxVersion } from "../../helpers/get-dfx-version.js";
 import { warnIfDfxReplica } from "../../helpers/deprecate-dfx-replica.js";
+import { hasPocketIcSource } from "../../helpers/pocket-ic-startup.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
@@ -65,9 +66,14 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
 
   let replicaType =
     options.replica ??
-    (config.toolchain?.["pocket-ic"] ? "pocket-ic" : ("dfx" as ReplicaName));
+    (hasPocketIcSource(config.toolchain?.["pocket-ic"])
+      ? "pocket-ic"
+      : ("dfx" as ReplicaName));
 
-  if (replicaType === "pocket-ic" && !config.toolchain?.["pocket-ic"]) {
+  if (
+    replicaType === "pocket-ic" &&
+    !hasPocketIcSource(config.toolchain?.["pocket-ic"])
+  ) {
     let dfxVersion = getDfxVersion();
     if (!dfxVersion || new SemVer(dfxVersion).compare("0.24.1") < 0) {
       console.log(
@@ -516,15 +522,17 @@ export async function testWithReporter(
     filesWithMode.filter(({ mode }) => mode !== "replica"),
     runTestFile,
   );
-  await parallel(
-    1,
-    filesWithMode.filter(({ mode }) => mode === "replica"),
-    runTestFile,
-  );
-
-  if (hasReplicaTests && !watch) {
-    await replica.stop();
-    fs.rmSync(testTempDir, { recursive: true, force: true });
+  try {
+    await parallel(
+      1,
+      filesWithMode.filter(({ mode }) => mode === "replica"),
+      runTestFile,
+    );
+  } finally {
+    if (hasReplicaTests && !watch) {
+      await replica.stop();
+      fs.rmSync(testTempDir, { recursive: true, force: true });
+    }
   }
 
   if (signal?.aborted) {

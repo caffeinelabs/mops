@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getWasmBindings } from "../wasm.js";
 import { toolchain } from "../commands/toolchain/index.js";
+import { getPocketIcUrl, stopPocketIc } from "./pocket-ic-startup.js";
 import { startPocketIc, type AnyPocketIcServer } from "./pocket-ic-client.js";
 import type { PocketIc } from "@dfinity/pic";
 
@@ -53,7 +54,9 @@ export async function checkDeploy(
     }
   });
 
-  const pocketIcBin = await toolchain.bin("pocket-ic");
+  const pocketIcBin = getPocketIcUrl()
+    ? undefined
+    : await toolchain.bin("pocket-ic");
   let server: AnyPocketIcServer | undefined;
   let client: PocketIc | undefined;
   let operationFailed = false;
@@ -69,7 +72,7 @@ export async function checkDeploy(
         binPath: pocketIcBin,
         showRuntimeLogs: verbose,
         showCanisterLogs: verbose,
-        ttl: 60,
+        ttl: pocketIcBin ? 60 : undefined,
       },
       { client: "dfinity" },
     );
@@ -103,8 +106,7 @@ export async function checkDeploy(
     operationFailed = true;
     operationError = error;
   } finally {
-    await client?.tearDown().catch(() => {});
-    await server?.stop().catch(() => {});
+    await stopPocketIc({ client, server });
   }
 
   if (operationFailed) {

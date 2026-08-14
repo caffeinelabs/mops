@@ -51,3 +51,20 @@ mops install
 ```
 
 These overrides apply to all registry operations (`add`, `install`, `publish`, `search`, etc.) and work with any network selection (staging, ic, or local).
+
+## PocketIC
+
+### `MOPS_POCKET_IC_URL`
+
+Connect to an already-running PocketIC server instead of spawning the `[toolchain] pocket-ic` binary. Applies to every Mops-managed PocketIC use: `mops build --check-deploy`, `mops test --mode replica`, `mops bench`, and `mops watch`.
+
+Mops creates a PocketIC instance (`POST /instances`) for the run and deletes that instance when the command finishes — including on SIGINT. It never starts or stops the server process.
+
+When this variable is set, a `[toolchain] pocket-ic` pin is ignored (Mops prints a warning) and the binary is not downloaded.
+
+```bash
+export MOPS_POCKET_IC_URL="http://127.0.0.1:8001"
+mops build --check-deploy
+```
+
+The URL must be `http` or `https` and must speak the PocketIC control API, not the IC HTTP gateway. `--replica dfx` is unaffected.
