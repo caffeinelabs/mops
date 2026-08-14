@@ -344,4 +344,4 @@ To update tools later: `mops toolchain update moc` or `mops toolchain update` (a
 
 ## Editing the mops docs site
 
-Edits go to `docs/docs/` — the in-development 3.x line, served at `docs.mops.one/next` during the 3.x preview. `docs/versioned_docs/version-2.x/` is the released line, served at the root, and is a frozen snapshot; back-port only correctness fixes for behavior that also exists in 2.x. The two swap back at the 3.0.0 GA.
+A 2.x change is documented in **both** `docs/docs/` (3.x line, `docs.mops.one/next`) and `docs/versioned_docs/version-2.x/` (2.x, site root). 3.x-only edits go in `docs/docs/` only. Do not treat the 2.x tree as frozen. Deploy ownership and `main`→`v3` merge rules: repo `AGENTS.md`, **Docs (2.x / 3.x)**.
