@@ -34,6 +34,16 @@ describe("bench", () => {
   // The `bench` fixture pins `[toolchain] moc = "1.3.0"`. Point DFX_MOC_PATH at a
   // nonexistent binary: if bench resolved the compiler through DFX_MOC_PATH (the bug),
   // the build would fail trying to exec it. It must use the toolchain-managed pin instead.
+  test("--replica dfx ignores an invalid MOPS_POCKET_IC_URL", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    const result = await cli(["bench", "--replica", "dfx"], {
+      cwd,
+      env: { MOPS_POCKET_IC_URL: "not-a-url" },
+    });
+    expect(result.stderr).not.toMatch("not a valid URL");
+    expect(result.stderr).not.toMatch("must be an http");
+  });
+
   test("uses pinned [toolchain] moc, ignoring DFX_MOC_PATH", async () => {
     const cwd = path.join(import.meta.dirname, "bench");
     try {

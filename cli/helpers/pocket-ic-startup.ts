@@ -93,8 +93,33 @@ export async function stopPocketIc(
   if (!client) {
     return;
   }
+  attachedClients.delete(client);
   if (!sigint || !server) {
     await client.tearDown().catch(() => {});
   }
   await server?.stop().catch(() => {});
+}
+
+const attachedClients = new Set<{ tearDown(): Promise<void> }>();
+let attachedSignalInstalled = false;
+
+export function trackAttachedPocketIc(client: {
+  tearDown(): Promise<void>;
+}): void {
+  attachedClients.add(client);
+  if (attachedSignalInstalled) {
+    return;
+  }
+  attachedSignalInstalled = true;
+  // A SIGINT listener replaces Node's default exit; after DELETE we must exit ourselves.
+  const onSignal = () => {
+    void (async () => {
+      const clients = [...attachedClients];
+      attachedClients.clear();
+      await Promise.all(clients.map((c) => c.tearDown().catch(() => {})));
+      process.exit(0);
+    })();
+  };
+  process.on("SIGINT", onSignal);
+  process.on("SIGTERM", onSignal);
 }

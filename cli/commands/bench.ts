@@ -68,9 +68,7 @@ export async function bench(
   let dfxJson = readDfxJson();
 
   let defaultOptions: BenchOptions = {
-    replica: hasPocketIcSource(config.toolchain?.["pocket-ic"])
-      ? "pocket-ic"
-      : "dfx",
+    replica: config.toolchain?.["pocket-ic"] ? "pocket-ic" : "dfx",
     replicaVersion: "",
     compiler: "moc",
     compilerVersion: getMocVersion(true),
@@ -89,11 +87,12 @@ export async function bench(
 
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
 
-  let replicaType =
-    options.replica ??
-    (hasPocketIcSource(config.toolchain?.["pocket-ic"])
+  let replicaType: ReplicaName = options.replica;
+  if (!optionsArg.replica) {
+    replicaType = hasPocketIcSource(config.toolchain?.["pocket-ic"])
       ? "pocket-ic"
-      : ("dfx" as ReplicaName));
+      : "dfx";
+  }
   if (
     replicaType === "pocket-ic" &&
     !hasPocketIcSource(config.toolchain?.["pocket-ic"])

@@ -15,6 +15,7 @@ import {
   assertDfinityClientSupportsPocketIc,
   createClientOrStopServer,
   getPocketIcUrl,
+  trackAttachedPocketIc,
   warnIgnoredPocketIcPin,
 } from "./pocket-ic-startup.js";
 
@@ -74,7 +75,9 @@ export async function startPocketIc(
   if (url) {
     warnIgnoredPocketIcPin(pinnedPocketIcVersion());
     const { PocketIc } = await import("@dfinity/pic");
-    return { client: await PocketIc.create(url) };
+    const client = await PocketIc.create(url);
+    trackAttachedPocketIc(client);
+    return { client };
   }
 
   const version = pinnedPocketIcVersion();

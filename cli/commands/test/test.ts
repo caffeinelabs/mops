@@ -107,9 +107,11 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
 
       if (replicaStartPromise) {
         console.log("Stopping replica...");
-        replica.stop(true).then(() => {
-          process.exit(0);
-        });
+        replicaStartPromise
+          .then(() => replica.stop(true))
+          .then(() => {
+            process.exit(0);
+          });
       } else {
         process.exit(0);
       }

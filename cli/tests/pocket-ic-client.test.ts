@@ -3,6 +3,7 @@ const {
   assertDfinityClientSupportsPocketIc,
   createClientOrStopServer,
   getPocketIcUrl,
+  hasPocketIcSource,
   stopPocketIc,
   warnIgnoredPocketIcPin,
 } = await import("../helpers/pocket-ic-startup");
@@ -93,6 +94,8 @@ describe("MOPS_POCKET_IC_URL", () => {
   test("is unset when the env var is missing or blank", () => {
     delete process.env.MOPS_POCKET_IC_URL;
     expect(getPocketIcUrl()).toBeUndefined();
+    expect(hasPocketIcSource(undefined)).toBe(false);
+    expect(hasPocketIcSource("15.0.0")).toBe(true);
     process.env.MOPS_POCKET_IC_URL = "  ";
     expect(getPocketIcUrl()).toBeUndefined();
   });
