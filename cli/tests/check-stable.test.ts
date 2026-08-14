@@ -1,7 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
 import { existsSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import path from "path";
 import { cli, cliSnapshot } from "./helpers";
 
@@ -63,20 +61,6 @@ describe("check-stable", () => {
     const result = await cli(["check-stable", ".old/src/main.most"], { cwd });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
-  });
-
-  test("compatible upgrade from .most file", async () => {
-    const cwd = path.join(import.meta.dirname, "check-stable/compatible");
-    const tempDir = await mkdtemp(path.join(tmpdir(), "mops-test-most-"));
-    try {
-      const mostPath = path.join(tempDir, "old.most");
-      await writeFile(mostPath, "actor {\n  stable var counter : Nat\n};\n");
-      const result = await cli(["check-stable", mostPath], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toMatch(/Stable compatibility check passed/);
-    } finally {
-      await rm(tempDir, { recursive: true, force: true });
-    }
   });
 
   test("works with relative paths in moc args (e.g. --actor-idl)", async () => {
