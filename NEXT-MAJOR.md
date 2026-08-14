@@ -102,6 +102,7 @@ Everything here except the canister-id item shipped in GH #676 (`feat(cli)!: str
 
 - ~~Lockfile commit guidance~~ — **decided and done on `v3`**: everyone commits `mops.lock`, libraries included. A library's lock has no effect on consumers (they resolve their own graph) and it makes the library's own CI reproducible. The `mops.lock created.` message, `docs/docs/10-mops.lock.md` and the CLI skill all say so now.
 - ~~Custom registry endpoints — ship as supported feature or drop the env-var?~~ — **decided: keep as supported.** `MOPS_REGISTRY_HOST` / `MOPS_REGISTRY_CANISTER_ID` are documented in the 3.x env-vars page, and the `@icp-sdk/core` 5.x entry in the changelog names their compatibility requirement (the replica must serve the HTTP API `v3` endpoint). (LIN, PR #425)
+- **Docs audit of both trees before GA.** Walk every docs change on `main` and `v3` since the v3 branch (docs versioning in #687). `docs/docs/` is 3.x (`docs.mops.one/next/` until GA); `docs/versioned_docs/version-2.x/` is 2.x (site root). PRs to `main` have been editing the wrong tree — e.g. #761 updated `docs/docs/` for a 2.x feature and treated the 2.x snapshot as frozen. 2.x pages must match shipped 2.x; 3.x pages must match v3. Merging `main` into `v3` is not a substitute: v3-specific wording (no dfx, required pocket-ic pin, lock model, …) must not be overwritten by 2.x copy. After GA the two trees swap (`docs/docs/` becomes the live 3.x site, 2.x stays the versioned snapshot).
 
 ---
 
