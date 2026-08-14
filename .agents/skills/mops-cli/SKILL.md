@@ -128,6 +128,8 @@ Adding a package that is already declared in the other section **moves** it rath
 
 Primary correctness command — runs moc check, then check-stable (if configured), then lint (if lintoko is in toolchain).
 
+On moc 1.12.0+, canisters with `[migrations]` and a committed `.most` baseline get stricter upgrade diagnostics: a field the initial actor requires that no migration produces fails as an `M0267` error instead of only warning (`M0254`), and compat errors carry a source location. Older moc pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
+
 ```bash
 mops check                # all canisters
 mops check backend        # single canister

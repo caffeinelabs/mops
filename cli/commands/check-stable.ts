@@ -18,6 +18,7 @@ import {
   resolveSingleCanister,
   validateCanisterArgs,
 } from "../helpers/resolve-canisters.js";
+import { supportsStableBaselineCheck } from "../helpers/get-moc-version.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -25,6 +26,19 @@ import { toolchain } from "./toolchain/index.js";
 // concurrent `mops` processes don't clobber each other's `old.most`/`new.most`.
 const CHECK_STABLE_PARENT = ".mops";
 const CHECK_STABLE_PREFIX = ".check-stable-";
+
+/** moc `--stable-baseline` only works together with `--enhanced-migration`. */
+function hasEnhancedMigrationArg(args: string[]): boolean {
+  return args.some(
+    (a) =>
+      a === "--enhanced-migration" || a.startsWith("--enhanced-migration="),
+  );
+}
+
+/** moc 1.12.0+: one `moc --check --stable-baseline` instead of 3 invocations. */
+export function canUseStableBaselineCheck(canisterArgs: string[]): boolean {
+  return supportsStableBaselineCheck() && hasEnhancedMigrationArg(canisterArgs);
+}
 
 export interface CheckStableOptions {
   verbose: boolean;
@@ -183,6 +197,96 @@ export interface RunStableCheckParams {
   options?: Partial<CheckStableOptions>;
 }
 
+export function reportStableCheckOutcome(
+  canisterName: string,
+  params: {
+    migrations?: MigrationsConfig;
+    oldMostPath: string;
+    baselineIsMostFile: boolean;
+    checkLimit?: boolean;
+    exitCode: number | null | undefined;
+    stderr?: string;
+  },
+): void {
+  const issue = getCheckLimitPendingIssue(
+    params.migrations,
+    canisterName,
+    params.oldMostPath,
+    params.checkLimit === false,
+    params.baselineIsMostFile,
+  );
+
+  if (issue) {
+    reportCheckLimitPendingIssue(issue, params.exitCode !== 0);
+  } else if (params.exitCode !== 0) {
+    if (params.stderr) {
+      console.error(params.stderr);
+    }
+    cliExit(
+      params.exitCode ?? 1,
+      `✗ Stable compatibility check failed for canister '${canisterName}'`,
+    );
+  }
+
+  console.log(
+    chalk.green(
+      `✓ Stable compatibility check passed for canister '${canisterName}'`,
+    ),
+  );
+}
+
+/**
+ * One `moc --check --stable-baseline` covering typecheck + upgrade compat.
+ * `baselinePath` is always a committed `.most` — see `runStableCheck`.
+ */
+async function runFoldedStableCheck(params: {
+  canisterMain: string;
+  canisterName: string;
+  mocPath: string;
+  baselinePath: string;
+  sources: string[];
+  globalMocArgs: string[];
+  canisterArgs: string[];
+  migrations?: MigrationsConfig;
+  options: Partial<CheckStableOptions>;
+}): Promise<void> {
+  const args = [
+    params.canisterMain,
+    "--check",
+    "--all-libs",
+    "--stable-baseline",
+    params.baselinePath,
+    ...params.sources,
+    ...params.globalMocArgs,
+    ...params.canisterArgs,
+    ...(params.options.extraArgs ?? []),
+  ];
+
+  if (params.options.verbose) {
+    console.log(
+      chalk.blue("check-stable"),
+      chalk.gray(
+        `Checking ${params.canisterMain} against baseline ${params.baselinePath}`,
+      ),
+    );
+    console.log(chalk.gray(params.mocPath, JSON.stringify(args)));
+  }
+
+  const result = await execa(params.mocPath, args, {
+    stdio: "pipe",
+    reject: false,
+  });
+
+  reportStableCheckOutcome(params.canisterName, {
+    migrations: params.migrations,
+    oldMostPath: params.baselinePath,
+    baselineIsMostFile: true,
+    checkLimit: params.options.checkLimit,
+    exitCode: result.exitCode,
+    stderr: result.stderr,
+  });
+}
+
 export async function runStableCheck(
   params: RunStableCheckParams,
 ): Promise<void> {
@@ -201,6 +305,25 @@ export async function runStableCheck(
 
   if (!existsSync(oldFile)) {
     cliError(`File not found: ${oldFile}`);
+  }
+
+  // Committed .most baseline + moc 1.12.0+ → one --check, no scratch dir.
+  // A .mo baseline keeps the 3-step path: the scratch .most compiled from it is
+  // only an approximation of what is deployed, and the folded check is stricter
+  // (a field no migration produces fails as M0267 rather than warning M0254).
+  if (isOldMostFile && canUseStableBaselineCheck(canisterArgs)) {
+    await runFoldedStableCheck({
+      canisterMain,
+      canisterName,
+      mocPath,
+      baselinePath: oldFile,
+      sources,
+      globalMocArgs,
+      canisterArgs,
+      migrations: params.migrations,
+      options,
+    });
+    return;
   }
 
   mkdirSync(CHECK_STABLE_PARENT, { recursive: true });
@@ -247,31 +370,14 @@ export async function runStableCheck(
       reject: false,
     });
 
-    const issue = getCheckLimitPendingIssue(
-      params.migrations,
-      canisterName,
+    reportStableCheckOutcome(canisterName, {
+      migrations: params.migrations,
       oldMostPath,
-      options.checkLimit === false,
-      isOldMostFile,
-    );
-
-    if (issue) {
-      reportCheckLimitPendingIssue(issue, result.exitCode !== 0);
-    } else if (result.exitCode !== 0) {
-      if (result.stderr) {
-        console.error(result.stderr);
-      }
-      cliExit(
-        result.exitCode ?? 1,
-        `✗ Stable compatibility check failed for canister '${canisterName}'`,
-      );
-    }
-
-    console.log(
-      chalk.green(
-        `✓ Stable compatibility check passed for canister '${canisterName}'`,
-      ),
-    );
+      baselineIsMostFile: isOldMostFile,
+      checkLimit: options.checkLimit,
+      exitCode: result.exitCode,
+      stderr: result.stderr,
+    });
   } finally {
     await rm(scratchDir, { recursive: true, force: true });
   }

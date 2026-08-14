@@ -137,10 +137,16 @@ describe("lint", () => {
       // passing by coincidence on an unrelated lintoko failure.
       await mkdir(path.join(dest, "lints"), { recursive: true });
 
+      // Anchor on the section header, not the fixture's moc pin: an unpinned
+      // lintoko silently falls back to `lintoko` on PATH, so a replace that
+      // stops matching passes locally and fails on a runner without it.
       let toml = readFileSync(path.join(dest, "mops.toml"), "utf-8").replace(
-        'moc = "1.5.0"',
-        'moc = "1.5.0"\nlintoko = "0.7.0"',
+        "[toolchain]",
+        '[toolchain]\nlintoko = "0.7.0"',
       );
+      if (!toml.includes('lintoko = "0.7.0"')) {
+        throw new Error(`Failed to pin lintoko in ${dest}/mops.toml`);
+      }
       if (checkLimit !== undefined) {
         toml = toml.replace(
           'next = "next-migration"',

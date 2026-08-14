@@ -165,9 +165,12 @@ jobs:
       # Every shard installs every fixture, not just the ones its own slice
       # needs. That is deliberate: all three share one cache key, so whichever
       # shard wins the save race has to publish a complete cache.
-      - name: Pre-cache moc 1.3.0 and test fixture dependencies
+      - name: Pre-cache moc versions and test fixture dependencies
         run: |
-          mops toolchain use moc 1.3.0 && mops toolchain use moc ${{ env.MOC_VERSION }}
+          mops toolchain use moc 1.3.0
+          mops toolchain use moc 1.5.0
+          mops toolchain use moc 1.12.0
+          mops toolchain use moc ${{ env.MOC_VERSION }}
           # pocket-ic 12.0.0 is shared by the pocket-ic and bench fixtures.
           (cd cli/tests/pocket-ic && mops install)
           (cd cli/tests/check/fix && mops install)

@@ -16,3 +16,13 @@ export function getMocVersion(): string {
   }
   return version;
 }
+
+/** First moc that runs the upgrade check inside `moc --check --stable-baseline`. */
+export const MOC_STABLE_BASELINE_MIN_VERSION = "1.12.0";
+
+export function supportsStableBaselineCheck(): boolean {
+  const version = getMocSemVer();
+  return version
+    ? version.compare(MOC_STABLE_BASELINE_MIN_VERSION) >= 0
+    : false;
+}

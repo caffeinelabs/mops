@@ -21,9 +21,35 @@ describe("check-stable", () => {
     const cwd = path.join(import.meta.dirname, "check-stable/compatible");
     const result = await cli(["check-stable", "old.mo", "--verbose"], { cwd });
     expect(result.exitCode).toBe(0);
+    // Fixture pinned to moc 1.3.0 — regression for the classic 3-step path.
     expect(result.stdout).toMatch(/Generating stable types for old\.mo/);
     expect(result.stdout).toMatch(/Generating stable types for new\.mo/);
     expect(result.stdout).toMatch(/--stable-compatible/);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
+  // Fixture pinned to moc 1.12.0 — EM + `.most` baseline folds into one invocation.
+  test("moc 1.12+ EM checks the baseline in a single moc invocation", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/migrations-chain");
+    const result = await cli(["check-stable", "--verbose"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/--stable-baseline/);
+    expect(result.stdout).not.toMatch(/--stable-compatible/);
+    expect(result.stdout).not.toMatch(/Generating stable types for/);
+    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
+  // Fixture pinned to moc 1.12.0 — EM, but a `.mo` baseline, so no fold. The
+  // scratch `.most` compiled from it is only an approximation of what is
+  // deployed; `d` is produced by no migration, which the folded check would
+  // reject as M0267 where `--stable-compatible` only warns (M0254).
+  test("moc 1.12+ EM keeps the 3-step path for a .mo baseline", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/mo-baseline-em");
+    const result = await cli(["check-stable", "--verbose"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/--stable-compatible/);
+    expect(result.stdout).not.toMatch(/--stable-baseline/);
+    expect(result.stdout).toMatch(/Generating stable types for deployed\.mo/);
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
@@ -61,8 +87,14 @@ describe("check-stable", () => {
 
   test("[canisters.X].args are passed to moc (enhanced migration)", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/canister-args");
-    const result = await cli(["check-stable", "old.most"], { cwd });
+    // Pinned to moc 1.5.0 — EM on a moc too old to fold keeps the classic path.
+    const result = await cli(["check-stable", "old.most", "--verbose"], {
+      cwd,
+    });
     expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/--enhanced-migration=/);
+    expect(result.stdout).toMatch(/--stable-compatible/);
+    expect(result.stdout).not.toMatch(/--stable-baseline/);
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
