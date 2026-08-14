@@ -351,9 +351,10 @@ jobs:
       # Everything from here up to — but not including — the docs deploy is
       # stable-only. Previews are npm-only: no cli-releases artifacts, no cli
       # canister upload, so `mops self update` keeps serving the latest 2.x.
-      # Said so in the notes. The docs deploy itself is deliberately ungated:
-      # it is what publishes docs.mops.one/next, which the preview notes
-      # point 3.x users at.
+      # Said so in the notes. The docs deploy itself is deliberately ungated
+      # on this branch: preview tags on v3 are what publish docs.mops.one/next.
+      # "Ungated" is vs prerelease on v3, not vs main — main's copy of this
+      # workflow has no docs step (that Docusaurus build would clobber /next).
 
       - name: Generate on-chain release artifacts
         if: steps.version.outputs.prerelease == 'false'
@@ -368,8 +369,8 @@ jobs:
       # icp-cli and the identity are set up once for the job rather than per
       # canister: both deploys run on the same runner, so repeating the import
       # would only give `icp identity import` — which has no --force — an
-      # existing name to fail on. Not gated on prerelease: the docs deploy
-      # below runs on preview tags too.
+      # existing name to fail on. Docs deploy below is not gated on prerelease
+      # because preview tags on this branch still have to publish docs.mops.one.
       - name: Install icp-cli
         # Keep in step with the pin in ci.yml.
         run: npm install -g @icp-sdk/icp-cli@1.2.0
@@ -433,6 +434,8 @@ jobs:
           echo "::error::cli.mops.one is not serving ${VERSION}. \`mops self update\` will not offer this release, and the artifacts commit has not run."
           exit 1
 
+      # Present on this branch only. main's copy of this workflow has no docs
+      # deploy: publishing that Docusaurus build would clobber /next.
       - name: Deploy docs canister
         uses: ./.github/actions/deploy-canister
         with:

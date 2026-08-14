@@ -6,13 +6,41 @@ This file provides guidance to AI coding agents when working with code in this r
 
 - **Always create a PR.** Never push directly to `main`.
 - **CLI design philosophy**: Follow conventions of established package managers (npm, cargo) — naming, flag style, UX patterns. Related commands must stay consistent: if `mops build` works without arguments (all canisters), then `mops check` and `mops check-stable` must too. When changing a command, review its siblings for consistency.
-- **Keep docs in sync.** CLI command docs live in `docs/docs/cli/` and config reference in `docs/docs/09-mops.toml.md`. The same feature often appears in both — update all relevant pages. `docs/docs/` is the in-development 3.x line, served at `docs.mops.one/next` during the 3.x preview; `docs/versioned_docs/version-2.x/` is the released line, served at the site root, and is a frozen snapshot — back-port only correctness fixes for behavior that also exists in 2.x. The two swap back at the 3.0.0 GA.
+- **Keep docs in sync.** CLI command docs live in `docs/docs/cli/` and config reference in `docs/docs/09-mops.toml.md`. The same feature often appears in both — update all relevant pages. `docs/docs/` is the in-development 3.x line, served at `docs.mops.one/next/` during the 3.x preview; `docs/versioned_docs/version-2.x/` is the 2.x line, served at the site root. A change shipping in a 2.x release (a PR to `main`) is documented in **both** trees — the site root is where 2.x users read, and `docs/docs/` carries it forward to v3. Only 3.x-exclusive behavior stays out of `versioned_docs`. The two swap back at the 3.0.0 GA. Deploy ownership and `main`→`v3` merge rules: see **Docs (2.x / 3.x)** below.
 - **Keep `--help` in sync with the docs.** A command's `--help` should be a concise summary of its doc page: every option and accepted argument (including the `-- <tool flags>` passthrough, via `.addHelpText`) must appear in `--help`, each with a non-empty description. Don't bloat it with prose — link-level detail stays in the docs.
 - **Update the changelog.** Add entries under `## Next` in `cli/CHANGELOG.md` for any user-facing CLI changes.
 - **Keep skills up to date.** When changing CLI commands or workflows, update `.agents/skills/mops-cli/SKILL.md` to match.
 - **`base` is deprecated.** Use `core` for all new code, examples, and docs.
 - **Pre-commit hook** runs `lint-staged + npm run check` via husky — fix TypeScript/lint errors before committing.
 - **Snapshot testing strategy**: Use Jest snapshots (`cliSnapshot` / `toMatchSnapshot`) for the main use cases so the full CLI output is committed and reviewable. Corner-case and error-path tests should use targeted assertions (`toMatch`, `toBe`) without snapshots to avoid cluttering the snapshot file.
+
+## Docs (2.x / 3.x)
+
+Until 3.0.0 GA, Docusaurus serves two trees:
+
+| Tree | Path in repo | Served at |
+|---|---|---|
+| 3.x (current) | `docs/docs/` | https://docs.mops.one/next |
+| 2.x | `docs/versioned_docs/version-2.x/` | https://docs.mops.one (site root) |
+
+**Who publishes.** `release.yml` is not the same file on both branches — GitHub runs the copy from the tagged commit. Seeing **Deploy docs canister** in a `v3` checkout does not mean `main` still deploys docs. `main`'s copy has no docs step (a 2.x release publishing that Docusaurus build would clobber `/next`). `v3`'s copy still has it, ungated, and is the live publisher (2.x at the root plus 3.x under `/next`), including on preview tags. Edits on `main` therefore go live only after they are merged into `v3` and `v3` redeploys (a `cli-v3.0.0-beta.*` tag, or from a v3 checkout: `icp deploy docs -e ic --identity mops --no-create --yes`). At GA, flip `lastVersion` in `docs/docusaurus.config.js` back to `'current'` so 3.x is the site root.
+
+### Which files to edit
+
+The contributing-rule bullet above is the same policy as on `main`. In addition:
+
+- **PR to `v3` (3.x-only):** edit `docs/docs/` only. Do not rewrite `versioned_docs` to describe v3 behavior (no dfx, required pocket-ic pin, lock model, …) — that would publish 3.x semantics at the 2.x site root.
+
+### Merging `main` into `v3`
+
+`docs/docs/` on `main` "carries the feature forward to v3" as a source to port from, not as a file to take wholesale. On `main` that tree is still written in 2.x terms; on `v3` it is actual 3.x.
+
+- **`docs/versioned_docs/version-2.x/`** — take `main`'s. `v3` must not independently evolve the 2.x snapshot.
+- **`docs/docs/`** — keep `v3`'s pages; port new 2.x-feature copy into them, rewritten for v3 semantics. Taking `main`'s copy restores dfx fallbacks, optional pocket-ic, old lock flags, etc. onto `/next`.
+- **`docs/docusaurus.config.js`** — keep `v3`'s `lastVersion: '2.x'` / `/next` setup until GA.
+- **`.github/workflows/release.yml`** — keep `v3`'s docs deploy step. `main` removed it on purpose; dropping it here would stop publishing `docs.mops.one`.
+
+The pre-GA audit in `NEXT-MAJOR.md` is the catch-up pass for every docs change on both branches since the v3 branch (docs versioning in #687).
 
 ## Interactive commands (caution for agents)
 
