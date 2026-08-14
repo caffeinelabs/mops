@@ -17,7 +17,6 @@ import { parallel } from "../parallel.js";
 import { absToRel } from "./test/utils.js";
 import { getMocVersion } from "../helpers/get-moc-version.js";
 import { toolchain } from "./toolchain/index.js";
-import { DEFAULT_POCKET_IC_VERSION } from "./toolchain/pocket-ic-versions.js";
 import {
   checkOptimizeConfig,
   formatOptimizePipeline,
@@ -55,8 +54,7 @@ export async function bench(
   let config = readConfig();
 
   let defaultOptions: BenchOptions = {
-    replicaVersion:
-      config.toolchain?.["pocket-ic"] || DEFAULT_POCKET_IC_VERSION,
+    replicaVersion: config.toolchain?.["pocket-ic"] ?? "",
     compiler: "moc",
     compilerVersion: getMocVersion(),
     gc: "incremental",

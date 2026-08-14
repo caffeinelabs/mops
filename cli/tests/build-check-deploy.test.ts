@@ -3,6 +3,7 @@ import { linkSync, rmSync } from "node:fs";
 import path from "path";
 import { cleanFixture } from "./build-helpers";
 import { cli, cliSnapshot } from "./helpers";
+import { RECOMMENDED_POCKET_IC_VERSION } from "../commands/toolchain/pocket-ic-versions";
 
 describe("build check-deploy", () => {
   // Several pocket-ic builds per test; slow CI can exceed 60s default.
@@ -162,6 +163,8 @@ describe("build check-deploy", () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch("pins below 9.0.0 no longer work");
-    expect(result.stderr).toMatch("mops toolchain use pocket-ic 14.0.0");
+    expect(result.stderr).toMatch(
+      `mops toolchain use pocket-ic ${RECOMMENDED_POCKET_IC_VERSION}`,
+    );
   });
 });
