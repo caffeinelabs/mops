@@ -13,7 +13,7 @@ mops check-stable [args...]
 
 Verifies that an upgrade from an old actor to the current canister entrypoint is safe — i.e., that stable variable signatures are compatible. This prevents `Memory-incompatible program upgrade` traps at deploy time.
 
-The command handles the full workflow internally: generating `.most` stable type signatures, comparing them, and cleaning up intermediate files.
+The command handles the full workflow internally: generating `.most` stable type signatures, comparing them, and cleaning up intermediate files. On `moc` 1.12.0+ some [diagnostics improve](#diagnostics-on-moc-1120).
 
 When checking canisters, per-canister `[canisters.<name>].args` from `mops.toml` are applied alongside global `[moc].args`.
 
@@ -93,11 +93,22 @@ Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limi
 
 When `[canisters.<name>.migrations].check-limit` is set, `mops check-stable` compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error (trimming started from the wrong state). If compat passed anyway, it is shown as a warning.
 
+On `moc` 1.12.0+ this diagnostic can also replace type errors from the same run. The command still exits non-zero; fold the pending migrations (or pass `--no-check-limit`) to see them.
+
 The warning only applies when the baseline is a committed `.most` file (via `[check-stable].path` or passed as a `.most` argument). Baselines compiled from a `.mo` source on the command line are skipped — the scratch `.most` would not reflect what is actually deployed.
 
 ## Enhanced migration support
 
 When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops check-stable` automatically injects the `--enhanced-migration` flag when generating stable type signatures.
+
+## Diagnostics on moc 1.12.0+
+
+On `moc` 1.12.0 or newer, two diagnostics improve for canisters that have `[migrations]` configured and a `.most` baseline:
+
+- A field the initial actor requires that no migration produces now **fails** the check (`M0267`) instead of only warning (`M0254`). If a forgotten migration used to slip through as a warning, expect it to be an error now. Fields the baseline already provides with a compatible type stay a warning.
+- Compatibility errors point at your source — `src/main.mo:3.1-11.2` — instead of `(unknown location)`.
+
+Older `moc` pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
 
 ## Passing flags to the Motoko compiler
 
