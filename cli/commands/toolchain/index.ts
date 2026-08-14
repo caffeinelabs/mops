@@ -20,7 +20,7 @@ import * as wasmOpt from "./wasm-opt.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
 import { cliError } from "../../error.js";
 import * as toolchainUtils from "./toolchain-utils.js";
-import { DEFAULT_POCKET_IC_VERSION } from "./pocket-ic-versions.js";
+import { RECOMMENDED_POCKET_IC_VERSION } from "./pocket-ic-versions.js";
 import type { ReleaseInfo } from "./release-tags.js";
 import { normalizeBinaryenVersion } from "../../helpers/binaryen-version.js";
 
@@ -302,21 +302,6 @@ async function bin(tool: Tool): Promise<string> {
   let config = readConfig();
   let version = config.toolchain?.[tool];
 
-  // `pocket-ic` is the one tool with a mops-controlled default, so replica tests
-  // and benchmarks work without a pin. Announced on stderr so command
-  // substitution around `mops toolchain bin pocket-ic` stays clean.
-  if (!version && tool === "pocket-ic") {
-    version = DEFAULT_POCKET_IC_VERSION;
-    if (!pocketIc.isCached(version)) {
-      process.stderr.write(
-        chalk.gray(
-          `pocket-ic is not pinned in [toolchain]; downloading the mops default ${version}.\n` +
-            `Run \`mops toolchain use pocket-ic ${version}\` to pin it.\n`,
-        ),
-      );
-    }
-  }
-
   if (version) {
     if (version.match(FILE_PATH_REGEX)) {
       return version;
@@ -334,9 +319,11 @@ async function bin(tool: Tool): Promise<string> {
   } else {
     // Raised, not printed: stdout is the tool path, and callers command-
     // substitute it. A hint printed there would be read back as the binary.
+    let versionHint =
+      tool === "pocket-ic" ? RECOMMENDED_POCKET_IC_VERSION : "<version>";
     cliError(
       `Tool '${tool}' is not defined in [toolchain] section in mops.toml\n` +
-        `Run ${chalk.green(`mops toolchain use ${tool} <version>`)} to install it ` +
+        `Run ${chalk.green(`mops toolchain use ${tool} ${versionHint}`)} to install it ` +
         `(${chalk.green(`mops toolchain info ${tool} --versions`)} lists the available versions)`,
     );
   }
