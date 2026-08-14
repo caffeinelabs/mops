@@ -42,6 +42,17 @@ describe("pocket-ic", () => {
     );
   });
 
+  test("toolchain bin pocket-ic fails without a pin", async () => {
+    const cwd = path.join(fixturesDir, "pocket-ic-default");
+    const result = await cli(["toolchain", "bin", "pocket-ic"], { cwd });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain(
+      `mops toolchain use pocket-ic ${RECOMMENDED_POCKET_IC_VERSION}`,
+    );
+  });
+
   // A `< 9.0.0` pin worked in 2.x through the legacy client this release
   // removes, so it has to fail with a migration message rather than the
   // client's own BinTimeoutError.
