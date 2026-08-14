@@ -24,10 +24,14 @@ mops sync --dry-run
 ```
 
 ```
+Missing packages: core, fuzz
+Unused packages: itertools
 Would add core
-Would remove itertools
 Would add fuzz (dev)
+Would remove itertools
 ```
+
+When there is nothing to do, it prints `Everything is in sync`.
 
 ## Dev dependencies
 

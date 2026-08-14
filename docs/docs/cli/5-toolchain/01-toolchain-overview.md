@@ -12,7 +12,7 @@ When you run `mops install` command, Mops will install the specified version of 
 ## Available tools
 - `moc` - Motoko compiler
 - `wasmtime` - Wasmtime runtime (used by `mops test --mode wasi`)
-- `pocket-ic` - PocketIC replica (used by `mops bench` and `mops test --mode replica`)
+- `pocket-ic` - PocketIC replica (used by `mops bench`, `mops test --mode replica` and [`mops build --check-deploy`](../4-dev/03-mops-build.md#--check-deploy))
 - `lintoko` - Extensible linter for Motoko ([https://github.com/caffeinelabs/lintoko](https://github.com/caffeinelabs/lintoko))
 - `wasm-opt` - Binaryen Wasm optimizer (used when [`[optimize]`](../../09-mops.toml.md#optimize) is set)
 
@@ -22,8 +22,8 @@ When you run `mops install` command, Mops will install the specified version of 
 
 You can use [`mops toolchain use`](./03-mops-toolchain-use.md) command to install specific tool version and update `mops.toml` file.
 ```
-mops toolchain use moc 0.10.3
-mops toolchain use wasmtime 16.0.0
+mops toolchain use moc 1.0.0
+mops toolchain use wasmtime 41.0.0
 mops toolchain use pocket-ic 15.0.0
 mops toolchain use lintoko 0.7.0
 mops toolchain use wasm-opt 131
@@ -37,8 +37,8 @@ You can manually edit `mops.toml` file to specify exact versions of each tool.
 
 ```toml
 [toolchain]
-moc = "0.10.3"
-wasmtime = "16.0.0"
+moc = "1.0.0"
+wasmtime = "41.0.0"
 lintoko = "0.7.0"
 pocket-ic = "15.0.0"
 wasm-opt = "131"
@@ -50,7 +50,7 @@ You need to run `mops install` command when you edit `mops.toml` file manually.
 
 Replica tests, benchmarks, `--check-deploy`, and `mops toolchain bin pocket-ic` all require an explicit `[toolchain] pocket-ic` pin — there is no default. Unpinned, they error naming `mops toolchain use pocket-ic 15.0.0`. The version in that hint is not a runtime fallback; it can move when a newer server is the one to recommend.
 
-Any version from `9.0.0` up can be pinned, `latest` included. Mops keeps no list of blessed versions — as with `moc`, `wasmtime` and `lintoko`, the version you pin is the version you get.
+Any version from `9.0.0` up can be pinned (`mops toolchain use pocket-ic latest` resolves and pins the newest release). Mops keeps no list of blessed versions — as with `moc`, `wasmtime` and `lintoko`, the version you pin is the version you get. A literal `pocket-ic = "latest"` written into `mops.toml` by hand does not work — the field takes a concrete version or a file path.
 
 Pins **below `9.0.0`** are rejected with a migration message. They worked in Mops 2.x through a second, legacy PocketIC client, which 3.0.0 removed; without the check, upgrading with an old pin would fail with an opaque timeout from the client instead. Run `mops toolchain use pocket-ic 15.0.0`.
 

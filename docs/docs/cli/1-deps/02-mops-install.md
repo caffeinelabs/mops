@@ -12,12 +12,12 @@ mops install
 
 ## Lockfile behavior
 
-The lockfile is considered **up to date** when the `[dependencies]` and `[dev-dependencies]` in `mops.toml` haven't changed since the lockfile was last written.
+The lockfile is considered **up to date** when it is the current format and consistent with the current inputs: the `[dependencies]` / `[dev-dependencies]` in `mops.toml`, the manifests of local `path` dependencies (under the current `MOPS_ENV`), and the resolved commits of GitHub dependencies. See [self-healing](../../10-mops.lock.md#self-healing) for the full list of defects that make a lockfile stale.
 
 - **Lockfile up to date** — installs the exact versions recorded in the lockfile, skipping dependency resolution.
 - **Lockfile missing or out of date** — runs full dependency resolution, installs resolved versions, then creates/updates the lockfile.
 
-`mops install` is self-healing: a missing, unparseable, legacy-format or `mops.toml`-inconsistent lockfile is regenerated rather than treated as an error. There is no flag to opt out of the lockfile — it is always maintained.
+`mops install` is self-healing: a missing, unparseable, legacy-format or inconsistent lockfile is regenerated rather than treated as an error. There is no flag to opt out of the lockfile — it is always maintained.
 
 See [mops.lock](../../10-mops.lock.md) for details on lockfile contents and when to commit it.
 
@@ -47,6 +47,9 @@ Require an up-to-date [lockfile](../../10-mops.lock.md) and never write it. This
 - `mops.lock` is missing
 - `mops.lock` cannot be parsed, or is not the current format version
 - `mops.toml` declares dependencies that `mops.lock` does not pin to the same values
+- a local `path` dependency's `mops.toml` changed since the lockfile was written, or the lockfile was generated under a different `MOPS_ENV`
+- the lockfile carries absolute local `path` entries written by an older CLI
+- a GitHub dependency lacks its recorded commit and content hash, or records a commit that `mops.toml` no longer declares
 - a file hash in `mops.lock` does not match the Mops registry
 
 On success, `mops.lock` is left byte-for-byte untouched.

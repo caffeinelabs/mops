@@ -97,6 +97,7 @@ mops build --no-optimize
 ### `--locked`
 
 Require an up-to-date [`mops.lock`](../../10-mops.lock.md) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](../1-deps/02-mops-install.md#--locked).
+
 ### `--check-wasm`
 
 Analyze each final Wasm for likely IC0505 function-complexity risks without starting PocketIC. This check emits actionable warnings and never fails the build.
@@ -176,6 +177,8 @@ Each canister configuration supports:
 - `args` - Additional compiler arguments for this specific canister (optional)
 - `initArg` - Candid-encoded initialization arguments (optional)
 - `candid` - Path to the Candid interface file (optional, for compatibility checking)
+- `wasmMemoryLimit` - Wasm memory limit in bytes applied by [`--check-deploy`](#--check-deploy) (optional)
+- `[canisters.<name>.migrations]` and `[canisters.<name>.check-stable]` subtables — see the [`mops.toml` reference](../../09-mops.toml.md#canisters)
 
 You can also set global build settings:
 ```toml

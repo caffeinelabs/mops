@@ -15,7 +15,7 @@ mops docs generate [options]
 ## Options
 
 - `--source <source>` - Source directory containing .mo files (default: `src`)
-- `--output <output>` - Output directory for generated documentation (default: `docs`)
+- `--output <output>`, `-o` - Output directory for generated documentation (default: `docs`)
 - `--format <format>` - Output format: `md`, `adoc`, or `html` (default: `md`)
 
 ## Description

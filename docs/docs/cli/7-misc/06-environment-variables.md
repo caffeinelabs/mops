@@ -37,6 +37,32 @@ export MOPS_CONCURRENCY=2
 mops install
 ```
 
+## Project Environment
+
+### `MOPS_ENV`
+
+Expanded into local `path` dependencies that contain the `{MOPS_ENV}` placeholder (defaults to `local` when unset):
+
+```toml
+[dependencies]
+envdep = "./envs/{MOPS_ENV}/dep"
+```
+
+```bash
+export MOPS_ENV="staging"
+mops install
+```
+
+The lockfile stores the expanded path, so it is specific to the `MOPS_ENV` it was generated under — a lockfile generated under a different value counts as stale, and `mops install --locked` fails on it. See [`{MOPS_ENV}` path dependencies](../../10-mops.lock.md#mops_env-path-dependencies).
+
+### `MOPS_CWD`
+
+Change the working directory before the command runs. Useful for npm scripts, where npm sets the working directory to the package root:
+
+```bash
+MOPS_CWD="canisters/backend" mops install
+```
+
 ## Registry Configuration
 
 ### `MOPS_REGISTRY_HOST`
