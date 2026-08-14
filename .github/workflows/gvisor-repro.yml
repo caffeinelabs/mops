@@ -1,8 +1,9 @@
 # Runs the perf/check-deploy-gvisor harness on an x86_64 runner — the
-# incident's architecture, which cannot be exercised from an arm64 machine
-# (gVisor has no binfmt support). Manual via workflow_dispatch, plus
-# automatically on PRs that touch the harness. Results land in the job log
-# as a markdown table to paste into perf/check-deploy-gvisor/RESULTS.md.
+# architecture where the memory blowup manifests, which cannot be exercised
+# from an arm64 machine (gVisor has no binfmt support). Manual via
+# workflow_dispatch, plus automatically on PRs that touch the harness.
+# Results land in the job log as a markdown table to paste into
+# perf/check-deploy-gvisor/RESULTS.md.
 name: gvisor-repro
 
 on:
