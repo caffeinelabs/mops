@@ -389,6 +389,50 @@ describe("build", () => {
     }
   });
 
+  test("--check-deploy with MOPS_POCKET_IC_URL does not require a pin", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    try {
+      const result = await cli(["build", "foo", "--check-deploy"], {
+        cwd,
+        env: { MOPS_POCKET_IC_URL: "http://127.0.0.1:1" },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).not.toMatch("mops toolchain use pocket-ic");
+      expect(result.stderr).toMatch("PocketIC deployment check failed");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy rejects a non-http MOPS_POCKET_IC_URL", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    try {
+      const result = await cli(["build", "foo", "--check-deploy"], {
+        cwd,
+        env: { MOPS_POCKET_IC_URL: "ftp://example.com" },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("must be an http or https URL");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy warns when MOPS_POCKET_IC_URL ignores a pin", async () => {
+    const cwd = path.join(import.meta.dirname, "build/check-deploy");
+    try {
+      const result = await cli(["build", "--check-deploy"], {
+        cwd,
+        env: { MOPS_POCKET_IC_URL: "http://127.0.0.1:1" },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout + result.stderr).toMatch("MOPS_POCKET_IC_URL");
+      expect(result.stdout + result.stderr).toMatch("ignored");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
   test("--check-deploy rejects a legacy PocketIC pin before building", async () => {
     const cwd = path.join(import.meta.dirname, "build/check-deploy-legacy");
     const result = await cli(["build", "--check-deploy"], { cwd });

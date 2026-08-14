@@ -12,7 +12,10 @@ import {
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { optimizeWasm } from "../helpers/optimize-wasm.js";
-import { assertDfinityClientSupportsPocketIc } from "../helpers/pocket-ic-startup.js";
+import {
+  assertDfinityClientSupportsPocketIc,
+  getPocketIcUrl,
+} from "../helpers/pocket-ic-startup.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
@@ -61,7 +64,9 @@ export async function build(
     options.checkWasm ?? config.build?.["check-wasm"] ?? false;
   const checkDeployEnabled =
     options.checkDeploy ?? config.build?.["check-deploy"] ?? false;
-  if (checkDeployEnabled) {
+  // A malformed MOPS_POCKET_IC_URL is rejected by the preAction hook in
+  // cli.ts before any command runs, so getPocketIcUrl() cannot throw here.
+  if (checkDeployEnabled && !getPocketIcUrl()) {
     const pocketIcVersion = config.toolchain?.["pocket-ic"];
     if (!pocketIcVersion) {
       cliError(

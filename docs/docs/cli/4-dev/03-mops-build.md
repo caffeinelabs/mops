@@ -125,6 +125,8 @@ check-deploy = true
 
 PocketIC 9.0.0 or newer, or a local PocketIC binary path, must be pinned in
 `[toolchain]`. Mops cannot verify compatibility for a path pin.
+Set `MOPS_POCKET_IC_URL` to use an already-running PocketIC server instead;
+the pin is then ignored.
 ```toml
 [toolchain]
 pocket-ic = "15.0.0"

@@ -27,6 +27,7 @@ import { Dependency } from "../types.js";
 import { testWithReporter } from "./test/test.js";
 import { SilentReporter } from "./test/reporters/silent-reporter.js";
 import { findChangelogEntry } from "../helpers/find-changelog-entry.js";
+import { hasPocketIcSource } from "../helpers/pocket-ic-startup.js";
 import { bench } from "./bench.js";
 import { docsCoverage } from "./docs-coverage.js";
 
@@ -333,7 +334,7 @@ export async function publish(
       reporter,
       "",
       "interpreter",
-      config.toolchain?.["pocket-ic"] ? "pocket-ic" : "dfx",
+      hasPocketIcSource(config.toolchain?.["pocket-ic"]) ? "pocket-ic" : "dfx",
     );
     if (reporter.failed > 0) {
       console.log(chalk.red("Error: ") + "tests failed");

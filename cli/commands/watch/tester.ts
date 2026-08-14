@@ -4,6 +4,7 @@ import { ErrorChecker } from "./error-checker.js";
 import { testWithReporter } from "../test/test.js";
 import { SilentReporter } from "../test/reporters/silent-reporter.js";
 import { type ReplicaName } from "../../helpers/deprecate-dfx-replica.js";
+import { hasPocketIcSource } from "../../helpers/pocket-ic-startup.js";
 
 export class Tester {
   verbose = false;
@@ -54,7 +55,9 @@ export class Tester {
     this.controller = new AbortController();
 
     let config = readConfig();
-    let replicaType: ReplicaName = config.toolchain?.["pocket-ic"]
+    let replicaType: ReplicaName = hasPocketIcSource(
+      config.toolchain?.["pocket-ic"],
+    )
       ? "pocket-ic"
       : "dfx";
 
