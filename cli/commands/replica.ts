@@ -21,6 +21,10 @@ import {
   serverStderr,
   addCycles,
 } from "../helpers/pocket-ic-client.js";
+import {
+  stopPocketIc,
+  warnAttachedCanisterLogsUnavailable,
+} from "../helpers/pocket-ic-startup.js";
 import { toolchain } from "./toolchain/index.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
 
@@ -114,19 +118,20 @@ export class Replica {
           });
       }
     } else {
-      let pocketIcBin = await toolchain.bin("pocket-ic");
-
-      let pic = await startPocketIc({
-        binPath: pocketIcBin,
+      let pic = await startPocketIc(async () => ({
+        binPath: await toolchain.bin("pocket-ic"),
         showRuntimeLogs: false,
         showCanisterLogs: false,
         ttl: this.ttl,
-      });
+      }));
       this.pocketIcServer = pic.server;
       this.pocketIc = pic.client;
 
-      // process canister logs
-      this._attachCanisterLogHandler(serverStderr(this.pocketIcServer));
+      if (pic.server) {
+        this._attachCanisterLogHandler(serverStderr(pic.server));
+      } else {
+        warnAttachedCanisterLogsUnavailable();
+      }
     }
   }
 
@@ -185,11 +190,13 @@ export class Replica {
         // }
         // catch {}
       }
-    } else if (this.pocketIc && this.pocketIcServer) {
-      if (!sigint) {
-        await this.pocketIc.tearDown(); // error 'fetch failed' if run on SIGINT
-      }
-      await this.pocketIcServer.stop();
+    } else {
+      await stopPocketIc(
+        { client: this.pocketIc, server: this.pocketIcServer },
+        { sigint },
+      );
+      this.pocketIc = undefined;
+      this.pocketIcServer = undefined;
     }
   }
 

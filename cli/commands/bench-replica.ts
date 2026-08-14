@@ -10,6 +10,7 @@ import {
   type AnySetupCanister,
   startPocketIc,
 } from "../helpers/pocket-ic-client.js";
+import { stopPocketIc } from "../helpers/pocket-ic-startup.js";
 import { createActor, idlFactory } from "../declarations/bench/index.js";
 import { toolchain } from "./toolchain/index.js";
 import { getDfxVersion } from "../helpers/get-dfx-version.js";
@@ -49,12 +50,13 @@ export class BenchReplica {
         },
       );
     } else {
-      let pocketIcBin = await toolchain.bin("pocket-ic");
-
-      // `@dfinity/pic` omits the flag when `ttl` is unset and lets the server
-      // default apply. Passed explicitly so the lifetime of an orphaned server
-      // doesn't depend on the pocket-ic default.
-      let pic = await startPocketIc({ binPath: pocketIcBin, ttl: 60 });
+      let pic = await startPocketIc(async () => ({
+        binPath: await toolchain.bin("pocket-ic"),
+        // `@dfinity/pic` omits the flag when `ttl` is unset and lets the
+        // server default apply. Passed explicitly so the lifetime of an
+        // orphaned server doesn't depend on the pocket-ic default.
+        ttl: 60,
+      }));
       this.pocketIcServer = pic.server;
       this.pocketIc = pic.client;
     }
@@ -67,9 +69,13 @@ export class BenchReplica {
         cwd: dir,
         stdio: ["pipe", this.verbose ? "inherit" : "ignore", "pipe"],
       });
-    } else if (this.pocketIc && this.pocketIcServer) {
-      await this.pocketIc.tearDown();
-      await this.pocketIcServer.stop();
+    } else {
+      await stopPocketIc({
+        client: this.pocketIc,
+        server: this.pocketIcServer,
+      });
+      this.pocketIc = undefined;
+      this.pocketIcServer = undefined;
     }
   }
 

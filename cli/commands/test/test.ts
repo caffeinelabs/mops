@@ -31,8 +31,10 @@ import { SilentReporter } from "./reporters/silent-reporter.js";
 import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
+import { cliError } from "../../error.js";
 import { getDfxVersion } from "../../helpers/get-dfx-version.js";
 import { warnIfDfxReplica } from "../../helpers/deprecate-dfx-replica.js";
+import { hasPocketIcSource } from "../../helpers/pocket-ic-startup.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
@@ -52,8 +54,14 @@ let replicaStartPromise: Promise<void> | undefined;
 
 async function startReplicaOnce(replica: Replica, type: ReplicaName) {
   if (!replicaStartPromise) {
-    replicaStartPromise = new Promise((resolve) => {
-      replica.start({ type, silent: true }).then(resolve);
+    // A start failure must settle this promise — every replica test file (and
+    // the watch SIGINT handler) awaits it — and surface as a clean error, not
+    // an unhandled rejection.
+    replicaStartPromise = replica.start({ type, silent: true }).catch((err) => {
+      cliError(
+        `Failed to start the ${type} replica:`,
+        err instanceof Error ? err.message : String(err),
+      );
     });
   }
   return replicaStartPromise;
@@ -65,9 +73,14 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
 
   let replicaType =
     options.replica ??
-    (config.toolchain?.["pocket-ic"] ? "pocket-ic" : ("dfx" as ReplicaName));
+    (hasPocketIcSource(config.toolchain?.["pocket-ic"])
+      ? "pocket-ic"
+      : ("dfx" as ReplicaName));
 
-  if (replicaType === "pocket-ic" && !config.toolchain?.["pocket-ic"]) {
+  if (
+    replicaType === "pocket-ic" &&
+    !hasPocketIcSource(config.toolchain?.["pocket-ic"])
+  ) {
     let dfxVersion = getDfxVersion();
     if (!dfxVersion || new SemVer(dfxVersion).compare("0.24.1") < 0) {
       console.log(
@@ -101,7 +114,15 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
 
       if (replicaStartPromise) {
         console.log("Stopping replica...");
-        replica.stop(true).then(() => {
+        // Wait for a settled start so the attached instance exists to be
+        // deleted — but bounded, so a stalled start cannot hold the exit.
+        let stopped = Promise.allSettled([replicaStartPromise]).then(() =>
+          replica.stop(true),
+        );
+        let deadline = new Promise<void>((resolve) => {
+          setTimeout(resolve, 10_000).unref();
+        });
+        void Promise.race([stopped, deadline]).then(() => {
           process.exit(0);
         });
       } else {
@@ -516,15 +537,17 @@ export async function testWithReporter(
     filesWithMode.filter(({ mode }) => mode !== "replica"),
     runTestFile,
   );
-  await parallel(
-    1,
-    filesWithMode.filter(({ mode }) => mode === "replica"),
-    runTestFile,
-  );
-
-  if (hasReplicaTests && !watch) {
-    await replica.stop();
-    fs.rmSync(testTempDir, { recursive: true, force: true });
+  try {
+    await parallel(
+      1,
+      filesWithMode.filter(({ mode }) => mode === "replica"),
+      runTestFile,
+    );
+  } finally {
+    if (hasReplicaTests && !watch) {
+      await replica.stop();
+      fs.rmSync(testTempDir, { recursive: true, force: true });
+    }
   }
 
   if (signal?.aborted) {

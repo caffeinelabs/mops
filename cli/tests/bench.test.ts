@@ -31,6 +31,20 @@ describe("bench", () => {
     }
   });
 
+  test("an invalid MOPS_POCKET_IC_URL fails fast with a clean error", async () => {
+    // Validated once per invocation (cli.ts preAction), for every command:
+    // a malformed value is broken environment config, and failing loudly
+    // beats behavior that depends on which code path reads the URL first.
+    const cwd = path.join(import.meta.dirname, "build/success");
+    const result = await cli(["bench", "--replica", "dfx"], {
+      cwd,
+      env: { MOPS_POCKET_IC_URL: "not-a-url" },
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch("not a valid URL");
+    expect(result.stderr).not.toMatch("at process");
+  });
+
   // The `bench` fixture pins `[toolchain] moc = "1.3.0"`. Point DFX_MOC_PATH at a
   // nonexistent binary: if bench resolved the compiler through DFX_MOC_PATH (the bug),
   // the build would fail trying to exec it. It must use the toolchain-managed pin instead.

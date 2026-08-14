@@ -14,6 +14,9 @@ import { warnLegacyPocketIc } from "./deprecate-legacy-pocket-ic.js";
 import {
   assertDfinityClientSupportsPocketIc,
   createClientOrStopServer,
+  getPocketIcUrl,
+  trackAttachedPocketIc,
+  warnIgnoredPocketIcPin,
 } from "./pocket-ic-startup.js";
 
 // Both packages declare the same `StartServerOptions` fields, so one type covers
@@ -21,7 +24,7 @@ import {
 export type { StartServerOptions };
 
 type PocketIcResult = {
-  server: AnyPocketIcServer;
+  server?: AnyPocketIcServer;
   client: AnyPocketIc;
 };
 
@@ -40,31 +43,64 @@ export type AnySetupCanister = PocketIcLegacy["setupCanister"] &
 type LegacyPrincipal = Parameters<PocketIcLegacy["addCycles"]>[0];
 type ModernPrincipal = Parameters<PocketIc["addCycles"]>[0];
 
+function pinnedPocketIcVersion(): string | undefined {
+  return readConfig().toolchain?.["pocket-ic"];
+}
+
 // The pinned version when it selects the legacy client, otherwise undefined.
 function legacyVersion(): string | undefined {
-  let version = readConfig().toolchain?.["pocket-ic"];
+  let version = pinnedPocketIcVersion();
   if (version && semver.valid(version) && semver.lt(version, "9.0.0")) {
     return version;
   }
   return undefined;
 }
 
+// Server options may be a thunk so the spawn-only work behind them (resolving
+// `toolchain.bin("pocket-ic")` downloads the binary) is never paid in attached
+// mode, where the whole object is unused.
+export type StartServerOptionsSource =
+  | StartServerOptions
+  | (() => Promise<StartServerOptions>);
+
 export function startPocketIc(
-  options: StartServerOptions,
+  options: StartServerOptionsSource,
   clientOptions: { client: "dfinity" },
-): Promise<{ server: PocketIcServer; client: PocketIc }>;
+): Promise<{ server?: PocketIcServer; client: PocketIc }>;
 export function startPocketIc(
-  options: StartServerOptions,
+  options: StartServerOptionsSource,
 ): Promise<PocketIcResult>;
 export async function startPocketIc(
-  options: StartServerOptions,
+  optionsSource: StartServerOptionsSource,
   {
     client: clientName = "versioned",
   }: {
     client?: "versioned" | "dfinity";
   } = {},
-): Promise<PocketIcResult | { server: PocketIcServer; client: PocketIc }> {
-  const version = readConfig().toolchain?.["pocket-ic"];
+): Promise<PocketIcResult | { server?: PocketIcServer; client: PocketIc }> {
+  const url = getPocketIcUrl();
+  if (url) {
+    warnIgnoredPocketIcPin(pinnedPocketIcVersion);
+    const { PocketIc } = await import("@dfinity/pic");
+    let client: PocketIc;
+    try {
+      client = await PocketIc.create(url);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Cannot connect to the PocketIC server at MOPS_POCKET_IC_URL (${url}): ${message}\n` +
+          "Check that the server is running, the URL points at the PocketIC control API " +
+          "(not the IC HTTP gateway), and the server version is compatible with the bundled `@dfinity/pic` client.",
+        { cause: error },
+      );
+    }
+    trackAttachedPocketIc(client);
+    return { client };
+  }
+
+  const options =
+    typeof optionsSource === "function" ? await optionsSource() : optionsSource;
+  const version = pinnedPocketIcVersion();
   if (clientName === "dfinity") {
     assertDfinityClientSupportsPocketIc(version);
   }
@@ -110,7 +146,7 @@ export async function addCycles(
   canisterId: LegacyPrincipal | ModernPrincipal,
   amount: bigint,
 ): Promise<void> {
-  if (legacyVersion()) {
+  if (!getPocketIcUrl() && legacyVersion()) {
     // 1e12 cycles is well inside Number.MAX_SAFE_INTEGER.
     await (client as PocketIcLegacy).addCycles(
       canisterId as LegacyPrincipal,

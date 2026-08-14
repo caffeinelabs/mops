@@ -18,7 +18,7 @@ Documentation for the package will be generated automatically from the source co
 
 ### Benchmarks
 
-Benchmarks will be run with `pocket-ic` replica if it is present in `mops.toml`, otherwise `dfx` replica will be used.
+Benchmarks (and the pre-publish tests) will be run with the `pocket-ic` replica if it is present in `mops.toml` or `MOPS_POCKET_IC_URL` points at an already-running PocketIC server, otherwise the `dfx` replica will be used.
 
 Benchmark results will be published to the registry.
 

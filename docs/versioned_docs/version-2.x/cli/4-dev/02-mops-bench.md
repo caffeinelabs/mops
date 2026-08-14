@@ -47,7 +47,7 @@ If `wasm-opt` fails, mops warns and keeps the unoptimized module. Run with [`--v
 
 Which replica to use.
 
-Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section, otherwise `dfx` (deprecated, see below).
+Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section or `MOPS_POCKET_IC_URL` points at an already-running PocketIC server, otherwise `dfx` (deprecated, see below).
 
 Possible values:
 - `pocket-ic` - use [PocketIC](https://github.com/dfinity/pocketic) light replica via [pic.js](https://github.com/dfinity/pic-js). Recommended.
