@@ -32,6 +32,13 @@ Remove package owner.
 mops owner remove <principal>
 ```
 
+### `--yes`
+
+`mops owner add` and `mops owner remove` ask for confirmation. Pass `--yes` to skip the prompt (required in non-interactive environments like CI):
+```
+mops owner add <principal> --yes
+```
+
 ## Example
 
 Imagine you have a package named `hello` and you want to add the principal `2d2zu-vaaaa-aaaak-qb6pq-cai` as an owner.

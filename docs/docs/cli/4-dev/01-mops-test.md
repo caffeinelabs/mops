@@ -10,7 +10,14 @@ Mops can run Motoko unit tests
 mops test
 ```
 
-Put your tests in `test/*.test.mo` files.
+Put your tests in `*.test.mo` files inside a `test/` or `tests/` directory (nested subdirectories work too).
+
+If a `test/lib.mo` (or `tests/lib.mo`) file exists, it is the **only** file run — use it as an entry point that imports your other tests.
+
+Pass a filter to run a subset of files — `mops test nat` runs every `*nat*.mo` file under the test directory (the `.test.mo` suffix is not required for filtered files):
+```
+mops test nat
+```
 
 All tests run as quickly as possible thanks to parallel execution.
 
@@ -60,12 +67,16 @@ Available modes:
 
 - `interpreter` - run tests via `moc -r` (default)
 - `wasi` - compile test file to wasm and execute it with `wasmtime`. Useful, when you use `to_candid`/`from_candid`, or if you get stackoverflow errors.
+- `replica` - deploy test files as canisters to a local replica ([`--replica`](#--replica) selects which one). See [Replica tests](#replica-tests).
 
 
-You can also specify `wasi` mode for a specific test file by adding the line below as the first line in the test file
+You can also specify `wasi` or `replica` mode for a specific test file by adding one of these markers to the file (on a line of its own, with nothing else on the line):
 ```
 // @testmode wasi
+// @testmode replica
 ```
+
+Test files that define an actor run in `replica` mode automatically.
 
 ### `--replica`
 
@@ -128,8 +139,6 @@ actor {
   };
 };
 ```
-
-Make sure your actor doesn't have a name `actor {`.
 
 Make sure your actor has `runTests` method.
 

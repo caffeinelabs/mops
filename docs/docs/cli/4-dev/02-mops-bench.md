@@ -11,7 +11,7 @@ Run Motoko benchmarks.
 mops bench [filter]
 ```
 
-Put your benchmark code in `bench/*.bench.mo` files.
+Put your benchmark code in `*.bench.mo` files inside a `bench/` or `benchmark/` directory (nested subdirectories work too). With a `[filter]` argument, every `*<filter>*.mo` file under those directories runs — the `.bench.mo` suffix is not required for filtered files.
 
 It is necessary to use [bench package](https://mops.one/bench) to write benchmarks.
 

@@ -20,6 +20,30 @@ export MOPS_NETWORK="local"
 mops install
 ```
 
+## Project Environment
+
+### `MOPS_ENV`
+
+Expanded into local `path` dependencies that contain the `{MOPS_ENV}` placeholder (defaults to `local` when unset):
+
+```toml
+[dependencies]
+envdep = "./envs/{MOPS_ENV}/dep"
+```
+
+```bash
+export MOPS_ENV="staging"
+mops install
+```
+
+### `MOPS_CWD`
+
+Change the working directory before the command runs. Useful for npm scripts, where npm sets the working directory to the package root:
+
+```bash
+MOPS_CWD="canisters/backend" mops install
+```
+
 ## Registry Configuration
 
 ### `MOPS_REGISTRY_HOST`
