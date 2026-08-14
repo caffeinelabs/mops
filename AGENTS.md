@@ -23,7 +23,7 @@ Until 3.0.0 GA, Docusaurus serves two trees:
 | 3.x (current) | `docs/docs/` | https://docs.mops.one/next |
 | 2.x | `docs/versioned_docs/version-2.x/` | https://docs.mops.one (site root) |
 
-**Who publishes.** `release.yml` on `main` does not deploy docs — a 2.x release publishing that branch's Docusaurus build would clobber `/next`. `release.yml` on `v3` still has the ungated **Deploy docs canister** step; that is the live publisher (2.x at the root plus 3.x under `/next`), including on preview tags. Edits on `main` therefore go live only after they are merged into `v3` and `v3` redeploys (a `cli-v3.0.0-beta.*` tag, or from a v3 checkout: `icp deploy docs -e ic --identity mops --no-create --yes`). At GA, flip `lastVersion` in `docs/docusaurus.config.js` back to `'current'` so 3.x is the site root.
+**Who publishes.** `release.yml` is not the same file on both branches — GitHub runs the copy from the tagged commit. Seeing **Deploy docs canister** in a `v3` checkout does not mean `main` still deploys docs. `main`'s copy has no docs step (a 2.x release publishing that Docusaurus build would clobber `/next`). `v3`'s copy still has it, ungated, and is the live publisher (2.x at the root plus 3.x under `/next`), including on preview tags. Edits on `main` therefore go live only after they are merged into `v3` and `v3` redeploys (a `cli-v3.0.0-beta.*` tag, or from a v3 checkout: `icp deploy docs -e ic --identity mops --no-create --yes`). At GA, flip `lastVersion` in `docs/docusaurus.config.js` back to `'current'` so 3.x is the site root.
 
 ### Which files to edit
 

@@ -8,9 +8,11 @@
 
 That workflow rolls `## Next` into a version heading, bumps `cli/package.json`, and opens a PR titled `release: CLI vX.Y.Z` with the `release` label.
 
-The [`release-pr.yml`](../.github/workflows/release-pr.yml) workflow validates the PR (title, changelog entry, `package.json` version). On merge it pushes the `cli-vX.Y.Z` tag, which triggers [`release.yml`](../.github/workflows/release.yml) — build, npm publish, GitHub Release, and deploy of `cli.mops.one` / `docs.mops.one`.
+The [`release-pr.yml`](../.github/workflows/release-pr.yml) workflow validates the PR (title, changelog entry, `package.json` version). On merge it pushes the `cli-vX.Y.Z` tag, which triggers [`release.yml`](../.github/workflows/release.yml) — build, npm publish, GitHub Release, and deploy of `cli.mops.one`.
 
-> **Note:** This pipeline only deploys the `cli` and `docs` canisters. The `main`, `assets`, `blog`, and `play-frontend` canisters require a manual deploy. If a release includes changes to any of those (e.g. `backend/main/` or `frontend/`), upgrade them manually (staging first, then `ic`):
+A tag on `main` does not deploy docs (`release.yml` on that branch has no docs step). This `v3` copy of `release.yml` does — preview tags below, and the 3.0.0 GA, are what publish `docs.mops.one`.
+
+> **Note:** The `main`, `assets`, `blog`, and `play-frontend` canisters require a manual deploy. If a release includes changes to any of those (e.g. `backend/main/` or `frontend/`), upgrade them manually (staging first, then `ic`):
 >
 > ```bash
 > npm run deploy-staging <canister>
