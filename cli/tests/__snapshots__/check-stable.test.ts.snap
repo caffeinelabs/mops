@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`check-stable compatible upgrade from .mo file 1`] = `
+exports[`check-stable compatible upgrade 1`] = `
 {
   "exitCode": 0,
   "stderr": "",
@@ -19,7 +19,7 @@ Canister 'backend' has 2 pending migration(s) but check-limit=1. Fold all change
 }
 `;
 
-exports[`check-stable incompatible upgrade from .mo file 1`] = `
+exports[`check-stable incompatible upgrade 1`] = `
 {
   "exitCode": 1,
   "stderr": "(unknown location): Compatibility error [M0170], the new type of stable variable \`counter\` is not compatible with the previous version.

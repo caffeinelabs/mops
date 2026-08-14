@@ -130,7 +130,7 @@ Configure automatic stable variable compatibility checking for a canister. When 
 
 | Field         | Description                                                     |
 | ------------- | --------------------------------------------------------------- |
-| path          | Path to the deployed version's `.most` or `.mo` file (required). A `.most` file is preferred; when a `.mo` file is provided, stable types are generated from it (the file must compile successfully) |
+| path          | Path to the deployed version's `.most` stable type signature (required). Must be a `.most` file — produce one with [`mops deployed`](./cli/4-dev/09-mops-deployed.md); a `.mo` source is rejected |
 
 Example:
 ```toml

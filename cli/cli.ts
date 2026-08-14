@@ -522,7 +522,7 @@ program
 program
   .command("check-stable [args...]")
   .description(
-    "Check stable variable compatibility. With no arguments, checks all canisters with [check-stable] configured. Arguments can be canister names or an old file path followed by an optional canister name",
+    "Check stable variable compatibility. With no arguments, checks all canisters with [check-stable] configured. Arguments can be canister names or a baseline .most path followed by an optional canister name. The baseline is always a .most file",
   )
   .option("--verbose", "Verbose console output")
   .addOption(

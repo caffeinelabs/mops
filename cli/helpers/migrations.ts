@@ -281,9 +281,8 @@ export function getCheckLimitPendingIssue(
   canisterName: string,
   oldMostPath: string,
   ignoreCheckLimit: boolean,
-  baselineIsMostFile: boolean,
 ): CheckLimitPendingIssue | null {
-  if (!migrations || ignoreCheckLimit || !baselineIsMostFile) {
+  if (!migrations || ignoreCheckLimit) {
     return null;
   }
   const checkLimit = migrations["check-limit"];
