@@ -19,10 +19,10 @@ The output format is a markdown table, so you can copy-paste it into your `READM
 
 ### How it works
 
-Benchmarks run on [PocketIC](https://github.com/dfinity/pocketic), which Mops downloads and manages itself — `dfx` is not involved and does not need to be installed. Pin a version with [`mops toolchain use pocket-ic 15.0.0`](../5-toolchain/03-mops-toolchain-use.md). There is no default: an unpinned project errors.
+Benchmarks run on [PocketIC](https://github.com/dfinity/pocketic), which Mops downloads and manages itself — `dfx` is not involved and does not need to be installed. Pin a version with [`mops toolchain use pocket-ic 15.0.0`](../5-toolchain/03-mops-toolchain-use.md). There is no default: an unpinned project errors, unless [`MOPS_POCKET_IC_URL`](../7-misc/06-environment-variables.md#mops_pocket_ic_url) points at an already-running PocketIC server (Mops then attaches to it instead of spawning one, and an existing pin is ignored).
 
 Under the hood, Mops will:
-- Start a PocketIC server on an ephemeral port
+- Start a PocketIC server on an ephemeral port (or attach to the `MOPS_POCKET_IC_URL` server)
 - Wrap each `*.bench.mo` file in a canister
 - Compile canisters under enhanced orthogonal persistence (moc's default) with the `--force-gc` flag and deploy them
 - Run each cell of the benchmark file as an update call (or a query call with [`--query`](#--query))

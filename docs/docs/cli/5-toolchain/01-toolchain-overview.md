@@ -48,7 +48,7 @@ You need to run `mops install` command when you edit `mops.toml` file manually.
 
 ### `pocket-ic` versions {#pocket-ic-versions}
 
-Replica tests, benchmarks, `--check-deploy`, and `mops toolchain bin pocket-ic` all require an explicit `[toolchain] pocket-ic` pin — there is no default. Unpinned, they error naming `mops toolchain use pocket-ic 15.0.0`. The version in that hint is not a runtime fallback; it can move when a newer server is the one to recommend.
+Replica tests, benchmarks, `--check-deploy`, and `mops toolchain bin pocket-ic` all require an explicit `[toolchain] pocket-ic` pin — there is no default. Unpinned, they error naming `mops toolchain use pocket-ic 15.0.0`. The version in that hint is not a runtime fallback; it can move when a newer server is the one to recommend. The one exception is [`MOPS_POCKET_IC_URL`](../7-misc/06-environment-variables.md#mops_pocket_ic_url): when it points at an already-running PocketIC server, no pin is needed, an existing pin is ignored with a warning, and no binary is downloaded.
 
 Any version from `9.0.0` up can be pinned (`mops toolchain use pocket-ic latest` resolves and pins the newest release). Mops keeps no list of blessed versions — as with `moc`, `wasmtime` and `lintoko`, the version you pin is the version you get. A literal `pocket-ic = "latest"` written into `mops.toml` by hand does not work — the field takes a concrete version or a file path.
 
