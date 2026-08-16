@@ -31,7 +31,7 @@ import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
-import { cliExit } from "../../error.js";
+import { cliErrorFrom, cliExit } from "../../error.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
 
@@ -48,8 +48,11 @@ let replicaStartPromise: Promise<void> | undefined;
 
 async function startReplicaOnce(replica: Replica) {
   if (!replicaStartPromise) {
-    replicaStartPromise = new Promise((resolve) => {
-      replica.start({ silent: true }).then(resolve);
+    // A start failure must settle this promise — every replica test file (and
+    // the watch SIGINT handler) awaits it — and surface as a clean error, not
+    // an unhandled rejection.
+    replicaStartPromise = replica.start({ silent: true }).catch((err) => {
+      cliErrorFrom(err, "Failed to start the pocket-ic replica");
     });
   }
   return replicaStartPromise;
@@ -78,7 +81,15 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
 
       if (replicaStartPromise) {
         console.log("Stopping replica...");
-        replica.stop(true).then(() => {
+        // Wait for a settled start so the attached instance exists to be
+        // deleted — but bounded, so a stalled start cannot hold the exit.
+        let stopped = Promise.allSettled([replicaStartPromise]).then(() =>
+          replica.stop(true),
+        );
+        let deadline = new Promise<void>((resolve) => {
+          setTimeout(resolve, 10_000).unref();
+        });
+        void Promise.race([stopped, deadline]).then(() => {
           // eslint-disable-next-line no-restricted-properties
           process.exit(0);
         });
@@ -483,15 +494,17 @@ export async function testWithReporter(
     filesWithMode.filter(({ mode }) => mode !== "replica"),
     runTestFile,
   );
-  await parallel(
-    1,
-    filesWithMode.filter(({ mode }) => mode === "replica"),
-    runTestFile,
-  );
-
-  if (hasReplicaTests && !watch) {
-    await replica.stop();
-    fs.rmSync(testTempDir, { recursive: true, force: true });
+  try {
+    await parallel(
+      1,
+      filesWithMode.filter(({ mode }) => mode === "replica"),
+      runTestFile,
+    );
+  } finally {
+    if (hasReplicaTests && !watch) {
+      await replica.stop();
+      fs.rmSync(testTempDir, { recursive: true, force: true });
+    }
   }
 
   if (signal?.aborted) {

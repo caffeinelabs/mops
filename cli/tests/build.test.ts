@@ -161,6 +161,35 @@ describe("build", () => {
     }
   });
 
+  test("--check-deploy with MOPS_POCKET_IC_URL does not require a pin", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    try {
+      const result = await cli(["build", "foo", "--check-deploy"], {
+        cwd,
+        env: { MOPS_POCKET_IC_URL: "http://127.0.0.1:1" },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).not.toMatch("mops toolchain use pocket-ic");
+      expect(result.stderr).toMatch("PocketIC deployment check failed");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("--check-deploy rejects a non-http MOPS_POCKET_IC_URL", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    try {
+      const result = await cli(["build", "foo", "--check-deploy"], {
+        cwd,
+        env: { MOPS_POCKET_IC_URL: "ftp://example.com" },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch("must be an http or https URL");
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
   // Anything that consumes mops as a build step — CI attestation, a canister
   // orchestrator, a cache keyed on artifact hashes — needs identical inputs to
   // produce identical outputs. Nothing else in the suite would catch a

@@ -19,6 +19,7 @@ import * as lintoko from "./lintoko.js";
 import * as wasmOpt from "./wasm-opt.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
 import { cliError } from "../../error.js";
+import { getPocketIcUrl } from "../../helpers/pocket-ic-startup.js";
 import * as toolchainUtils from "./toolchain-utils.js";
 import { RECOMMENDED_POCKET_IC_VERSION } from "./pocket-ic-versions.js";
 import type { ReleaseInfo } from "./release-tags.js";
@@ -105,7 +106,7 @@ async function installAll({ silent = false, verbose = false } = {}) {
   if (config.toolchain?.wasmtime) {
     await download("wasmtime", config.toolchain.wasmtime, { silent, verbose });
   }
-  if (config.toolchain?.["pocket-ic"]) {
+  if (config.toolchain?.["pocket-ic"] && !getPocketIcUrl()) {
     await download("pocket-ic", config.toolchain["pocket-ic"], {
       silent,
       verbose,

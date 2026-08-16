@@ -32,6 +32,13 @@ Remove package maintainer.
 mops maintainer remove <principal>
 ```
 
+### `--yes`
+
+`mops maintainer add` and `mops maintainer remove` ask for confirmation. Pass `--yes` to skip the prompt (required in non-interactive environments like CI):
+```
+mops maintainer add <principal> --yes
+```
+
 ## Example
 
 Imagine you have a package named `hello` and you want to add the principal `2d2zu-vaaaa-aaaak-qb6pq-cai` as a maintainer.

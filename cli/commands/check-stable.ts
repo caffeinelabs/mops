@@ -256,7 +256,10 @@ export function reportStableCheckOutcome(
   );
 }
 
-/** One `moc --check --stable-baseline` covering typecheck + upgrade compat. */
+/**
+ * One `moc --check --stable-baseline` covering typecheck + upgrade compat.
+ * `baselinePath` is always a committed `.most` — see `runStableCheck`.
+ */
 async function runFoldedStableCheck(params: {
   canisterMain: string;
   canisterName: string;

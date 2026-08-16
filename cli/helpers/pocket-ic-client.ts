@@ -4,26 +4,53 @@ import type {
   PocketIcServer,
   StartServerOptions,
 } from "@dfinity/pic";
+import { readConfig } from "../mops.js";
+import {
+  createClientOrStopServer,
+  getPocketIcUrl,
+  trackAttachedPocketIc,
+  warnIgnoredPocketIcPin,
+} from "./pocket-ic-startup.js";
 
 export type { PocketIc, PocketIcServer, StartServerOptions };
 
-// A server whose client never came up is an orphaned process: nothing holds a
-// handle to stop it later, so it must be stopped here.
-export async function createClientOrStopServer<T>(
-  server: { stop(): Promise<void> },
-  createClient: () => Promise<T>,
-): Promise<T> {
-  try {
-    return await createClient();
-  } catch (error) {
-    await server.stop().catch(() => {});
-    throw error;
-  }
+function pinnedPocketIcVersion(): string | undefined {
+  return readConfig().toolchain?.["pocket-ic"];
 }
 
+// Server options may be a thunk so the spawn-only work behind them (resolving
+// `toolchain.bin("pocket-ic")` downloads the binary) is never paid in attached
+// mode, where the whole object is unused.
+export type StartServerOptionsSource =
+  | StartServerOptions
+  | (() => Promise<StartServerOptions>);
+
 export async function startPocketIc(
-  options: StartServerOptions,
-): Promise<{ server: PocketIcServer; client: PocketIc }> {
+  optionsSource: StartServerOptionsSource,
+): Promise<{ server?: PocketIcServer; client: PocketIc }> {
+  const url = getPocketIcUrl();
+  if (url) {
+    warnIgnoredPocketIcPin(pinnedPocketIcVersion);
+    const { PocketIc } = await import("@dfinity/pic");
+    let client: PocketIc;
+    try {
+      client = await PocketIc.create(url);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Cannot connect to the PocketIC server at MOPS_POCKET_IC_URL (${url}): ${message}\n` +
+          "Check that the server is running, the URL points at the PocketIC control API " +
+          "(not the IC HTTP gateway), and the server version is compatible with the bundled `@dfinity/pic` client.",
+        { cause: error },
+      );
+    }
+    trackAttachedPocketIc(client);
+    return { client };
+  }
+
+  const options =
+    typeof optionsSource === "function" ? await optionsSource() : optionsSource;
+
   // Imported lazily so commands that never start a replica don't load the
   // PocketIC client (and its `@icp-sdk/core` dependency).
   //
