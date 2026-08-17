@@ -355,9 +355,9 @@ type MemoEntry = Record<string, string>;
 // overridden canister id) cannot collide.
 const fileHashesMemo = new Map<string, MemoEntry>();
 
-function memoKey(packageId: string): string {
+function endpointKey(): string {
   let { host, canisterId } = getEndpoint(getNetwork());
-  return `${host}|${canisterId}|${packageId}`;
+  return `${host}|${canisterId}`;
 }
 
 function toHashRecord(
@@ -371,41 +371,113 @@ function toHashRecord(
   );
 }
 
+type HashWaiter = {
+  resolve: (record: MemoEntry | undefined) => void;
+  reject: (err: unknown) => void;
+};
+
+// A consensus round costs the same ~2s whether it carries one packageId or
+// twenty, so fetches that miss the memo wait one macrotask tick and go out as
+// a single `getFileHashesByPackageIds` call. Keyed by endpoint like the memo,
+// so a batch never mixes registries. `inFlightHashFetches` is what joins a
+// late caller to a batch already on the wire.
+const pendingHashBatches = new Map<string, Map<string, HashWaiter>>();
+const inFlightHashFetches = new Map<string, Promise<MemoEntry | undefined>>();
+
+function enqueueHashFetch(
+  endpoint: string,
+  packageId: string,
+): Promise<MemoEntry | undefined> {
+  let inFlight = inFlightHashFetches.get(`${endpoint}|${packageId}`);
+  if (inFlight) {
+    return inFlight;
+  }
+  let batch = pendingHashBatches.get(endpoint);
+  if (!batch) {
+    batch = new Map();
+    pendingHashBatches.set(endpoint, batch);
+    setTimeout(() => flushHashBatch(endpoint), 0);
+  }
+  let waiters = batch;
+  let promise = new Promise<MemoEntry | undefined>((resolve, reject) => {
+    waiters.set(packageId, { resolve, reject });
+  });
+  inFlightHashFetches.set(`${endpoint}|${packageId}`, promise);
+  return promise;
+}
+
+async function flushHashBatch(endpoint: string): Promise<void> {
+  let batch = pendingHashBatches.get(endpoint);
+  pendingHashBatches.delete(endpoint);
+  if (!batch) {
+    return;
+  }
+  // Every outcome clears the in-flight entries: answered ids live on in the
+  // memo, and unanswered or failed ones must be fetched anew by the next
+  // caller (the install retry path counts on that).
+  let settle = (fn: (waiter: HashWaiter, packageId: string) => void) => {
+    for (let [packageId, waiter] of batch) {
+      inFlightHashFetches.delete(`${endpoint}|${packageId}`);
+      fn(waiter, packageId);
+    }
+  };
+  try {
+    let actor = await mainActor();
+    let response = await actor.getFileHashesByPackageIds([...batch.keys()]);
+    let records = new Map(
+      response.map(([packageId, fileHashes]) => [
+        packageId,
+        toHashRecord(fileHashes),
+      ]),
+    );
+    settle((waiter, packageId) => {
+      let record = records.get(packageId);
+      if (record) {
+        fileHashesMemo.set(`${endpoint}|${packageId}`, record);
+      }
+      waiter.resolve(record);
+    });
+  } catch (err) {
+    settle((waiter) => waiter.reject(err));
+  }
+}
+
 // The registry's file hashes, always via `getFileHashesByPackageIds` — an
 // update call, so every answer has been through consensus. There is no query
 // variant of this on purpose: a query reply is signed by a single node, and
 // nothing that decides whether bytes may be trusted is settled by one node.
-async function fetchRegistryFileHashes(
+//
+// Exported for `installAll`, which starts this before the downloads so the
+// consensus round overlaps them. An id the registry does not answer for is
+// simply absent from the result — and not memoized, so a later call asks again.
+export async function fetchRegistryFileHashes(
   packageIds: string[],
 ): Promise<Record<string, Record<string, string>>> {
+  let endpoint = endpointKey();
   let hashes: Record<string, Record<string, string>> = {};
-  let missing: string[] = [];
+  let waiting = new Map<string, Promise<MemoEntry | undefined>>();
   for (let packageId of packageIds) {
-    let memoized = fileHashesMemo.get(memoKey(packageId));
+    let memoized = fileHashesMemo.get(`${endpoint}|${packageId}`);
     if (memoized) {
       hashes[packageId] = memoized;
-    } else if (!missing.includes(packageId)) {
-      missing.push(packageId);
+    } else if (!waiting.has(packageId)) {
+      waiting.set(packageId, enqueueHashFetch(endpoint, packageId));
     }
   }
-  if (missing.length === 0) {
-    return hashes;
-  }
-
-  let actor = await mainActor();
-  let fileHashesByPackageIds = await actor.getFileHashesByPackageIds(missing);
-
-  for (let [packageId, fileHashes] of fileHashesByPackageIds) {
-    let record = toHashRecord(fileHashes);
-    fileHashesMemo.set(memoKey(packageId), record);
-    hashes[packageId] = record;
-  }
+  let ids = [...waiting.keys()];
+  let records = await Promise.all(waiting.values());
+  ids.forEach((packageId, index) => {
+    let record = records[index];
+    if (record) {
+      hashes[packageId] = record;
+    }
+  });
   return hashes;
 }
 
 // Registry packages only — github/path deps have no published file hashes.
 // Aliases like `base@0` and `base@0.16` collapse to the same packageId.
-function mopsPackageIds(deps: Record<string, string>): string[] {
+export function mopsPackageIds(deps: Record<string, string>): string[] {
   return [
     ...new Set(
       Object.entries(deps)

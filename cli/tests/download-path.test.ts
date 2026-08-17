@@ -11,6 +11,7 @@ import nodePath from "node:path";
 type HashEntry = [string, Uint8Array];
 
 let batchCalls: string[][] = [];
+let batchFailure: Error | undefined;
 const hashResponses = new Map<string, HashEntry[]>();
 let resolvedDeps: Record<string, string> = {};
 
@@ -22,13 +23,19 @@ const actor = {
   },
   getFileHashesByPackageIds: async (packageIds: string[]) => {
     batchCalls.push(packageIds);
-    return packageIds.map(
-      (packageId) =>
-        [packageId, hashResponses.get(packageId) ?? []] as [
-          string,
-          HashEntry[],
-        ],
-    );
+    if (batchFailure) {
+      let err = batchFailure;
+      batchFailure = undefined;
+      throw err;
+    }
+    // ids the registry does not know are omitted from the reply, not answered
+    // empty — an empty list is a real answer ("published, no hashes recorded")
+    return packageIds.flatMap((packageId) => {
+      let entry = hashResponses.get(packageId);
+      return entry === undefined
+        ? []
+        : [[packageId, entry] as [string, HashEntry[]]];
+    });
   },
 };
 
@@ -100,6 +107,7 @@ const lockWith = (packageId: string, hashes: Record<string, string>) => ({
 // registry keeps answering for every id it has already served.
 beforeEach(() => {
   batchCalls = [];
+  batchFailure = undefined;
   resolvedDeps = {};
 });
 
@@ -374,6 +382,82 @@ describe("verifyDownloadedPackageFiles", () => {
       new Map([["src/lib.mo", bytes("module { let evil = 1 }")]]),
     );
     expect(mismatch.errors).toHaveLength(1);
+  });
+});
+
+// One consensus round costs the same however many ids it carries, so the
+// packages verifying concurrently during an install must share a single
+// `getFileHashesByPackageIds` call.
+describe("batched hash fetches", () => {
+  const okFiles = () => new Map([["src/lib.mo", bytes("module {}")]]);
+
+  test("concurrent verifications coalesce into one registry call", async () => {
+    let packageIds = [uniqueId(), uniqueId(), uniqueId()];
+    for (let packageId of packageIds) {
+      hashResponses.set(packageId, [
+        [`${packageId}/src/lib.mo`, sha256(bytes("module {}"))],
+      ]);
+    }
+
+    let results = await Promise.all(
+      packageIds.map((packageId) =>
+        verifyDownloadedPackageFiles(packageId, okFiles()),
+      ),
+    );
+
+    expect(results).toEqual(
+      packageIds.map(() => ({ errors: [], unverified: false })),
+    );
+    expect(batchCalls).toEqual([packageIds]);
+  });
+
+  test("an id the registry does not answer is not memoized", async () => {
+    let packageId = uniqueId();
+
+    let first = await verifyDownloadedPackageFiles(packageId, okFiles());
+    expect(first).toEqual({ errors: [], unverified: true });
+
+    // published since; a memoized absence would keep admitting bytes unverified
+    hashResponses.set(packageId, [
+      [`${packageId}/src/lib.mo`, sha256(bytes("module {}"))],
+    ]);
+    let second = await verifyDownloadedPackageFiles(packageId, okFiles());
+
+    expect(second).toEqual({ errors: [], unverified: false });
+    expect(batchCalls).toEqual([[packageId], [packageId]]);
+  });
+
+  test("a failed call rejects every waiter and a retry fetches fresh", async () => {
+    let packageIds = [uniqueId(), uniqueId()];
+    for (let packageId of packageIds) {
+      hashResponses.set(packageId, [
+        [`${packageId}/src/lib.mo`, sha256(bytes("module {}"))],
+      ]);
+    }
+    batchFailure = new Error("fetch failed");
+
+    let settled = await Promise.allSettled(
+      packageIds.map((packageId) =>
+        verifyDownloadedPackageFiles(packageId, okFiles()),
+      ),
+    );
+    for (let outcome of settled) {
+      expect(outcome.status).toBe("rejected");
+      expect((outcome as PromiseRejectedResult).reason.message).toBe(
+        "fetch failed",
+      );
+    }
+
+    // nothing lingers from the failure: the retry gets a fresh batched call
+    let retried = await Promise.all(
+      packageIds.map((packageId) =>
+        verifyDownloadedPackageFiles(packageId, okFiles()),
+      ),
+    );
+    expect(retried).toEqual(
+      packageIds.map(() => ({ errors: [], unverified: false })),
+    );
+    expect(batchCalls).toEqual([packageIds, packageIds]);
   });
 });
 
