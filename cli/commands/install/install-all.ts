@@ -6,14 +6,42 @@ import {
   checkIntegrity,
   checkLockedPrerequisites,
   checkLockFileLight,
+  fetchRegistryFileHashes,
   LockPolicy,
+  mopsPackageIds,
   readLockFile,
 } from "../../integrity.js";
+import { Dependency } from "../../types.js";
 import { installDeps } from "./install-deps.js";
 import { checkRequirements } from "../../check-requirements.js";
 import { syncLocalCache } from "./sync-local-cache.js";
 import { notifyInstalls } from "../../notify-installs.js";
 import { cliError } from "../../error.js";
+
+// Each freshly downloaded package the lock cannot vouch for must ask the
+// registry for its file hashes before entering the cache — a ~2s consensus
+// call. Start one batched request for the root deps now, without awaiting it,
+// so the round overlaps the downloads; per-package fetches coalesce with it
+// and are answered from the memo. Best-effort on purpose: on failure the
+// verification path fetches again and reports the error properly.
+function prefetchFileHashes(deps: Dependency[], verbose?: boolean) {
+  let depValues: Record<string, string> = {};
+  for (let dep of deps) {
+    let value = dep.version || dep.repo || dep.path;
+    if (value) {
+      depValues[dep.name] = value;
+    }
+  }
+  let lockedHashes = readLockFile()?.hashes ?? {};
+  let packageIds = mopsPackageIds(depValues).filter(
+    (packageId) => !Object.keys(lockedHashes[packageId] ?? {}).length,
+  );
+  if (packageIds.length) {
+    fetchRegistryFileHashes(packageIds).catch((err) => {
+      verbose && console.log(`Failed to prefetch registry file hashes: ${err}`);
+    });
+  }
+}
 
 type InstallAllOptions = {
   verbose?: boolean;
@@ -80,6 +108,7 @@ export async function installAll({
   }
 
   if (!installedFromLockFile) {
+    prefetchFileHashes(allDeps, verbose);
     let ok = await installDeps(allDeps, {
       silent,
       verbose,
