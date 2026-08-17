@@ -190,8 +190,8 @@ Accepted <pkg> forms:
   )
   .action(async (pkg, options) => {
     checkConfigFile();
-    // Moving between sections is interactive-only: `mops update` and
-    // `mops sync` call add() for a package they already located in one section.
+    // Moving between sections is interactive-only: `mops sync` decides the
+    // section itself when it calls add().
     await add(pkg, { ...options, moveSections: true });
   });
 
@@ -916,7 +916,7 @@ program
       "\nExit codes:\n" +
       "  0  mops.toml is up to date\n" +
       "  2  the update could not be run or completed (no mops.toml, unknown [pkg],\n" +
-      "     or a GitHub dependency failed to re-pin)",
+      "     or a dependency failed to update)",
   )
   .action(async (pkg, options) => {
     await update(pkg, options);

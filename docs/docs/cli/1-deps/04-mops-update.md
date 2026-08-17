@@ -32,7 +32,7 @@ mops update core
 | Code | Meaning                                                                                             |
 | ---- | --------------------------------------------------------------------------------------------------- |
 | `0`  | `mops.toml` is up to date                                                                           |
-| `2`  | The update could not be run or completed — no `mops.toml`, unknown `[pkg]`, or a GitHub dependency failed to re-pin |
+| `2`  | The update could not be run or completed — no `mops.toml`, unknown `[pkg]`, or a dependency failed to update (the others are still updated) |
 
 Same vocabulary as [`mops outdated`](./03-mops-outdated.md#exit-codes), minus code `1`: after a successful `mops update` there is nothing left to report as outdated.
 

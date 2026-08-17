@@ -243,7 +243,7 @@ mops sync                 # add missing / remove unused packages
 mops sync --dry-run       # print what would change, write nothing
 ```
 
-`mops update` rewrites `mops.toml` in place (like `cargo upgrade`, not `cargo update`) and re-pins GitHub dependencies to their branch head. Like `mops outdated`, it exits `2` when it cannot run or complete — no `mops.toml`, a package that is not declared, or a GitHub dependency that failed to re-pin.
+`mops update` rewrites `mops.toml` in place (like `cargo upgrade`, not `cargo update`) and re-pins GitHub dependencies to their branch head. Like `mops outdated`, it exits `2` when it cannot run or complete — no `mops.toml`, a package that is not declared, or a dependency that failed to update (the other dependencies are still updated).
 
 `mops sync` needs a pinned `[toolchain] moc` — it reads imports with `moc --print-deps`. Packages imported only from `test`/`tests`/`bench`/`benchmark` directories are added to `[dev-dependencies]`; already-declared packages are never moved between sections.
 
