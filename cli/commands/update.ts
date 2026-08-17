@@ -9,20 +9,24 @@ import { installMopsDep } from "./install/install-mops-dep.js";
 import { installFromGithub } from "./install/install-from-github.js";
 import {
   createInstallScope,
+  dedupeInstall,
   fileThreadsPerPackage,
+  isTransientNetworkError,
   nextRetryBudget,
   noteTransientNetworkError,
   packageConcurrency,
   requestBudget,
   runInInstallScope,
 } from "./install/install-concurrency.js";
+import { depKey } from "./install/install-deps.js";
 import { parallel } from "../parallel.js";
 import { syncLocalCache } from "./install/sync-local-cache.js";
 import { notifyInstalls } from "../notify-installs.js";
-import { checkIntegrity } from "../integrity.js";
+import { checkIntegrity, fetchRegistryFileHashes } from "../integrity.js";
 import { checkRequirements } from "../check-requirements.js";
 import { Dependency } from "../types.js";
-import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
+import { matchesDepKey } from "../helpers/get-dep-name.js";
+import { getPackageId } from "../helpers/get-package-id.js";
 
 // Same vocabulary as `mops outdated`: 2 = "the command could not be completed".
 const EXIT_ERROR = 2;
@@ -97,23 +101,38 @@ export async function update(
     });
   }
 
-  let devDeps = Object.keys(config["dev-dependencies"] || {});
-  let allDeps = [...Object.keys(config.dependencies || {}), ...devDeps];
+  // Every declared key with the section it lives in, so the key an update is
+  // written under and the section it is written to always come from the same
+  // declaration. Deriving them from two searches lets a package declared in
+  // both sections be written under the other section's key.
+  let declared = [
+    ...Object.keys(config.dependencies || {}).map((key) => ({
+      key,
+      dev: false,
+    })),
+    ...Object.keys(config["dev-dependencies"] || {}).map((key) => ({
+      key,
+      dev: true,
+    })),
+  ];
 
+  let claimed = new Set<string>();
   for (let [name, oldVersion, newVersion] of available) {
-    // The declared key can pin a version prefix (`"map@8" = "..."`); matching
-    // against it keeps the alias key instead of duplicating the package.
-    let matchesKey = (key: string) => {
-      let pinnedVersion = getDepPinnedVersion(key);
-      return (
-        getDepName(key) === name &&
-        (!pinnedVersion || oldVersion.startsWith(pinnedVersion))
-      );
-    };
-    let key = allDeps.find(matchesKey) || name;
+    // Matching against the declared key keeps a pinned alias (`"map@8"`)
+    // instead of duplicating the package under its bare name.
+    let declaration = declared.find(({ key }) =>
+      matchesDepKey(key, name, oldVersion),
+    );
+    let key = declaration?.key || name;
+    // A package declared twice is reported once per declaration; one update
+    // per key is enough, and two tasks would install it concurrently.
+    if (claimed.has(key)) {
+      continue;
+    }
+    claimed.add(key);
     tasks.push({
       key,
-      dev: devDeps.some(matchesKey),
+      dev: !!declaration?.dev,
       entry: { name: key, repo: "", version: newVersion },
       install: (threads) =>
         installMopsDep(name, newVersion, { verbose, threads }),
@@ -135,23 +154,52 @@ export async function update(
     return;
   }
 
+  // Verifying a freshly downloaded package against the registry's file hashes
+  // is a ~2s consensus round. Start one batched request for the new versions
+  // now, without awaiting it, so it overlaps the downloads; the per-package
+  // fetches are then answered from the memo. Best-effort: on failure the
+  // verification path fetches again and reports the error properly.
+  let packageIds = [
+    ...new Set(
+      tasks
+        .filter((task) => !!task.entry.version)
+        .map((task) => getPackageId(task.key, task.entry.version || "")),
+    ),
+  ];
+  if (packageIds.length) {
+    fetchRegistryFileHashes(packageIds).catch((err) => {
+      verbose && console.log(`Failed to prefetch registry file hashes: ${err}`);
+    });
+  }
+
   // Install every new version before touching mops.toml. One scope bounds the
   // run the way installDeps does: the pool divides the request budget,
   // transitive installs inherit their package's thread share, and a transient
   // network failure retries the still-failed updates with the budget halved.
   let succeeded = new Set<UpdateTask>();
   let failed = new Map<UpdateTask, string>();
+  // Failures no retry can fix — a malformed manifest, say. Held out of the
+  // next attempt so a sibling's transient error cannot drag them along.
+  let deterministic = new Set<UpdateTask>();
   let pending = tasks;
   let budget = requestBudget();
   for (let attempt = 1; ; attempt++) {
     let poolSize = packageConcurrency(pending.length, budget);
     let threads = fileThreadsPerPackage(poolSize, budget);
     let scope = createInstallScope(threads);
-    failed = new Map();
+    for (let task of pending) {
+      failed.delete(task);
+    }
     await runInInstallScope(scope, () =>
       parallel(poolSize, pending, async (task) => {
         try {
-          if (await task.install(threads)) {
+          // Share the install with any transitive request for the same
+          // package: an updated dep is often also a dependency of another
+          // updated dep, and both would otherwise download and verify it.
+          let ok = await dedupeInstall(depKey(task.entry), () =>
+            task.install(threads),
+          );
+          if (ok) {
             succeeded.add(task);
           } else {
             failed.set(task, "install failed");
@@ -159,6 +207,9 @@ export async function update(
         } catch (err: any) {
           // a thrown transient error earns a retry like a noted one
           noteTransientNetworkError(err);
+          if (!isTransientNetworkError(err)) {
+            deterministic.add(task);
+          }
           // install errors carry an "Error: " prefix of their own; strip it,
           // and never report an empty reason.
           failed.set(
@@ -168,7 +219,10 @@ export async function update(
         }
       }),
     );
-    if (!failed.size) {
+    let retryable = [...failed.keys()].filter(
+      (task) => !deterministic.has(task),
+    );
+    if (!retryable.length) {
       break;
     }
     let retryBudget = nextRetryBudget(scope, undefined, attempt, budget);
@@ -176,7 +230,7 @@ export async function update(
       break;
     }
     budget = retryBudget;
-    pending = [...failed.keys()];
+    pending = retryable;
   }
 
   // A failed dep keeps its old mops.toml entry; the successful ones land in a

@@ -908,6 +908,7 @@ program
       "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
+  .option("--verbose", "Show more information")
   .addOption(legacyLockOption())
   .addHelpText(
     "after",

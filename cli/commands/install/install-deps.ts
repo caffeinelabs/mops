@@ -23,7 +23,7 @@ type InstallDepsOptions = {
 
 // Identifies the work, not the declaration: an alias and its base package at
 // the same version are one cache entry, so they are one install.
-function depKey(dep: Dependency, ignoreTransitive?: boolean): string {
+export function depKey(dep: Dependency, ignoreTransitive?: boolean): string {
   let source = dep.repo || `${getDepName(dep.name)}@${dep.version}`;
   return `${source}|${ignoreTransitive ? 1 : 0}`;
 }

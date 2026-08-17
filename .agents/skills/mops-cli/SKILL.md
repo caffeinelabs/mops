@@ -239,6 +239,7 @@ mops update               # rewrite mops.toml versions within caret bound (no ma
 mops update core          # update specific package within caret bound
 mops update --major       # allow updates that cross major versions
 mops update --patch       # restrict to patch bumps only (mutually exclusive with --major)
+mops update --verbose     # verbose output
 mops sync                 # add missing / remove unused packages
 mops sync --dry-run       # print what would change, write nothing
 ```
