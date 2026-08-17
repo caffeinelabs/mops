@@ -350,9 +350,10 @@ export function checkLockFileLight(): boolean {
 type MemoEntry = Record<string, string>;
 
 // Published versions are immutable, so a package's file hashes can never change
-// once published — that is what makes reusing a fetched answer safe. In-process
-// only, never persisted, and keyed by registry endpoint so two networks (or an
-// overridden canister id) cannot collide.
+// once published — that is what makes reusing a fetched answer safe, the empty
+// answer of a package that published none included. In-process only, never
+// persisted, and keyed by registry endpoint so two networks (or an overridden
+// canister id) cannot collide.
 const fileHashesMemo = new Map<string, MemoEntry>();
 
 function endpointKey(): string {
@@ -372,22 +373,32 @@ function toHashRecord(
 }
 
 type HashWaiter = {
-  resolve: (record: MemoEntry | undefined) => void;
+  resolve: (record: MemoEntry) => void;
   reject: (err: unknown) => void;
 };
 
 // A consensus round costs the same ~2s whether it carries one packageId or
 // twenty, so fetches that miss the memo wait one macrotask tick and go out as
-// a single `getFileHashesByPackageIds` call. Keyed by endpoint like the memo,
-// so a batch never mixes registries. `inFlightHashFetches` is what joins a
-// late caller to a batch already on the wire.
+// a single `getFileHashesByPackageIds` call. The window closes when the flush
+// starts, so what coalesces is the callers asking within one tick — the set
+// `installAll` prefetches, and packages verifying concurrently. An id first
+// asked for later opens a batch of its own; `inFlightHashFetches` only joins a
+// caller to a batch already carrying its id. Keyed by endpoint like the memo,
+// so a batch never mixes registries.
 const pendingHashBatches = new Map<string, Map<string, HashWaiter>>();
-const inFlightHashFetches = new Map<string, Promise<MemoEntry | undefined>>();
+const inFlightHashFetches = new Map<string, Promise<MemoEntry>>();
+
+// The reply carries every file hash of every requested package, so it grows
+// with the batch while an IC message stays capped at 2MB. Chunking bounds it
+// independently of how large a dependency graph gets; 50 leaves an order of
+// magnitude of headroom at realistic package sizes and still covers any real
+// project in one round. The endpoint imposes no limit of its own.
+const MAX_HASH_BATCH_IDS = 50;
 
 function enqueueHashFetch(
   endpoint: string,
   packageId: string,
-): Promise<MemoEntry | undefined> {
+): Promise<MemoEntry> {
   let inFlight = inFlightHashFetches.get(`${endpoint}|${packageId}`);
   if (inFlight) {
     return inFlight;
@@ -399,7 +410,7 @@ function enqueueHashFetch(
     setTimeout(() => flushHashBatch(endpoint), 0);
   }
   let waiters = batch;
-  let promise = new Promise<MemoEntry | undefined>((resolve, reject) => {
+  let promise = new Promise<MemoEntry>((resolve, reject) => {
     waiters.set(packageId, { resolve, reject });
   });
   inFlightHashFetches.set(`${endpoint}|${packageId}`, promise);
@@ -412,18 +423,39 @@ async function flushHashBatch(endpoint: string): Promise<void> {
   if (!batch) {
     return;
   }
+  let ids = [...batch.keys()];
+  let chunks: string[][] = [];
+  for (let index = 0; index < ids.length; index += MAX_HASH_BATCH_IDS) {
+    chunks.push(ids.slice(index, index + MAX_HASH_BATCH_IDS));
+  }
+  // Concurrently: the chunks are one consensus round split for size, not a
+  // queue. Each settles only its own ids, so a call that fails cannot undo
+  // answers another one already delivered.
+  await Promise.all(
+    chunks.map((chunk) => fetchHashChunk(endpoint, batch, chunk)),
+  );
+}
+
+async function fetchHashChunk(
+  endpoint: string,
+  batch: Map<string, HashWaiter>,
+  packageIds: string[],
+): Promise<void> {
   // Every outcome clears the in-flight entries: answered ids live on in the
-  // memo, and unanswered or failed ones must be fetched anew by the next
-  // caller (the install retry path counts on that).
+  // memo, and failed ones must be fetched anew by the next caller (the install
+  // retry path counts on that).
   let settle = (fn: (waiter: HashWaiter, packageId: string) => void) => {
-    for (let [packageId, waiter] of batch) {
+    for (let packageId of packageIds) {
+      let waiter = batch.get(packageId);
       inFlightHashFetches.delete(`${endpoint}|${packageId}`);
-      fn(waiter, packageId);
+      if (waiter) {
+        fn(waiter, packageId);
+      }
     }
   };
   try {
     let actor = await mainActor();
-    let response = await actor.getFileHashesByPackageIds([...batch.keys()]);
+    let response = await actor.getFileHashesByPackageIds(packageIds);
     let records = new Map(
       response.map(([packageId, fileHashes]) => [
         packageId,
@@ -431,10 +463,13 @@ async function flushHashBatch(endpoint: string): Promise<void> {
       ]),
     );
     settle((waiter, packageId) => {
-      let record = records.get(packageId);
-      if (record) {
-        fileHashesMemo.set(`${endpoint}|${packageId}`, record);
-      }
+      // The registry answers every id it was asked for, a package it does not
+      // know and one that published no hashes alike with an empty list. An
+      // absent id would mean a registry breaking that contract, and is read as
+      // "no hashes" — which leaves a download unverified rather than passing it
+      // off as verified.
+      let record = records.get(packageId) ?? {};
+      fileHashesMemo.set(`${endpoint}|${packageId}`, record);
       waiter.resolve(record);
     });
   } catch (err) {
@@ -448,14 +483,15 @@ async function flushHashBatch(endpoint: string): Promise<void> {
 // nothing that decides whether bytes may be trusted is settled by one node.
 //
 // Exported for `installAll`, which starts this before the downloads so the
-// consensus round overlaps them. An id the registry does not answer for is
-// simply absent from the result — and not memoized, so a later call asks again.
+// consensus round overlaps them. Every requested id gets an entry; a package
+// the registry has no hashes for gets an empty one, which every caller reads as
+// "nothing to check against" rather than as a pass.
 export async function fetchRegistryFileHashes(
   packageIds: string[],
 ): Promise<Record<string, Record<string, string>>> {
   let endpoint = endpointKey();
   let hashes: Record<string, Record<string, string>> = {};
-  let waiting = new Map<string, Promise<MemoEntry | undefined>>();
+  let waiting = new Map<string, Promise<MemoEntry>>();
   for (let packageId of packageIds) {
     let memoized = fileHashesMemo.get(`${endpoint}|${packageId}`);
     if (memoized) {
@@ -464,14 +500,17 @@ export async function fetchRegistryFileHashes(
       waiting.set(packageId, enqueueHashFetch(endpoint, packageId));
     }
   }
-  let ids = [...waiting.keys()];
-  let records = await Promise.all(waiting.values());
-  ids.forEach((packageId, index) => {
-    let record = records[index];
-    if (record) {
-      hashes[packageId] = record;
-    }
-  });
+  let fetched = await Promise.all(
+    [...waiting].map(
+      async ([packageId, pending]): Promise<[string, MemoEntry]> => [
+        packageId,
+        await pending,
+      ],
+    ),
+  );
+  for (let [packageId, record] of fetched) {
+    hashes[packageId] = record;
+  }
   return hashes;
 }
 
