@@ -87,11 +87,19 @@ for sweep in $SWEEPS; do
   await_slot
   # A sweep that produces nothing usable writes its own coverage gap. Silence
   # would let the judge mark the category ✅ and approve.
-  (run_agent "$prompt" "$WORK_DIR/findings/${sweep}.md" "find:${sweep}" || {
-    log "find:${sweep}: no usable output — recording a coverage gap"
-    printf 'COVERAGE GAP: the %s sweep failed to produce output, so nothing in this review was checked through it.\n' \
-      "$sweep" > "$WORK_DIR/findings/${sweep}.gap"
-  }) &
+  (
+    rc=0
+    run_agent "$prompt" "$WORK_DIR/findings/${sweep}.md" "find:${sweep}" || rc=$?
+    if [ "$rc" -eq 2 ]; then
+      log "find:${sweep}: cut short at the ${REVIEW_CALL_TIMEOUT}s cap — recording a coverage gap"
+      printf 'COVERAGE GAP: the %s sweep was cut short at its %ss wall-clock cap before reporting, so what it covers was NOT reviewed. Treat its categories as unverified.\n' \
+        "$sweep" "$REVIEW_CALL_TIMEOUT" > "$WORK_DIR/findings/${sweep}.gap"
+    elif [ "$rc" -ne 0 ]; then
+      log "find:${sweep}: no usable output — recording a coverage gap"
+      printf 'COVERAGE GAP: the %s sweep failed to produce output, so nothing in this review was checked through it.\n' \
+        "$sweep" > "$WORK_DIR/findings/${sweep}.gap"
+    fi
+  ) &
 done
 wait
 
@@ -154,7 +162,9 @@ append_pr_context "$prompt"
 append_diff "$prompt"
 
 judge_out="$WORK_DIR/judge.md"
-if ! run_agent "$prompt" "$judge_out" "judge"; then
+# Without the judge there is no review at all, so it gets a larger ceiling than a
+# sweep. Measured at ~200s; this is headroom, not a target.
+if ! REVIEW_CALL_TIMEOUT="${REVIEW_JUDGE_TIMEOUT:-360}" run_agent "$prompt" "$judge_out" "judge"; then
   log "ERROR: judging pass failed"
   exit 1
 fi

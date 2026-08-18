@@ -120,6 +120,30 @@ append_pr_context() {
 # why this has to be a hard number and not a local observation.
 MAX_ARG_STRLEN=131072
 
+# Per-call wall-clock ceiling. Measured across runs, the same sweep on the same
+# kind of diff took 470s, 789s and 851s: duration is driven by how far the agent
+# chooses to explore, not by the prompt, so it has to be capped rather than
+# tuned. A cut-short sweep is reported as a coverage gap, which forces the
+# affected categories to ⚠️ and stops an approval resting on them — better than a
+# review that lands after every other check.
+REVIEW_CALL_TIMEOUT="${REVIEW_CALL_TIMEOUT:-480}"
+
+# GNU coreutils on the runner; gtimeout on a Homebrew macOS. Absent either, calls
+# run unbounded and say so.
+resolve_timeout_bin() {
+  if [ -n "${TIMEOUT_BIN+x}" ]; then
+    return 0
+  fi
+  if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_BIN="timeout"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    TIMEOUT_BIN="gtimeout"
+  else
+    TIMEOUT_BIN=""
+    log "WARNING: no timeout(1) available; agent calls will run unbounded"
+  fi
+}
+
 prompt_bytes() { wc -c < "$1" | tr -d ' '; }
 
 # append_diff <prompt-file>
@@ -183,7 +207,7 @@ append_history() {
 # failure — a silent empty review is worse than a loud one.
 run_agent() {
   local prompt_file="$1" out_file="$2" label="$3"
-  local model started elapsed size
+  local model started elapsed size status
   resolve_agent_bin || return 1
 
   size="$(prompt_bytes "$prompt_file")"
@@ -195,20 +219,42 @@ run_agent() {
   local models
   read -r -a models <<< "$REVIEW_MODELS"
 
+  resolve_timeout_bin
+  local -a runner=()
+  if [ -n "$TIMEOUT_BIN" ] && [ "${REVIEW_CALL_TIMEOUT:-0}" -gt 0 ]; then
+    # SIGKILL after a grace period: the CLI does not always honour SIGTERM.
+    runner=("$TIMEOUT_BIN" --kill-after=30 "$REVIEW_CALL_TIMEOUT")
+  fi
+
   for model in "${models[@]}"; do
     started=$SECONDS
-    log "$label: starting (model $model)"
-    if "$AGENT_BIN" -p --model "$model" --output-format text --trust \
-      "$(cat "$prompt_file")" > "$out_file" 2> "$out_file.err" && [ -s "$out_file" ]; then
-      elapsed=$((SECONDS - started))
+    log "$label: starting (model $model, cap ${REVIEW_CALL_TIMEOUT}s)"
+    # Status captured straight off the call: `local` and arithmetic both reset $?.
+    status=0
+    "${runner[@]}" "$AGENT_BIN" -p --model "$model" --output-format text --trust \
+      "$(cat "$prompt_file")" > "$out_file" 2> "$out_file.err" || status=$?
+    elapsed=$((SECONDS - started))
+
+    if [ "$status" -eq 0 ] && [ -s "$out_file" ]; then
       # Recorded per output file so the stats footer can report which model
       # actually answered; run_agent usually runs in a subshell.
       printf '%s\n' "$model" > "$out_file.model"
       log "$label: done in ${elapsed}s, $(wc -c < "$out_file" | tr -d ' ') bytes (model $model)"
       return 0
     fi
-    elapsed=$((SECONDS - started))
-    log "$label: FAILED after ${elapsed}s with model $model"
+
+    # 124 from timeout(1), 137 when the kill-after SIGKILL lands. Another model
+    # would just spend the same wall clock again, so stop here.
+    if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
+      log "$label: TIMED OUT after ${elapsed}s (cap ${REVIEW_CALL_TIMEOUT}s); not retrying another model"
+      if [ -s "$out_file" ]; then
+        mv "$out_file" "$out_file.timed-out"
+      fi
+      rm -f "$out_file" "$out_file.model"
+      return 2
+    fi
+
+    log "$label: FAILED after ${elapsed}s with model $model (status $status)"
     if [ -s "$out_file.err" ]; then
       sed -n '1,15p' "$out_file.err" >&2
     fi
