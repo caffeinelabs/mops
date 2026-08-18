@@ -8,3 +8,11 @@ dist/
 mops.lock
 
 .DS_Store
+
+# AI PR review scratch (materialized diff/history context, per-pass outputs)
+.ai-review-context/
+.ai-review-work/
+cursor-ai-review.md
+cursor-ai-review.md.model
+.cursor/cli.json
+.github/prompts/eval/results/
