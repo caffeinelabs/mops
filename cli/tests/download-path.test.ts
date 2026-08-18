@@ -28,14 +28,16 @@ const actor = {
       batchFailure = undefined;
       throw err;
     }
-    // ids the registry does not know are omitted from the reply, not answered
-    // empty — an empty list is a real answer ("published, no hashes recorded")
-    return packageIds.flatMap((packageId) => {
-      let entry = hashResponses.get(packageId);
-      return entry === undefined
-        ? []
-        : [[packageId, entry] as [string, HashEntry[]]];
-    });
+    // `getFileHashesByPackageIds` answers every id it was asked for; an id it
+    // does not know and one that published no hashes both come back with an
+    // empty list, neither is omitted (`backend/main/main-canister.mo`).
+    return packageIds.map(
+      (packageId) =>
+        [packageId, hashResponses.get(packageId) ?? []] as [
+          string,
+          HashEntry[],
+        ],
+    );
   },
 };
 
@@ -386,7 +388,8 @@ describe("verifyDownloadedPackageFiles", () => {
 });
 
 // One consensus round costs the same however many ids it carries, so the
-// packages verifying concurrently during an install must share a single
+// callers asking within the same tick — the packages verifying concurrently
+// during an install, and the set `installAll` prefetches — must share a single
 // `getFileHashesByPackageIds` call.
 describe("batched hash fetches", () => {
   const okFiles = () => new Map([["src/lib.mo", bytes("module {}")]]);
@@ -411,20 +414,67 @@ describe("batched hash fetches", () => {
     expect(batchCalls).toEqual([packageIds]);
   });
 
-  test("an id the registry does not answer is not memoized", async () => {
+  // The registry answers a package it has no hashes for, with an empty list, so
+  // that answer is memoized like any other — which is sound because a published
+  // version is immutable and cannot acquire hashes mid-process.
+  test("a package with no registry hashes is answered once and memoized", async () => {
     let packageId = uniqueId();
 
     let first = await verifyDownloadedPackageFiles(packageId, okFiles());
-    expect(first).toEqual({ errors: [], unverified: true });
-
-    // published since; a memoized absence would keep admitting bytes unverified
-    hashResponses.set(packageId, [
-      [`${packageId}/src/lib.mo`, sha256(bytes("module {}"))],
-    ]);
     let second = await verifyDownloadedPackageFiles(packageId, okFiles());
 
-    expect(second).toEqual({ errors: [], unverified: false });
-    expect(batchCalls).toEqual([[packageId], [packageId]]);
+    expect(first).toEqual({ errors: [], unverified: true });
+    expect(second).toEqual({ errors: [], unverified: true });
+    expect(batchCalls).toEqual([[packageId]]);
+  });
+
+  test("a batch larger than the chunk size is split across calls", async () => {
+    let packageIds = Array.from({ length: 120 }, () => uniqueId());
+    for (let packageId of packageIds) {
+      hashResponses.set(packageId, [
+        [`${packageId}/src/lib.mo`, sha256(bytes("module {}"))],
+      ]);
+    }
+
+    let results = await Promise.all(
+      packageIds.map((packageId) =>
+        verifyDownloadedPackageFiles(packageId, okFiles()),
+      ),
+    );
+
+    expect(results).toEqual(
+      packageIds.map(() => ({ errors: [], unverified: false })),
+    );
+    // an IC message is capped at 2MB and the reply carries every file hash of
+    // every requested package, so no single call may grow with the graph
+    expect(batchCalls.map((call) => call.length)).toEqual([50, 50, 20]);
+    expect(batchCalls.flat()).toEqual(packageIds);
+  });
+
+  test("one failed chunk leaves the other chunks' waiters answered", async () => {
+    let packageIds = Array.from({ length: 60 }, () => uniqueId());
+    for (let packageId of packageIds) {
+      hashResponses.set(packageId, [
+        [`${packageId}/src/lib.mo`, sha256(bytes("module {}"))],
+      ]);
+    }
+    // consumed by whichever chunk reaches the actor first
+    batchFailure = new Error("fetch failed");
+
+    let settled = await Promise.allSettled(
+      packageIds.map((packageId) =>
+        verifyDownloadedPackageFiles(packageId, okFiles()),
+      ),
+    );
+
+    let failedIds = new Set(batchCalls[0]);
+    expect(failedIds.size).toBe(50);
+    for (let [index, outcome] of settled.entries()) {
+      let packageId = packageIds[index] as string;
+      expect(outcome.status).toBe(
+        failedIds.has(packageId) ? "rejected" : "fulfilled",
+      );
+    }
   });
 
   test("a failed call rejects every waiter and a retry fetches fresh", async () => {

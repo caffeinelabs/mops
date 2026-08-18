@@ -21,12 +21,15 @@ const actor = {
   },
   getFileHashesByPackageIds: async (packageIds: string[]) => {
     batchCalls.push(packageIds);
-    return packageIds.flatMap((packageId) => {
-      let entry = hashResponses.get(packageId);
-      return entry === undefined
-        ? []
-        : [[packageId, entry] as [string, Array<[string, Uint8Array]>]];
-    });
+    // every requested id is answered, unknown ones with an empty list — see
+    // `backend/main/main-canister.mo`
+    return packageIds.map(
+      (packageId) =>
+        [packageId, hashResponses.get(packageId) ?? []] as [
+          string,
+          Array<[string, Uint8Array]>,
+        ],
+    );
   },
 };
 
@@ -151,5 +154,64 @@ describe("hash prefetch in installAll", () => {
     expect(ok).toBe(true);
     expect(batchCallsWhenInstallDepsRan).toBe(0);
     expect(batchCalls).toEqual([]);
+  });
+
+  // `mops sources` runs with lock: "skip", which writes no lock and validates
+  // nothing — so a prefetched answer would have no consumer, and the un-awaited
+  // call would only keep an otherwise offline command alive for a consensus
+  // round.
+  test("the lock: skip path makes no registry hash call", async () => {
+    let name = `skip${counter++}`;
+    let packageId = `${name}@1.0.0`;
+    resolvedDeps = { [name]: "1.0.0" };
+    hashResponses.set(packageId, [
+      [`${packageId}/src/lib.mo`, sha256(bytes("module {}"))],
+    ]);
+
+    let ok = await inTempProject({ name }, (dir) =>
+      installAll({ silent: true, lock: "skip", threads: 6 }).then((ok) => {
+        expect(fs.existsSync(nodePath.join(dir, "mops.lock"))).toBe(false);
+        return ok;
+      }),
+    );
+
+    expect(ok).toBe(true);
+    expect(batchCalls).toEqual([]);
+  });
+
+  // Transitive packages are not knowable before their parent's download
+  // resolves — except from a stale lock, which still names the previous
+  // resolution's. Seeding from it is what puts them in the prefetched round
+  // instead of a batch of their own, one graph level later.
+  test("a stale lock seeds the prefetch with its transitive packages", async () => {
+    let name = `stale${counter++}`;
+    let trans = `trans${counter++}`;
+    let vouched = `vouched${counter++}`;
+    let vouchedId = `${vouched}@3.0.0`;
+    resolvedDeps = { [name]: "1.0.0", [trans]: "2.0.0", [vouched]: "3.0.0" };
+    for (let packageId of [`${name}@1.0.0`, `${trans}@2.0.0`, vouchedId]) {
+      hashResponses.set(packageId, [
+        [`${packageId}/src/lib.mo`, sha256(bytes("module {}"))],
+      ]);
+    }
+    let lock = {
+      version: 3,
+      // does not match mops.toml, so the lock is stale but still readable
+      mopsTomlDepsHash: "stale",
+      deps: { [name]: "1.0.0", [trans]: "2.0.0", [vouched]: "3.0.0" },
+      // the one package the lock can already vouch for needs no fetch, now or
+      // when the lock is rewritten
+      hashes: {
+        [vouchedId]: { [`${vouchedId}/src/lib.mo`]: hashOf("module {}") },
+      },
+    };
+
+    let ok = await inTempProject({ name, lock }, () =>
+      installAll({ silent: true }),
+    );
+
+    expect(ok).toBe(true);
+    expect(batchCalls).toEqual([[`${name}@1.0.0`, `${trans}@2.0.0`]]);
+    expect(batchCallsWhenInstallDepsRan).toBe(1);
   });
 });
