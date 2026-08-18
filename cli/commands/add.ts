@@ -26,13 +26,12 @@ import { cliError } from "../error.js";
 type AddOptions = {
   verbose?: boolean;
   dev?: boolean;
-  // Internal: `mops sync`/`mops update` pass "skip" to batch many add/remove
-  // calls into a single lock update at the end. Not exposed as a flag.
+  // Internal: `mops sync` passes "skip" to batch many add/remove calls into a
+  // single lock update at the end. Not exposed as a flag.
   lock?: LockPolicy;
-  // Only the interactive `mops add` moves an entry between sections. `mops
-  // update` reaches here for a package it already located in one section, and a
-  // manifest that declares it in both — from the old duplicating bug, or by
-  // hand — would silently lose the other entry to an unrelated version bump.
+  // Only the interactive `mops add` moves an entry between sections: a
+  // manifest that declares the package in both — from the old duplicating bug,
+  // or by hand — would otherwise silently lose one entry to an unrelated add.
   moveSections?: boolean;
 };
 
@@ -140,7 +139,7 @@ export async function add(
     let aliasKey = getPackageId(depName, ver);
     let key = asName || (findDeclared(config, aliasKey) ? aliasKey : depName);
     let replaced = findDeclared(config, key);
-    // `mops update`/`mops sync` pass `asName` and replace versions on purpose
+    // `mops sync` passes `asName` and replaces versions on purpose
     if (!asName && replaced?.version && replaced.version !== ver) {
       pinNote =
         `replaced ${key} = "${replaced.version}". ` +

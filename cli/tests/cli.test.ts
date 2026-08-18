@@ -370,4 +370,21 @@ describe("update / outdated --patch bound", () => {
       );
     },
   );
+
+  // `update` threads verbose into the installers, the GitHub re-pin and the
+  // requirements check, so it needs the same flag its siblings take.
+  test("mops update accepts --verbose", async () => {
+    const result = await cli(["update", "--verbose", "nosuchpkg"], {
+      cwd,
+      env: { CI: undefined },
+    });
+    expect(result.stderr).not.toMatch(/unknown option/);
+    expect(result.stdout).toMatch(/Package "nosuchpkg" is not installed!/);
+    expect(result.exitCode).toBe(2);
+  });
+
+  test("mops update --help lists --verbose", async () => {
+    const result = await cli(["update", "--help"]);
+    expect(result.stdout).toMatch(/--verbose\s+Show more information/);
+  });
 });

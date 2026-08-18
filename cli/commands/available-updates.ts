@@ -2,7 +2,11 @@ import semver from "semver";
 import { mainActor } from "../api/actors.js";
 import { getGithubCommit, parseGithubURL } from "../mops.js";
 import { Config } from "../types.js";
-import { getDepName, getDepPinnedVersion } from "../helpers/get-dep-name.js";
+import {
+  getDepName,
+  getDepPinnedVersion,
+  matchesDepKey,
+} from "../helpers/get-dep-name.js";
 import { SemverPart } from "../declarations/main/main.did.js";
 import { cliError } from "../error.js";
 
@@ -40,11 +44,7 @@ export async function getAvailableUpdates(
 
   let getCurrentVersion = (pkg: string, updateVersion: string) => {
     for (let dep of allDeps) {
-      if (getDepName(dep.name) === pkg && dep.version) {
-        let pinnedVersion = getDepPinnedVersion(dep.name);
-        if (pinnedVersion && !updateVersion.startsWith(pinnedVersion)) {
-          continue;
-        }
+      if (dep.version && matchesDepKey(dep.name, pkg, updateVersion)) {
         return dep.version;
       }
     }

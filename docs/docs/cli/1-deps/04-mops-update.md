@@ -32,7 +32,7 @@ mops update core
 | Code | Meaning                                                                                             |
 | ---- | --------------------------------------------------------------------------------------------------- |
 | `0`  | `mops.toml` is up to date                                                                           |
-| `2`  | The update could not be run or completed — no `mops.toml`, unknown `[pkg]`, or a GitHub dependency failed to re-pin |
+| `2`  | The update could not be run or completed — no `mops.toml`, unknown `[pkg]`, or a dependency failed to update (the others are still updated) |
 
 Same vocabulary as [`mops outdated`](./03-mops-outdated.md#exit-codes), minus code `1`: after a successful `mops update` there is nothing left to report as outdated.
 
@@ -57,5 +57,9 @@ Restrict updates to patch versions only — never bumps minor or major. Useful f
 For `0.x.y` packages this matches the default — caret already restricts pre-1.0 packages to patch updates.
 
 Mutually exclusive with [`--major`](#--major).
+
+### `--verbose`
+
+Verbose output.
 
 The [lockfile](../../10-mops.lock.md) is always kept in sync — there is no flag to opt out.

@@ -11,7 +11,13 @@ import os from "node:os";
 import path from "node:path";
 
 const getHighestSemverBatch = jest.fn<(...args: any[]) => Promise<any>>();
-const add = jest.fn<(...args: any[]) => Promise<any>>();
+const installMopsDep = jest.fn<(...args: any[]) => Promise<boolean>>();
+const installFromGithub = jest.fn<(...args: any[]) => Promise<boolean>>();
+const syncLocalCache = jest.fn<() => Promise<Record<string, string>>>();
+const notifyInstalls = jest.fn<(...args: any[]) => Promise<void>>();
+const checkIntegrity = jest.fn<(...args: any[]) => Promise<void>>();
+const checkRequirements = jest.fn<(...args: any[]) => Promise<void>>();
+const fetchRegistryFileHashes = jest.fn<(...args: any[]) => Promise<any>>();
 
 // `api/actors` pulls in the generated `*.did.js` declarations, which the ESM
 // `.js` -> extensionless moduleNameMapper resolves to the raw `.did` files.
@@ -21,32 +27,52 @@ jest.unstable_mockModule("../api/actors.js", () => ({
   storageActor: jest.fn(),
 }));
 
-// `add` installs and rewrites mops.toml; the tests here only assert what
-// `update` asks it to write.
-jest.unstable_mockModule("../commands/add.js", () => ({ add }));
-
+// The installers and the post-install tail are mocked out; the tests here
+// assert what `update` installs, what it writes to mops.toml, and that the
+// tail runs exactly once per invocation.
+jest.unstable_mockModule("../commands/install/install-mops-dep.js", () => ({
+  installMopsDep,
+}));
+jest.unstable_mockModule("../commands/install/install-from-github.js", () => ({
+  installFromGithub,
+}));
+jest.unstable_mockModule("../commands/install/sync-local-cache.js", () => ({
+  syncLocalCache,
+}));
+jest.unstable_mockModule("../notify-installs.js", () => ({ notifyInstalls }));
 jest.unstable_mockModule("../integrity.js", () => ({
-  checkIntegrity: jest.fn(async () => {}),
+  checkIntegrity,
+  fetchRegistryFileHashes,
+}));
+jest.unstable_mockModule("../check-requirements.js", () => ({
+  checkRequirements,
 }));
 
 const { update } = await import("../commands/update.js");
+const { dedupeInstall, noteTransientNetworkError } =
+  await import("../commands/install/install-concurrency.js");
 
 const SHA_OLD = "1111111111111111111111111111111111111111";
 const SHA_NEW = "2222222222222222222222222222222222222222";
 
 let originalCwd = process.cwd();
 let originalFetch = globalThis.fetch;
+let projectRoot = "";
 let logs: string[] = [];
 let logSpy: ReturnType<typeof jest.spyOn>;
+let warnSpy: ReturnType<typeof jest.spyOn>;
 
 const makeProject = (toml: string) => {
-  let root = fs.realpathSync(
+  projectRoot = fs.realpathSync(
     fs.mkdtempSync(path.join(os.tmpdir(), "mops-update-")),
   );
-  fs.writeFileSync(path.join(root, "mops.toml"), toml);
-  process.chdir(root);
-  return root;
+  fs.writeFileSync(path.join(projectRoot, "mops.toml"), toml);
+  process.chdir(projectRoot);
+  return projectRoot;
 };
+
+const readToml = () =>
+  fs.readFileSync(path.join(projectRoot, "mops.toml"), "utf8");
 
 // Stub the GitHub commits API so no test depends on the network or the
 // unauthenticated rate limit.
@@ -72,14 +98,28 @@ beforeEach(() => {
   logSpy = jest.spyOn(console, "log").mockImplementation((...args: any[]) => {
     logs.push(args.join(" "));
   });
+  warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
   getHighestSemverBatch.mockReset();
-  add.mockReset();
-  add.mockResolvedValue(undefined);
+  installMopsDep.mockReset();
+  installMopsDep.mockResolvedValue(true);
+  installFromGithub.mockReset();
+  installFromGithub.mockResolvedValue(true);
+  syncLocalCache.mockReset();
+  syncLocalCache.mockResolvedValue({});
+  notifyInstalls.mockReset();
+  notifyInstalls.mockResolvedValue(undefined);
+  checkIntegrity.mockReset();
+  checkIntegrity.mockResolvedValue(undefined);
+  checkRequirements.mockReset();
+  checkRequirements.mockResolvedValue(undefined);
+  fetchRegistryFileHashes.mockReset();
+  fetchRegistryFileHashes.mockResolvedValue({});
   process.exitCode = 0;
 });
 
 afterEach(() => {
   logSpy.mockRestore();
+  warnSpy.mockRestore();
   globalThis.fetch = originalFetch;
   process.chdir(originalCwd);
   process.exitCode = 0;
@@ -95,7 +135,7 @@ describe("mops update exit codes", () => {
 
     expect(output()).toMatch('Package "nope" is not installed!');
     expect(getHighestSemverBatch).not.toHaveBeenCalled();
-    expect(add).not.toHaveBeenCalled();
+    expect(installMopsDep).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(2);
   });
 
@@ -119,7 +159,9 @@ describe("mops update exit codes", () => {
     await update();
 
     expect(output()).toMatch("All dependencies are up to date!");
-    expect(add).not.toHaveBeenCalled();
+    expect(installMopsDep).not.toHaveBeenCalled();
+    expect(syncLocalCache).not.toHaveBeenCalled();
+    expect(checkIntegrity).toHaveBeenCalledTimes(1);
     expect(process.exitCode).toBe(0);
   });
 
@@ -129,11 +171,13 @@ describe("mops update exit codes", () => {
 
     await update();
 
-    expect(add).toHaveBeenCalledWith(
-      "core@1.2.0",
-      { dev: false, lock: "skip" },
+    expect(installMopsDep).toHaveBeenCalledWith(
       "core",
+      "1.2.0",
+      expect.objectContaining({ threads: expect.any(Number) }),
     );
+    expect(readToml()).toMatch('core = "1.2.0"');
+    expect(output()).toMatch("Updated core 1.0.0 -> 1.2.0");
     expect(process.exitCode).toBe(0);
   });
 
@@ -143,11 +187,7 @@ describe("mops update exit codes", () => {
 
     await update();
 
-    expect(add).toHaveBeenCalledWith(
-      "test@1.1.0",
-      { dev: true, lock: "skip" },
-      "test",
-    );
+    expect(readToml()).toMatch(/\[dev-dependencies\]\ntest = "1\.1\.0"/);
     expect(process.exitCode).toBe(0);
   });
 
@@ -157,11 +197,12 @@ describe("mops update exit codes", () => {
 
     await update();
 
-    expect(add).toHaveBeenCalledWith(
-      "core@1.5.0",
-      { dev: false, lock: "skip" },
-      "core@1",
+    expect(installMopsDep).toHaveBeenCalledWith(
+      "core",
+      "1.5.0",
+      expect.objectContaining({ threads: expect.any(Number) }),
     );
+    expect(readToml()).toMatch('"core@1" = "1.5.0"');
   });
 });
 
@@ -177,10 +218,13 @@ describe("mops update github dependencies", () => {
 
     await update();
 
-    expect(add).toHaveBeenCalledWith(
-      `https://github.com/org/repo#main@${SHA_NEW}`,
-      { dev: false, lock: "skip" },
+    expect(installFromGithub).toHaveBeenCalledWith(
       "mydep",
+      `https://github.com/org/repo#main@${SHA_NEW}`,
+      expect.anything(),
+    );
+    expect(readToml()).toMatch(
+      `mydep = "https://github.com/org/repo#main@${SHA_NEW}"`,
     );
     expect(process.exitCode).toBe(0);
   });
@@ -191,7 +235,8 @@ describe("mops update github dependencies", () => {
 
     await update();
 
-    expect(add).not.toHaveBeenCalled();
+    expect(installFromGithub).not.toHaveBeenCalled();
+    expect(readToml()).toMatch(SHA_OLD);
   });
 
   test("re-pins a github dev-dependency into [dev-dependencies]", async () => {
@@ -202,10 +247,10 @@ describe("mops update github dependencies", () => {
 
     await update();
 
-    expect(add).toHaveBeenCalledWith(
-      `https://github.com/org/repo#main@${SHA_NEW}`,
-      { dev: true, lock: "skip" },
-      "mydep",
+    expect(readToml()).toMatch(
+      new RegExp(
+        `\\[dev-dependencies\\]\\nmydep = "https://github.com/org/repo#main@${SHA_NEW}"`,
+      ),
     );
   });
 
@@ -218,11 +263,14 @@ describe("mops update github dependencies", () => {
     await update("mydep");
 
     expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    expect(add).toHaveBeenCalledTimes(1);
-    expect(add).toHaveBeenCalledWith(
-      `https://github.com/org/repo#main@${SHA_NEW}`,
-      { dev: false, lock: "skip" },
+    expect(installFromGithub).toHaveBeenCalledTimes(1);
+    expect(installFromGithub).toHaveBeenCalledWith(
       "mydep",
+      `https://github.com/org/repo#main@${SHA_NEW}`,
+      expect.anything(),
+    );
+    expect(readToml()).toMatch(
+      `other = "https://github.com/org/other#main@${SHA_OLD}"`,
     );
   });
 
@@ -237,21 +285,290 @@ describe("mops update github dependencies", () => {
 
     expect(output()).toMatch("Failed to update mydep: API rate limit exceeded");
     expect(process.exitCode).toBe(2);
-    expect(add).toHaveBeenCalledWith(
-      "core@1.2.0",
-      { dev: false, lock: "skip" },
-      "core",
-    );
+    expect(readToml()).toMatch('core = "1.2.0"');
   });
 
   test("reports a failed re-pin without aborting the run", async () => {
     makeProject(githubToml(SHA_OLD));
     stubGithub(SHA_NEW);
-    add.mockRejectedValue(new Error("download failed"));
+    installFromGithub.mockRejectedValue(new Error("download failed"));
 
     await update();
 
     expect(output()).toMatch("Failed to update mydep: download failed");
+    expect(readToml()).toMatch(SHA_OLD);
+    expect(process.exitCode).toBe(2);
+  });
+});
+
+// The single-pass contract: every new version is installed first, then one
+// mops.toml write, one local-cache sync, one install notification, one
+// integrity check.
+describe("mops update single pass", () => {
+  test("updates github and registry deps in one pass", async () => {
+    makeProject(
+      `[dependencies]\ncore = "1.0.0"\nmydep = "https://github.com/org/repo#main@${SHA_OLD}"\n\n[dev-dependencies]\ntest = "1.0.0"\n`,
+    );
+    getHighestSemverBatch.mockResolvedValue({
+      ok: [
+        ["core", "1.2.0"],
+        ["test", "1.1.0"],
+      ],
+    });
+    stubGithub(SHA_NEW);
+    syncLocalCache.mockResolvedValue({ core: "1.2.0", test: "1.1.0" });
+
+    await update();
+
+    expect(output()).toMatchSnapshot();
+
+    let toml = readToml();
+    expect(toml).toMatch('core = "1.2.0"');
+    expect(toml).toMatch(
+      `mydep = "https://github.com/org/repo#main@${SHA_NEW}"`,
+    );
+    expect(toml).toMatch(/\[dev-dependencies\]\ntest = "1\.1\.0"/);
+
+    expect(syncLocalCache).toHaveBeenCalledTimes(1);
+    expect(notifyInstalls).toHaveBeenCalledTimes(1);
+    expect(notifyInstalls).toHaveBeenCalledWith({
+      core: "1.2.0",
+      test: "1.1.0",
+    });
+    expect(checkIntegrity).toHaveBeenCalledTimes(1);
+    expect(checkRequirements).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(0);
+  });
+
+  test("a failed dep keeps its mops.toml entry and does not block the others", async () => {
+    makeProject('[dependencies]\ncore = "1.0.0"\nmap = "8.0.0"\n');
+    getHighestSemverBatch.mockResolvedValue({
+      ok: [
+        ["core", "1.2.0"],
+        ["map", "8.1.0"],
+      ],
+    });
+    installMopsDep.mockImplementation(async (name: string) => name !== "map");
+
+    await update();
+
+    expect(output()).toMatch("Updated core 1.0.0 -> 1.2.0");
+    expect(output()).toMatch("Failed to update map: install failed");
+    let toml = readToml();
+    expect(toml).toMatch('core = "1.2.0"');
+    expect(toml).toMatch('map = "8.0.0"');
+    expect(syncLocalCache).toHaveBeenCalledTimes(1);
+    expect(notifyInstalls).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(2);
+  });
+
+  test("skips the install tail when every update failed", async () => {
+    makeProject('[dependencies]\ncore = "1.0.0"\n');
+    getHighestSemverBatch.mockResolvedValue({ ok: [["core", "1.2.0"]] });
+    installMopsDep.mockResolvedValue(false);
+
+    await update();
+
+    expect(readToml()).toMatch('core = "1.0.0"');
+    expect(syncLocalCache).not.toHaveBeenCalled();
+    expect(notifyInstalls).not.toHaveBeenCalled();
+    expect(checkIntegrity).toHaveBeenCalledTimes(1);
+    expect(process.exitCode).toBe(2);
+  });
+
+  test("retries a transient network failure with a halved budget", async () => {
+    makeProject('[dependencies]\ncore = "1.0.0"\n');
+    getHighestSemverBatch.mockResolvedValue({ ok: [["core", "1.2.0"]] });
+    installMopsDep.mockImplementationOnce(async () => {
+      noteTransientNetworkError(new Error("fetch failed"));
+      return false;
+    });
+
+    await update();
+
+    expect(installMopsDep).toHaveBeenCalledTimes(2);
+    expect(readToml()).toMatch('core = "1.2.0"');
+    expect(process.exitCode).toBe(0);
+  });
+
+  test("mops update <pkg> updates only that registry dep", async () => {
+    makeProject('[dependencies]\ncore = "1.0.0"\nmap = "8.0.0"\n');
+    getHighestSemverBatch.mockResolvedValue({ ok: [["core", "1.2.0"]] });
+
+    await update("core");
+
+    expect(getHighestSemverBatch).toHaveBeenCalledWith([
+      ["core", "1.0.0", { minor: null }],
+    ]);
+    expect(installMopsDep).toHaveBeenCalledTimes(1);
+    let toml = readToml();
+    expect(toml).toMatch('core = "1.2.0"');
+    expect(toml).toMatch('map = "8.0.0"');
+  });
+
+  test("threads --verbose through to the installers", async () => {
+    makeProject('[dependencies]\ncore = "1.0.0"\n');
+    getHighestSemverBatch.mockResolvedValue({ ok: [["core", "1.2.0"]] });
+
+    await update(undefined, { verbose: true });
+
+    expect(installMopsDep).toHaveBeenCalledWith(
+      "core",
+      "1.2.0",
+      expect.objectContaining({ verbose: true }),
+    );
+    expect(checkRequirements).toHaveBeenCalledWith({ verbose: true });
+  });
+});
+
+// The key an update is written under and the section it goes to both come from
+// the one declaration that matched, so they cannot disagree.
+describe("mops update declaration matching", () => {
+  test("updates the [dependencies] entry of a package declared in both sections", async () => {
+    makeProject(
+      '[dependencies]\ncore = "1.5.0"\n\n[dev-dependencies]\n"core@1" = "1.2.0"\n',
+    );
+    getHighestSemverBatch.mockResolvedValue({
+      ok: [
+        ["core", "1.9.0"],
+        ["core", "1.9.0"],
+      ],
+    });
+
+    await update();
+
+    // One declaration, one install: two tasks would download it twice.
+    expect(installMopsDep).toHaveBeenCalledTimes(1);
+    let toml = readToml();
+    expect(toml).toMatch(/\[dependencies\]\ncore = "1\.9\.0"/);
+    expect(toml).toMatch(/\[dev-dependencies\]\n"core@1" = "1\.2\.0"/);
+    expect(process.exitCode).toBe(0);
+  });
+
+  test("a pinned alias only claims versions inside its own segment", async () => {
+    makeProject('[dependencies]\n"core@1" = "1.0.0"\n"core@10" = "10.0.0"\n');
+    getHighestSemverBatch.mockResolvedValue({
+      ok: [
+        ["core", "1.1.0"],
+        ["core", "10.1.0"],
+      ],
+    });
+
+    await update();
+
+    expect(output()).toMatch("Updated core@1 1.0.0 -> 1.1.0");
+    expect(output()).toMatch("Updated core@10 10.0.0 -> 10.1.0");
+    let toml = readToml();
+    expect(toml).toMatch('"core@1" = "1.1.0"');
+    expect(toml).toMatch('"core@10" = "10.1.0"');
+  });
+});
+
+describe("mops update install pool", () => {
+  test("shares one install with a transitive request for the same package", async () => {
+    makeProject('[dependencies]\ncore = "1.0.0"\nmap = "8.0.0"\n');
+    getHighestSemverBatch.mockResolvedValue({
+      ok: [
+        ["core", "1.2.0"],
+        ["map", "8.1.0"],
+      ],
+    });
+    let downloads: string[] = [];
+    installMopsDep.mockImplementation(async (name: string, version: string) => {
+      downloads.push(`${name}@${version}`);
+      // core's own dependency walk asks for the very version map is being
+      // updated to, through the scope's dedupe map.
+      if (name === "core") {
+        await dedupeInstall("map@8.1.0|0", () =>
+          installMopsDep("map", "8.1.0", {}),
+        );
+      }
+      return true;
+    });
+
+    await update();
+
+    expect(downloads.filter((id) => id === "map@8.1.0")).toHaveLength(1);
+    let toml = readToml();
+    expect(toml).toMatch('core = "1.2.0"');
+    expect(toml).toMatch('map = "8.1.0"');
+  });
+
+  test("prefetches the new versions' registry hashes in one call before installing", async () => {
+    makeProject(
+      `[dependencies]\ncore = "1.0.0"\n"map@8" = "8.0.0"\nmydep = "https://github.com/org/repo#main@${SHA_OLD}"\n`,
+    );
+    getHighestSemverBatch.mockResolvedValue({
+      ok: [
+        ["core", "1.2.0"],
+        ["map", "8.1.0"],
+      ],
+    });
+    stubGithub(SHA_NEW);
+
+    await update();
+
+    // The github dep has no registry hashes to prefetch.
+    expect(fetchRegistryFileHashes).toHaveBeenCalledTimes(1);
+    expect(fetchRegistryFileHashes).toHaveBeenCalledWith([
+      "core@1.2.0",
+      "map@8.1.0",
+    ]);
+    expect(fetchRegistryFileHashes.mock.invocationCallOrder[0]).toBeLessThan(
+      installMopsDep.mock.invocationCallOrder[0] as number,
+    );
+  });
+
+  test("does not prefetch when nothing registry-backed is updating", async () => {
+    makeProject(
+      `[dependencies]\nmydep = "https://github.com/org/repo#main@${SHA_OLD}"\n`,
+    );
+    stubGithub(SHA_NEW);
+
+    await update();
+
+    expect(fetchRegistryFileHashes).not.toHaveBeenCalled();
+  });
+
+  test("a failed prefetch does not fail the update", async () => {
+    makeProject('[dependencies]\ncore = "1.0.0"\n');
+    getHighestSemverBatch.mockResolvedValue({ ok: [["core", "1.2.0"]] });
+    fetchRegistryFileHashes.mockRejectedValue(new Error("consensus failed"));
+
+    await update();
+
+    expect(readToml()).toMatch('core = "1.2.0"');
+    expect(process.exitCode).toBe(0);
+  });
+
+  test("retries a transient failure but not a deterministic one", async () => {
+    makeProject('[dependencies]\ncore = "1.0.0"\nmap = "8.0.0"\n');
+    getHighestSemverBatch.mockResolvedValue({
+      ok: [
+        ["core", "1.2.0"],
+        ["map", "8.1.0"],
+      ],
+    });
+    let attempts: Record<string, number> = {};
+    installMopsDep.mockImplementation(async (name: string) => {
+      attempts[name] = (attempts[name] ?? 0) + 1;
+      if (name === "core") {
+        throw new Error("Error: Invalid mops.toml");
+      }
+      noteTransientNetworkError(new Error("ECONNRESET"));
+      return false;
+    });
+
+    await update();
+
+    expect(attempts.core).toBe(1);
+    expect(attempts.map).toBe(3);
+    // The deterministic failure is reported once, not once per attempt.
+    expect(
+      output().match(/Failed to update core: Invalid mops\.toml/g),
+    ).toEqual(["Failed to update core: Invalid mops.toml"]);
+    expect(output()).toMatch("Failed to update map: install failed");
+    expect(readToml()).toMatch('core = "1.0.0"');
     expect(process.exitCode).toBe(2);
   });
 });
