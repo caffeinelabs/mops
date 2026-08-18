@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`mops update single pass updates github and registry deps in one pass 1`] = `
+"Updated mydep 1111111 -> 2222222 (github: org/repo#main)
+Updated core 1.0.0 -> 1.2.0
+Updated test 1.0.0 -> 1.1.0"
+`;
