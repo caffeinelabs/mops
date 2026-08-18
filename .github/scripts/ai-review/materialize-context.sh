@@ -24,6 +24,7 @@ MAX_BLAME_FILES="${MAX_BLAME_FILES:-25}"
 MAX_BLAME_RANGES="${MAX_BLAME_RANGES:-8}"
 MAX_BLAME_LINES="${MAX_BLAME_LINES:-400}"
 MAX_PRIOR_PRS="${MAX_PRIOR_PRS:-5}"
+MAX_BLAME_COMMITS="${MAX_BLAME_COMMITS:-40}"
 MAX_PRIOR_COMMENTS="${MAX_PRIOR_COMMENTS:-60}"
 MAX_BLAME_BLOB_BYTES="${MAX_BLAME_BLOB_BYTES:-524288}"
 
@@ -116,13 +117,10 @@ while IFS= read -r -d '' file; do
 
   blame_path="$CONTEXT_DIR/history/blame/${file}.blame"
   mkdir -p "$(dirname "$blame_path")"
-  if git blame --date=short "${args[@]}" "$BASE_SHA" -- "$file" 2>/dev/null |
-    head -n "$MAX_BLAME_LINES" > "$blame_path"; then
-    if [ -s "$blame_path" ]; then
-      blamed=$((blamed + 1))
-    else
-      rm -f "$blame_path"
-    fi
+  git blame --date=short "${args[@]}" "$BASE_SHA" -- "$file" 2>/dev/null |
+    awk -v max="$MAX_BLAME_LINES" 'NR <= max' > "$blame_path" || true
+  if [ -s "$blame_path" ]; then
+    blamed=$((blamed + 1))
   else
     rm -f "$blame_path"
   fi
@@ -149,7 +147,7 @@ fetch_pr_comments() {
       | select((.body // "") != "")
       | select(.user.login as $l | ($d | index($l)) == null)
       | select((.user.login // "") | endswith("[bot]") | not)
-      | select(.body | test("cursor-ai-review") | not)
+      | select(.body | test("<!-- cursor-ai-review") | not)
       | "- \($kind) `\(.path // "-"):\(.line // .original_line // 0)` — \(.user.login): \(.body | gsub("[\r\n]+"; " ") | .[0:600])"
     '
 }
@@ -162,8 +160,26 @@ prior_out="$CONTEXT_DIR/history/prior-review-comments.md"
     [ -z "${GITHUB_REPOSITORY:-}" ] || [ -z "${GH_TOKEN:-}" ]; then
     printf '(unavailable: gh CLI, jq, GITHUB_REPOSITORY or GH_TOKEN missing)\n'
   else
-    pr_numbers="$(grep -oE '\(#[0-9]+\)' "$CONTEXT_DIR/history/commits.txt" 2>/dev/null |
-      tr -d '(#)' | awk '!seen[$0]++' | head -n "$MAX_PRIOR_PRS" || true)"
+    # Prefer the PRs that own the changed lines over the newest PRs touching any
+    # changed path: a diff that also brushes a high-churn file like AGENTS.md
+    # would otherwise spend the whole budget on unrelated traffic and never fetch
+    # the reviews of the code actually being rewritten. Blame gives the owning
+    # commits; the repository's squash subjects give their PR numbers.
+    blame_prs=''
+    if [ "$blamed" -gt 0 ]; then
+      blame_prs="$(
+        find "$CONTEXT_DIR/history/blame" -type f -name '*.blame' -exec cat {} + 2>/dev/null |
+          awk '{ gsub(/\^/, "", $1); if ($1 ~ /^[0-9a-f]{7,40}$/) print $1 }' |
+          awk '!seen[$0]++' | head -n "$MAX_BLAME_COMMITS" |
+          while IFS= read -r sha; do
+            git log -1 --format=%s "$sha" 2>/dev/null || true
+          done | grep -oE '\(#[0-9]+\)' | tr -d '(#)' || true
+      )"
+    fi
+    log_prs="$(grep -oE '\(#[0-9]+\)' "$CONTEXT_DIR/history/commits.txt" 2>/dev/null |
+      tr -d '(#)' || true)"
+    pr_numbers="$(printf '%s\n%s\n' "$blame_prs" "$log_prs" |
+      grep -E '^[0-9]+$' | awk '!seen[$0]++' | head -n "$MAX_PRIOR_PRS" || true)"
     if [ -z "$pr_numbers" ]; then
       printf '(no earlier PR numbers found in the commit history for these files)\n'
     else
@@ -171,10 +187,10 @@ prior_out="$CONTEXT_DIR/history/prior-review-comments.md"
       for pr in $pr_numbers; do
         body="$(
           {
-            fetch_pr_comments "$pr" comments inline
-            fetch_pr_comments "$pr" reviews review
-          } | head -n "$MAX_PRIOR_COMMENTS"
-        )"
+            fetch_pr_comments "$pr" comments inline || true
+            fetch_pr_comments "$pr" reviews review || true
+          } | awk -v max="$MAX_PRIOR_COMMENTS" 'NR <= max' || true
+        )" || body=''
         if [ -n "$body" ]; then
           printf '## PR #%s\n\n%s\n\n' "$pr" "$body"
           total=$((total + 1))

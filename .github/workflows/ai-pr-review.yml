@@ -332,9 +332,12 @@ jobs:
             // Carry the verdict of every earlier run forward, newest first, so a
             // later run cannot erase the record of what an earlier one said.
             const shortSha = headSha.slice(0, 8);
-            const priorEntries = ((previous && previous.body) || "")
-              .split("\n")
-              .filter((line) => /^- `[0-9a-f]{7,40}`/.test(line.trim()))
+            const previousBody = (previous && previous.body) || "";
+            const historyStart = previousBody.indexOf(historyMarker);
+            const priorEntries = (historyStart === -1
+              ? []
+              : previousBody.slice(historyStart + historyMarker.length).split("\n"))
+              .filter((line) => /^- `[0-9a-f]{7,40}` — /.test(line.trim()))
               .filter((line) => !line.includes(shortSha));
             const historyEntries = [
               `- \`${shortSha}\` — ${verdict} — ${new Date().toISOString()}`,
@@ -351,11 +354,15 @@ jobs:
             ].join("\n");
 
             const heading = `### Cursor AI review\n\n${verdictHeader}`;
-            let body = `${marker}\n${heading}\n\n${review}\n\n${history}\n\n---\n_${statsParts.join(" · ")}_`;
+            const prefix = `${marker}\n${heading}\n\n`;
+            const suffix = `\n\n${history}\n\n---\n_${statsParts.join(" · ")}_`;
+            const truncationNotice = "\n\n_Review truncated because it exceeded GitHub's comment size limit._";
 
-            if (body.length > maxBodyLength) {
-              body = body.slice(0, maxBodyLength) + "\n\n_Review truncated because it exceeded GitHub's comment size limit._";
+            if (prefix.length + review.length + suffix.length > maxBodyLength) {
+              const room = maxBodyLength - prefix.length - suffix.length - truncationNotice.length;
+              review = review.slice(0, Math.max(room, 0)) + truncationNotice;
             }
+            const body = `${prefix}${review}${suffix}`;
 
             if (previous) {
               await retry("updateComment", () => github.rest.issues.updateComment({

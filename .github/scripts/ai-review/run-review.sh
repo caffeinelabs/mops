@@ -45,47 +45,72 @@ PIPELINE_STARTED=$SECONDS
 ALL_LENSES="01-inputs 02-state 03-parity 04-wiring 05-history 06-tests 07-signals"
 LIGHT_LENSES="04-wiring 05-history 07-signals"
 
+# The light set is for diffs that are genuinely prose. Anything executable —
+# including the shell and YAML under .github/, which is where this pipeline's own
+# logic lives — gets the full set, because loops, retries and boundary conditions
+# are exactly what defects hide in.
 if [ -n "${REVIEW_LENSES:-}" ]; then
   LENSES="$REVIEW_LENSES"
   log "lens set: explicit ($LENSES)"
-elif grep -qE '^(cli|backend|frontend|cli-releases)/' "$CONTEXT_DIR/changed-files.txt"; then
+elif grep -qvE '\.(md|mdx|txt|png|jpe?g|gif|svg|ico|webp)$|^(docs|blog)/|^[^/]*\.md$' "$CONTEXT_DIR/changed-files.txt" > /dev/null; then
   LENSES="$ALL_LENSES"
-  log "lens set: full — the diff touches code"
+  log "lens set: full — the diff contains at least one non-prose file"
 else
   LENSES="$LIGHT_LENSES"
-  log "lens set: light — the diff touches no code under cli/, backend/, frontend/ or cli-releases/"
+  log "lens set: light — the diff is documentation and assets only"
 fi
 
 # --- Pass 1: find -------------------------------------------------------------
 
+lenses_attempted=0
 for lens in $LENSES; do
   lens_prompt="$PROMPT_DIR/lenses/${lens}.md"
   if [ ! -s "$lens_prompt" ]; then
     log "WARNING: lens prompt $lens_prompt not found; skipping"
+    printf 'COVERAGE GAP: the %s lens did not run (its prompt %s is missing), so nothing in this review was checked through that lens.\n' \
+      "$lens" "$lens_prompt" > "$WORK_DIR/findings/${lens}.gap"
     continue
   fi
+  lenses_attempted=$((lenses_attempted + 1))
   prompt="$WORK_DIR/prompt-find-${lens}.md"
   cat "$PROMPT_DIR/pr-review-context.md" "$PROMPT_DIR/pr-review-find.md" "$lens_prompt" > "$prompt"
   append_pr_context "$prompt"
 
   await_slot
-  (run_agent "$prompt" "$WORK_DIR/findings/${lens}.md" "find:${lens}" ||
-    log "find:${lens}: no usable output — this lens contributes a coverage gap") &
+  # A lens that produces nothing usable writes its own coverage gap. Silence
+  # would let synthesis mark the category ✅ and approve.
+  (run_agent "$prompt" "$WORK_DIR/findings/${lens}.md" "find:${lens}" || {
+    log "find:${lens}: no usable output — recording a coverage gap"
+    printf 'COVERAGE GAP: the %s lens failed to produce output, so nothing in this review was checked through that lens.\n' \
+      "$lens" > "$WORK_DIR/findings/${lens}.gap"
+  }) &
 done
 wait
 
+# Success is the .model marker run_agent writes, not file size: a failed CLI can
+# leave a partial dump behind, and treating that as output both hides the outage
+# and feeds error text into triage as candidates.
 finders_ok=0
 for lens in $LENSES; do
-  [ -s "$WORK_DIR/findings/${lens}.md" ] && finders_ok=$((finders_ok + 1))
+  if agent_succeeded "$WORK_DIR/findings/${lens}.md"; then
+    finders_ok=$((finders_ok + 1))
+  fi
 done
-log "finders completed: $finders_ok"
+lenses_selected="$(echo "$LENSES" | wc -w | tr -d ' ')"
+lenses_failed=$((lenses_selected - finders_ok))
+log "finders completed: $finders_ok of $lenses_selected selected ($lenses_attempted attempted)"
 
 if [ "$finders_ok" -eq 0 ]; then
   log "ERROR: every finder failed; refusing to synthesize a review from nothing"
   exit 1
 fi
 
-cat "$WORK_DIR/findings/"*.md > "$WORK_DIR/candidates-raw.md" 2>/dev/null || true
+: > "$WORK_DIR/candidates-raw.md"
+for lens in $LENSES; do
+  if agent_succeeded "$WORK_DIR/findings/${lens}.md"; then
+    cat "$WORK_DIR/findings/${lens}.md" >> "$WORK_DIR/candidates-raw.md"
+  fi
+done
 raw_count="$(grep -c '^=== FINDING ===' "$WORK_DIR/candidates-raw.md" 2>/dev/null || true)"
 raw_count="${raw_count:-0}"
 log "raw candidates: $raw_count"
@@ -143,7 +168,9 @@ if [ "$candidate_count" -gt 0 ]; then
   wait
 
   for candidate in "$WORK_DIR/candidates/"c*.txt; do
-    [ -s "$WORK_DIR/verdicts/$(basename "$candidate" .txt).md" ] && verified=$((verified + 1))
+    if agent_succeeded "$WORK_DIR/verdicts/$(basename "$candidate" .txt).md"; then
+      verified=$((verified + 1))
+    fi
   done
 fi
 if [ "$dropped_for_cap" -gt 0 ]; then
@@ -228,11 +255,20 @@ cat "$PROMPT_DIR/pr-review-context.md" "$PROMPT_DIR/pr-review-synthesize.md" > "
     cat "$refuted_appendix"
   fi
   # Coverage gaps drive the difference between a ✅ and a ⚠️ row, so they have to
-  # reach the synthesis pass verbatim.
-  if grep -h '^COVERAGE GAP:' "$WORK_DIR/findings/"*.md "$WORK_DIR/triage.md" > "$WORK_DIR/coverage-gaps.txt" 2>/dev/null &&
-    [ -s "$WORK_DIR/coverage-gaps.txt" ]; then
+  # reach the synthesis pass verbatim — including the gaps written on behalf of
+  # lenses that never ran.
+  {
+    grep -h '^COVERAGE GAP:' "$WORK_DIR/findings/"*.md "$WORK_DIR/triage.md" 2>/dev/null || true
+    cat "$WORK_DIR/findings/"*.gap 2>/dev/null || true
+  } > "$WORK_DIR/coverage-gaps.txt"
+  if [ -s "$WORK_DIR/coverage-gaps.txt" ]; then
     printf '\n## Coverage gaps reported by the reviewers\n\n'
     cat "$WORK_DIR/coverage-gaps.txt"
+  fi
+  if [ "$lenses_failed" -gt 0 ]; then
+    printf '\n## Incomplete lens coverage\n\n'
+    printf '%s of %s selected review lenses produced no output for this PR. The categories those lenses cover were NOT checked: mark them ⚠️ and say so, and do not treat this review as complete evidence for an approval.\n' \
+      "$lenses_failed" "$lenses_selected"
   fi
   if [ "$dropped_for_cap" -gt 0 ]; then
     printf '\n## Verification cap\n\n'
@@ -248,11 +284,15 @@ fi
 
 # --- Stats footer -------------------------------------------------------------
 
-models_used="$(cat "$WORK_DIR"/findings/*.model "$WORK_DIR"/*.model "$OUTPUT_FILE.model" 2>/dev/null |
-  tr ' ' '\n' | sort -u | tr '\n' ' ' | sed -E 's/ +$//')"
+models_used="$(
+  shopt -s nullglob
+  cat "$WORK_DIR"/findings/*.model "$WORK_DIR"/verdicts/*.model "$WORK_DIR"/*.model "$OUTPUT_FILE.model" 2>/dev/null |
+    tr ' ' '\n' | sort -u | tr '\n' ' ' | sed -E 's/ +$//' || true
+)"
 {
-  printf 'lenses=%s\n' "$(echo "$LENSES" | wc -w | tr -d ' ')"
+  printf 'lenses=%s/%s\n' "$finders_ok" "$lenses_selected"
   printf 'finders_ok=%s\n' "$finders_ok"
+  printf 'lenses_failed=%s\n' "$lenses_failed"
   printf 'raw_candidates=%s\n' "$raw_count"
   printf 'candidates=%s\n' "$candidate_count"
   printf 'confirmed=%s\n' "$confirmed"

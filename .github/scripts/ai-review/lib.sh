@@ -57,6 +57,7 @@ write_agent_sandbox() {
       "Read(package-lock.json)",
       "Read(tsconfig*.json)",
       "Read(dfx.json)",
+      "Read(canister_ids.json)",
       "Read(icp.yaml)",
       "Read(mops.toml)",
       "Read(mops.lock)",
@@ -71,6 +72,8 @@ write_agent_sandbox() {
       "Shell(*)",
       "Write(**)",
       "Read(.git/**)",
+      "Read(.github/prompts/pr-review-synthesize.md)",
+      "Read(.github/prompts/pr-review-prompt.md)",
       "Read(.env*)",
       "Read(**/.env*)",
       "Read(**/*secret*)",
@@ -140,8 +143,21 @@ run_agent() {
     if [ -s "$out_file.err" ]; then
       sed -n '1,15p' "$out_file.err" >&2
     fi
+    # A failing CLI can still have streamed a partial dump — including a stray
+    # finding block — into $out_file. Keep it for the artifact under a .failed
+    # name, but never leave it where a caller could mistake it for output.
+    if [ -s "$out_file" ]; then
+      mv "$out_file" "$out_file.failed-$model"
+    fi
+    rm -f "$out_file" "$out_file.model"
   done
   return 1
+}
+
+# Whether run_agent produced real output for this file. The .model marker is
+# written only on success, so it is the honest signal; file size is not.
+agent_succeeded() {
+  [ -s "$1" ] && [ -s "$1.model" ]
 }
 
 # Block until fewer than REVIEW_MAX_PARALLEL background jobs are running.

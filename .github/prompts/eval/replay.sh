@@ -28,10 +28,11 @@ run_case() {
   local case_name
   case_name="$(basename "$case_file" .md)"
 
-  local base_sha head_sha expected
+  local base_sha head_sha expected case_pr
   base_sha="$(field "$case_file" base_sha)"
   head_sha="$(field "$case_file" head_sha)"
   expected="$(field "$case_file" expected_verdict)"
+  case_pr="$(field "$case_file" pr)"
 
   if [ -z "$base_sha" ] || [ -z "$head_sha" ]; then
     log "$case_name: missing base_sha or head_sha; skipping"
@@ -52,6 +53,7 @@ run_case() {
   log "$case_name: checking out $head_sha in a throwaway worktree"
   git -C "$REPO_ROOT" worktree add --detach --quiet "$work_tree" "$head_sha"
 
+  local pipeline_status=0
   (
     cd "$work_tree"
     # CONTEXT_DIR and WORK_DIR stay relative: the agent sandbox allow-rules are
@@ -64,15 +66,24 @@ run_case() {
     export OUTPUT_FILE="review.md"
     export BASE_SHA="$base_sha"
     export HEAD_SHA="$head_sha"
-    export GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}"
+    # Fall back to the checkout's own remote so a local replay gets the same
+    # prior-review input CI does; Actions sets both of these itself.
+    export GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null || true)}"
     export GH_TOKEN="${GH_TOKEN:-$(gh auth token 2>/dev/null || true)}"
+    export PR_NUMBER="$case_pr"
 
     "$REPO_ROOT/.github/scripts/ai-review/materialize-context.sh"
     "$REPO_ROOT/.github/scripts/ai-review/run-review.sh"
-  )
+  ) || pipeline_status=$?
 
+  rm -rf "$out_dir/work"
   cp -R "$work_tree/.ai-review-work" "$out_dir/work" 2>/dev/null || true
   cp "$work_tree/review.md" "$out_dir/review.md" 2>/dev/null || true
+
+  if [ "$pipeline_status" -ne 0 ]; then
+    log "$case_name: pipeline exited $pipeline_status — partial artifacts kept in $out_dir"
+    return 1
+  fi
 
   score_case "$case_file" "$case_name" "$out_dir" "$expected"
 }
