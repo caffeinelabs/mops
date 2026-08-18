@@ -51,20 +51,20 @@ jobs:
         github.event.label.name == 'skip-ai-review'
       )
     runs-on: ubuntu-latest
-    # Three parallel sweeps plus one judge. The generous timeout is a backstop
-    # for a stuck agent, not the expected duration — this check is meant to
-    # finish alongside the other CI jobs, not after them.
-    timeout-minutes: 20
+    # Three parallel sweeps plus one judge. A backstop for a stuck agent, not a
+    # target: 20 minutes cut a run that was still making progress, and a
+    # truncated review posts as REVIEW_ERROR, which is worse than a slow one.
+    timeout-minutes: 30
     concurrency:
       group: ai-pr-review-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     env:
       # Tried in order. The account default ("Auto") routes to cheaper models
-      # that produce shallow reviews, so the chain is pinned. The Fast tier
-      # leads because it is the same model with faster output; the plain and
-      # previous pins follow, since an unrecognised slug would otherwise lose
-      # the whole run.
-      REVIEW_MODELS: grok-4.6-fast grok-4.6 grok-4.5
+      # that produce shallow reviews, so the chain is pinned; the previous pin
+      # trails it because an unrecognised slug would otherwise lose the whole
+      # run. Do not add a "-fast" variant: Cursor's Fast tier is an account
+      # setting, not a --model id, and it is rejected in a few seconds.
+      REVIEW_MODELS: grok-4.6 grok-4.5
       CONTEXT_DIR: .ai-review-context
       WORK_DIR: .ai-review-work
       PROMPT_DIR: .github/prompts

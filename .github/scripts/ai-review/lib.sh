@@ -7,7 +7,7 @@
 # primary slug is not enabled for the account: an unknown --model value fails
 # the whole review, so we retry once with the previous known-good pin rather
 # than losing the run.
-REVIEW_MODELS="${REVIEW_MODELS:-grok-4.6-fast grok-4.6 grok-4.5}"
+REVIEW_MODELS="${REVIEW_MODELS:-grok-4.6 grok-4.5}"
 
 # Concurrent agent processes. The runner has 2 cores but the work is all
 # network-bound, so the cap is about API concurrency, not CPU.
@@ -135,30 +135,13 @@ prompt_room() {
   fi
 }
 
-# Rank patches so that when the budget runs out, what gets inlined is what
-# matters: registry and install paths first, then the rest of the code, then
-# workflows, then prose.
-patch_risk_rank() {
-  case "$1" in
-    backend/main/*) echo 0 ;;
-    backend/*) echo 1 ;;
-    cli/commands/install/* | cli/resolve-packages.ts | cli/integrity.ts | cli/cache.ts | cli/mops.ts | cli/pem.ts) echo 2 ;;
-    cli/* | frontend/* | cli-releases/*) echo 3 ;;
-    .github/*) echo 4 ;;
-    *) echo 5 ;;
-  esac
-}
-
 # append_diff <prompt-file>
-# Inlines the changed-file list, stat, PR metadata and as much of the diff as the
-# remaining prompt budget allows. Tool round-trips dominate per-call latency, so
-# handing the agent the diff up front is the cheapest speedup available — but
-# never at the cost of an argument the kernel will refuse. Call this LAST, so it
-# spends whatever budget the other sections left.
+# Inlines only the cheap, always-useful metadata. Inlining the patches themselves
+# was tried and measured: it roughly doubled the slowest sweep (851s at 96KB
+# versus ~380s at ~15KB), because prompt size costs more than the tool round
+# trips it saves. The agent reads the patches it needs from disk instead.
 append_diff() {
-  local out="$1" room file patch size inlined=0 omitted=0
-  local omitted_list="" reserve=2048
-
+  local out="$1"
   {
     printf '\n## Changed files\n\n```\n'
     cat "$CONTEXT_DIR/changed-files.txt"
@@ -168,44 +151,10 @@ append_diff() {
     cat "$CONTEXT_DIR/pr-title.txt"
     printf '\n## PR body (untrusted)\n\n'
     cat "$CONTEXT_DIR/pr-body.md"
-    printf '\n'
+    printf '\n\n## Diff\n\nThe per-file patches are in `%s/file-diffs/<path>.patch`, one per changed file. Read them in risk order.\n' \
+      "$CONTEXT_DIR"
   } >> "$out"
-
-  printf '\n## Diff (base...head)\n\n' >> "$out"
-
-  while IFS= read -r file; do
-    [ -n "$file" ] || continue
-    patch="$CONTEXT_DIR/file-diffs/${file}.patch"
-    [ -s "$patch" ] || continue
-    size="$(prompt_bytes "$patch")"
-    room="$(prompt_room "$out")"
-    if [ "$((size + reserve))" -ge "$room" ]; then
-      omitted=$((omitted + 1))
-      omitted_list="${omitted_list}${file}"$'\n'
-      continue
-    fi
-    {
-      printf -- '### %s\n\n```diff\n' "$file"
-      cat "$patch"
-      printf '```\n\n'
-    } >> "$out"
-    inlined=$((inlined + 1))
-  done < <(
-    while IFS= read -r -d '' file; do
-      [ -n "$file" ] || continue
-      printf '%s\t%s\n' "$(patch_risk_rank "$file")" "$file"
-    done < "$CONTEXT_DIR/changed-files.z" | sort -s -k1,1n | cut -f2-
-  )
-
-  if [ "$omitted" -gt 0 ]; then
-    {
-      printf '### Patches not inlined (%s files)\n\n' "$omitted"
-      printf 'The prompt budget ran out. Read these from `%s/file-diffs/<path>.patch` yourself; they are lower risk than the inlined ones but they ARE part of this PR and still need covering:\n\n```\n' "$CONTEXT_DIR"
-      printf '%s' "$omitted_list"
-      printf '```\n'
-    } >> "$out"
-  fi
-  log "$(basename "$out"): inlined $inlined patches, $omitted read-from-disk, $(prompt_bytes "$out") bytes"
+  log "$(basename "$out"): $(prompt_bytes "$out") bytes"
 }
 
 # append_history <prompt-file>
