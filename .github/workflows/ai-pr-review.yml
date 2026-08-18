@@ -300,10 +300,13 @@ jobs:
               review = "⚠️ **AI review could not be completed.**\n\nPlease proceed with manual code review.";
             }
 
+            // Order matters: truncating after the wrap would slice off the
+            // closing </details> and leave the block permanently expanded.
             const reviewLines = review.split("\n").length;
-            if (reviewLines > 150) {
-              review = `<details>\n<summary>View full review (${reviewLines} lines)</summary>\n\n${review}\n\n</details>`;
-            }
+            const wrapReview = (text) =>
+              reviewLines > 150
+                ? `<details>\n<summary>View full review (${reviewLines} lines)</summary>\n\n${text}\n\n</details>`
+                : text;
 
             // Pipeline stats come from the run, not from the model's own account
             // of what it did.
@@ -361,11 +364,13 @@ jobs:
             const suffix = `\n\n${history}\n\n---\n_${statsParts.join(" · ")}_`;
             const truncationNotice = "\n\n_Review truncated because it exceeded GitHub's comment size limit._";
 
-            if (prefix.length + review.length + suffix.length > maxBodyLength) {
-              const room = maxBodyLength - prefix.length - suffix.length - truncationNotice.length;
+            const wrapOverhead = wrapReview("").length;
+            if (prefix.length + wrapOverhead + review.length + suffix.length > maxBodyLength) {
+              const room =
+                maxBodyLength - prefix.length - wrapOverhead - suffix.length - truncationNotice.length;
               review = review.slice(0, Math.max(room, 0)) + truncationNotice;
             }
-            const body = `${prefix}${review}${suffix}`;
+            const body = `${prefix}${wrapReview(review)}${suffix}`;
 
             if (previous) {
               await retry("updateComment", () => github.rest.issues.updateComment({
@@ -465,6 +470,13 @@ jobs:
                     message: `AI review verdict for ${headSha} is ${verdict}; dismissing stale automated approval.`,
                   }));
                 } catch (error) {
+                  // A dismissal that landed just before a retriable-looking
+                  // error 422s on the retry. The approval is gone either way,
+                  // which is the outcome this step exists to guarantee.
+                  if (error.status === 422) {
+                    core.info(`Automated approval ${review.id} was already dismissed.`);
+                    continue;
+                  }
                   core.setFailed(`Could not dismiss stale automated approval ${review.id}: ${error.message}`);
                 }
               }

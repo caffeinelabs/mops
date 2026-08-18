@@ -1,7 +1,7 @@
 ## Your sweep: fit (SWEEP_ID = `FIT`)
 
-Does the change fit the code around it, and does every new knob actually reach the user? Everything here is
-mechanically checkable — do the checks, do not eyeball them.
+Does the change fit the code around it, does every new knob actually reach the user, and does the test suite
+still match what it covers? Everything here is mechanically checkable — do the checks, do not eyeball them.
 
 **Parity with the code this was modelled on.** New code in this repo is almost always derived from existing
 code: a command modelled on a sibling command, an install path on the existing install path, a canister
@@ -52,3 +52,18 @@ that switches on that type.
 exit codes diverge without cause. Logic newly present in two places that must stay in step — say which two
 sites will drift and what breaks when they do. A helper added where an existing one would do, or added for a
 single caller with no second use in sight.
+
+**Tests as an attack surface.** Not "add coverage" — find defects *through* the tests:
+
+- Read the new tests, then the code they cover. Enumerate the inputs the new code accepts that no test
+  exercises, then reason through each by hand. Any you conclude is wrong is a finding — report the wrong
+  behavior, with the gap as supporting evidence.
+- Assertions that cannot fail: a mock asserted called but not with what; an expectation that would pass with
+  the body deleted; a substring so short it always matches.
+- Every changed snapshot hunk under `cli/tests/__snapshots__/` is a recorded behavior change: a changed exit
+  message, dropped warning, reordered output or large diff with no corresponding source change is a
+  regression as easily as a fix.
+- Mocks that no longer match the real module's shape, arity or error behavior — the suite stays green while
+  the real path is broken.
+
+Missing tests where the surrounding code has none are not a finding.

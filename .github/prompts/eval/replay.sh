@@ -14,6 +14,13 @@
 # present locally (git fetch first if they are not). Each run costs real tokens.
 set -euo pipefail
 
+# The pipeline uses mapfile and `wait -n`, which need bash >= 4.3. macOS ships
+# 3.2 as /bin/bash, so say so plainly rather than failing somewhere obscure.
+if [ "${BASH_VERSINFO[0]}" -lt 5 ] && { [ "${BASH_VERSINFO[0]}" -lt 4 ] || [ "${BASH_VERSINFO[1]}" -lt 3 ]; }; then
+  printf 'This needs bash >= 4.3 (running %s). On macOS: brew install bash, then re-run.\n' "$BASH_VERSION" >&2
+  exit 1
+fi
+
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 EVAL_DIR="$REPO_ROOT/.github/prompts/eval"
 CASES_DIR="$EVAL_DIR/cases"
@@ -93,7 +100,7 @@ score_case() {
   local review="$out_dir/review.md"
   local candidates="$out_dir/candidates.txt"
 
-  cat "$out_dir/work/candidates.md" "$out_dir/work/dispositions.txt" > "$candidates" 2>/dev/null || : > "$candidates"
+  cp "$out_dir/work/candidates.md" "$candidates" 2>/dev/null || : > "$candidates"
 
   local total=0 reported=0 found=0
   printf '\n== %s ==\n' "$case_name"
@@ -120,12 +127,27 @@ score_case() {
     printf '%-32s %-10s %-10s\n' "$defect" "$in_candidates" "$in_review"
   done < <(sed -nE 's/^[[:space:]]*defect:[[:space:]]*(.*)$/\1/p' "$case_file")
 
-  local decision
-  decision="$(grep -m1 -E '^(\*\*Decision\*\*|Decision):' "$review" 2>/dev/null |
+  # Mirror ai-pr-review.yml's Parse verdict step: findings override the token.
+  local token decision
+  token="$(grep -m1 -E '^(\*\*Decision\*\*|Decision):' "$review" 2>/dev/null |
     sed -E 's/^(\*\*Decision\*\*|Decision):[[:space:]]*//' | tr -d '\r' | xargs || true)"
+  if grep -Eq '^[[:space:]]*-?[[:space:]]*P[0-3]:' "$review" 2>/dev/null; then
+    decision=REQUEST_CHANGES
+  elif grep -Eq '^[[:space:]]*-?[[:space:]]*S[0-2]:' "$review" 2>/dev/null; then
+    decision=REQUEST_HUMAN_REVIEW
+  else
+    case "$token" in
+      APPROVE | REQUEST_CHANGES | REQUEST_HUMAN_REVIEW | REVIEW_ERROR) decision="$token" ;;
+      *) decision=REVIEW_ERROR ;;
+    esac
+  fi
 
   printf '\nfound as candidate: %s/%s   reported in review: %s/%s\n' "$found" "$total" "$reported" "$total"
-  printf 'decision: %s (expected %s)\n' "${decision:-none}" "${expected:-unspecified}"
+  printf 'decision: %s (expected %s)' "$decision" "${expected:-unspecified}"
+  if [ "$decision" != "$token" ]; then
+    printf '  [model said %s; CI gating wins]' "${token:-none}"
+  fi
+  printf '\n'
   printf 'artifacts: %s\n' "$out_dir"
 
   # A defect that shows up as a candidate but not in the review is the synthesis

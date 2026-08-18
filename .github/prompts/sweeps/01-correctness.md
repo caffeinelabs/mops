@@ -1,7 +1,8 @@
 ## Your sweep: correctness (SWEEP_ID = `CORRECTNESS`)
 
 Does the changed code do the wrong thing for some reachable input? Find bugs by construction — pick the
-input that breaks each decision — not by reading for smells.
+input that breaks each decision — not by reading for smells. The test suite is another sweep's job; here you
+reason about the production code directly.
 
 **Changed decisions.** For every predicate, comparison, match, lookup and branch this PR adds or changes,
 work out the input where the new code and the base code disagree, and decide which is right:
@@ -39,18 +40,3 @@ work out the input where the new code and the base code disagree, and decide whi
 (exit 141) into a failure branch; an `if`'s else branch deleting output the pipeline already wrote; unquoted
 expansions; a glob that matches nothing without `nullglob`; `|| true` on the wrong command; an error path
 that masks failure into success.
-
-**Tests as an attack surface.** Not "add coverage" — find defects *through* the tests:
-
-- Read the new tests, then the code they cover. Enumerate the inputs the new code accepts that no test
-  exercises, then reason through each by hand. Any you conclude is wrong is a finding — report the wrong
-  behavior, with the gap as supporting evidence.
-- Assertions that cannot fail: a mock asserted called but not with what; an expectation that would pass with
-  the body deleted; a substring so short it always matches.
-- Every changed snapshot hunk under `cli/tests/__snapshots__/` is a recorded behavior change: a changed exit
-  message, dropped warning, reordered output or large diff with no corresponding source change is a
-  regression as easily as a fix.
-- Mocks that no longer match the real module's shape, arity or error behavior — the suite stays green while
-  the real path is broken.
-
-Missing tests where the surrounding code has none are not a finding.

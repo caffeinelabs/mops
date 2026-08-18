@@ -53,12 +53,12 @@ PROSE_SWEEPS="03-risk"
 if [ -n "${REVIEW_SWEEPS:-}" ]; then
   SWEEPS="$REVIEW_SWEEPS"
   log "sweeps: explicit ($SWEEPS)"
-elif grep -qvE '\.(md|mdx|txt|png|jpe?g|gif|svg|ico|webp)$|^(docs|blog)/|^[^/]*\.md$' "$CONTEXT_DIR/changed-files.txt" > /dev/null; then
+elif grep -qvE '^(docs|blog)/|^[^/]*\.md$|^[^/]*\.txt$' "$CONTEXT_DIR/changed-files.txt" > /dev/null; then
   SWEEPS="$ALL_SWEEPS"
-  log "sweeps: full — the diff contains at least one non-prose file"
+  log "sweeps: full — the diff touches something outside docs/, blog/ and root prose"
 else
   SWEEPS="$PROSE_SWEEPS"
-  log "sweeps: prose — the diff is documentation and assets only"
+  log "sweeps: prose — the diff is documentation only"
 fi
 
 # --- Wave 1: find (parallel) --------------------------------------------------
@@ -162,10 +162,19 @@ fi
 # The dispositions block records what happened to every candidate. It is kept for
 # the artifact and stripped from the posted review — a reader wants the findings,
 # not the bookkeeping.
-sed -n '/^=== DISPOSITIONS ===$/,/^=== END DISPOSITIONS ===$/p' "$judge_out" |
-  sed -e '/^=== DISPOSITIONS ===$/d' -e '/^=== END DISPOSITIONS ===$/d' > "$WORK_DIR/dispositions.txt" || true
-sed -e '/^=== DISPOSITIONS ===$/,/^=== END DISPOSITIONS ===$/d' "$judge_out" |
-  sed -e '/./,$!d' > "$OUTPUT_FILE"
+awk '
+  /^=== END DISPOSITIONS ===$/ && !seen { seen = 1; next }
+  !seen && /^=== DISPOSITIONS ===$/ { next }
+  !seen { print > dispositions; next }
+  { print > review }
+' dispositions="$WORK_DIR/dispositions.txt" review="$WORK_DIR/review-body.md" "$judge_out"
+
+# No dispositions block at all: the whole output is the review.
+if [ ! -s "$WORK_DIR/review-body.md" ]; then
+  cp "$judge_out" "$WORK_DIR/review-body.md"
+  : > "$WORK_DIR/dispositions.txt"
+fi
+sed -e '/./,$!d' "$WORK_DIR/review-body.md" > "$OUTPUT_FILE"
 
 if [ ! -s "$OUTPUT_FILE" ]; then
   log "ERROR: the judging pass produced no review after stripping dispositions"
