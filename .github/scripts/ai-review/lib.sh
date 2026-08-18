@@ -112,16 +112,52 @@ append_pr_context() {
   } >> "$out"
 }
 
-# append_diff <prompt-file>
-# Inlines the changed-file list, diff stat, PR metadata and — when it fits — the
-# full diff. Tool round-trips dominate per-call latency, so handing the agent
-# everything up front is the cheapest speedup available.
-INLINE_DIFF_MAX_BYTES="${INLINE_DIFF_MAX_BYTES:-260000}"
+# Linux caps a single execve argument at 32 pages (131072 bytes), and the prompt
+# is passed as one argv string. Exceeding it fails the call instantly with E2BIG,
+# for every model in the chain, with no useful error — so the assembled prompt is
+# budgeted rather than merely the diff. macOS has no such cap, which is exactly
+# why this has to be a hard number and not a local observation.
+MAX_ARG_STRLEN=131072
+MAX_PROMPT_BYTES="${MAX_PROMPT_BYTES:-102400}"
+if [ "$MAX_PROMPT_BYTES" -gt $((MAX_ARG_STRLEN - 16384)) ]; then
+  MAX_PROMPT_BYTES=$((MAX_ARG_STRLEN - 16384))
+fi
 
+prompt_bytes() { wc -c < "$1" | tr -d ' '; }
+
+prompt_room() {
+  local used
+  used="$(prompt_bytes "$1")"
+  if [ "$used" -ge "$MAX_PROMPT_BYTES" ]; then
+    echo 0
+  else
+    echo $((MAX_PROMPT_BYTES - used))
+  fi
+}
+
+# Rank patches so that when the budget runs out, what gets inlined is what
+# matters: registry and install paths first, then the rest of the code, then
+# workflows, then prose.
+patch_risk_rank() {
+  case "$1" in
+    backend/main/*) echo 0 ;;
+    backend/*) echo 1 ;;
+    cli/commands/install/* | cli/resolve-packages.ts | cli/integrity.ts | cli/cache.ts | cli/mops.ts | cli/pem.ts) echo 2 ;;
+    cli/* | frontend/* | cli-releases/*) echo 3 ;;
+    .github/*) echo 4 ;;
+    *) echo 5 ;;
+  esac
+}
+
+# append_diff <prompt-file>
+# Inlines the changed-file list, stat, PR metadata and as much of the diff as the
+# remaining prompt budget allows. Tool round-trips dominate per-call latency, so
+# handing the agent the diff up front is the cheapest speedup available — but
+# never at the cost of an argument the kernel will refuse. Call this LAST, so it
+# spends whatever budget the other sections left.
 append_diff() {
-  local out="$1" diff_bytes
-  diff_bytes="$(find "$CONTEXT_DIR/file-diffs" -type f -name '*.patch' -exec cat {} + 2>/dev/null | wc -c | tr -d ' ')"
-  diff_bytes="${diff_bytes:-0}"
+  local out="$1" room file patch size inlined=0 omitted=0
+  local omitted_list="" reserve=2048
 
   {
     printf '\n## Changed files\n\n```\n'
@@ -133,30 +169,70 @@ append_diff() {
     printf '\n## PR body (untrusted)\n\n'
     cat "$CONTEXT_DIR/pr-body.md"
     printf '\n'
-    if [ "$diff_bytes" -le "$INLINE_DIFF_MAX_BYTES" ] && [ "$diff_bytes" -gt 0 ]; then
-      printf '\n## Diff (base...head)\n\n```diff\n'
-      find "$CONTEXT_DIR/file-diffs" -type f -name '*.patch' -exec cat {} + 2>/dev/null || true
-      printf '```\n'
-    else
-      printf '\n## Diff\n\nThe diff is %s bytes, too large to inline. Read the per-file patches from `%s/file-diffs/` in risk order.\n' \
-        "$diff_bytes" "$CONTEXT_DIR"
-    fi
   } >> "$out"
+
+  printf '\n## Diff (base...head)\n\n' >> "$out"
+
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    patch="$CONTEXT_DIR/file-diffs/${file}.patch"
+    [ -s "$patch" ] || continue
+    size="$(prompt_bytes "$patch")"
+    room="$(prompt_room "$out")"
+    if [ "$((size + reserve))" -ge "$room" ]; then
+      omitted=$((omitted + 1))
+      omitted_list="${omitted_list}${file}"$'\n'
+      continue
+    fi
+    {
+      printf -- '### %s\n\n```diff\n' "$file"
+      cat "$patch"
+      printf '```\n\n'
+    } >> "$out"
+    inlined=$((inlined + 1))
+  done < <(
+    while IFS= read -r -d '' file; do
+      [ -n "$file" ] || continue
+      printf '%s\t%s\n' "$(patch_risk_rank "$file")" "$file"
+    done < "$CONTEXT_DIR/changed-files.z" | sort -s -k1,1n | cut -f2-
+  )
+
+  if [ "$omitted" -gt 0 ]; then
+    {
+      printf '### Patches not inlined (%s files)\n\n' "$omitted"
+      printf 'The prompt budget ran out. Read these from `%s/file-diffs/<path>.patch` yourself; they are lower risk than the inlined ones but they ARE part of this PR and still need covering:\n\n```\n' "$CONTEXT_DIR"
+      printf '%s' "$omitted_list"
+      printf '```\n'
+    } >> "$out"
+  fi
+  log "$(basename "$out"): inlined $inlined patches, $omitted read-from-disk, $(prompt_bytes "$out") bytes"
 }
 
 # append_history <prompt-file>
+# Bounded like the diff: blame in particular can dwarf everything else.
 append_history() {
-  local out="$1"
+  local out="$1" budget="${HISTORY_BUDGET_BYTES:-24576}" blame_file
   {
     printf '\n## History digest\n\n### Recent commits touching the changed files\n\n```\n'
-    cat "$CONTEXT_DIR/history/commits.txt" 2>/dev/null || printf '(unavailable)\n'
+    awk -v max=$((budget / 3)) '
+      full { next }
+      { n += length($0) + 1 }
+      n > max { print "(truncated)"; full = 1; next }
+      { print }
+    ' "$CONTEXT_DIR/history/commits.txt" 2>/dev/null || printf '(unavailable)\n'
     printf '```\n\n### Blame for the changed lines, at base\n\n```\n'
     # A loop rather than `find -printf`: that flag is GNU-only and the local
     # eval replay runs on macOS. Each file needs its own header anyway.
     while IFS= read -r blame_file; do
       printf -- '--- %s ---\n' "${blame_file#"$CONTEXT_DIR/history/blame/"}"
       cat "$blame_file"
-    done < <(find "$CONTEXT_DIR/history/blame" -type f -name '*.blame' 2>/dev/null | sort)
+    done < <(find "$CONTEXT_DIR/history/blame" -type f -name '*.blame' 2>/dev/null | sort) |
+      awk -v max=$((budget / 2)) '
+        full { next }
+        { n += length($0) + 1 }
+        n > max { print "(truncated)"; full = 1; next }
+        { print }
+      '
     printf '```\n\n### Human review comments on earlier PRs touching these files\n\n'
     cat "$CONTEXT_DIR/history/prior-review-comments.md" 2>/dev/null || printf '(unavailable)\n'
     printf '\n'
@@ -168,8 +244,14 @@ append_history() {
 # failure — a silent empty review is worse than a loud one.
 run_agent() {
   local prompt_file="$1" out_file="$2" label="$3"
-  local model started elapsed
+  local model started elapsed size
   resolve_agent_bin || return 1
+
+  size="$(prompt_bytes "$prompt_file")"
+  if [ "$size" -ge "$MAX_ARG_STRLEN" ]; then
+    log "$label: ERROR prompt is $size bytes, at or over the $MAX_ARG_STRLEN single-argument limit; refusing to call the CLI"
+    return 1
+  fi
 
   local models
   read -r -a models <<< "$REVIEW_MODELS"

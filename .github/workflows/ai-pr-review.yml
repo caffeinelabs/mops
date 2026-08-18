@@ -241,6 +241,10 @@ jobs:
             .ai-review-context/diff-stat.txt
             .ai-review-context/changed-files.txt
             .ai-review-context/history/
+          # Every path here starts with a dot, and upload-artifact drops hidden
+          # files by default — without this the artifact arrives empty and a
+          # failed run cannot be diagnosed, which is the whole point of it.
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30
 

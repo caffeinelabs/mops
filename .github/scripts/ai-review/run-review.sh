@@ -77,11 +77,12 @@ for sweep in $SWEEPS; do
   prompt="$WORK_DIR/prompt-find-${sweep}.md"
   cat "$PROMPT_DIR/pr-review-context.md" "$PROMPT_DIR/pr-review-find.md" "$sweep_prompt" > "$prompt"
   append_pr_context "$prompt"
-  append_diff "$prompt"
   # Only the risk sweep is told to read history, so only it pays for the digest.
+  # History before the diff: append_diff spends whatever budget is left.
   case "$sweep" in
     03-risk) append_history "$prompt" ;;
   esac
+  append_diff "$prompt"
 
   await_slot
   # A sweep that produces nothing usable writes its own coverage gap. Silence
