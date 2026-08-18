@@ -7,8 +7,7 @@
 # primary slug is not enabled for the account: an unknown --model value fails
 # the whole review, so we retry once with the previous known-good pin rather
 # than losing the run.
-REVIEW_MODEL="${REVIEW_MODEL:-grok-4.6}"
-REVIEW_MODEL_FALLBACK="${REVIEW_MODEL_FALLBACK:-grok-4.5}"
+REVIEW_MODELS="${REVIEW_MODELS:-grok-4.6-fast grok-4.6 grok-4.5}"
 
 # Concurrent agent processes. The runner has 2 cores but the work is all
 # network-bound, so the cap is about API concurrency, not CPU.
@@ -113,6 +112,57 @@ append_pr_context() {
   } >> "$out"
 }
 
+# append_diff <prompt-file>
+# Inlines the changed-file list, diff stat, PR metadata and — when it fits — the
+# full diff. Tool round-trips dominate per-call latency, so handing the agent
+# everything up front is the cheapest speedup available.
+INLINE_DIFF_MAX_BYTES="${INLINE_DIFF_MAX_BYTES:-260000}"
+
+append_diff() {
+  local out="$1" diff_bytes
+  diff_bytes="$(find "$CONTEXT_DIR/file-diffs" -type f -name '*.patch' -exec cat {} + 2>/dev/null | wc -c | tr -d ' ')"
+  diff_bytes="${diff_bytes:-0}"
+
+  {
+    printf '\n## Changed files\n\n```\n'
+    cat "$CONTEXT_DIR/changed-files.txt"
+    printf '```\n\n## Diff stat\n\n```\n'
+    cat "$CONTEXT_DIR/diff-stat.txt"
+    printf '```\n\n## PR title (untrusted)\n\n'
+    cat "$CONTEXT_DIR/pr-title.txt"
+    printf '\n## PR body (untrusted)\n\n'
+    cat "$CONTEXT_DIR/pr-body.md"
+    printf '\n'
+    if [ "$diff_bytes" -le "$INLINE_DIFF_MAX_BYTES" ] && [ "$diff_bytes" -gt 0 ]; then
+      printf '\n## Diff (base...head)\n\n```diff\n'
+      find "$CONTEXT_DIR/file-diffs" -type f -name '*.patch' -exec cat {} + 2>/dev/null || true
+      printf '```\n'
+    else
+      printf '\n## Diff\n\nThe diff is %s bytes, too large to inline. Read the per-file patches from `%s/file-diffs/` in risk order.\n' \
+        "$diff_bytes" "$CONTEXT_DIR"
+    fi
+  } >> "$out"
+}
+
+# append_history <prompt-file>
+append_history() {
+  local out="$1"
+  {
+    printf '\n## History digest\n\n### Recent commits touching the changed files\n\n```\n'
+    cat "$CONTEXT_DIR/history/commits.txt" 2>/dev/null || printf '(unavailable)\n'
+    printf '```\n\n### Blame for the changed lines, at base\n\n```\n'
+    # A loop rather than `find -printf`: that flag is GNU-only and the local
+    # eval replay runs on macOS. Each file needs its own header anyway.
+    while IFS= read -r blame_file; do
+      printf -- '--- %s ---\n' "${blame_file#"$CONTEXT_DIR/history/blame/"}"
+      cat "$blame_file"
+    done < <(find "$CONTEXT_DIR/history/blame" -type f -name '*.blame' 2>/dev/null | sort)
+    printf '```\n\n### Human review comments on earlier PRs touching these files\n\n'
+    cat "$CONTEXT_DIR/history/prior-review-comments.md" 2>/dev/null || printf '(unavailable)\n'
+    printf '\n'
+  } >> "$out"
+}
+
 # run_agent <prompt-file> <out-file> <label>
 # Tries REVIEW_MODEL, then REVIEW_MODEL_FALLBACK. Empty output counts as
 # failure — a silent empty review is worse than a loud one.
@@ -121,10 +171,8 @@ run_agent() {
   local model started elapsed
   resolve_agent_bin || return 1
 
-  local models=("$REVIEW_MODEL")
-  if [ -n "$REVIEW_MODEL_FALLBACK" ] && [ "$REVIEW_MODEL_FALLBACK" != "$REVIEW_MODEL" ]; then
-    models+=("$REVIEW_MODEL_FALLBACK")
-  fi
+  local models
+  read -r -a models <<< "$REVIEW_MODELS"
 
   for model in "${models[@]}"; do
     started=$SECONDS

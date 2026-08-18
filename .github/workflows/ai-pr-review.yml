@@ -12,11 +12,11 @@ name: AI PR review
 # review. When SA_RW_GITHUB_TOKEN is not configured, the review degrades to
 # comment-only.
 #
-# The review itself runs as four passes (find -> triage -> verify -> synthesize)
-# in .github/scripts/ai-review/run-review.sh. A single pass that both hunts for
-# defects and decides whether to approve suppresses its own findings, so the
-# finders never see the verdict rules and filtering happens only in synthesis,
-# on candidates an independent pass already tried to refute.
+# The review runs as two waves in .github/scripts/ai-review/run-review.sh:
+# parallel find sweeps, then one judging pass that refutes, classifies and
+# writes the verdict. A single pass that both hunts for defects and decides
+# whether to approve suppresses its own findings, so the sweeps never see the
+# verdict rules. Four agent calls on a code PR, two on a prose-only one.
 #
 # The prompts, the pipeline scripts and this workflow are all read from the PR
 # head, so a PR that changes them is reviewed BY them — prompt work is testable
@@ -51,19 +51,20 @@ jobs:
         github.event.label.name == 'skip-ai-review'
       )
     runs-on: ubuntu-latest
-    # The pipeline fans out across lenses and candidates; worst case is ~25
-    # agent calls at REVIEW_MAX_PARALLEL 4.
-    timeout-minutes: 35
+    # Three parallel sweeps plus one judge. The generous timeout is a backstop
+    # for a stuck agent, not the expected duration — this check is meant to
+    # finish alongside the other CI jobs, not after them.
+    timeout-minutes: 20
     concurrency:
       group: ai-pr-review-${{ github.event.pull_request.number }}
       cancel-in-progress: true
     env:
-      # Pinned frontier model; the account default ("Auto") routes to cheaper
-      # models that produce shallow reviews. The fallback covers the primary
-      # slug not being enabled for the account — an unknown --model value would
-      # otherwise lose the whole run.
-      REVIEW_MODEL: grok-4.6
-      REVIEW_MODEL_FALLBACK: grok-4.5
+      # Tried in order. The account default ("Auto") routes to cheaper models
+      # that produce shallow reviews, so the chain is pinned. The Fast tier
+      # leads because it is the same model with faster output; the plain and
+      # previous pins follow, since an unrecognised slug would otherwise lose
+      # the whole run.
+      REVIEW_MODELS: grok-4.6-fast grok-4.6 grok-4.5
       CONTEXT_DIR: .ai-review-context
       WORK_DIR: .ai-review-work
       PROMPT_DIR: .github/prompts
@@ -310,14 +311,12 @@ jobs:
               }
             } catch (_) {}
             const statsParts = [`Generated for commit ${headSha}`];
-            if (stats.lenses) statsParts.push(`${stats.lenses} lenses`);
+            if (stats.sweeps) statsParts.push(`${stats.sweeps} sweeps`);
+            if (stats.agent_calls) statsParts.push(`${stats.agent_calls} agent calls`);
             if (stats.candidates) statsParts.push(`${stats.candidates} candidates`);
             if (stats.confirmed) statsParts.push(`${stats.confirmed} confirmed`);
             if (stats.plausible && stats.plausible !== "0") statsParts.push(`${stats.plausible} plausible`);
             if (stats.refuted && stats.refuted !== "0") statsParts.push(`${stats.refuted} refuted`);
-            if (stats.unverified_at_cap && stats.unverified_at_cap !== "0") {
-              statsParts.push(`${stats.unverified_at_cap} unverified at cap`);
-            }
             if (stats.models) statsParts.push(stats.models);
             if (stats.seconds) statsParts.push(`${stats.seconds}s`);
 

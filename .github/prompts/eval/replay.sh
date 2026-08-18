@@ -93,7 +93,7 @@ score_case() {
   local review="$out_dir/review.md"
   local candidates="$out_dir/candidates.txt"
 
-  cat "$out_dir/work/findings/"*.md "$out_dir/work/triage.md" > "$candidates" 2>/dev/null || : > "$candidates"
+  cat "$out_dir/work/candidates.md" "$out_dir/work/dispositions.txt" > "$candidates" 2>/dev/null || : > "$candidates"
 
   local total=0 reported=0 found=0
   printf '\n== %s ==\n' "$case_name"

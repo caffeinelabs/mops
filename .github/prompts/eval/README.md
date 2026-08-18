@@ -17,14 +17,16 @@ export CURSOR_API_KEY=...            # the same token the workflow uses
 The replay checks the case's `head_sha` out into a throwaway git worktree and runs the pipeline there, but
 takes the prompts and scripts from your **current** checkout — so you are testing today's pipeline against a
 past diff. Results land in `.github/prompts/eval/results/<case>/` (gitignored): the posted review, every
-pass's prompt, the raw per-lens findings, and the verdicts.
+pass's prompt, the raw per-sweep candidates, and the judge's dispositions.
 
-Each run makes real API calls and costs real tokens. `REVIEW_LENSES` and `REVIEW_MAX_VERIFY` work here just
-as they do in the workflow, so you can narrow a run to the one lens you are changing:
+Each run makes real API calls and costs real tokens. `REVIEW_SWEEPS` works here just as it does in the
+workflow, so you can narrow a run to the one sweep you are changing:
 
 ```bash
-REVIEW_LENSES=01-inputs .github/prompts/eval/replay.sh 772-single-pass-update
+REVIEW_SWEEPS=01-correctness .github/prompts/eval/replay.sh 772-single-pass-update
 ```
+
+A full run is four agent calls; a single-sweep run is two.
 
 ## Reading the output
 
@@ -32,12 +34,12 @@ The score has two columns per defect, and the gap between them is the interestin
 
 | column | meaning |
 | --- | --- |
-| `candidate` | a finder or triage described the defect |
-| `reported`  | it survived verification and synthesis into the posted review |
+| `candidate` | a sweep described the defect |
+| `reported`  | it survived the judge's refutation and filtering into the posted review |
 
-- `— / —`: nobody found it. A finding lens needs work, or the defect needs a lens that does not exist yet.
-- `HIT / —`: a finder found it and a later pass threw it away. That is a verification or synthesis problem,
-  and a much cheaper fix than a recall problem.
+- `- / -`: nobody found it. A sweep needs work, or the defect needs a check that does not exist yet.
+- `HIT / -`: a sweep found it and the judge threw it away. That is a refutation or filtering problem, and a
+  much cheaper fix than a recall problem.
 - `HIT / HIT`: recovered.
 
 Matching is by regex over the review text, so it is a proxy for "the reviewer described this defect". Read
@@ -54,7 +56,7 @@ Copy an existing case and fill in:
 - `fix_sha` — where the defects were actually fixed, so a reader can see the answer.
 - `verdict_at_the_time` and `expected_verdict`.
 - one `defect:` block per known defect, each with `files`, a `match:` regex, `why:` in enough detail to judge
-  a reviewer's description against it, and the `lens:` that ought to catch it.
+  a reviewer's description against it, and the `sweep:` that ought to catch it.
 
 False positives are worth recording too: give the case a defect-free expectation and let a spurious finding
 show up as a decision mismatch.

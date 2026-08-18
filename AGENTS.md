@@ -12,7 +12,7 @@ This file provides guidance to AI coding agents when working with code in this r
 - **Keep skills up to date.** When changing CLI commands or workflows, update `.agents/skills/mops-cli/SKILL.md` to match.
 - **`base` is deprecated.** Use `core` for all new code, examples, and docs.
 - **Pre-commit hook** runs `lint-staged + npm run check` via husky — fix TypeScript/lint errors before committing.
-- **AI PR review** runs as four passes (find → triage → verify → synthesize) from `.github/scripts/ai-review/`, driven by the prompts in `.github/prompts/`. Finders never see the verdict rules; filtering happens only in synthesis. When changing those prompts, measure the change with `.github/prompts/eval/replay.sh` against the labelled cases rather than guessing, and add a case for any miss worth not repeating.
+- **AI PR review** runs as two waves from `.github/scripts/ai-review/`, driven by the prompts in `.github/prompts/`: parallel find sweeps, then one judging pass that refutes, classifies and decides the verdict. The sweeps never see the verdict rules, so filtering happens only in the judge. Budget is four agent calls on a code PR — keep it there; it must not become the slowest CI job. When changing those prompts, measure the change with `.github/prompts/eval/replay.sh` against the labelled cases rather than guessing, and add a case for any miss worth not repeating.
 - **Snapshot testing strategy**: Use Jest snapshots (`cliSnapshot` / `toMatchSnapshot`) for the main use cases so the full CLI output is committed and reviewable. Corner-case and error-path tests should use targeted assertions (`toMatch`, `toBe`) without snapshots to avoid cluttering the snapshot file.
 
 ## Interactive commands (caution for agents)
