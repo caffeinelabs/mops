@@ -19,7 +19,7 @@ Add dependencies as easily as `mops add <package>`.
 
 Update dependencies as easily as `mops update <package>`.
 
-### Mops is on on-chain package registry for Motoko
+### Mops is an on-chain package registry for Motoko
 
 All packages published to Mops registry are hosted on the [Internet Computer](https://internetcomputer.org/) blockchain.
 

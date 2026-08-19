@@ -51,15 +51,15 @@ const config = {
 				docs: {
 					routeBasePath: '/',
 					sidebarPath: './sidebars.js',
-					// The released line is served at the root; the in-development line
-					// lives under /next. Flip back to 'current' at the 3.0.0 GA.
-					// This branch is the only one that deploys the docs canister, so
-					// this config decides what docs.mops.one serves. `main` keeps a
-					// matching copy, but there it only shapes local previews.
-					lastVersion: '2.x',
+					// 3.x is the released line and is served at the root; 2.x is the
+					// maintenance snapshot under /2.x. Before the 3.0.0 GA this was
+					// inverted (2.x at the root, 3.x under /next), so the first deploy
+					// after the flip moves every page: /cli/mops-install now serves 3.x
+					// and the 2.x page lives at /2.x/cli/mops-install.
+					lastVersion: 'current',
 					versions: {
-						current: {label: '3.x (unreleased)', path: 'next'},
-						'2.x': {label: '2.x', path: ''},
+						current: {label: '3.x', path: ''},
+						'2.x': {label: '2.x', path: '2.x'},
 					},
 					// Please change this to your repo.
 					// Remove this to remove the "edit this page" links.
