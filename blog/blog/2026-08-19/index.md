@@ -1,7 +1,6 @@
 ---
 slug: mops-3-0-0
 title: Mops 3.0.0
-authors: [zen]
 ---
 
 ### Summary
