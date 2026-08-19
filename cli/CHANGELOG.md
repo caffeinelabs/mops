@@ -17,7 +17,7 @@
 - `mops install` no longer crashes with a raw `RangeError: Maximum call stack size exceeded` when two local `path` dependencies require each other, or when one requires itself. The install walk now skips a local package it has already visited in the same run, naming neither a cycle nor an error — the packages install normally.
 - Fixed `mops remove <pkg>` crashing with `Invalid dependency value ""` when the dependency is a local path dep.
 - `mops remove` now echoes the dependency value it removed for GitHub and local path deps, instead of an empty version.
-- Temporary compatibility shim: `mops add`, `remove`, `install`, `sync` and `update` again accept the removed 2.x flag `--lock <check|update|ignore>` instead of failing to parse. The value is ignored — including `check`, which is **not** treated as `--locked` — so v2 call sites keep working during the 3.x rollout. Migrate to `mops install --locked` for CI enforcement; the flag will be removed.
+- The temporary `--lock <check|update|ignore>` compatibility shim is removed. `mops add`, `remove`, `install`, `sync` and `update` accepted and ignored the 2.x flag in `3.0.0-beta.4` and `3.0.0-beta.5` so v2 call sites would keep parsing during the rollout; they now reject it as an unknown option, as the rest of 3.x always did. `--lock check` is `--locked`, `--lock update` is plain `mops install`, and `--lock ignore` has no successor.
 
 ### Performance
 

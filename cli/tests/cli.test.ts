@@ -124,8 +124,7 @@ describe("install", () => {
 
   // `--lock <check|update|ignore>` is gone in v3. `check` became `--locked`,
   // `update` became plain `mops install` (self-healing), and `ignore` has no
-  // successor — the lock is always maintained. The flag is still parsed and
-  // ignored during the rollout; see legacy-lock-flag.test.ts.
+  // successor — the lock is always maintained.
 
   // The `CI` env var used to silently switch install to `--lock check`
   // (deprecated since 2.18). CI must now opt in with `--locked`. See GH #516.
