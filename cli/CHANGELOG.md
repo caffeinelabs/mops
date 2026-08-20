@@ -2,6 +2,7 @@
 
 ## Next
 
+## 3.0.0
 ### Migrating from 2.x
 
 Everything that requires action, in one list. Details in the themed sections below.
