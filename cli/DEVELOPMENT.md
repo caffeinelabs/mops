@@ -4,7 +4,7 @@ Releasing is a separate document: [RELEASE.md](RELEASE.md).
 
 ## Prerequisites
 
-- Node.js >= 20 and npm
+- Node.js >= 22 and npm
 - [bun](https://bun.sh) — `npm run build` bundles with `bun build`
 - GNU tar, on macOS only (`bundle:tar` builds the reproducible tarball with `tar --sort name`, which BSD tar lacks):
 

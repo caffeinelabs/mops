@@ -10,7 +10,7 @@ Mops is a package manager for the Motoko programming language.
 ## Setup
 
 ### 1. Check system requirements
-- [Node.js](https://nodejs.org/) >= 20.0.0
+- [Node.js](https://nodejs.org/) >= 22.0.0
 
 Mops downloads and manages the Motoko toolchain itself. It does not need `dfx`, and does not support it.
 
