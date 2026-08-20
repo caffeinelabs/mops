@@ -134,7 +134,7 @@ If the file at `path` doesn't exist, the check fails with an error. For initial 
 actor { };
 ```
 
-On `moc` 1.12.0+, canisters with `[migrations]` configured and a `.most` baseline get better upgrade diagnostics — see [diagnostics on moc 1.12.0+](./05-mops-check-stable.md#diagnostics-on-moc-1120).
+On `moc` 1.12.0+, canisters with `[migrations]` configured and a `.most` baseline get better upgrade diagnostics — currently disabled while a `moc` bug is open, see [diagnostics on moc 1.12.0+](./05-mops-check-stable.md#diagnostics-on-moc-1120).
 
 For more details, see [`mops check-stable`](./05-mops-check-stable.md).
 

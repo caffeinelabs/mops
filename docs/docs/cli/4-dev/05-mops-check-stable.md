@@ -100,13 +100,17 @@ Require an up-to-date [`mops.lock`](../../10-mops.lock.md) and never write it �
 
 When `[canisters.<name>.migrations].check-limit` is set, `mops check-stable` compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error (trimming started from the wrong state). If compat passed anyway, it is shown as a warning.
 
-On `moc` 1.12.0+ this diagnostic can also replace type errors from the same run. The command still exits non-zero; fold the pending migrations (or pass `--no-check-limit`) to see them.
+On `moc` 1.12.0+ this diagnostic can also replace type errors from the same run. The command still exits non-zero; fold the pending migrations (or pass `--no-check-limit`) to see them. (Currently inactive — see [diagnostics on moc 1.12.0+](#diagnostics-on-moc-1120).)
 
 ## Enhanced migration support
 
 When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `mops check-stable` automatically injects the `--enhanced-migration` flag when generating stable type signatures.
 
 ## Diagnostics on moc 1.12.0+
+
+:::warning Temporarily disabled
+These improvements are turned off in the current release. `moc`'s `--stable-baseline` has a bug, so every `moc` pin runs the check the pre-1.12.0 way until `moc` ships a fix — the check still runs and still fails on an incompatible upgrade, but the diagnostics below are not in effect.
+:::
 
 On `moc` 1.12.0 or newer, two diagnostics improve for canisters that have `[migrations]` configured:
 
