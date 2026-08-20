@@ -67,8 +67,11 @@ jobs:
       - name: Install mops
         run: npm i -g ./cli/dist
 
+      # --locked, because the root lockfile is committed: this is the CI flow
+      # the docs prescribe. It fails on a lock nobody regenerated instead of
+      # quietly rewriting one, and it keeps the registry out of the hash check.
       - name: Install mops packages
-        run: mops install
+        run: mops install --locked
 
       - name: Select moc version
         run: mops toolchain use moc ${{ env.MOC_VERSION }}
