@@ -26,7 +26,9 @@ canisters:
       type: "@dfinity/asset-canister@v2.3.0"
       sha256: ee41744bd1361593a041d830b06ce50598cae5b21b57209fc727e8f63ae7e906
       configuration:
-        version: "0.29.1"
+        # 0.32.0 is what the recipe's bundled sync plugin requires — see the
+        # matching note on the `cli` canister below.
+        version: "0.32.0"
         dir: frontend/dist
         build:
           - npm run build-frontend
@@ -47,7 +49,7 @@ canisters:
       type: "@dfinity/asset-canister@v2.3.0"
       sha256: ee41744bd1361593a041d830b06ce50598cae5b21b57209fc727e8f63ae7e906
       configuration:
-        version: "0.29.1"
+        version: "0.32.0"
         dir: blog/build
         build:
           - npm run build-blog
@@ -58,7 +60,7 @@ canisters:
       type: "@dfinity/asset-canister@v2.3.0"
       sha256: ee41744bd1361593a041d830b06ce50598cae5b21b57209fc727e8f63ae7e906
       configuration:
-        version: "0.29.1"
+        version: "0.32.0"
         dir: play-frontend
   # Raw build/sync (not the recipe) because the asset-canister recipe template
   # only supports a single `dir`, and `cli` serves two: `cli-releases/`
@@ -72,8 +74,11 @@ canisters:
           commands:
             - npm run build-cli-releases
         - type: pre-built
-          url: https://github.com/dfinity/sdk/releases/download/0.29.1/assetstorage.wasm.gz
-          sha256: 4014793c83ae0ff2d851a0c4e62f289a114d36bc1826f5579f55a70ff3c70551
+          # 0.32.0 is the version the sync plugin below requires: its `list`
+          # pagination loop never terminates against pre-0.30.1 assetstorage,
+          # which ignores `start`/`length` and returns every asset each call.
+          url: https://github.com/dfinity/sdk/releases/download/0.32.0/assetstorage.wasm.gz
+          sha256: 04e565b3425fe7510ee16b02adcfe3f01abc9a2725c82a21cb08969241debd62
     sync:
       steps:
         - type: plugin
