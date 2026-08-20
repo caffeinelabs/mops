@@ -1,6 +1,6 @@
 name: Release CLI
 
-# Handles both stable releases from main and 3.x previews from v3.
+# Handles both stable releases and prereleases, all tagged on main.
 #
 # The preview path lives here rather than in its own workflow because npm
 # allows exactly one trusted publisher per package and pins it to a single
@@ -58,23 +58,16 @@ jobs:
           echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION (prerelease: $PRERELEASE)"
 
-      # Stable releases must be tagged on main, previews on v3. A prerelease tag
-      # that is on neither aborts here.
-      - name: Abort if tag is not on the expected branch
-        env:
-          IS_PRERELEASE: ${{ steps.version.outputs.prerelease }}
+      # `main` is the only branch that releases. `v2` archives the 2.x line and
+      # has no release path, so a `cli-v2.*` tag aborts here by design.
+      - name: Abort if tag is not on main
         run: |
           set -euo pipefail
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            BRANCH=v3
+          git fetch origin main
+          if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "Tag commit ${GITHUB_SHA} is reachable from main."
           else
-            BRANCH=main
-          fi
-          git fetch origin "$BRANCH"
-          if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/${BRANCH}"; then
-            echo "Tag commit ${GITHUB_SHA} is reachable from ${BRANCH}."
-          else
-            echo "::error::Tag commit ${GITHUB_SHA} is not on ${BRANCH}. Aborting."
+            echo "::error::Tag commit ${GITHUB_SHA} is not on main. Aborting."
             exit 1
           fi
 
@@ -90,9 +83,9 @@ jobs:
             exit 1
           fi
 
-      # Previews take the version from the tag instead, so v3 needs no churn
-      # commit per beta and cli/package.json keeps the 2.x version that
-      # `mops --version` reports and the test suite asserts on.
+      # Previews take the version from the tag instead, so main needs no churn
+      # commit per beta and cli/package.json keeps the last released version
+      # that `mops --version` reports and the test suite asserts on.
       - name: Set package version from tag
         if: steps.version.outputs.prerelease == 'true'
         working-directory: cli
@@ -181,9 +174,9 @@ jobs:
             echo '```'
           } >> /tmp/release-notes.md
 
-      # Previews have no changelog heading of their own — v3 work accumulates
-      # under `## Next` and `## 3.0.0 (unreleased)` — so this takes everything
-      # above the first released heading instead of requiring a per-beta entry.
+      # Previews have no changelog heading of their own — work accumulates
+      # under `## Next` — so this takes everything above the first released
+      # heading instead of requiring a per-beta entry.
       - name: Build prerelease notes
         if: steps.version.outputs.prerelease == 'true'
         working-directory: cli
@@ -200,17 +193,14 @@ jobs:
             echo "npm i -g ic-mops@${VERSION}   # or: npm i -g ic-mops@next"
             echo '```'
             echo ""
-            echo "> \`mops self update\` still serves the latest 2.x release — preview builds are"
+            echo "> \`mops self update\` still serves the latest stable release — preview builds are"
             echo "> published to npm only and are not uploaded to the cli-releases canister."
             echo "> Use the npm command above to move between betas."
             echo ""
-            # No trailing slash — the docs canister 307s `/next/` to `/next`.
-            echo "Docs for this line: https://docs.mops.one/next"
+            echo "Docs: https://docs.mops.one"
             echo ""
           } > /tmp/release-notes.md
 
-          # The `(unreleased)` suffix on the 3.0.0 heading keeps it out of the
-          # released-heading pattern, so it and `## Next` are both included.
           awk 'NR>1 && /^## [0-9]+\.[0-9]+\.[0-9]+$/{exit} NR>1' \
             CHANGELOG.md > /tmp/changelog-section.md
 
@@ -241,7 +231,7 @@ jobs:
           set -euo pipefail
           if [ "$IS_PRERELEASE" = "true" ]; then
             # --tag next is load-bearing. Publishing with no tag sets `latest`,
-            # which would serve a beta to every `npm i -g ic-mops` on 2.x.
+            # which would serve a beta to every `npm i -g ic-mops`.
             npm publish --provenance --ignore-scripts --tag next
           else
             npm publish --provenance --ignore-scripts
@@ -350,11 +340,9 @@ jobs:
       #
       # Everything from here up to — but not including — the docs deploy is
       # stable-only. Previews are npm-only: no cli-releases artifacts, no cli
-      # canister upload, so `mops self update` keeps serving the latest 2.x.
-      # Said so in the notes. The docs deploy itself is deliberately ungated
-      # on this branch: preview tags on v3 are what publish docs.mops.one/next.
-      # "Ungated" is vs prerelease on v3, not vs main — main's copy of this
-      # workflow has no docs step (that Docusaurus build would clobber /next).
+      # canister upload, so `mops self update` keeps serving the latest stable.
+      # The docs deploy is ungated so documentation can be corrected from a
+      # preview tag, without cutting a stable release.
 
       - name: Generate on-chain release artifacts
         if: steps.version.outputs.prerelease == 'false'
@@ -370,7 +358,7 @@ jobs:
       # canister: both deploys run on the same runner, so repeating the import
       # would only give `icp identity import` — which has no --force — an
       # existing name to fail on. Docs deploy below is not gated on prerelease
-      # because preview tags on this branch still have to publish docs.mops.one.
+      # because preview tags still have to publish docs.mops.one.
       - name: Install icp-cli
         # Keep in step with the pin in ci.yml.
         run: npm install -g @icp-sdk/icp-cli@1.2.0
@@ -434,8 +422,8 @@ jobs:
           echo "::error::cli.mops.one is not serving ${VERSION}. \`mops self update\` will not offer this release, and the artifacts commit has not run."
           exit 1
 
-      # Present on this branch only. main's copy of this workflow has no docs
-      # deploy: publishing that Docusaurus build would clobber /next.
+      # The only publisher of docs.mops.one: `docs/docs/` at the site root and
+      # `versioned_docs/version-2.x/` at /2.x.
       - name: Deploy docs canister
         uses: ./.github/actions/deploy-canister
         with:
