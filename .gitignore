@@ -8,6 +8,10 @@ dist/
 .icp/cache/
 .mops/
 .migrations-*/
-mops.lock
+# The root lockfile is committed, as our own docs tell every project to do.
+# Fixture lockfiles are not: the CLI tests create, rewrite and corrupt them on
+# purpose, so committing them would put the suite at war with git on every run.
+cli/tests/**/mops.lock
+test/**/mops.lock
 
 .DS_Store
