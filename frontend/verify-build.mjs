@@ -26,10 +26,9 @@ if (missing.length) {
 // define turns a missed replacement into `undefined` at runtime — a bundle that
 // builds green and cannot reach any canister.
 //
-// Two assertions, because neither is sufficient alone. cli/api/network.ts
-// hardcodes the ic and staging endpoint ids and the frontend bundles it, and
-// those are the same principals as `main` in the mappings — so on those two
-// networks "the id is present" is true no matter what vite did.
+// Two assertions, because neither is sufficient alone. On ic, the badge URL in
+// components/package/BadgesModal.svelte hardcodes the main canister id, so
+// "the id is present" is true there no matter what vite did.
 //
 // vite.config.ts rejects an unset or unknown value, but this file also runs
 // standalone, where an unset one would otherwise read `undefined.ids.json`.
@@ -89,9 +88,8 @@ if (!sources.some((s) => s.includes(expectedId))) {
 //    A successful build leaves no occurrence of the name; a missed one does.
 //
 //    The keys are derived exactly as vite.config.ts derives them, covering both
-//    spellings it defines, rather than pattern-matched: a loose /CANISTER_ID/
-//    also hits `MOPS_REGISTRY_CANISTER_ID`, which cli/api/network.ts reads at
-//    runtime on purpose and which must survive into the bundle.
+//    spellings it defines, rather than pattern-matched, so a name that drifts out
+//    of step with the mappings is caught rather than silently unchecked.
 const defineKeys = Object.keys(canisterIds).flatMap((name) => {
   const upper = name.toUpperCase().replace(/-/g, "_");
   return [`CANISTER_ID_${upper}`, `${upper}_CANISTER_ID`];

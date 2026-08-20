@@ -2,10 +2,10 @@
 	import {onMount} from "svelte";
 	import {debounce} from "throttle-debounce";
 	import {currentURL, routeParams, push, link} from "svelte-spa-history-router";
-	import {getFileIds} from "ic-mops/api/downloadPackageFiles";
 
 	import type {PackageDetails, PackageSummary, PackageSummaryWithChanges} from "/declarations/main/main.did.js";
 	import {mainActor, storageActor} from "/logic/actors";
+	import {getFileIds} from "/logic/package-files";
 
 	import Header from "../Header.svelte";
 	import Loader from "../Loader.svelte";
@@ -83,8 +83,6 @@
 		};
 
 		let downloadCode = async () => {
-			window.MOPS_NETWORK =
-				process.env.MOPS_FRONTEND_NETWORK === "local" ? "local" : "ic";
 			fileIds = await getFileIds(packageDetails.config.name, packageDetails.config.version);
 		};
 
