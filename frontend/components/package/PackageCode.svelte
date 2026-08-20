@@ -3,10 +3,10 @@
 	import {toHtml} from "hast-util-to-html";
 	import {onMount} from "svelte";
 	import {filesize} from "filesize";
-	import {downloadFile} from "ic-mops/api/downloadPackageFiles";
 	import "@wooorm/starry-night/style/light";
 
 	import {getStarryNight} from "/logic/get-starry-night";
+	import {downloadFile} from "/logic/package-files";
 	import type {PackageDetails} from "/declarations/main/main.did.js";
 	import PackageCodeTreeView from "./PackageCodeTreeView.svelte";
 	import {mainActor} from "/logic/actors";
@@ -92,8 +92,8 @@
 		fileContentHtml = null;
 		fileContent = "";
 
-		let {data} = await downloadFile(packageDetails.publication.storage.toText(), pkgId + "/" + curSelectedFileName);
-		let content = new TextDecoder().decode(new Uint8Array(data));
+		let data = await downloadFile(packageDetails.publication.storage, pkgId + "/" + curSelectedFileName);
+		let content = new TextDecoder().decode(data);
 
 		// syntax highlight
 		let starryNight = await getStarryNight();
