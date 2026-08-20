@@ -58,28 +58,25 @@ jobs:
           echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION (prerelease: $PRERELEASE)"
 
-      # Every tag, stable or prerelease, must be on main. This used to send
-      # prereleases to `v3`, which the 3.0.0 promotion folds into main and
-      # deletes — leaving that hardcoded would abort every future preview on a
-      # fetch of a branch that no longer exists.
+      # Every tag, stable or prerelease, must be on main. `main` is the 3.x line
+      # once the 3.0.0 promotion folds `v3` into it, and it is the only branch
+      # that releases: this used to send prereleases to `v3`, which the
+      # promotion deletes, so leaving that hardcoded would abort every future
+      # preview on a fetch of a branch that no longer exists.
       #
-      # `v3` is still accepted so a preview cut between this landing and the
-      # promotion is not rejected. Drop it from the list once the branch is
-      # gone; the fetch failing is not an error, it just falls through to the
-      # next candidate. A later major developed on its own branch adds itself
-      # here the same way.
-      - name: Abort if tag is not on the expected branch
+      # Deliberately one branch and no fallbacks. The `v2` branch is kept as an
+      # archive of the 2.x line and has no release path — a `cli-v2.*` tag would
+      # abort here, which is the intended answer until someone decides otherwise.
+      - name: Abort if tag is not on main
         run: |
           set -euo pipefail
-          for BRANCH in main v3; do
-            git fetch origin "$BRANCH" 2>/dev/null || continue
-            if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/${BRANCH}"; then
-              echo "Tag commit ${GITHUB_SHA} is reachable from ${BRANCH}."
-              exit 0
-            fi
-          done
-          echo "::error::Tag commit ${GITHUB_SHA} is not on main. Aborting."
-          exit 1
+          git fetch origin main
+          if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "Tag commit ${GITHUB_SHA} is reachable from main."
+          else
+            echo "::error::Tag commit ${GITHUB_SHA} is not on main. Aborting."
+            exit 1
+          fi
 
       - name: Validate version matches package.json
         if: steps.version.outputs.prerelease == 'false'
@@ -436,9 +433,9 @@ jobs:
           echo "::error::cli.mops.one is not serving ${VERSION}. \`mops self update\` will not offer this release, and the artifacts commit has not run."
           exit 1
 
-      # Present on this branch only. The `v2` branch's copy of this workflow has
-      # no docs deploy: publishing that 2.x Docusaurus build would clobber the
-      # 3.x site, and both doc trees already ship from here.
+      # Both doc trees ship from here — `docs/docs/` at the site root and
+      # `versioned_docs/version-2.x/` at /2.x — so this is the only place
+      # docs.mops.one is published from.
       - name: Deploy docs canister
         uses: ./.github/actions/deploy-canister
         with:

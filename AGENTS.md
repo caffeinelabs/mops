@@ -23,11 +23,11 @@ Docusaurus serves two trees:
 | 3.x (current) | `docs/docs/` | https://docs.mops.one (site root) |
 | 2.x | `docs/versioned_docs/version-2.x/` | https://docs.mops.one/2.x |
 
-**Who publishes.** `release.yml` is not the same file on both branches — GitHub runs the copy from the tagged commit. `main` deploys the docs canister, ungated, on stable and preview tags alike; the `v2` branch has no docs step on purpose, because a 2.x release publishing its own Docusaurus build would clobber this one. Both trees therefore ship from `main`, and a 2.x docs fix made on `v2` is invisible until it is ported here. Out-of-band redeploy, from a `main` checkout: `icp deploy docs -e ic --identity mops --no-create --yes`.
+**Who publishes.** `main`, and only `main`. It deploys the docs canister on stable and preview tags alike, and both trees ship from it — `docs/docs/` at the root, `versioned_docs/version-2.x/` at `/2.x`. The `v2` branch is an archive of the 2.x line with no release path at all, so nothing there publishes anything. Out-of-band redeploy: `icp deploy docs -e ic --identity mops --no-create --yes`.
 
 ### Which files to edit
 
-A change to the 3.x CLI is documented in `docs/docs/` only. A 2.x docs correction — a fix to something that shipped in a 2.x release — is made in `docs/versioned_docs/version-2.x/` here, and, if it also needs to land on the maintenance branch, ported to `v2` separately. `versioned_docs` is a snapshot of shipped 2.x behavior: never rewrite it to describe 3.x.
+A change to the 3.x CLI is documented in `docs/docs/` only. A correction to something that shipped in a 2.x release is made in `docs/versioned_docs/version-2.x/` here — that tree is what serves `/2.x`, and editing it on `v2` would publish nothing. `versioned_docs` is a snapshot of shipped 2.x behavior: never rewrite it to describe 3.x.
 
 ## Interactive commands (caution for agents)
 

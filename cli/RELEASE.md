@@ -10,7 +10,7 @@ That workflow rolls `## Next` into a version heading, bumps `cli/package.json`, 
 
 The [`release-pr.yml`](../.github/workflows/release-pr.yml) workflow validates the PR (title, changelog entry, `package.json` version). On merge it pushes the `cli-vX.Y.Z` tag, which triggers [`release.yml`](../.github/workflows/release.yml) — build, npm publish, GitHub Release, and deploy of `cli.mops.one`.
 
-A tag on `main` also deploys `docs.mops.one`, on stable and preview tags alike. The `v2` maintenance branch has no docs step in its copy of `release.yml`, on purpose — a 2.x release publishing its own Docusaurus build would clobber the 3.x site. Both doc trees ship from `main`.
+A tag on `main` also deploys `docs.mops.one`, on stable and preview tags alike, and both doc trees ship from it. `main` is the only branch that releases: `v2` is an archive of the 2.x line, and `release.yml` requires every tag to be on `main`, so a `cli-v2.*` tag aborts rather than publishing.
 
 > **Note:** The `main`, `assets`, `blog`, and `play-frontend` canisters require a manual deploy. If a release includes changes to any of those (e.g. `backend/main/` or `frontend/`), upgrade them manually (staging first, then `ic`):
 >
