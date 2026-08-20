@@ -2,6 +2,7 @@
 
 ## Next
 
+## 3.1.0
 - Temporarily disabled `--stable-baseline` in `mops check` and `mops check-stable` due to a `moc` bug. Upgrade compatibility is still checked, but the moc 1.12.0+ diagnostics are off until moc ships a fix.
 - Node.js >= 22 is now required (`engines` bump from >= 20). Node 20 reached end of life on 2026-04-30, and nothing in the project tested against it — CI runs on 22, 24 and 26, and release builds run on Node 24 — so `>= 20` was a support claim with nothing behind it. Node 22 is in LTS maintenance until April 2027. The prerequisite lists in the README, the CLI README, the quick-start guide and `cli/DEVELOPMENT.md` are updated to match.
 
