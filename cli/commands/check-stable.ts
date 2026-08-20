@@ -18,7 +18,10 @@ import {
   resolveSingleCanister,
   validateCanisterArgs,
 } from "../helpers/resolve-canisters.js";
-import { supportsStableBaselineCheck } from "../helpers/get-moc-version.js";
+import {
+  hasStableBaselineFix,
+  supportsStableBaselineCheck,
+} from "../helpers/get-moc-version.js";
 import { sourcesArgs } from "./sources.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -35,17 +38,13 @@ function hasEnhancedMigrationArg(args: string[]): boolean {
   );
 }
 
-// TEMPORARY: `moc --stable-baseline` is buggy, so no pin folds the upgrade check
-// into `moc --check` — everything takes the 3-invocation path. Drop this constant
-// and the guard below once moc ships the fix.
-const STABLE_BASELINE_DISABLED = true;
-
-/** moc 1.12.0+: one `moc --check --stable-baseline` instead of 3 invocations. */
+/** moc 1.12.0+ with the `--stable-baseline` fix: one `moc --check` instead of 3. */
 export function canUseStableBaselineCheck(canisterArgs: string[]): boolean {
-  if (STABLE_BASELINE_DISABLED) {
-    return false;
-  }
-  return supportsStableBaselineCheck() && hasEnhancedMigrationArg(canisterArgs);
+  return (
+    supportsStableBaselineCheck() &&
+    hasStableBaselineFix() &&
+    hasEnhancedMigrationArg(canisterArgs)
+  );
 }
 
 export interface CheckStableOptions {
