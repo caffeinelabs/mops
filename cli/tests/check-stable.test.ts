@@ -27,14 +27,16 @@ describe("check-stable", () => {
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
-  // Fixture pinned to moc 1.12.0 — EM + `.most` baseline folds into one invocation.
-  test("moc 1.12+ EM checks the baseline in a single moc invocation", async () => {
+  // Fixture pinned to moc 1.12.0 — EM + `.most` baseline would fold into one
+  // invocation, but `--stable-baseline` is disabled while moc's bug is open.
+  // Flip this back to asserting the fold when `STABLE_BASELINE_DISABLED` goes.
+  test("moc 1.12+ EM keeps the classic path while --stable-baseline is off", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/migrations-chain");
     const result = await cli(["check-stable", "--verbose"], { cwd });
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/--stable-baseline/);
-    expect(result.stdout).not.toMatch(/--stable-compatible/);
-    expect(result.stdout).not.toMatch(/Generating stable types for/);
+    expect(result.stdout).not.toMatch(/--stable-baseline/);
+    expect(result.stdout).toMatch(/--stable-compatible/);
+    expect(result.stdout).toMatch(/Generating stable types for/);
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
