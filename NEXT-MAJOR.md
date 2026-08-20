@@ -1,21 +1,14 @@
 # Next-major checklist
 
-Breaking changes deferred past 3.0.0. Non-breaking work that can ship now lives in `TODO.md`.
+Breaking changes deferred past 3.0.0, now that it has shipped. Non-breaking work that can ship in a 3.x minor lives here or in `TODO.md`.
 
 CLI (`ic-mops`) and the backend canister version independently — group accordingly.
 
 Refs: GH = `caffeinelabs/mops`, LIN = Linear ticket title.
 
-This file is forward-looking only. Shipped v3 breaking changes are recorded in `cli/CHANGELOG.md`, not here.
+This file is forward-looking only. Shipped breaking changes are recorded in `cli/CHANGELOG.md`, not here.
 
 ---
-
-## Before 3.0.0 GA
-
-- **Run `prepare-cli-release` with `major`.** All 3.0.0 content lives under `## Next`, so the bump rolls it into a single `## 3.0.0`. Do not reintroduce a second 3.0.0 heading — the workflow's already-released guard is anchored (`^## 3\.0\.0$`) and would not catch it.
-- **After the release, repoint or drop the npm `next` dist-tag.** It still serves `3.0.0-beta.5`, so `npm i -g ic-mops@next` installs a prerelease of a version that has shipped.
-- Bump `apiVersion` (CLI ↔ backend) only if a schema-affecting change lands before GA — nothing in the current scope requires it.
-- `mops search` and `mops template` have no doc page in either tree (GH #205). Pre-existing and consistent across both, so not a tree-sync defect — but it is a gap a GA docs site shows.
 
 ## Standing decisions
 
@@ -64,6 +57,7 @@ Both are blocked on the same thing — a cross-version conflict cannot actually 
 - **Install-as alias** — table-stakes (cargo `package = "..."`, npm `"foo": "npm:bar@1"`). Schema + `--package` plumbing change. (GH #266)
 - Local-path deps no longer require copy-pasting transitives into the parent's `mops.toml`. (GH #289)
 - Expose the replica/PocketIC canister id to tests. (GH #274)
+- Doc pages for `mops search` and `mops template`, which have never had one in either tree. (GH #205)
 
 The Cargo/pnpm parity backlog — store/CAS, cache GC, `--offline`, `mops why`/`tree`/`licenses`, registry metadata cache, comment-preserving `mops.toml` writes — is tracked in GH #723. Nothing there is breaking.
 
