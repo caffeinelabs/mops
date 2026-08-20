@@ -1,7 +1,8 @@
 import { describe, expect, test } from "@jest/globals";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import path from "path";
-import { cli, cliSnapshot } from "./helpers";
+import { cli, cliSnapshot, useTempFixtures } from "./helpers";
 
 describe("check-stable", () => {
   test("compatible upgrade", async () => {
@@ -27,10 +28,9 @@ describe("check-stable", () => {
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
-  // Fixture pinned to moc 1.12.0 — EM + `.most` baseline would fold into one
-  // invocation, but `--stable-baseline` is disabled while moc's bug is open.
-  // Flip this back to asserting the fold when `STABLE_BASELINE_DISABLED` goes.
-  test("moc 1.12+ EM keeps the classic path while --stable-baseline is off", async () => {
+  // Fixture pinned to moc 1.12.0: that build accepts `--stable-baseline` but lacks
+  // the fix, so the fold stays off and the classic path runs.
+  test("moc without the --stable-baseline fix keeps the classic path", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/migrations-chain");
     const result = await cli(["check-stable", "--verbose"], { cwd });
     expect(result.exitCode).toBe(0);
@@ -38,6 +38,46 @@ describe("check-stable", () => {
     expect(result.stdout).toMatch(/--stable-compatible/);
     expect(result.stdout).toMatch(/Generating stable types for/);
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  });
+
+  // Regression: `check-limit` trims the chain back to DropB, whose input type still
+  // mentions `b`, while the baseline is already past DropB and no longer has `b`.
+  // moc 1.12.0-1.14.1 fail that valid upgrade from inside `moc --check
+  // --stable-baseline` with a bogus M0267 demanding `b`; the fix build passes it.
+  describe("baseline already past a trimmed migration", () => {
+    const makeTempFixture = useTempFixtures(
+      path.join(import.meta.dirname, "check-stable"),
+    );
+
+    test("folds and passes on a moc with the --stable-baseline fix", async () => {
+      const cwd = path.join(
+        import.meta.dirname,
+        "check-stable/trimmed-baseline",
+      );
+      const result = await cli(["check-stable", "--verbose"], { cwd });
+      expect(result.stdout).toMatch(/--stable-baseline/);
+      expect(result.stdout).not.toMatch(/--stable-compatible/);
+      expect(result.stdout).toMatch(/Stable compatibility check passed/);
+      expect(result.exitCode).toBe(0);
+    });
+
+    // The workaround for every released moc: the 3-step path never had the bug.
+    test("passes on the classic path when moc lacks the fix", async () => {
+      const cwd = await makeTempFixture("trimmed-baseline");
+      const tomlPath = path.join(cwd, "mops.toml");
+      await writeFile(
+        tomlPath,
+        readFileSync(tomlPath, "utf-8").replace(
+          '"1.14.1-fix-stable-baseline"',
+          '"1.12.0"',
+        ),
+      );
+      const result = await cli(["check-stable", "--verbose"], { cwd });
+      expect(result.stdout).not.toMatch(/--stable-baseline/);
+      expect(result.stdout).toMatch(/--stable-compatible/);
+      expect(result.stdout).toMatch(/Stable compatibility check passed/);
+      expect(result.exitCode).toBe(0);
+    });
   });
 
   test("rejects a .mo baseline in mops.toml", async () => {

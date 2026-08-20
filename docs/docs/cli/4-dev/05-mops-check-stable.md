@@ -109,7 +109,7 @@ When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `m
 ## Diagnostics on moc 1.12.0+
 
 :::warning Temporarily disabled
-These improvements are turned off in the current release. `moc`'s `--stable-baseline` has a bug, so every `moc` pin runs the check the pre-1.12.0 way until `moc` ships a fix — the check still runs and still fails on an incompatible upgrade, but the diagnostics below are not in effect.
+These improvements are turned off for every released `moc`. With [`check-limit`](./08-mops-migrate.md#chain-trimming) trimming the chain, `moc --stable-baseline` rejects a baseline that is already past the trimmed migration — it demands a field that migration dropped and fails a valid upgrade with `M0267`. Until the fix ships, mops runs the check the pre-1.12.0 way: it still runs and still fails on a genuinely incompatible upgrade, but the diagnostics below are not in effect.
 :::
 
 On `moc` 1.12.0 or newer, two diagnostics improve for canisters that have `[migrations]` configured:
