@@ -72,8 +72,11 @@ canisters:
           commands:
             - npm run build-cli-releases
         - type: pre-built
-          url: https://github.com/dfinity/sdk/releases/download/0.29.1/assetstorage.wasm.gz
-          sha256: 4014793c83ae0ff2d851a0c4e62f289a114d36bc1826f5579f55a70ff3c70551
+          # 0.32.0 is the version the sync plugin below requires: its `list`
+          # pagination loop never terminates against pre-0.30.1 assetstorage,
+          # which ignores `start`/`length` and returns every asset each call.
+          url: https://github.com/dfinity/sdk/releases/download/0.32.0/assetstorage.wasm.gz
+          sha256: 04e565b3425fe7510ee16b02adcfe3f01abc9a2725c82a21cb08969241debd62
     sync:
       steps:
         - type: plugin
