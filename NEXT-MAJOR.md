@@ -12,9 +12,8 @@ This file is forward-looking only. Shipped v3 breaking changes are recorded in `
 
 ## Before 3.0.0 GA
 
-- **The docs trees are already flipped.** `lastVersion` is `'current'`, so 3.x serves at the site root and 2.x at `/2.x`. **The next docs deploy publishes that**, and every tag on this branch deploys docs — so cutting another `3.0.0-beta.*` now would put 3.x at the root before GA. If a further preview is needed, flip `lastVersion` back to `'2.x'` for that tag.
-- **Rename the release post's directory to the GA date.** `blog/blog/2026-08-19/` is a placeholder; the slug (`mops-3-0-0`) is date-independent and should stay.
-- **Consolidate `## Next` before running `prepare-cli-release`.** All 3.0.0 content now lives under `## Next` (the `## 3.0.0 (unreleased)` heading is gone) so a `major` bump rolls it into a single `## 3.0.0`. Do not reintroduce a second 3.0.0 heading — the workflow's already-released guard is anchored (`^## 3\.0\.0$`) and would not catch it.
+- **Run `prepare-cli-release` with `major`.** All 3.0.0 content lives under `## Next`, so the bump rolls it into a single `## 3.0.0`. Do not reintroduce a second 3.0.0 heading — the workflow's already-released guard is anchored (`^## 3\.0\.0$`) and would not catch it.
+- **After the release, repoint or drop the npm `next` dist-tag.** It still serves `3.0.0-beta.5`, so `npm i -g ic-mops@next` installs a prerelease of a version that has shipped.
 - Bump `apiVersion` (CLI ↔ backend) only if a schema-affecting change lands before GA — nothing in the current scope requires it.
 - `mops search` and `mops template` have no doc page in either tree (GH #205). Pre-existing and consistent across both, so not a tree-sync defect — but it is a gap a GA docs site shows.
 
