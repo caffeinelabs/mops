@@ -15,7 +15,8 @@ import { cli, useTempFixtures } from "./helpers";
 // `<cache>/packages/<pkg>@<ver>/mops.toml`): a lock-driven install caches
 // only winning versions, so a later stale-lock re-walk used to crash on
 // versions that lost a conflict; and an empty cache dir used to count as a
-// cache hit.
+// cache hit. The lock's `graph` section answers the re-walk without touching
+// the network at all.
 describe("global cache resilience", () => {
   jest.setTimeout(300_000);
 
@@ -108,7 +109,7 @@ describe("global cache resilience", () => {
     }
   });
 
-  test("stale-lock regeneration carries hashes over; --lock update refetches them", async () => {
+  test("stale-lock regeneration carries hashes over; deleting the lock refetches them", async () => {
     const cwd = await makeTempFixture("success");
     const cacheHome = await makeTempCacheHome();
     const env = { CI: undefined, XDG_CACHE_HOME: cacheHome };
@@ -129,17 +130,22 @@ describe("global cache resilience", () => {
       lock.hashes["core@1.0.0"][fileId] = tampered;
       writeFileSync(lockFile, JSON.stringify(lock, null, 2));
 
-      // implicit regeneration (add) carries the corrupt hash over instead of
-      // silently refetching it, and the integrity check reports it loudly
+      // the maintain flow regenerates the stale lock carrying the corrupt
+      // hash over — hashes of already-locked packages are never refetched
       const add = await cli(["add", "base@0.16.0"], { cwd, env });
-      expect(add.exitCode).toBe(1);
-      expect(add.stderr).toMatch(/carried over from the previous lock/);
+      expect(add.exitCode).toBe(0);
       const carried = JSON.parse(readFileSync(lockFile, "utf8"));
       expect(carried.hashes["core@1.0.0"][fileId]).toBe(tampered);
       expect(carried.hashes["base@0.16.0"]).toBeDefined();
 
-      // explicit --lock update refetches every hash from the registry
-      const recover = await cli(["install", "--lock", "update"], { cwd, env });
+      // `mops verify` catches the corruption against the registry
+      const verify = await cli(["verify"], { cwd, env });
+      expect(verify.exitCode).not.toBe(0);
+
+      // recovery per RESTORE_HINT: delete the lock, reinstall — nothing is
+      // carried from a missing lock, so every hash comes from the registry
+      rmSync(lockFile, { force: true });
+      const recover = await cli(["install"], { cwd, env });
       expect(recover.exitCode).toBe(0);
       const refreshed = JSON.parse(readFileSync(lockFile, "utf8"));
       expect(refreshed.hashes["core@1.0.0"][fileId]).toBe(original);

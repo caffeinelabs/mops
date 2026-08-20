@@ -36,7 +36,7 @@ describe("bench", () => {
     // a malformed value is broken environment config, and failing loudly
     // beats behavior that depends on which code path reads the URL first.
     const cwd = path.join(import.meta.dirname, "build/success");
-    const result = await cli(["bench", "--replica", "dfx"], {
+    const result = await cli(["bench"], {
       cwd,
       env: { MOPS_POCKET_IC_URL: "not-a-url" },
     });

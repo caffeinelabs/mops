@@ -1,65 +1,53 @@
-# Mops CLI
+# Mops CLI development
+
+Releasing is a separate document: [RELEASE.md](RELEASE.md).
 
 ## Prerequisites
 
-On macOS, you need to install `gnu-tar` package:
-```
-brew install gnu-tar
-```
+- Node.js >= 20 and npm
+- [bun](https://bun.sh) — `npm run build` bundles with `bun build`
+- GNU tar, on macOS only (`bundle:tar` builds the reproducible tarball with `tar --sort name`, which BSD tar lacks):
 
-To make it available in your shell as `tar`, add the following to your `~/.zshrc` or `~/.bashrc`:
-```
-export PATH="$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin:$PATH"
-```
+  ```
+  brew install gnu-tar
+  ```
 
-## Steps
+  To make it available in your shell as `tar`, add the following to your `~/.zshrc` or `~/.bashrc`:
 
-1. Run `bun install`
+  ```
+  export PATH="$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin:$PATH"
+  ```
 
-2. Update changelog in `CHANGELOG.md` file
+## Dev loop
 
-3. Push latest commits to `main` branch
-
-4. Check reproducibility of the build (see below)
-
-5. Update the version in `package.json` using `npm version` command
-
-6. Publish
-
-## Publish to npm
-```
-npm publish
+```bash
+cd cli
+npm ci
+npm run check           # tsc --noEmit
+npm test                # Jest (all tests)
+npm test -- build.test.ts                    # single test file
+npm test -- --testNamePattern="pattern"      # filter by test name
+npm run build           # TypeScript compile + bundle
 ```
 
-## Check reproducibility of the build
+To run your working copy against a project, use the repo-root helper — it runs the CLI from source via `tsx`:
 
-Check release hash of latest build for version `0.0.0` at https://github.com/caffeinelabs/mops/actions/workflows/build-hash.yml
-
-Build locally version `0.0.0`
-```
-MOPS_VERSION=0.0.0 ./build.sh
+```bash
+npm run mops -- install
 ```
 
-Compare hashes.
+## Reproducible build
 
-## Publish on-chain
-_Run from root of the project_
+Every release's bundle hash is published by the [build-hash workflow](https://github.com/caffeinelabs/mops/actions/workflows/build-hash.yml). To reproduce a build locally (requires Docker; the builder base image lives in [`cli-builder/`](../cli-builder/)):
 
-1. Make sure Docker is running
-
-2. Prepeare release
-```
-npm run release-cli
+```bash
+cd cli
+MOPS_VERSION=<version> COMMIT_HASH=<commit_hash> ./build.sh
 ```
 
-3. Deploy canister
-```
-dfx deploy --network ic --no-wallet cli --identity mops
-```
+To verify a released bundle against its published hash:
 
-## Verify build
-
-```
+```bash
 docker build . --build-arg COMMIT_HASH=<commit_hash> --build-arg MOPS_VERSION=<mops_version> -t mops
 docker run --rm --env SHASUM=<build_hash> mops
 ```

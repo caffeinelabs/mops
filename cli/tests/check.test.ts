@@ -168,6 +168,18 @@ describe("check", () => {
     expect(result.stdout).not.toMatch(/Stable compatibility/);
   });
 
+  // A bad baseline format is a mops.toml error, so it fires before moc runs —
+  // unlike a *missing* baseline, which waits so a compile error wins.
+  test("rejects a .mo baseline before type-checking", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/mo-baseline");
+    const result = await cli(["check"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(
+      /\[canisters\.backend\.check-stable\]\.path must be a \.most file, got: deployed\.mo/,
+    );
+    expect(result.stdout).not.toMatch(/✓ backend/);
+  });
+
   test("lint runs after moc check and passes", async () => {
     const cwd = path.join(import.meta.dirname, "check/with-lint-pass");
     const result = await cli(["check"], { cwd });
@@ -180,6 +192,20 @@ describe("check", () => {
     const result = await cli(["check"], { cwd });
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/no-bool-switch/);
+  });
+
+  test("--no-lint skips lint even when lintoko is configured", async () => {
+    const cwd = path.join(import.meta.dirname, "check/with-lint-pass");
+    const result = await cli(["check", "--no-lint"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).not.toMatch(/Lint/);
+  });
+
+  test("unknown flag before -- is rejected", async () => {
+    const cwd = path.join(import.meta.dirname, "check/success");
+    const result = await cli(["check", "--nope"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/unknown option '--nope'/);
   });
 
   test("lint is skipped when lintoko not configured and no rules exist", async () => {

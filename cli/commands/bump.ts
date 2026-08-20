@@ -1,25 +1,19 @@
-import process from "node:process";
 import prompts from "prompts";
 import chalk from "chalk";
 import { checkConfigFile, readConfig, writeConfig } from "../mops.js";
+import { cliError } from "../error.js";
 
 export async function bump(part: string) {
-  if (!checkConfigFile()) {
-    return;
-  }
+  checkConfigFile();
 
   if (part && !["major", "minor", "patch"].includes(part)) {
-    console.log(
-      chalk.red("Unknown version part. Available parts: major, minor, patch"),
-    );
-    process.exit(1);
+    cliError("Unknown version part. Available parts: major, minor, patch");
   }
 
   let config = readConfig();
 
   if (!config.package) {
-    console.log(chalk.red("No [package] section found in mops.toml."));
-    process.exit(1);
+    cliError("No [package] section found in mops.toml.");
   }
 
   console.log(`Current version: ${chalk.yellow.bold(config.package.version)}`);

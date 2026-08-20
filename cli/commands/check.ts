@@ -2,7 +2,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
-import { cliError, cliExit } from "../error.js";
+import { cliError, cliErrorFrom, cliExit } from "../error.js";
 import {
   getGlobalMocArgs,
   getRootDir,
@@ -27,6 +27,7 @@ import { CanisterConfig, Config } from "../types.js";
 import {
   canUseStableBaselineCheck,
   reportStableCheckOutcome,
+  requireMostBaseline,
   resolveStablePath,
   runStableCheck,
 } from "./check-stable.js";
@@ -45,6 +46,8 @@ export interface CheckOptions {
   verbose: boolean;
   fix: boolean;
   extraArgs: string[];
+  /** Commander `--no-lint`: false skips linting even when lintoko is pinned. */
+  lint: boolean;
   /** Commander `--no-check-limit`: false ignores [migrations].check-limit. */
   checkLimit: boolean;
 }
@@ -138,7 +141,7 @@ async function checkImpl(
     await checkCanisters(config, filtered, options);
   }
 
-  if (config.toolchain?.lintoko) {
+  if (config.toolchain?.lintoko && options.lint !== false) {
     const rootDir = getRootDir();
     const lintRules = await collectLintRules(config, rootDir);
     const lintFiles = isFileMode ? fileArgs : undefined;
@@ -157,7 +160,7 @@ async function checkCanisters(
   canisters: Record<string, CanisterConfig>,
   options: Partial<CheckOptions>,
 ): Promise<void> {
-  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const mocPath = await toolchain.bin("moc");
   const sources = (await sourcesArgs()).flat();
   const globalMocArgs = getGlobalMocArgs(config);
   const allLibs = checkAllLibsSupport(options.verbose);
@@ -184,14 +187,20 @@ async function checkCanisters(
         ...migration.migrationArgs,
         ...(canister.args ?? []),
       ];
-      // Soft-resolve only for the fold decision — don't fatal on a missing
-      // baseline before moc --check (preserves compile-error precedence).
+      // A bad baseline format is a mops.toml error, so it fails before moc runs.
+      // Whether the file *exists* is only soft-resolved here: fatalling on that
+      // before moc --check would hide a compile error behind it.
+      const stableConfigPath = canister["check-stable"]?.path;
+      if (stableConfigPath) {
+        requireMostBaseline(
+          stableConfigPath,
+          `[canisters.${canisterName}.check-stable].path`,
+        );
+      }
       const configuredMost =
-        canister["check-stable"]?.path &&
-        resolveConfigPath(canister["check-stable"].path);
+        stableConfigPath && resolveConfigPath(stableConfigPath);
       const foldStableBaseline =
         !!configuredMost &&
-        configuredMost.endsWith(".most") &&
         existsSync(configuredMost) &&
         canUseStableBaselineCheck(canisterArgs);
       const foldedBaseline = foldStableBaseline ? configuredMost : null;
@@ -245,7 +254,6 @@ async function checkCanisters(
               canisterName,
               foldedBaseline,
               options.checkLimit === false,
-              true,
             );
             // Trimming started from the wrong state, so moc's compat output is
             // misleading — replace it with the actionable hint, same as the
@@ -281,22 +289,19 @@ async function checkCanisters(
           reportStableCheckOutcome(canisterName, {
             migrations: canister.migrations,
             oldMostPath: foldedBaseline,
-            baselineIsMostFile: true,
             checkLimit: options.checkLimit,
             exitCode: 0,
           });
         }
-      } catch (err: any) {
-        cliError(
-          `Error while checking canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
-        );
+      } catch (err) {
+        cliErrorFrom(err, `Error while checking canister ${canisterName}`);
       }
 
       if (!foldStableBaseline) {
         const stablePath = resolveStablePath(canister, canisterName);
         if (stablePath) {
           await runStableCheck({
-            oldFile: stablePath,
+            baselineMost: stablePath,
             canisterMain: motokoPath,
             canisterName,
             mocPath,
@@ -323,7 +328,7 @@ async function checkFiles(
   files: string[],
   options: Partial<CheckOptions>,
 ): Promise<void> {
-  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const mocPath = await toolchain.bin("moc");
   const sources = (await sourcesArgs()).flat();
   const globalMocArgs = getGlobalMocArgs(config);
   const allLibs = checkAllLibsSupport(options.verbose);
@@ -366,10 +371,8 @@ async function checkFiles(
       }
 
       console.log(chalk.green(`✓ ${file}`));
-    } catch (err: any) {
-      cliError(
-        `Error while checking ${file}${err?.message ? `\n${err.message}` : ""}`,
-      );
+    } catch (err) {
+      cliErrorFrom(err, `Error while checking ${file}`);
     }
   }
 }

@@ -1,3 +1,10 @@
+declare global {
+  // Set by the frontend (`window.MOPS_NETWORK` in Package.svelte), which has
+  // no `process.env`. Keep in sync with `frontend/types.d.ts`.
+  // eslint-disable-next-line no-var
+  var MOPS_NETWORK: string;
+}
+
 export function getNetwork() {
   return process.env["MOPS_NETWORK"] || globalThis.MOPS_NETWORK || "ic";
 }

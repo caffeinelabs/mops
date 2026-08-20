@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import semver from "semver";
 import { FILE_PATH_REGEX } from "../constants.js";
+import { RECOMMENDED_POCKET_IC_VERSION } from "../commands/toolchain/pocket-ic-versions.js";
 
 export const MIN_DFINITY_CLIENT_POCKET_IC_VERSION = "9.0.0";
 
@@ -93,14 +94,14 @@ export function assertDfinityClientSupportsPocketIc(
   if (!version || semver.valid(version) === null) {
     throw new Error(
       `PocketIC version ${JSON.stringify(version)} is invalid for deployment checks. ` +
-        "Use an exact semantic version. Run `mops toolchain use pocket-ic 15.0.0` to pin a supported version.",
+        `Use an exact semantic version. Run \`mops toolchain use pocket-ic ${RECOMMENDED_POCKET_IC_VERSION}\` to pin a supported version.`,
     );
   }
   if (semver.lt(version, MIN_DFINITY_CLIENT_POCKET_IC_VERSION)) {
     throw new Error(
       `PocketIC ${version} is incompatible with deployment checks. ` +
         `\`mops build --check-deploy\` requires pocket-ic ${MIN_DFINITY_CLIENT_POCKET_IC_VERSION} or newer. ` +
-        "Run `mops toolchain use pocket-ic 15.0.0` to pin a supported version.",
+        `Run \`mops toolchain use pocket-ic ${RECOMMENDED_POCKET_IC_VERSION}\` to pin a supported version.`,
     );
   }
 }
@@ -154,6 +155,7 @@ function onAttachedSignal(signal: NodeJS.Signals): void {
   const exitCode = signal === "SIGINT" ? 130 : 143;
   if (attachedShuttingDown) {
     // A second signal means "stop waiting" — exit immediately.
+    // eslint-disable-next-line no-restricted-properties
     process.exit(exitCode);
   }
   attachedShuttingDown = true;
@@ -167,6 +169,7 @@ function onAttachedSignal(signal: NodeJS.Signals): void {
   });
   void Promise.race([teardown, timeout]).then(() => {
     if (process.listenerCount(signal) <= 1) {
+      // eslint-disable-next-line no-restricted-properties
       process.exit(exitCode);
     }
   });

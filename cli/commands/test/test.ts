@@ -9,7 +9,6 @@ import chalk from "chalk";
 import { globSync } from "glob";
 import chokidar from "chokidar";
 import debounce from "debounce";
-import { SemVer } from "semver";
 import { ActorMethod } from "@icp-sdk/core/agent";
 
 import { sourcesArgs } from "../sources.js";
@@ -31,20 +30,15 @@ import { SilentReporter } from "./reporters/silent-reporter.js";
 import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
-import { cliError } from "../../error.js";
-import { getDfxVersion } from "../../helpers/get-dfx-version.js";
-import { warnIfDfxReplica } from "../../helpers/deprecate-dfx-replica.js";
-import { hasPocketIcSource } from "../../helpers/pocket-ic-startup.js";
 import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
+import { cliErrorFrom, cliExit } from "../../error.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
-type ReplicaName = "dfx" | "pocket-ic" | "dfx-pocket-ic";
 
 type TestOptions = {
   watch: boolean;
   reporter: ReporterName;
   mode: TestMode;
-  replica: ReplicaName;
   verbose: boolean;
   extraArgs: string[];
 };
@@ -52,51 +46,21 @@ type TestOptions = {
 let replica = new Replica();
 let replicaStartPromise: Promise<void> | undefined;
 
-async function startReplicaOnce(replica: Replica, type: ReplicaName) {
+async function startReplicaOnce(replica: Replica) {
   if (!replicaStartPromise) {
     // A start failure must settle this promise — every replica test file (and
     // the watch SIGINT handler) awaits it — and surface as a clean error, not
     // an unhandled rejection.
-    replicaStartPromise = replica.start({ type, silent: true }).catch((err) => {
-      cliError(
-        `Failed to start the ${type} replica:`,
-        err instanceof Error ? err.message : String(err),
-      );
+    replicaStartPromise = replica.start({ silent: true }).catch((err) => {
+      cliErrorFrom(err, "Failed to start the pocket-ic replica");
     });
   }
   return replicaStartPromise;
 }
 
 export async function test(filter = "", options: Partial<TestOptions> = {}) {
-  let config = readConfig();
   let rootDir = getRootDir();
 
-  let replicaType =
-    options.replica ??
-    (hasPocketIcSource(config.toolchain?.["pocket-ic"])
-      ? "pocket-ic"
-      : ("dfx" as ReplicaName));
-
-  if (
-    replicaType === "pocket-ic" &&
-    !hasPocketIcSource(config.toolchain?.["pocket-ic"])
-  ) {
-    let dfxVersion = getDfxVersion();
-    if (!dfxVersion || new SemVer(dfxVersion).compare("0.24.1") < 0) {
-      console.log(
-        chalk.red(
-          "Please update dfx to the version >=0.24.1 or specify pocket-ic version in mops.toml",
-        ),
-      );
-      process.exit(1);
-    } else {
-      replicaType = "dfx-pocket-ic";
-    }
-  }
-
-  let explicitReplica = options.replica === "dfx";
-
-  replica.type = replicaType;
   replica.verbose = !!options.verbose;
 
   let extraArgs = options.extraArgs ?? [];
@@ -105,9 +69,12 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
     replica.ttl = 60 * 15; // 15 minutes
 
     let sigint = false;
+    // Signal handler: a throw cannot propagate from here, so exiting
+    // directly is the only option.
     process.on("SIGINT", () => {
       if (sigint) {
         console.log("Force exit");
+        // eslint-disable-next-line no-restricted-properties
         process.exit(0);
       }
       sigint = true;
@@ -123,9 +90,11 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
           setTimeout(resolve, 10_000).unref();
         });
         void Promise.race([stopped, deadline]).then(() => {
+          // eslint-disable-next-line no-restricted-properties
           process.exit(0);
         });
       } else {
+        // eslint-disable-next-line no-restricted-properties
         process.exit(0);
       }
     });
@@ -148,10 +117,8 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
         options.reporter,
         filter,
         options.mode,
-        replicaType,
         true,
         controller.signal,
-        explicitReplica,
         extraArgs,
       );
       await curRun;
@@ -178,14 +145,12 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
       options.reporter,
       filter,
       options.mode,
-      replicaType,
       false,
       undefined,
-      explicitReplica,
       extraArgs,
     );
     if (!passed) {
-      process.exit(maxMocExit >= 2 ? 2 : 1);
+      cliExit(maxMocExit >= 2 ? 2 : 1);
     }
   }
 }
@@ -204,20 +169,16 @@ async function runAll(
   reporterName: ReporterName | undefined,
   filter = "",
   mode: TestMode = "interpreter",
-  replicaType: ReplicaName,
   watch = false,
   signal?: AbortSignal,
-  explicitReplica = false,
   extraArgs: string[] = [],
 ): Promise<boolean> {
   let done = await testWithReporter(
     reporterName,
     filter,
     mode,
-    replicaType,
     watch,
     signal,
-    explicitReplica,
     extraArgs,
   );
   return done;
@@ -227,10 +188,8 @@ export async function testWithReporter(
   reporterName: ReporterName | Reporter | undefined,
   filter = "",
   defaultMode: TestMode = "interpreter",
-  replicaType: ReplicaName,
   watch = false,
   signal?: AbortSignal,
-  explicitReplica = false,
   extraArgs: string[] = [],
 ): Promise<boolean> {
   maxMocExit = 0;
@@ -259,7 +218,7 @@ export async function testWithReporter(
 
   if (!reporterName || typeof reporterName === "string") {
     if (!reporterName) {
-      reporterName = files.length > 1 ? "files" : "verbose";
+      reporterName = "verbose";
     }
 
     if (reporterName == "compact") {
@@ -282,11 +241,10 @@ export async function testWithReporter(
   let globalMocArgs = getGlobalMocArgs(config);
 
   if (!mocPath) {
-    mocPath = await toolchain.bin("moc", { fallback: true });
+    mocPath = await toolchain.bin("moc");
   }
 
   let testTempDir = path.join(getRootDir(), ".mops/.test/");
-  replica.dir = testTempDir;
 
   fs.rmSync(testTempDir, { recursive: true, force: true });
   fs.mkdirSync(testTempDir, { recursive: true });
@@ -307,10 +265,6 @@ export async function testWithReporter(
 
   let hasWasiTests = filesWithMode.some(({ mode }) => mode === "wasi");
   let hasReplicaTests = filesWithMode.some(({ mode }) => mode === "replica");
-
-  if (hasReplicaTests) {
-    warnIfDfxReplica(replicaType, explicitReplica);
-  }
 
   // prepare wasmtime path
   if (hasWasiTests && !wasmtimePath) {
@@ -416,6 +370,9 @@ export async function testWithReporter(
                   "Minimum wasmtime version is 14.0.0. Please update wasmtime to the latest version",
                 ),
               );
+              // This promise chain only propagates resolution (`.then(resolve)`),
+              // so a throw here would be an unhandled rejection, not an exit.
+              // eslint-disable-next-line no-restricted-properties
               process.exit(1);
             }
 
@@ -455,7 +412,7 @@ export async function testWithReporter(
               return;
             }
 
-            await startReplicaOnce(replica, replicaType);
+            await startReplicaOnce(replica);
 
             if (signal?.aborted) {
               return;

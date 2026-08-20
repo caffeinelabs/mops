@@ -13,7 +13,7 @@ mops check-stable [args...]
 
 Verifies that an upgrade from an old actor to the current canister entrypoint is safe — i.e., that stable variable signatures are compatible. This prevents `Memory-incompatible program upgrade` traps at deploy time.
 
-The command handles the full workflow internally: generating `.most` stable type signatures, comparing them, and cleaning up intermediate files. On `moc` 1.12.0+ some [diagnostics improve](#diagnostics-on-moc-1120).
+The baseline is always a committed `.most` file — see [Getting a baseline](#getting-a-baseline). The command handles the rest internally: generating the current `.most` stable type signature, comparing it against the baseline, and cleaning up intermediate files. On `moc` 1.12.0+ some [diagnostics improve](#diagnostics-on-moc-1120).
 
 When checking canisters, per-canister `[canisters.<name>].args` from `mops.toml` are applied alongside global `[moc].args`.
 
@@ -29,19 +29,14 @@ Check a specific canister by name
 mops check-stable backend
 ```
 
-Check upgrade compatibility using an old source file
+Check against a baseline path directly
 ```
-mops check-stable .old/src/backend/main.mo
-```
-
-Check using a pre-generated `.most` file
-```
-mops check-stable /path/to/deployed.most
+mops check-stable deployed/backend.most
 ```
 
-Check a specific canister using an old file
+Check a specific canister against a baseline path
 ```
-mops check-stable .old/src/backend/main.mo backend
+mops check-stable deployed/backend.most backend
 ```
 
 Check with verbose output
@@ -66,18 +61,26 @@ With no arguments, all canisters that have `[check-stable]` configured are check
 
 ### File mode
 
-When the first argument looks like a file path (`.mo` or `.most`):
+When the first argument looks like a file path:
 
 ```
-mops check-stable <old-file> [canister]
+mops check-stable <baseline.most> [canister]
 ```
 
-- **`<old-file>`** — Path to the old (deployed) version. A `.mo` file is compiled to extract stable types; a `.most` file is used directly.
+- **`<baseline.most>`** — Path to the deployed version's stable type signature. Must be a `.most` file.
 - **`[canister]`** — Name of the canister to check against. When omitted, auto-detected if exactly one canister is defined; errors if multiple canisters exist.
 
-:::tip
-`mops build` generates a `.most` file for each canister alongside `.wasm` and `.did`. Use [`mops deployed`](./09-mops-deployed.md) as a post-deploy hook to promote that `.most` into a committed `deployed/<name>.most` baseline, and configure `[canisters.<name>.check-stable]` in `mops.toml` so `mops check-stable` (and `mops check`) verify upgrade safety automatically on every run.
-:::
+## Getting a baseline
+
+The baseline must be a `.most` file, in both canister mode and file mode. A `.mo` source is rejected:
+
+```
+[canisters.backend.check-stable].path must be a .most file, got: deployed.mo
+```
+
+`mops build` writes a `.most` for each canister alongside its `.wasm` and `.did`. [`mops deployed`](./09-mops-deployed.md) promotes that file into a committed `deployed/<name>.most` baseline; run it as a post-deploy hook so the baseline always describes the running canister. Before the first deploy, `mops deployed init <canister>` creates an empty-actor baseline and wires `[canisters.<name>.check-stable].path` to it.
+
+A `.mo` source is not accepted because it describes whatever that source says today, not what the deployed canister actually holds — the two drift the moment someone edits the file, and the check silently passes against the wrong state.
 
 ## Options
 
@@ -89,13 +92,15 @@ Show detailed output including the `moc` commands being run and the intermediate
 
 Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. See [chain trimming](./08-mops-migrate.md#chain-trimming). Also suppresses the pending-migration warning that runs when `check-limit` is set.
 
+### `--locked`
+
+Require an up-to-date [`mops.lock`](../../10-mops.lock.md) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](../1-deps/02-mops-install.md#--locked).
+
 ## Pending migration diagnostic
 
 When `[canisters.<name>.migrations].check-limit` is set, `mops check-stable` compares the deployed `.most` baseline against the local chain after the compatibility check. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error (trimming started from the wrong state). If compat passed anyway, it is shown as a warning.
 
 On `moc` 1.12.0+ this diagnostic can also replace type errors from the same run. The command still exits non-zero; fold the pending migrations (or pass `--no-check-limit`) to see them.
-
-The warning only applies when the baseline is a committed `.most` file (via `[check-stable].path` or passed as a `.most` argument). Baselines compiled from a `.mo` source on the command line are skipped — the scratch `.most` would not reflect what is actually deployed.
 
 ## Enhanced migration support
 
@@ -103,12 +108,12 @@ When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `m
 
 ## Diagnostics on moc 1.12.0+
 
-On `moc` 1.12.0 or newer, two diagnostics improve for canisters that have `[migrations]` configured and a `.most` baseline:
+On `moc` 1.12.0 or newer, two diagnostics improve for canisters that have `[migrations]` configured:
 
 - A field the initial actor requires that no migration produces now **fails** the check (`M0267`) instead of only warning (`M0254`). If a forgotten migration used to slip through as a warning, expect it to be an error now. Fields the baseline already provides with a compatible type stay a warning.
 - Compatibility errors point at your source — `src/main.mo:3.1-11.2` — instead of `(unknown location)`.
 
-Older `moc` pins, canisters without `[migrations]`, and `.mo` baselines are unaffected.
+Older `moc` pins and canisters without `[migrations]` are unaffected.
 
 ## Passing flags to the Motoko compiler
 

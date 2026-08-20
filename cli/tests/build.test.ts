@@ -1,18 +1,18 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { execa } from "execa";
-import { existsSync, linkSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { appendFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import path from "path";
+import { cleanFixture } from "./build-helpers";
 import { cli, cliSnapshot } from "./helpers";
+import { RECOMMENDED_POCKET_IC_VERSION } from "../commands/toolchain/pocket-ic-versions";
 
 const distBin = path.resolve(import.meta.dirname, "../dist/bin/mops.js");
 
-function cleanFixture(cwd: string, ...extras: string[]) {
-  rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
-  for (const p of extras) {
-    rmSync(p, { recursive: true, force: true });
-  }
-}
-
+// Core build behaviour. The `[optimize]`, Wasm-analysis and PocketIC
+// check-deploy groups live in build-optimize / build-check-wasm /
+// build-check-deploy: jest parallelises across files, not within one, so a
+// single build suite made itself the tail of the entire run.
 describe("build", () => {
   // Several dfx/pocket-ic builds per test; slow CI can exceed 60s default.
   jest.setTimeout(120_000);
@@ -141,249 +141,21 @@ describe("build", () => {
     },
   );
 
-  test("[optimize] runs wasm-opt after build", async () => {
-    const cwd = path.join(import.meta.dirname, "build/optimize");
-    const stamp = path.join(cwd, ".mops/.build/.wasm-opt-ran");
-    try {
-      const result = await cli(["build", "--verbose"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout + result.stderr).toMatch(/Optimized main\.wasm/);
-      expect(existsSync(path.join(cwd, ".mops/.build/main.wasm"))).toBe(true);
-      expect(existsSync(stamp)).toBe(true);
-    } finally {
-      cleanFixture(cwd);
-      rmSync(stamp, { force: true });
-    }
-  });
-
-  test("--no-optimize skips the wasm-opt pass", async () => {
-    const cwd = path.join(import.meta.dirname, "build/optimize");
-    const stamp = path.join(cwd, ".mops/.build/.wasm-opt-ran");
-    try {
-      const result = await cli(["build", "--no-optimize", "--verbose"], {
-        cwd,
-      });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout + result.stderr).not.toMatch(/Optimized main\.wasm/);
-      expect(existsSync(path.join(cwd, ".mops/.build/main.wasm"))).toBe(true);
-      expect(existsSync(stamp)).toBe(false);
-    } finally {
-      cleanFixture(cwd);
-      rmSync(stamp, { force: true });
-    }
-  });
-
-  test("over-limit IC0505 estimate continues to PocketIC", async () => {
-    const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
-    try {
-      const result = await cli(["build"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("Warning [MOPS-WASM-COMPLEXITY]");
-      expect(result.stderr).toMatch(
-        /Function: 0[\s\S]*Estimated complexity: 1,000,050[\s\S]*IC0505 limit: 1,000,000[\s\S]*Limit usage: 100\.0%[\s\S]*Instruction count: 20,001/,
-      );
-      expect(result.stderr).toMatch(
-        "Run `mops build --check-deploy` for authoritative PocketIC validation",
-      );
-      expect(result.stderr).toMatch("Error code: CanisterInvalidWasm");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--check-wasm analyzes Wasm without starting PocketIC", async () => {
-    const cwd = path.join(import.meta.dirname, "build/check-wasm-flag");
-    try {
-      const result = await cli(["build", "--check-wasm"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stderr).toMatch("Warning [MOPS-WASM-COMPLEXITY]");
-      expect(result.stdout).not.toMatch("check deploy canister");
-      expect(result.stdout).toMatch("Built 1 canister successfully");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--no-check-deploy leaves configured Wasm analysis enabled", async () => {
-    const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
-    try {
-      const result = await cli(["build", "--no-check-deploy"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stderr).toMatch("Warning [MOPS-WASM-COMPLEXITY]");
-      expect(result.stdout).not.toMatch("check deploy canister");
-      expect(result.stdout).toMatch("Built 1 canister successfully");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--no-check-wasm leaves configured PocketIC validation enabled", async () => {
-    const cwd = path.join(import.meta.dirname, "build/wasm-complexity");
-    try {
-      const result = await cli(["build", "--no-check-wasm"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).not.toMatch("MOPS-WASM-COMPLEXITY");
-      expect(result.stderr).toMatch("Error code: CanisterInvalidWasm");
-      expect(result.stdout).toMatch("check deploy canister main");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("[build].check-deploy installs the built Wasm on PocketIC", async () => {
-    const cwd = path.join(import.meta.dirname, "build/check-deploy-config");
-    try {
-      await cliSnapshot(["build"], { cwd }, 0);
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--check-deploy installs the built Wasm on PocketIC", async () => {
-    const cwd = path.join(import.meta.dirname, "build/check-deploy");
-    try {
-      await cliSnapshot(["build", "--check-deploy"], { cwd }, 0);
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--check-deploy accepts a path-pinned PocketIC binary", async () => {
-    const versionCwd = path.join(import.meta.dirname, "build/check-deploy");
-    const cwd = path.join(import.meta.dirname, "build/check-deploy-path");
-    const localBin = path.join(cwd, "pocket-ic");
-    try {
-      const binResult = await cli(["toolchain", "bin", "pocket-ic"], {
-        cwd: versionCwd,
-      });
-      expect(binResult.exitCode).toBe(0);
-      rmSync(localBin, { force: true });
-      linkSync(binResult.stdout.trim(), localBin);
-
-      const result = await cli(["build", "--check-deploy"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toMatch("check deploy canister main");
-    } finally {
-      rmSync(localBin, { force: true });
-      cleanFixture(cwd);
-    }
-  });
-
-  test("build without check-deploy config does not check deployment", async () => {
-    const cwd = path.join(import.meta.dirname, "build/check-deploy");
-    try {
-      const result = await cli(["build"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).not.toMatch("check deploy canister");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--no-check-deploy overrides [build].check-deploy", async () => {
-    const cwd = path.join(import.meta.dirname, "build/check-deploy-config");
-    try {
-      const result = await cli(["build", "--no-check-deploy"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).not.toMatch("check deploy canister");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--check-deploy reports Wasm memory limit failures", async () => {
-    const cwd = path.join(import.meta.dirname, "build/check-deploy-fail");
-    try {
-      const result = await cli(["build", "--check-deploy"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("PocketIC deployment check failed");
-      expect(result.stderr).toMatch("Wasm memory limit");
-      expect(result.stderr).toMatch(
-        "Error code: CanisterWasmMemoryLimitExceeded",
-      );
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--check-deploy reports Candid encoding errors without a deployment label", async () => {
-    const cwd = path.join(
-      import.meta.dirname,
-      "build/check-deploy-invalid-arg",
-    );
-    try {
-      const result = await cli(["build", "--check-deploy"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("Invalid initArg for canister main");
-      expect(result.stderr).not.toMatch("PocketIC deployment check failed");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--check-deploy preserves an ordinary installation failure", async () => {
-    const cwd = path.join(import.meta.dirname, "build/check-deploy-trap");
-    try {
-      const result = await cli(["build", "--check-deploy"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("PocketIC deployment check failed");
-      expect(result.stderr).toMatch("assertion failed");
-      expect(result.stderr).toMatch("Error code: CanisterCalledTrap");
-      expect(result.stderr).not.toMatch("MOPS-CHECK-DEPLOY-SKIPPED");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--check-deploy preserves PocketIC startup failures", async () => {
-    const cwd = path.join(
-      import.meta.dirname,
-      "build/check-deploy-startup-fail",
-    );
-    try {
-      const result = await cli(["build", "--check-deploy"], { cwd });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("PocketIC deployment check failed");
-      expect(result.stdout).not.toMatch("check deploy canister");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("check-deploy skips chains incompatible with empty state and checks siblings", async () => {
-    const cwd = path.join(
-      import.meta.dirname,
-      "build/check-deploy-incomplete-migrations",
-    );
-    try {
-      const result = await cli(["build"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stderr).toMatch("Warning [MOPS-CHECK-DEPLOY-SKIPPED]");
-      expect(result.stderr).toMatch("Canister: problematic");
-      expect(result.stderr).toMatch("Canister: problematic2");
-      expect(
-        result.stderr.match(/Fresh PocketIC deployment check did not run\./g),
-      ).toHaveLength(2);
-      expect(result.stderr).toMatch(
-        "moc reported that the generated stable state is incompatible with an empty canister",
-      );
-      expect(result.stderr).toMatch("Compatibility error");
-      expect(result.stdout).not.toMatch("check deploy canister problematic");
-      expect(result.stdout).not.toMatch("check deploy canister problematic2");
-      expect(result.stdout).toMatch("check deploy canister healthy");
-      expect(result.stdout).toMatch("check deploy canister aliased");
-      expect(result.stdout).toMatch("Built 4 canisters successfully");
-    } finally {
-      cleanFixture(cwd);
-    }
-  });
-
-  test("--check-deploy requires a pinned PocketIC version", async () => {
+  // Lives here rather than in build-check-deploy because it builds
+  // `build/success`, and this file owns that fixture. Every test in it calls
+  // `cleanFixture`, which removes `.mops` — from a parallel worker that would
+  // delete a build another test is still using.
+  test("--check-deploy requires a PocketIC pin", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
     try {
       const result = await cli(["build", "foo", "--check-deploy"], { cwd });
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("mops toolchain use pocket-ic 15.0.0");
+      expect(result.stderr).toMatch(
+        "Tool 'pocket-ic' is not defined in [toolchain] section in mops.toml",
+      );
+      expect(result.stderr).toMatch(
+        `mops toolchain use pocket-ic ${RECOMMENDED_POCKET_IC_VERSION}`,
+      );
     } finally {
       cleanFixture(cwd);
     }
@@ -418,53 +190,84 @@ describe("build", () => {
     }
   });
 
-  test("--check-deploy warns when MOPS_POCKET_IC_URL ignores a pin", async () => {
-    const cwd = path.join(import.meta.dirname, "build/check-deploy");
+  // Anything that consumes mops as a build step — CI attestation, a canister
+  // orchestrator, a cache keyed on artifact hashes — needs identical inputs to
+  // produce identical outputs. Nothing else in the suite would catch a
+  // timestamp or an iteration-order dependency creeping into the pipeline.
+  test("repeated builds of the same source produce identical artifacts", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    const outA = path.join(cwd, ".mops/.repro-a");
+    const outB = path.join(cwd, ".mops/.repro-b");
     try {
-      const result = await cli(["build", "--check-deploy"], {
-        cwd,
-        env: { MOPS_POCKET_IC_URL: "http://127.0.0.1:1" },
-      });
-      expect(result.exitCode).toBe(1);
-      expect(result.stdout + result.stderr).toMatch("MOPS_POCKET_IC_URL");
-      expect(result.stdout + result.stderr).toMatch("ignored");
+      expect((await cli(["build", "-o", outA], { cwd })).exitCode).toBe(0);
+      expect((await cli(["build", "-o", outB], { cwd })).exitCode).toBe(0);
+
+      const artifacts = ["foo.wasm", "foo.did", "foo.most"];
+      for (const name of artifacts) {
+        const a = readFileSync(path.join(outA, name));
+        const b = readFileSync(path.join(outB, name));
+        expect(`${name}: ${createHash("sha256").update(b).digest("hex")}`).toBe(
+          `${name}: ${createHash("sha256").update(a).digest("hex")}`,
+        );
+      }
     } finally {
       cleanFixture(cwd);
     }
   });
 
-  test("--check-deploy rejects a legacy PocketIC pin before building", async () => {
-    const cwd = path.join(import.meta.dirname, "build/check-deploy-legacy");
-    const result = await cli(["build", "--check-deploy"], { cwd });
+  // `build` used to install with `lock: "ignore"`, so a lockfile was never
+  // written and a tampered `.mops/` went unnoticed on every build.
+  describe("lock policy", () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    const lockFile = path.join(cwd, "mops.lock");
 
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch("requires pocket-ic 9.0.0 or newer");
-    // The guard fires before compilation — no build output for this canister.
-    expect(result.stdout).not.toMatch("build canister");
-  });
+    test("creates mops.lock without announcing it", async () => {
+      rmSync(lockFile, { force: true });
+      try {
+        const result = await cli(["build", "foo"], {
+          cwd,
+          env: { CI: undefined },
+        });
+        expect(result.exitCode).toBe(0);
+        expect(existsSync(lockFile)).toBe(true);
+        expect(result.stdout).not.toMatch(/mops\.lock created/);
+      } finally {
+        cleanFixture(cwd, lockFile);
+      }
+    });
 
-  test("rejects an invalid wasmMemoryLimit without --check-deploy", async () => {
-    const cwd = path.join(import.meta.dirname, "build/invalid-memory-limit");
-    const result = await cli(["build"], { cwd });
+    // Integrity is verified at download time now, so builds no longer re-hash
+    // `.mops/` — editing a dependency in place is tolerated (and is how some
+    // debugging workflows operate). `mops verify` is the on-demand audit.
+    test("tolerates a locally modified .mops/ file that mops verify rejects", async () => {
+      rmSync(lockFile, { force: true });
+      try {
+        const first = await cli(["build", "foo"], {
+          cwd,
+          env: { CI: undefined },
+        });
+        expect(first.exitCode).toBe(0);
 
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatch(
-      "Invalid wasmMemoryLimit for canister main: expected a positive integer number of bytes",
-    );
-    expect(result.stderr).not.toMatch("PocketIC deployment check failed");
-  });
+        appendFileSync(
+          path.join(cwd, ".mops/core@1.0.0/src/Array.mo"),
+          "\n// tampered\n",
+        );
 
-  test("[optimize] soft-fails when wasm-opt errors", async () => {
-    const cwd = path.join(import.meta.dirname, "build/optimize-fail");
-    try {
-      const result = await cli(["build"], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout + result.stderr).toMatch(
-        /Failed to optimize main\.wasm/,
-      );
-      expect(existsSync(path.join(cwd, ".mops/.build/main.wasm"))).toBe(true);
-    } finally {
-      cleanFixture(cwd);
-    }
+        const result = await cli(["build", "foo"], {
+          cwd,
+          env: { CI: undefined },
+        });
+        expect(result.exitCode).toBe(0);
+        expect(result.stderr).not.toMatch(/Integrity check failed/);
+
+        const verify = await cli(["verify"], { cwd, env: { CI: undefined } });
+        expect(verify.exitCode).toBe(1);
+        expect(verify.stderr).toMatch(
+          /\.mops\/core@1\.0\.0\/src\/Array\.mo does not match mops\.lock/,
+        );
+      } finally {
+        cleanFixture(cwd, lockFile);
+      }
+    });
   });
 });

@@ -19,7 +19,7 @@
 
 ## Local Development
 
-The local pipeline runs on [icp-cli](https://github.com/dfinity/icp-cli) (config in `icp.yaml`). Install the same versions CI pins:
+Every canister deploy — local, staging and mainnet — runs on [icp-cli](https://github.com/dfinity/icp-cli) (config in `icp.yaml`). Install the same versions CI pins:
 
 ```bash
 npm install -g @icp-sdk/icp-cli@1.2.0 @icp-sdk/ic-wasm@0.11.1
@@ -46,7 +46,7 @@ alias mops-local="bun /<path-to-local-mops>/cli/environments/nodejs/cli.ts"
 
 3. Point the CLI at your local registry
 
-`mops-local set-network local` alone is not enough: the built-in `local` endpoint assumes the fixed canister id dfx used to pin via `specified_id`, and icp-cli has no equivalent — the local replica allocates the id at create time. Pass the deployed one explicitly:
+`MOPS_NETWORK=local` alone is not enough: the built-in `local` endpoint hardcodes the staging canister id, while the local replica allocates a fresh one at create time. Pass the deployed one explicitly:
 
 ```bash
 export MOPS_REGISTRY_HOST="http://127.0.0.1:4943"
@@ -55,6 +55,40 @@ export MOPS_REGISTRY_CANISTER_ID="$(jq -r .main .icp/cache/mappings/local.ids.js
 
 Now you can install/publish packages locally like this `mops-local add <pkg>`
 
-To work against the staging registry instead, `mops-local set-network staging` (no overrides needed).
+To work against the staging registry instead, `export MOPS_NETWORK=staging` (no overrides needed), or set it per command: `MOPS_NETWORK=staging mops-local add <pkg>`.
 
 See [Environment Variables](/cli/environment-variables) in the documentation for details.
+
+## Deploying
+
+```bash
+npm run deploy-staging          # main + assets, on the staging canisters
+npm run deploy-ic               # every canister the ic environment declares
+npm run deploy-ic blog          # or just one
+```
+
+Both import the `mops` identity by name. The canister IDs come from
+`.icp/data/mappings/<environment>.ids.json`, which is committed — icp-cli keeps
+mainnet IDs there precisely so a fresh clone knows the canisters already exist,
+and only `.icp/cache/` (local networks, downloads) is ignored. Deploys pass
+`--no-create`, so a missing mapping fails instead of quietly creating a second
+canister.
+
+Adding a mainnet canister means `icp canister link <name> <id> -e ic` once, then
+committing the updated mapping.
+
+Always deploy through the npm scripts, not `icp deploy` directly. They set
+`MOPS_FRONTEND_NETWORK` from the same value they pass to `-e`, which is what the
+frontend build reads. Deliberately not icp-cli's own `ICP_ENVIRONMENT`: `-e`
+wins for icp but an exported `ICP_ENVIRONMENT` would still reach vite, so the
+two could silently disagree and bake local replica IDs into a mainnet bundle.
+A raw `icp deploy assets` leaves it unset and fails loudly instead.
+
+`docs` and `cli` are deployed by `release.yml` on a CLI release, through
+`.github/actions/deploy-canister`. Neither builds the frontend, so the raw form
+is safe for them. To roll one back, check out the previous release commit and
+run what that action runs:
+
+```bash
+icp deploy cli -e ic --identity mops --no-create --yes
+```

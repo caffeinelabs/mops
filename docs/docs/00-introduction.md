@@ -19,7 +19,7 @@ Add dependencies as easily as `mops add <package>`.
 
 Update dependencies as easily as `mops update <package>`.
 
-### Mops is on on-chain package registry for Motoko
+### Mops is an on-chain package registry for Motoko
 
 All packages published to Mops registry are hosted on the [Internet Computer](https://internetcomputer.org/) blockchain.
 
@@ -39,4 +39,4 @@ Mops comes with a [benchmarking tool](./cli/4-dev/02-mops-bench.md) that works w
 
 ### Mops is an essential tool for Motoko developers
 
-Use [`mops watch`](./cli/4-dev/01-mops-watch.md) to check syntax errors, show warnings, run tests, generate declarations, and deploy canisters each time you make changes in your code.
+Use [`mops watch`](./cli/4-dev/01-mops-watch.md) to check syntax errors, show warnings, and format code each time you make changes — and run tests too, with `--test`.

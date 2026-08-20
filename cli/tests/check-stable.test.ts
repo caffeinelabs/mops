@@ -1,28 +1,27 @@
 import { describe, expect, test } from "@jest/globals";
 import { existsSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import path from "path";
 import { cli, cliSnapshot } from "./helpers";
 
 describe("check-stable", () => {
-  test("compatible upgrade from .mo file", async () => {
+  test("compatible upgrade", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/compatible");
-    await cliSnapshot(["check-stable", "old.mo"], { cwd }, 0);
+    await cliSnapshot(["check-stable", "old.most"], { cwd }, 0);
   });
 
-  test("incompatible upgrade from .mo file", async () => {
+  test("incompatible upgrade", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/incompatible");
-    const result = await cliSnapshot(["check-stable", "old.mo"], { cwd }, 1);
+    const result = await cliSnapshot(["check-stable", "old.most"], { cwd }, 1);
     expect(result.stderr).toMatch(/compatibility/i);
   });
 
   test("compatible upgrade with verbose", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/compatible");
-    const result = await cli(["check-stable", "old.mo", "--verbose"], { cwd });
+    const result = await cli(["check-stable", "old.most", "--verbose"], {
+      cwd,
+    });
     expect(result.exitCode).toBe(0);
     // Fixture pinned to moc 1.3.0 — regression for the classic 3-step path.
-    expect(result.stdout).toMatch(/Generating stable types for old\.mo/);
     expect(result.stdout).toMatch(/Generating stable types for new\.mo/);
     expect(result.stdout).toMatch(/--stable-compatible/);
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
@@ -39,47 +38,36 @@ describe("check-stable", () => {
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
-  // Fixture pinned to moc 1.12.0 — EM, but a `.mo` baseline, so no fold. The
-  // scratch `.most` compiled from it is only an approximation of what is
-  // deployed; `d` is produced by no migration, which the folded check would
-  // reject as M0267 where `--stable-compatible` only warns (M0254).
-  test("moc 1.12+ EM keeps the 3-step path for a .mo baseline", async () => {
-    const cwd = path.join(import.meta.dirname, "check-stable/mo-baseline-em");
-    const result = await cli(["check-stable", "--verbose"], { cwd });
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toMatch(/--stable-compatible/);
-    expect(result.stdout).not.toMatch(/--stable-baseline/);
-    expect(result.stdout).toMatch(/Generating stable types for deployed\.mo/);
-    expect(result.stdout).toMatch(/Stable compatibility check passed/);
+  test("rejects a .mo baseline in mops.toml", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/mo-baseline");
+    const result = await cli(["check-stable"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(
+      /\[canisters\.backend\.check-stable\]\.path must be a \.most file, got: deployed\.mo/,
+    );
+  });
+
+  test("rejects a .mo baseline passed as an argument", async () => {
+    const cwd = path.join(import.meta.dirname, "check-stable/compatible");
+    const result = await cli(["check-stable", "new.mo"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(
+      /Baseline must be a \.most file, got: new\.mo/,
+    );
   });
 
   test("old file in subdirectory (.old/src/ pattern)", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/subdirectory");
-    const result = await cli(["check-stable", ".old/src/main.mo"], { cwd });
+    const result = await cli(["check-stable", ".old/src/main.most"], { cwd });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
-  });
-
-  test("compatible upgrade from .most file", async () => {
-    const cwd = path.join(import.meta.dirname, "check-stable/compatible");
-    const tempDir = await mkdtemp(path.join(tmpdir(), "mops-test-most-"));
-    try {
-      const mostPath = path.join(tempDir, "old.most");
-      await writeFile(mostPath, "actor {\n  stable var counter : Nat\n};\n");
-      const result = await cli(["check-stable", mostPath], { cwd });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toMatch(/Stable compatibility check passed/);
-    } finally {
-      await rm(tempDir, { recursive: true, force: true });
-    }
   });
 
   test("works with relative paths in moc args (e.g. --actor-idl)", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/actor-idl");
-    const result = await cli(["check-stable", "old.mo"], { cwd });
+    const result = await cli(["check-stable", "old.most"], { cwd });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
-    expect(existsSync(path.join(cwd, "old.most"))).toBe(false);
     expect(existsSync(path.join(cwd, "old.wasm"))).toBe(false);
     expect(existsSync(path.join(cwd, "new.most"))).toBe(false);
     expect(existsSync(path.join(cwd, "new.wasm"))).toBe(false);
@@ -114,7 +102,7 @@ describe("check-stable", () => {
 
   test("errors when old file does not exist", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/compatible");
-    const result = await cli(["check-stable", "nonexistent.mo"], { cwd });
+    const result = await cli(["check-stable", "nonexistent.most"], { cwd });
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/File not found/);
   });

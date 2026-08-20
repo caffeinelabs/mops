@@ -11,7 +11,6 @@ export type Config = {
     files?: string[];
     homepage?: string;
     documentation?: string;
-    dfx?: string;
     moc?: string;
     donation?: string;
   };

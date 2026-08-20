@@ -26,6 +26,8 @@ You can specify `latest` as version to install the latest available version.
 mops toolchain use moc latest
 ```
 
+For `pocket-ic`, versions below `9.0.0` are rejected — see [`pocket-ic` versions](./01-toolchain-overview.md#pocket-ic-versions).
+
 If a version is not specified, you will be prompted to select the version from the list of available versions.
 ```
 mops toolchain use moc

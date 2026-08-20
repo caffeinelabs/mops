@@ -4,5 +4,15 @@
   },
   "parserOptions": {
     "sourceType": "module"
+  },
+  "rules": {
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "process",
+        "property": "exit",
+        "message": "Throw via cliError()/cliExit()/cliAbort() from error.ts instead; handleCliError() is the only exit point. Event handlers that cannot propagate a throw may disable this rule inline."
+      }
+    ]
   }
 }

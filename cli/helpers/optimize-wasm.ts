@@ -3,11 +3,10 @@ import fs from "fs-extra";
 import chalk from "chalk";
 import { execa } from "execa";
 
-import { readConfig, writeConfig, getClosestConfigFile } from "../mops.js";
+import { readConfig } from "../mops.js";
 import type { Config } from "../types.js";
-import { cliError } from "../error.js";
+import { CliError, cliError } from "../error.js";
 import { toolchain } from "../commands/toolchain/index.js";
-import { getLatestReleaseTag } from "../commands/toolchain/wasm-opt.js";
 import {
   formatOptimizePipeline,
   isOptimizeEnabled,
@@ -28,33 +27,49 @@ function resolveOptimizeConfigOrExit(config: Config) {
     cliError(err?.message ?? String(err));
   }
 }
+
 /**
- * If `[optimize]` is on and `[toolchain].wasm-opt` is missing, pin the latest
- * Binaryen release into mops.toml and return its version.
+ * Validate the `[optimize]` settings and the `wasm-opt` pin without compiling
+ * anything, so a misconfigured project fails before the first canister builds.
  */
-export async function ensureWasmOptPinned(
+export function checkOptimizeConfig(config: Config = readConfig()): void {
+  if (!isOptimizeEnabled(config)) {
+    return;
+  }
+  resolveOptimizeConfigOrExit(config);
+  requireWasmOptPin(config);
+}
+
+/**
+ * The pinned Binaryen version, or null when `[optimize]` is absent. Resolving a
+ * version here rather than pinning one would mean a build command writing
+ * mops.toml and asking GitHub for the latest release.
+ */
+export function requireWasmOptPin(
   config: Config = readConfig(),
-  { verbose = false } = {},
-): Promise<string | null> {
+): string | null {
   if (!isOptimizeEnabled(config)) {
     return null;
   }
-  let existing = config.toolchain?.["wasm-opt"];
-  if (existing) {
-    return existing;
+  let pinned = config.toolchain?.["wasm-opt"];
+  if (!pinned) {
+    cliError(
+      "[optimize] is enabled but wasm-opt is not pinned in [toolchain].\n" +
+        "Run `mops toolchain use wasm-opt 131` (or another version), or drop [optimize] from mops.toml.\n" +
+        "Pass --no-optimize to skip the pass for a single run.",
+    );
   }
-  let version = await getLatestReleaseTag();
-  config.toolchain = { ...config.toolchain, "wasm-opt": version };
-  writeConfig(config);
-  console.log(
-    chalk.yellow(
-      `Pinned wasm-opt ${version} in ${path.basename(getClosestConfigFile())} ([optimize] enabled)`,
-    ),
+  return pinned;
+}
+
+// Failing rather than shipping the unoptimized module: `[optimize]` is a
+// property of the artifact, and silently producing a different one leaves no
+// signal for anything downstream that hashes or certifies the output.
+function failOptimize(wasmPath: string, detail?: string): never {
+  cliError(
+    `Failed to optimize ${path.basename(wasmPath)} with wasm-opt` +
+      (detail?.trim() ? `\n${detail.trim()}` : ""),
   );
-  if (verbose) {
-    console.log(chalk.gray(`  [toolchain] wasm-opt = "${version}"`));
-  }
-  return version;
 }
 
 export type OptimizeWasmOptions = {
@@ -63,10 +78,7 @@ export type OptimizeWasmOptions = {
   optimize?: boolean;
 };
 
-/**
- * Run wasm-opt on a Wasm file in place when `[optimize]` is enabled.
- * On failure: warn and leave the unoptimized file.
- */
+/** Run wasm-opt on a Wasm file in place when `[optimize]` is enabled. */
 export async function optimizeWasm(
   wasmPath: string,
   config: Config = readConfig(),
@@ -80,9 +92,7 @@ export async function optimizeWasm(
     return false;
   }
 
-  await ensureWasmOptPinned(config, { verbose: options.verbose });
-  // Re-read in case auto-pin wrote toolchain; callers may pass a stale object.
-  config = readConfig();
+  requireWasmOptPin(config);
   let wasmOptBin = await toolchain.bin("wasm-opt");
 
   let tmpPath = `${wasmPath}.opt`;
@@ -105,18 +115,8 @@ export async function optimizeWasm(
       all: true,
     });
     if (result.exitCode !== 0) {
-      console.warn(
-        chalk.yellow(
-          `Failed to optimize ${path.basename(wasmPath)} with wasm-opt; using unoptimized Wasm`,
-        ),
-      );
-      if (options.verbose && result.all) {
-        console.warn(chalk.gray(result.all));
-      } else if (result.stderr) {
-        console.warn(chalk.gray(result.stderr.trim()));
-      }
       await fs.remove(tmpPath).catch(() => {});
-      return false;
+      failOptimize(wasmPath, options.verbose ? result.all : result.stderr);
     }
     await fs.move(tmpPath, wasmPath, { overwrite: true });
     console.log(
@@ -126,15 +126,10 @@ export async function optimizeWasm(
     );
     return true;
   } catch (err: any) {
-    console.warn(
-      chalk.yellow(
-        `Failed to optimize ${path.basename(wasmPath)} with wasm-opt; using unoptimized Wasm`,
-      ),
-    );
-    if (options.verbose && err?.message) {
-      console.warn(chalk.gray(err.message));
-    }
     await fs.remove(tmpPath).catch(() => {});
-    return false;
+    if (err instanceof CliError) {
+      throw err;
+    }
+    failOptimize(wasmPath, err?.message);
   }
 }

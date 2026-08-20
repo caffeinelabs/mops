@@ -17,6 +17,8 @@ Refs: GH = `caffeinelabs/mops`, LIN = Linear ticket title.
 
 **Security / dependency hygiene**
 - ~~**Replace `decompress` (critical, no fix available).**~~ Done: `downloadFromGithub` extracts with `fflate` plus explicit path containment (`cli/helpers/extract-github-zip.ts`); the `decompress` dependency is removed and `npm audit` is clean.
+
+**Bundling / runtime**
 - `MOPS_PASSWORD` / `--password` for non-interactive identity (today `getIdentity()` blocks on stdin for encrypted PEMs — `cli/mops.ts:59-82`).
 - Standalone binary distribution alongside npm — additive third channel. (LIN: standalone binary)
 - Narrow `files` in `cli/package.json` (currently `["*"]` with a few exclusions). The published npm tarball ships **both** distributions: the unbundled `dist/` tree that `bin` actually points at *and* the 5.9 MB bun `bundle/cli.js` that only the `cli.mops.one` installer uses (that installer downloads `bundle/cli.tgz` from the releases canister instead — `cli-releases/install.sh` → `cli/release-cli.ts:33-41`). Excluding `bundle/` would roughly halve the npm download. Pre-existing; found while investigating the `@dfinity/pic` postinstall (see `NEXT-MAJOR.md`).
@@ -46,7 +48,6 @@ Refs: GH = `caffeinelabs/mops`, LIN = Linear ticket title.
 ## Deprecate-now-remove-in-v3
 
 - `MOPS_*` env-var overrides (`MOPS_NETWORK`, `MOPS_REGISTRY_HOST`, `MOPS_REGISTRY_CANISTER_ID`, `MOPS_VERIFY_QUERY_SIGNATURES`, `MOPS_CWD`, `MOPS_ENV`): document, log when active, add proper flag equivalents. Today they silently change registry/network/cwd. (`cli/api/network.ts`, `cli/api/actors.ts`, `cli/cli.ts:72`)
-- `GITHUB_ENV`-triggered concurrency change (`cli/commands/install/install-mops-dep.ts:85`) — replace with explicit `--concurrency` flag.
 - `dfx`-bundled moc fallback: warn on every fallback today (`cli/commands/toolchain/index.ts:359,387`, `cli/commands/docs.ts:44-54`); drop in v3.
 - WASI `wasmtime` PATH fallback already labelled "legacy" — already warns (`cli/commands/test/test.ts:270-280`); remove in v3.
 - `// compatibility with older versions` re-exports (`cli/mops.ts:324-325`): mark `@deprecated`, document successors.

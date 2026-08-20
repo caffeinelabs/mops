@@ -12,7 +12,6 @@ import { globMoFiles } from "./globMoFiles.js";
 
 export class WarningChecker {
   verbose = false;
-  canisters: Record<string, string> = {};
   status: "pending" | "running" | "syntax-error" | "error" | "success" =
     "pending";
   warnings: string[] = [];
@@ -25,15 +24,12 @@ export class WarningChecker {
 
   constructor({
     verbose,
-    canisters,
     errorChecker,
   }: {
     verbose: boolean;
-    canisters: Record<string, string>;
     errorChecker: ErrorChecker;
   }) {
     this.verbose = verbose;
-    this.canisters = canisters;
     this.errorChecker = errorChecker;
   }
 
@@ -68,7 +64,7 @@ export class WarningChecker {
     onProgress();
 
     let rootDir = getRootDir();
-    let mocPath = await toolchain.bin("moc", { fallback: true });
+    let mocPath = await toolchain.bin("moc");
     let deps = (await sourcesArgs({ cwd: rootDir })).flat();
     let globalMocArgs = getGlobalMocArgs(readConfig());
     let paths = globMoFiles(rootDir);

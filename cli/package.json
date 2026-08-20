@@ -4,13 +4,11 @@
   "type": "module",
   "bin": {
     "mops": "dist/bin/mops.js",
-    "ic-mops": "dist/bin/mops.js",
-    "moc-wrapper": "bin/moc-wrapper.sh"
+    "ic-mops": "dist/bin/mops.js"
   },
   "files": [
     "/dist",
     "!/dist/tests",
-    "/bin",
     "/CHANGELOG.md"
   ],
   "homepage": "https://mops.one",
@@ -21,7 +19,7 @@
   "author": "DFINITY",
   "license": "MIT",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "mops": "tsx ./environments/nodejs/cli",
@@ -37,7 +35,7 @@
     "bundle:tar": "rm -f bundle/cli.tgz && touch -t 200101010101 bundle/cli.tgz && find bundle -exec touch -d '1970-01-01 00:00:00' {} + && tar --sort name --exclude bundle/cli.tgz -cvf - bundle | gzip -n > bundle/cli.tgz",
     "copy": "cp -r commands/bench dist/commands && cp -r declarations templates package.json bin dist | true",
     "prepare": "rm -rf dist && run-s dist copy vendor:pic fix-dist",
-    "vendor:pic": "esbuild vendor/pic-entry.mjs --bundle --platform=node --format=esm --outfile=dist/vendor/pic.mjs --banner:js=\"import{fileURLToPath as __vfu}from 'node:url';import{dirname as __vdn}from 'node:path';import{createRequire as __vcr}from 'node:module';const require=__vcr(import.meta.url);const __filename=__vfu(import.meta.url);const __dirname=__vdn(__filename);\"",
+    "vendor:pic": "esbuild vendor/pic-entry.mjs --bundle --platform=node --format=esm --external:@icp-sdk/core --external:@icp-sdk/core/* --outfile=dist/vendor/pic.mjs --banner:js=\"import{fileURLToPath as __vfu}from 'node:url';import{dirname as __vdn}from 'node:path';import{createRequire as __vcr}from 'node:module';const require=__vcr(import.meta.url);const __filename=__vfu(import.meta.url);const __dirname=__vdn(__filename);\"",
     "fix-dist": "tsx ./fix-dist.ts",
     "release": "tsx release-cli.ts",
     "check": "tsc --project tsconfig.json --noEmit",
@@ -46,7 +44,7 @@
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
   },
   "dependencies": {
-    "@icp-sdk/core": "4.0.2",
+    "@icp-sdk/core": "5.4.0",
     "@noble/hashes": "1.8.0",
     "as-table": "1.0.55",
     "buffer": "6.0.3",
@@ -56,7 +54,6 @@
     "commander": "13.1.0",
     "debounce": "2.2.0",
     "del": "8.0.0",
-    "dhall-to-json-cli": "1.7.6",
     "execa": "9.3.1",
     "fflate": "0.8.3",
     "filesize": "10.1.6",
@@ -73,7 +70,6 @@
     "minimatch": "10.2.5",
     "ncp": "2.0.0",
     "octokit": "4.1.4",
-    "pic-ic": "0.5.4",
     "prettier": "3.5.3",
     "prettier-plugin-motoko": "0.13.0",
     "promisify-child-process": "4.1.2",
@@ -90,6 +86,7 @@
   },
   "devDependencies": {
     "@dfinity/pic": "0.23.0",
+    "@jest/globals": "30.4.1",
     "@tsconfig/strictest": "2.0.5",
     "@types/debounce": "1.2.4",
     "@types/fs-extra": "11.0.4",
@@ -103,6 +100,7 @@
     "@types/tar": "7.0.87",
     "esbuild": "0.28.1",
     "eslint": "8.57.0",
+    "jest": "30.4.2",
     "npm-run-all": "4.1.5",
     "rexreplace": "7.1.13",
     "ts-jest": "29.4.5",

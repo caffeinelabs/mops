@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { getWasmBindings } from "../wasm.js";
 import { toolchain } from "../commands/toolchain/index.js";
 import { stopPocketIc } from "./pocket-ic-startup.js";
-import { startPocketIc, type AnyPocketIcServer } from "./pocket-ic-client.js";
+import { startPocketIc, type PocketIcServer } from "./pocket-ic-client.js";
 import type { PocketIc } from "@dfinity/pic";
 
 const CHECK_DEPLOY_PARENT = ".mops";
@@ -54,7 +54,7 @@ export async function checkDeploy(
     }
   });
 
-  let server: AnyPocketIcServer | undefined;
+  let server: PocketIcServer | undefined;
   let client: PocketIc | undefined;
   let operationFailed = false;
   let operationError: unknown;
@@ -64,15 +64,12 @@ export async function checkDeploy(
   }> = [];
 
   try {
-    const pocketIc = await startPocketIc(
-      async () => ({
-        binPath: await toolchain.bin("pocket-ic"),
-        showRuntimeLogs: verbose,
-        showCanisterLogs: verbose,
-        ttl: 60,
-      }),
-      { client: "dfinity" },
-    );
+    const pocketIc = await startPocketIc(async () => ({
+      binPath: await toolchain.bin("pocket-ic"),
+      showRuntimeLogs: verbose,
+      showCanisterLogs: verbose,
+      ttl: 60,
+    }));
     server = pocketIc.server;
     client = pocketIc.client;
 

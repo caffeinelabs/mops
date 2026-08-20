@@ -5,8 +5,8 @@ let globConfig = {
   ignore: [
     "**/node_modules/**",
     "**/.mops/**",
-    "**/.vessel/**",
     "**/.git/**",
+    // not dfx support — just a build dir users may still have lying around
     "**/.dfx/**",
     "**/{build,bundle,dist}/**",
   ],

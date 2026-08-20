@@ -37,8 +37,8 @@ export const normalizePaths = (text: string): string => {
       .replaceAll(dirname(fileURLToPath(import.meta.url)), "<TEST_DIR>")
       .replace(/\/[^\s"]+\/\.cache\/mops/g, "<CACHE>")
       .replace(/\/[^\s"]+\/Library\/Caches\/mops/g, "<CACHE>")
-      .replace(/\/[^\s"[\]]+\/moc(?:-wrapper)?(?=\s|$)/g, "moc-wrapper")
-      .replace(/\/[^\s"[\]]+\.motoko\/bin\/moc/g, "moc-wrapper")
+      .replace(/\/[^\s"[\]]+\/moc(?=\s|$)/g, "<MOC>")
+      .replace(/\/[^\s"[\]]+\.motoko\/bin\/moc/g, "<MOC>")
       // Per-invocation scratch / staging dirs use mkdtemp; redact the random suffix
       // (Node's exact suffix format isn't a stable contract) so snapshots stay stable.
       .replace(/\.mops\/\.check-stable-\w+/g, ".mops/.check-stable")

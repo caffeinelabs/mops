@@ -1,0 +1,9 @@
+[package]
+name = "lockfile-ordering"
+version = "1.0.0"
+
+# Declared in reverse alphabetical order on purpose: the lock must come out
+# sorted regardless of how mops.toml lists them.
+[dependencies]
+test = "2.1.2"
+core = "1.0.0"

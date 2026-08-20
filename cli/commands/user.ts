@@ -8,13 +8,13 @@ import { deleteSync } from "del";
 import { mainActor } from "../api/actors.js";
 import { getIdentity, globalConfigDir } from "../mops.js";
 import { decodePem, encrypt } from "../pem.js";
+import { cliError } from "../error.js";
 
 export async function getUserProp(prop: string) {
   let actor = await mainActor();
   let identity = await getIdentity();
   if (!identity) {
-    console.log(chalk.red("Error: ") + "No identity found");
-    process.exit(1);
+    cliError("Error: No identity found");
   }
   let res = await actor.getUser(identity.getPrincipal());
   // @ts-ignore

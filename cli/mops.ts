@@ -6,11 +6,9 @@ import TOML from "smol-toml";
 import chalk from "chalk";
 import prompts from "prompts";
 import { decodeFile } from "./pem.js";
-import { cliError } from "./error.js";
+import { CliError, cliError } from "./error.js";
 import { Config, Dependency } from "./types.js";
-import { mainActor, storageActor } from "./api/actors.js";
-import { getNetwork } from "./api/network.js";
-import { getHighestVersion } from "./api/getHighestVersion.js";
+import { mainActor } from "./api/actors.js";
 import { getPackageId } from "./helpers/get-package-id.js";
 import { FILE_PATH_REGEX } from "./constants.js";
 
@@ -42,20 +40,6 @@ if (process.env.XDG_CACHE_HOME) {
   globalCacheDir = path.join(process.env.XDG_CACHE_HOME, "mops");
 }
 
-export function getNetworkFile(): string | URL {
-  let networkFile: string | URL = "";
-  try {
-    networkFile = new URL("./network.txt", import.meta.url);
-  } catch {
-    networkFile = path.join(__dirname, "network.txt");
-  }
-  return networkFile;
-}
-
-export function setNetwork(network: string) {
-  fs.writeFileSync(getNetworkFile(), network);
-}
-
 export let getIdentity = async (): Promise<Identity | undefined> => {
   let identityPem = path.resolve(globalConfigDir, "identity.pem");
   let identityPemEncrypted = path.resolve(
@@ -71,8 +55,7 @@ export let getIdentity = async (): Promise<Identity | undefined> => {
     try {
       return decodeFile(identityPemEncrypted, res.value);
     } catch (e) {
-      console.log(chalk.red("Error: ") + "Invalid password");
-      process.exit(1);
+      cliError("Error: Invalid password");
     }
   }
   if (fs.existsSync(identityPem)) {
@@ -108,19 +91,15 @@ export function resolveConfigPath(configPath: string): string {
   return path.relative(process.cwd(), path.resolve(getRootDir(), configPath));
 }
 
-export function checkConfigFile(exit = false) {
+// `mops outdated`/`mops update` pass their documented "check failed" code 2.
+export function checkConfigFile(exitCode = 1): void {
   let configFile = getClosestConfigFile();
   if (!configFile) {
-    console.log(
-      chalk.red("Error: ") +
-        `Config file 'mops.toml' not found. Please run ${chalk.green("mops init")} first`,
+    throw new CliError(
+      `Error: Config file 'mops.toml' not found. Please run ${chalk.green("mops init")} first`,
+      exitCode,
     );
-    if (exit) {
-      process.exit(1);
-    }
-    return false;
   }
-  return true;
 }
 
 export function progressBar(step: number, total: number) {
@@ -270,20 +249,6 @@ export function formatGithubDir(name: string, repo: string) {
   );
 }
 
-export function readDfxJson(): any {
-  let dir = process.cwd();
-  let dfxJson = null;
-  for (let i = 0; i < 5; i++) {
-    let file = path.resolve(dir, "dfx.json");
-    if (fs.existsSync(file)) {
-      dfxJson = JSON.parse(fs.readFileSync(file).toString());
-      break;
-    }
-    dir = path.resolve(dir, "..");
-  }
-  return dfxJson;
-}
-
 // warn on minor mismatch
 // err on major mismatch
 export async function checkApiCompatibility() {
@@ -320,6 +285,3 @@ export function version() {
   );
   return packageJson.version;
 }
-
-// compatibility with older versions
-export { getNetwork, mainActor, storageActor, getHighestVersion };

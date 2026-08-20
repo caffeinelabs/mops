@@ -47,6 +47,23 @@ export interface CheckStableOptions {
   checkLimit: boolean;
 }
 
+// A baseline compiled from a `.mo` source only approximates what is deployed:
+// it is whatever that source says today, not what the running canister holds.
+// Deliberately no "run X" hint here: how a baseline gets produced depends on
+// who deploys, and naming one command would be wrong for the others.
+export function requireMostBaseline(
+  baselinePath: string,
+  origin: string,
+): void {
+  if (baselinePath.endsWith(".most")) {
+    return;
+  }
+  cliError(
+    `${origin} must be a .most file, got: ${baselinePath}\n` +
+      "A .mo source is only an approximation of what is deployed.",
+  );
+}
+
 export function resolveStablePath(
   canister: CanisterConfig,
   canisterName: string,
@@ -61,6 +78,10 @@ export function resolveStablePath(
     }
     return null;
   }
+  requireMostBaseline(
+    stableConfig.path,
+    `[canisters.${canisterName}.check-stable].path`,
+  );
   const stablePath = resolveConfigPath(stableConfig.path);
   if (stableConfig.skipIfMissing) {
     console.warn(
@@ -91,12 +112,13 @@ export async function checkStable(
   options: Partial<CheckStableOptions> = {},
 ): Promise<void> {
   const config = readConfig();
-  const mocPath = await toolchain.bin("moc", { fallback: true });
+  const mocPath = await toolchain.bin("moc");
   const globalMocArgs = getGlobalMocArgs(config);
 
   const firstArg = args[0];
   if (firstArg && looksLikeFile(firstArg)) {
-    const oldFile = firstArg;
+    const baselineMost = firstArg;
+    requireMostBaseline(baselineMost, "Baseline");
     const canisterName = args[1];
     const { name, canister } = resolveSingleCanister(config, canisterName);
 
@@ -115,7 +137,7 @@ export async function checkStable(
     );
     try {
       await runStableCheck({
-        oldFile,
+        baselineMost,
         canisterMain: resolveConfigPath(canister.main),
         canisterName: name,
         mocPath,
@@ -158,7 +180,7 @@ export async function checkStable(
     );
     try {
       await runStableCheck({
-        oldFile: stablePath,
+        baselineMost: stablePath,
         canisterMain: resolveConfigPath(canister.main),
         canisterName: name,
         mocPath,
@@ -177,16 +199,17 @@ export async function checkStable(
   if (checked === 0 && !canisterNames) {
     cliError(
       "No canisters with [check-stable] configuration found in mops.toml.\n" +
-        "Either pass an old file: mops check-stable <old-file> [canister]\n" +
+        "Either pass a baseline: mops check-stable <baseline.most> [canister]\n" +
         "Or configure check-stable for a canister:\n\n" +
         "  [canisters.backend.check-stable]\n" +
-        '  path = "deployed.mo"',
+        '  path = "deployed/backend.most"',
     );
   }
 }
 
 export interface RunStableCheckParams {
-  oldFile: string;
+  /** Committed `.most` baseline — callers go through `requireMostBaseline`. */
+  baselineMost: string;
   canisterMain: string;
   canisterName: string;
   mocPath: string;
@@ -202,7 +225,6 @@ export function reportStableCheckOutcome(
   params: {
     migrations?: MigrationsConfig;
     oldMostPath: string;
-    baselineIsMostFile: boolean;
     checkLimit?: boolean;
     exitCode: number | null | undefined;
     stderr?: string;
@@ -213,7 +235,6 @@ export function reportStableCheckOutcome(
     canisterName,
     params.oldMostPath,
     params.checkLimit === false,
-    params.baselineIsMostFile,
   );
 
   if (issue) {
@@ -280,7 +301,6 @@ async function runFoldedStableCheck(params: {
   reportStableCheckOutcome(params.canisterName, {
     migrations: params.migrations,
     oldMostPath: params.baselinePath,
-    baselineIsMostFile: true,
     checkLimit: params.options.checkLimit,
     exitCode: result.exitCode,
     stderr: result.stderr,
@@ -291,7 +311,7 @@ export async function runStableCheck(
   params: RunStableCheckParams,
 ): Promise<void> {
   const {
-    oldFile,
+    baselineMost,
     canisterMain,
     canisterName,
     mocPath,
@@ -301,22 +321,18 @@ export async function runStableCheck(
   } = params;
 
   const sources = params.sources ?? (await sourcesArgs()).flat();
-  const isOldMostFile = oldFile.endsWith(".most");
 
-  if (!existsSync(oldFile)) {
-    cliError(`File not found: ${oldFile}`);
+  if (!existsSync(baselineMost)) {
+    cliError(`File not found: ${baselineMost}`);
   }
 
-  // Committed .most baseline + moc 1.12.0+ → one --check, no scratch dir.
-  // A .mo baseline keeps the 3-step path: the scratch .most compiled from it is
-  // only an approximation of what is deployed, and the folded check is stricter
-  // (a field no migration produces fails as M0267 rather than warning M0254).
-  if (isOldMostFile && canUseStableBaselineCheck(canisterArgs)) {
+  // moc 1.12.0+ → one --check, no scratch dir.
+  if (canUseStableBaselineCheck(canisterArgs)) {
     await runFoldedStableCheck({
       canisterMain,
       canisterName,
       mocPath,
-      baselinePath: oldFile,
+      baselinePath: baselineMost,
       sources,
       globalMocArgs,
       canisterArgs,
@@ -331,18 +347,6 @@ export async function runStableCheck(
     join(CHECK_STABLE_PARENT, CHECK_STABLE_PREFIX),
   );
   try {
-    const oldMostPath = isOldMostFile
-      ? oldFile
-      : await generateStableTypes(
-          mocPath,
-          oldFile,
-          join(scratchDir, "old.most"),
-          sources,
-          globalMocArgs,
-          canisterArgs,
-          options,
-        );
-
     const newMostPath = await generateStableTypes(
       mocPath,
       canisterMain,
@@ -356,11 +360,11 @@ export async function runStableCheck(
     if (options.verbose) {
       console.log(
         chalk.blue("check-stable"),
-        chalk.gray(`Comparing ${oldMostPath} ↔ ${newMostPath}`),
+        chalk.gray(`Comparing ${baselineMost} ↔ ${newMostPath}`),
       );
     }
 
-    const args = ["--stable-compatible", oldMostPath, newMostPath];
+    const args = ["--stable-compatible", baselineMost, newMostPath];
     if (options.verbose) {
       console.log(chalk.gray(mocPath, JSON.stringify(args)));
     }
@@ -372,8 +376,7 @@ export async function runStableCheck(
 
     reportStableCheckOutcome(canisterName, {
       migrations: params.migrations,
-      oldMostPath,
-      baselineIsMostFile: isOldMostFile,
+      oldMostPath: baselineMost,
       checkLimit: options.checkLimit,
       exitCode: result.exitCode,
       stderr: result.stderr,

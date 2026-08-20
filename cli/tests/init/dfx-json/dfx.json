@@ -1,0 +1,5 @@
+{
+  "canisters": {
+    "app": { "main": "src/App.mo" }
+  }
+}

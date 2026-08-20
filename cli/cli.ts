@@ -1,10 +1,10 @@
-import { Argument, Command, Option } from "commander";
+import { Argument, Command, InvalidArgumentError, Option } from "commander";
+import chalk from "chalk";
 import events from "node:events";
-import fs from "node:fs";
 import process from "node:process";
 
 import { resolve } from "node:path";
-import { getNetwork } from "./api/network.js";
+import { cliError, handleCliError } from "./error.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
 import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
@@ -52,20 +52,16 @@ import {
   checkApiCompatibility,
   checkConfigFile,
   getGlobalMocArgs,
-  getNetworkFile,
   readConfig,
-  setNetwork,
   version,
 } from "./mops.js";
-import { resolvePackages } from "./resolve-packages.js";
+import { setConflictPolicy } from "./resolve-packages.js";
+import { verifyIntegrity } from "./integrity.js";
 import { Tool } from "./types.js";
 import { TOOLCHAINS } from "./commands/toolchain/toolchain-utils.js";
 import { getPocketIcUrl } from "./helpers/pocket-ic-startup.js";
-import { cliError } from "./error.js";
 
 declare global {
-  // eslint-disable-next-line no-var
-  var MOPS_NETWORK: string;
   // eslint-disable-next-line no-var
   var mopsReplicaTestRunning: boolean;
 }
@@ -76,11 +72,6 @@ events.setMaxListeners(20);
 let cwd = process.env["MOPS_CWD"];
 if (cwd) {
   process.chdir(resolve(cwd));
-}
-
-let networkFile = getNetworkFile();
-if (fs.existsSync(networkFile)) {
-  globalThis.MOPS_NETWORK = fs.readFileSync(networkFile).toString() || "ic";
 }
 
 let program = new Command();
@@ -99,6 +90,30 @@ function parseExtraArgs(variadicArgs?: string[]): {
       : variadicArgs
     : [];
   return { extraArgs, args };
+}
+
+// Implicit install for build/check/test/bench/generate. Fails on any install
+// error: a download that fails its integrity check must not let the command
+// carry on against a half-populated `.mops/`. installAll already reported the
+// error, so the CliError carries no message.
+async function installAllOrExit(options: { locked?: boolean }): Promise<void> {
+  let ok = await installAll({
+    silent: true,
+    lock: options.locked ? "locked" : "maintain",
+  });
+  if (!ok) {
+    cliError();
+  }
+}
+
+// Validates `--concurrency`; MOPS_CONCURRENCY is parsed in
+// install-concurrency.ts because the env var must work without the flag.
+function parseConcurrency(value: string): number {
+  let parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new InvalidArgumentError("expected an integer >= 1");
+  }
+  return parsed;
 }
 
 // Shared `--help` section describing the enhanced migration `check-limit`
@@ -155,19 +170,27 @@ program
 program
   .command("add <pkg>")
   .description("Install the package and save it to mops.toml")
-  .option("--dev", "Add to [dev-dependencies] section")
+  .option(
+    "--dev",
+    "Add to [dev-dependencies] section (moves an existing dependency)",
+  )
   .option("--verbose", "Show more information")
-  .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "update",
-      "ignore",
-    ]),
+  .addHelpText(
+    "after",
+    `
+Accepted <pkg> forms:
+  core                          latest version from the mops registry
+  core@1.0.0                    specific version
+  org/repo[#branch|tag|sha]     GitHub repository
+  https://github.com/org/repo   GitHub repository url
+  ./pkg                         local package directory
+`,
   )
   .action(async (pkg, options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
-    await add(pkg, options);
+    checkConfigFile();
+    // Moving between sections is interactive-only: `mops sync` decides the
+    // section itself when it calls add().
+    await add(pkg, { ...options, moveSections: true });
   });
 
 // remove
@@ -175,20 +198,14 @@ program
   .command("remove <pkg>")
   .alias("rm")
   .description("Remove package and update mops.toml")
-  .option("--dev", "Remove from dev-dependencies instead of dependencies")
+  .option("--dev", "Only remove from [dev-dependencies]")
   .option("--verbose", "Show more information")
   .option("--dry-run", "Do not actually remove anything")
-  .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "update",
-      "ignore",
-    ]),
-  )
   .action(async (pkg, options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
-    await remove(pkg, options);
+    checkConfigFile();
+    // Searching both sections is interactive-only: `mops sync` removes a
+    // dual-declared package with one call per section.
+    await remove(pkg, { ...options, anySection: true });
   });
 
 // install
@@ -199,38 +216,75 @@ program
   .option("--no-toolchain", "Do not install toolchain")
   .option("--verbose", "Show more information")
   .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "check",
-      "update",
-      "ignore",
-    ]),
+    new Option(
+      "--concurrency <n>",
+      "Max simultaneous registry requests (default: derived from the CPU count and open-file limit, 4–16; env var MOPS_CONCURRENCY works on every command)",
+    ).argParser(parseConcurrency),
+  )
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
   )
   .action(async (options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
+    checkConfigFile();
+
+    // Fired here, awaited below: the check costs a registry round trip the
+    // install would otherwise serialize behind, and the two share no state.
+    // Settled into a thunk so a rejection during the install cannot surface
+    // as an unhandled rejection; awaiting the thunk rethrows it where the
+    // serial code used to throw. `mops publish` keeps its check serial — it
+    // writes immutable registry state.
+    let compatibility = checkApiCompatibility().then(
+      (compatible) => () => compatible,
+      (err) => () => {
+        throw err;
+      },
+    );
+
+    let ok = await installAll({
+      ...options,
+      lock: options.locked ? "locked" : "maintain",
+    });
+
+    // Bail before the conflicts check: it re-resolves, which reads dependency
+    // manifests that a failed install may never have written.
+    if (!ok) {
+      cliError();
     }
 
-    let compatible = await checkApiCompatibility();
+    // An incompatible CLI now completes the install before this error
+    // surfaces — accepted, since build/test/sources never check at all.
+    let compatible = (await compatibility)();
     if (!compatible) {
       return;
     }
 
     if (options.toolchain) {
-      await toolchain.checkToolchainInited({ strict: false });
-    }
-
-    let ok = await installAll(options);
-
-    if (options.toolchain) {
       await toolchain.installAll(options);
     }
 
-    // check conflicts
-    await resolvePackages({ conflicts: "warning" });
+    // No explicit conflict check: installAll resolves, and resolution reports
+    // conflicts on its own now instead of waiting for a caller to opt in.
+  });
 
-    if (!ok) {
-      process.exit(1);
+// verify
+program
+  .command("verify")
+  .description(
+    "Audit installed dependencies against mops.lock: re-hash every file under .mops/ and confirm the lock still matches mops.toml and the registry",
+  )
+  .action(async () => {
+    checkConfigFile();
+    let result = await verifyIntegrity();
+    if (result.errors.length) {
+      cliError(["Integrity check failed", ...result.errors].join("\n"));
     }
+    console.log(
+      chalk.green("Integrity verified ") +
+        `${result.packages} package(s), ${result.files} file(s)`,
+    );
   });
 
 // publish
@@ -246,65 +300,47 @@ program
   )
   .option("--verbose", "Show more information")
   .action(async (options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     // dry-run is local-only — skip registry API compatibility check
     if (options.dryRun) {
       await publish(options);
       return;
     }
+    // Deliberately serial (unlike `mops install`): publishing writes
+    // immutable registry state, so the version gate must hold it back.
     let compatible = await checkApiCompatibility();
     if (compatible) {
       await publish(options);
     }
   });
 
-// set-network
-program
-  .command("set-network <network>")
-  .alias("sn")
-  .description("Set network local|staging|ic")
-  .action(async (network) => {
-    await setNetwork(network);
-    console.log(`Selected '${network}' network`);
-  });
-
-// get-network
-program
-  .command("get-network")
-  .alias("gn")
-  .description("Get network")
-  .action(async () => {
-    console.log(getNetwork());
-  });
-
 // sources
 program
   .command("sources")
-  .description("for dfx packtool")
+  .description(
+    "Print the resolved dependencies as `--package` flags for the Motoko compiler",
+  )
   .option("--no-install", "Do not install dependencies before running sources")
   .addOption(
     new Option(
       "--conflicts <action>",
-      "What to do with dependency version conflicts",
+      "What to do with cross-major dependency version conflicts (reported on stderr)",
     )
       .choices(["ignore", "warning", "error"])
       .default("warning"),
   )
   .action(async (options) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
+    // Before installAll: that resolves too, and --conflicts governs the whole
+    // command, not just the final resolve that produces the sources.
+    setConflictPolicy(options.conflicts);
     if (options.install) {
-      await installAll({
-        silent: true,
-        lock: "ignore",
-        threads: 6,
-        installFromLockFile: true,
-      });
+      // `mops sources` stdout is machine-parsed, so it must not write the lock
+      // or print integrity output — hence `lock: "skip"`. It has no `--locked`:
+      // enforce the lock with a preceding `mops install --locked` step instead
+      // of failing in the middle of whatever build invoked it.
+      await installAll({ silent: true, lock: "skip", threads: 6 });
     }
-    await toolchain.checkToolchainInited({ strict: false });
     let sourcesArr = await sources(options);
     console.log(sourcesArr.join("\n"));
   });
@@ -314,7 +350,7 @@ program
   .command("moc-args")
   .description("Print global moc compiler flags from [moc] config section")
   .action(async () => {
-    checkConfigFile(true);
+    checkConfigFile();
     let config = readConfig();
     let args = getGlobalMocArgs(config);
     if (args.length) {
@@ -344,9 +380,13 @@ program
   .command("cache")
   .description("Manage cache")
   .addArgument(new Argument("<sub>").choices(["size", "clean", "show"]))
-  .action(async (sub) => {
+  .option(
+    "--global",
+    "cache clean: clean only the global cache, keep the project's .mops directory",
+  )
+  .action(async (sub, options) => {
     if (sub == "clean") {
-      await cleanCache();
+      await cleanCache(options);
       console.log("Cache cleaned");
     } else if (sub == "size") {
       let size = await cacheSize();
@@ -404,15 +444,16 @@ program
       "  [migrations].check-limit is set, re-run with mops check --no-check-limit to\n" +
       "  surface the issue (check trims the chain; build compiles all of it).",
   )
-  .allowUnknownOption(true) // TODO: restrict unknown before "--"
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (canisters, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(canisters);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAllOrExit(options);
     await build(args.length ? args : undefined, {
       ...options,
       outputDir: options.output,
@@ -424,13 +465,19 @@ program
 program
   .command("check [args...]")
   .description(
-    "Check Motoko canisters or files for syntax errors and type issues. Arguments can be canister names or file paths. If no arguments are given, checks all canisters from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured, and runs linting if lintoko is configured in [toolchain]",
+    "Check Motoko canisters or files for syntax errors and type issues. Arguments can be canister names or file paths. If no arguments are given, checks all canisters from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured, and runs linting if lintoko is configured in [toolchain] (pass --no-lint to skip)",
   )
   .option("--verbose", "Verbose console output")
   .addOption(
     new Option(
       "--fix",
       "Apply autofixes to all files, including transitively imported ones",
+    ),
+  )
+  .addOption(
+    new Option(
+      "--no-lint",
+      "Skip linting even when lintoko is pinned in [toolchain]",
     ),
   )
   .addOption(
@@ -447,15 +494,16 @@ program
     "after",
     enhancedMigrationHelp({ withFix: true, withPendingWarning: true }),
   )
-  .allowUnknownOption(true)
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (args, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args: argList } = parseExtraArgs(args);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAllOrExit(options);
     await check(argList, {
       ...options,
       extraArgs,
@@ -466,13 +514,15 @@ program
 program
   .command("check-candid <new-candid> <original-candid>")
   .description("Check Candid interface compatibility between two Candid files")
-  .action(async (newCandid, originalCandid) => {
-    checkConfigFile(true);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
+  .action(async (newCandid, originalCandid, options) => {
+    checkConfigFile();
+    await installAllOrExit(options);
     await checkCandid(newCandid, originalCandid);
   });
 
@@ -480,7 +530,7 @@ program
 program
   .command("check-stable [args...]")
   .description(
-    "Check stable variable compatibility. With no arguments, checks all canisters with [check-stable] configured. Arguments can be canister names or an old file path followed by an optional canister name",
+    "Check stable variable compatibility. With no arguments, checks all canisters with [check-stable] configured. Arguments can be canister names or a baseline .most path followed by an optional canister name. The baseline is always a .most file",
   )
   .option("--verbose", "Verbose console output")
   .addOption(
@@ -494,15 +544,16 @@ program
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check-stable -- -Werror",
   )
   .addHelpText("after", enhancedMigrationHelp({ withPendingWarning: true }))
-  .allowUnknownOption(true)
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (args, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args: argList } = parseExtraArgs(args);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAllOrExit(options);
     await checkStable(argList, {
       ...options,
       extraArgs,
@@ -528,7 +579,7 @@ const deployedCommand = new Command("deployed")
     ),
   )
   .action(async (canisters: string[], options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await deployed(canisters.length ? canisters : undefined, options);
   });
 
@@ -544,7 +595,7 @@ deployedCommand
     ),
   )
   .action(async (canisters: string[], options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await deployedInit(canisters.length ? canisters : undefined, options);
   });
 
@@ -555,23 +606,14 @@ program
   .command("test [filter...]")
   .description("Run tests")
   .addOption(
-    new Option("-r, --reporter <reporter>", "Test reporter").choices([
-      "verbose",
-      "compact",
-      "files",
-      "silent",
-    ]),
+    new Option("-r, --reporter <reporter>", "Test reporter")
+      .choices(["verbose", "compact", "files", "silent"])
+      .default("verbose"),
   )
   .addOption(
     new Option("--mode <mode>", "Test mode")
       .choices(["interpreter", "wasi", "replica"])
       .default("interpreter"),
-  )
-  .addOption(
-    new Option(
-      "--replica <replica>",
-      "Which replica to use to run tests in replica mode (`dfx` is deprecated; prefer `pocket-ic`)",
-    ).choices(["dfx", "pocket-ic"]),
   )
   .option("-w, --watch", "Enable watch mode")
   .option("--verbose", "Verbose output")
@@ -579,16 +621,17 @@ program
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops test -- -Werror",
   )
-  .allowUnknownOption(true)
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (filterArr, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAllOrExit(options);
     await test(filter, { ...options, extraArgs });
   });
 
@@ -596,12 +639,6 @@ program
 program
   .command("bench [filter...]")
   .description("Run benchmarks")
-  .addOption(
-    new Option(
-      "--replica <replica>",
-      "Which replica to use to run benchmarks (`dfx` is deprecated; prefer `pocket-ic`)",
-    ).choices(["dfx", "pocket-ic"]),
-  )
   .addOption(
     new Option(
       "--gc <gc>",
@@ -635,7 +672,7 @@ program
   .addOption(
     new Option(
       "--verbose",
-      "Print the benchmark pipeline (compiler, replica, GC, context, persistence, profile, optimization) and stream compiler/replica output, including dfx optimization warnings",
+      "Print the benchmark pipeline (compiler, replica, GC, context, persistence, profile, optimization) and stream compiler and replica output",
     ),
   )
   .addOption(
@@ -648,16 +685,17 @@ program
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops bench -- -Werror",
   )
-  .allowUnknownOption(true)
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (filterArr, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(filterArr);
     const filter = args[0] ?? "";
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAllOrExit(options);
     await bench(filter, { ...options, extraArgs });
   });
 
@@ -666,9 +704,7 @@ program
   .command("template")
   .description("Apply template")
   .action(async () => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await template();
   });
 
@@ -811,11 +847,9 @@ program
 program
   .command("sync")
   .description("Add missing packages and remove unused packages")
-  .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "update",
-      "ignore",
-    ]),
+  .option(
+    "--dry-run",
+    "Print what would be added and removed without changing mops.toml, the local cache or mops.lock",
   )
   .action(async (options) => {
     await sync(options);
@@ -823,7 +857,7 @@ program
 
 // outdated
 program
-  .command("outdated")
+  .command("outdated [pkg]")
   .description(
     "Print outdated dependencies in mops.toml within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
   )
@@ -839,15 +873,23 @@ program
       "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
-  .action(async (options) => {
-    await outdated(options);
+  .addHelpText(
+    "after",
+    "\nGitHub dependencies are checked against their branch head (one GitHub API call each).\n" +
+      "\nExit codes:\n" +
+      "  0  everything is up to date\n" +
+      "  1  updates are available\n" +
+      "  2  the check failed (no mops.toml, unknown [pkg], registry or GitHub lookup error)",
+  )
+  .action(async (pkg, options) => {
+    await outdated(pkg, options);
   });
 
 // update
 program
   .command("update [pkg]")
   .description(
-    "Update dependencies in mops.toml to the highest semver-compatible version within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
+    "Rewrite the versions in mops.toml to the highest semver-compatible ones within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
   )
   .addOption(
     new Option(
@@ -861,11 +903,15 @@ program
       "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
-  .addOption(
-    new Option("--lock <action>", "Lockfile action").choices([
-      "update",
-      "ignore",
-    ]),
+  .option("--verbose", "Show more information")
+  .addHelpText(
+    "after",
+    "\nRewrites the new versions into mops.toml, and keeps mops.lock in sync.\n" +
+      "GitHub dependencies are re-pinned to their branch head (one GitHub API call each).\n" +
+      "\nExit codes:\n" +
+      "  0  mops.toml is up to date\n" +
+      "  2  the update could not be run or completed (no mops.toml, unknown [pkg],\n" +
+      "     or a dependency failed to update)",
   )
   .action(async (pkg, options) => {
     await update(pkg, options);
@@ -879,20 +925,6 @@ const toolchainCommand = new Command("toolchain")
   .showHelpAfterError();
 
 toolchainCommand
-  .command("init")
-  .description("One-time initialization of toolchain management")
-  .action(async () => {
-    await toolchain.init();
-  });
-
-toolchainCommand
-  .command("reset")
-  .description("Uninstall toolchain management")
-  .action(async () => {
-    await toolchain.init({ reset: true });
-  });
-
-toolchainCommand
   .command("use")
   .description("Install specified tool version and update mops.toml")
   .addArgument(new Argument("<tool>", "tool to install").choices(TOOLCHAINS))
@@ -903,9 +935,7 @@ toolchainCommand
     ),
   )
   .action(async (tool, version) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await toolchain.use(tool, version);
   });
 
@@ -921,9 +951,7 @@ toolchainCommand
     ).choices(TOOLCHAINS),
   )
   .action(async (tool?: Tool) => {
-    if (!checkConfigFile()) {
-      process.exit(1);
-    }
+    checkConfigFile();
     await toolchain.update(tool);
   });
 
@@ -947,14 +975,8 @@ toolchainCommand
   .command("bin")
   .description("Get path to the tool binary")
   .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
-  .addOption(
-    new Option(
-      "--fallback",
-      "Fallback to the moc that comes with dfx if moc is not specified in the [toolchain] section",
-    ),
-  )
-  .action(async (tool, options) => {
-    let bin = await toolchain.bin(tool, options);
+  .action(async (tool) => {
+    let bin = await toolchain.bin(tool);
     console.log(bin);
   });
 
@@ -969,7 +991,7 @@ migrateCommand
   .command("new <name> [canister]")
   .description("Create a new migration file in the next-migration directory")
   .action(async (name, canister) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await migrateNew(name, canister);
   });
 
@@ -977,7 +999,7 @@ migrateCommand
   .command("freeze [canister]")
   .description("Move the next migration into the frozen chain")
   .action(async (canister) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await migrateFreeze(canister);
   });
 
@@ -1004,15 +1026,16 @@ generateCommand
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops generate candid -- -Werror",
   )
-  .allowUnknownOption(true)
+  .addOption(
+    new Option(
+      "--locked",
+      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+    ),
+  )
   .action(async (canisters, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(canisters);
-    await installAll({
-      silent: true,
-      lock: "ignore",
-      installFromLockFile: true,
-    });
+    await installAllOrExit(options);
     await generateCandid(args.length ? args : undefined, {
       ...options,
       extraArgs,
@@ -1048,19 +1071,22 @@ program.addCommand(selfCommand);
 program
   .command("watch")
   .description(
-    "Watch *.mo files and check for syntax errors, warnings, run tests, generate declarations and deploy canisters",
+    "Watch *.mo files and check for syntax errors and warnings and format code. Pass flags to run only the selected tasks; --test is opt-in only",
   )
-  .option(
-    "-e, --error",
-    "Check Motoko canisters or *.mo files for syntax errors",
+  .option("-e, --error", "Check *.mo files for syntax errors (always on)")
+  .option("-w, --warning", "Check *.mo files for warnings (on by default)")
+  .option("-f, --format", "Format Motoko code (on by default)")
+  .option("-t, --test", "Run tests (opt-in)")
+  .addHelpText(
+    "after",
+    "\nWith no flags, runs the default set: errors, warnings and formatting.\n" +
+      "Passing any flag runs only the selected tasks (error checking is always on).\n" +
+      "Tests never run unless requested:\n" +
+      "  $ mops watch -t     # errors + tests\n" +
+      "  $ mops watch -tw    # errors + tests + warnings",
   )
-  .option("-w, --warning", "Check Motoko canisters or *.mo files for warnings")
-  .option("-f, --format", "Format Motoko code")
-  .option("-t, --test", "Run tests")
-  .option("-g, --generate", "Generate declarations for Motoko canisters")
-  .option("-d, --deploy", "Deploy Motoko canisters")
   .action(async (options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await watch(options);
   });
 
@@ -1073,16 +1099,16 @@ program
     new Option("--check", "Check code formatting (do not change source files)"),
   )
   .action(async (filter, options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     let { ok } = await format(filter, options);
     if (!ok) {
-      process.exit(1);
+      cliError();
     }
   });
 
 // lint
 program
-  .command("lint [filter]")
+  .command("lint [filter...]")
   .description("Lint Motoko code")
   .addOption(new Option("--verbose", "Verbose output"))
   .addOption(new Option("--fix", "Apply fixes"))
@@ -1103,11 +1129,12 @@ program
     "\nArguments after -- are forwarded directly to lintoko, e.g.:\n  $ mops lint -- --severity warning",
   )
   .addHelpText("after", enhancedMigrationHelp({ withFix: true }))
-  .allowUnknownOption(true)
-  .action(async (filter, options) => {
-    checkConfigFile(true);
-    const { extraArgs } = parseExtraArgs();
-    await lint(filter, {
+  .action(async (filterArr, options) => {
+    checkConfigFile();
+    // Variadic filter only to absorb the `--` passthrough operands (Commander
+    // counts them against the declared arity); a single filter is supported.
+    const { extraArgs, args } = parseExtraArgs(filterArr);
+    await lint(args[0], {
       ...options,
       extraArgs,
       noCheckLimit: options.checkLimit === false,
@@ -1130,7 +1157,7 @@ docsCommand
       .choices(["md", "adoc", "html"]),
   )
   .action(async (options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await docs(options);
   });
 
@@ -1155,9 +1182,14 @@ docsCommand
     ).default(70),
   )
   .action(async (options) => {
-    checkConfigFile(true);
+    checkConfigFile();
     await docsCoverage(options);
   });
 program.addCommand(docsCommand);
 
-program.parse();
+// Safety net for CliErrors raised where no await can catch them — debounced
+// watch runs, resolve-only promise chains — routed to the single handler
+// instead of Node's unhandled-rejection crash banner.
+process.on("unhandledRejection", handleCliError);
+
+program.parseAsync().catch(handleCliError);

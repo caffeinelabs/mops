@@ -11,7 +11,7 @@ datetime = "1.0.0"
 principal-ext = "0.1.0"
 telegram-bot = "0.1.1"
 
-# Mirrors the motoko canisters in dfx.json / icp.yaml. The icp-cli motoko
+# Mirrors the motoko canisters in icp.yaml. The icp-cli motoko
 # recipe builds via `mops build <name>`, which resolves the entry point here.
 [canisters]
 main = "backend/main/main-canister.mo"
@@ -25,5 +25,6 @@ prng = "0.0.8"
 
 [toolchain]
 moc = "0.14.14"
+pocket-ic = "14.0.0"
 wasmtime = "34.0.1"
 lintoko = "0.7.0"

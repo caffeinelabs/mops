@@ -83,6 +83,14 @@ Concurrent `--fix` runs in the same project (e.g. two agents on the same checkou
 
 Print the full `moc` invocation before running it.
 
+### `--no-lint`
+
+Skip the automatic lint step for a single run, even when `lintoko` is pinned in `[toolchain]`. See [Lint integration](#lint-integration).
+
+```
+mops check --no-lint
+```
+
 ### `--no-check-limit`
 
 Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limit`. Useful with `--fix` to autofix issues in older migrations that the limit would normally skip. Also suppresses the pending-migration warning that runs when `check-limit` is set. See [chain trimming](./08-mops-migrate.md#chain-trimming).
@@ -90,6 +98,10 @@ Use the full migration chain, ignoring `[canisters.<name>.migrations].check-limi
 ```
 mops check --fix --no-check-limit
 ```
+
+### `--locked`
+
+Require an up-to-date [`mops.lock`](../../10-mops.lock.md) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](../1-deps/02-mops-install.md#--locked).
 
 ## Passing flags to the Motoko compiler
 
@@ -126,7 +138,7 @@ On `moc` 1.12.0+, canisters with `[migrations]` configured and a `.most` baselin
 
 For more details, see [`mops check-stable`](./05-mops-check-stable.md).
 
-When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. Only applies when the baseline is a committed `.most` file configured via `[check-stable].path` (not a `.mo` source passed on the command line). See [chain trimming](./08-mops-migrate.md#chain-trimming).
+When `[canisters.<name>.migrations].check-limit` is set, the stable check compares the deployed `.most` baseline against the local chain after compatibility checking. If more migrations are pending than `check-limit` allows, mops reports a diagnostic naming the latest pending file to fold into. If compat already failed, this replaces the misleading `moc` error; if compat passed anyway, it is shown as a warning. See [chain trimming](./08-mops-migrate.md#chain-trimming).
 
 ## Enhanced migration support
 
@@ -138,7 +150,7 @@ If a stable compatibility check fails and `[migrations]` is configured, a hint i
 
 After type-checking succeeds, `mops check` automatically runs [`mops lint`](./07-mops-lint.md) when `lintoko` is pinned in `[toolchain]`.
 
-This means `mops check` is the single command for all correctness checks — type errors and lint violations are both caught in one pass.
+This means `mops check` is the single command for all correctness checks — type errors and lint violations are both caught in one pass. Pass `--no-lint` to skip the lint step for a single run. Projects without a `lintoko` pin are unaffected.
 
 ```
 mops check --fix

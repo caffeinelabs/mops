@@ -11,21 +11,13 @@ import { globMoFiles } from "./globMoFiles.js";
 
 export class ErrorChecker {
   verbose = false;
-  canisters: Record<string, string> = {};
   status: "pending" | "running" | "error" | "success" = "pending";
   errors: string[] = [];
   totalFiles = 0;
   processedFiles = 0;
 
-  constructor({
-    verbose,
-    canisters,
-  }: {
-    verbose: boolean;
-    canisters: Record<string, string>;
-  }) {
+  constructor({ verbose }: { verbose: boolean }) {
     this.verbose = verbose;
-    this.canisters = canisters;
   }
 
   reset() {
@@ -42,7 +34,7 @@ export class ErrorChecker {
     onProgress();
 
     let rootDir = getRootDir();
-    let mocPath = await toolchain.bin("moc", { fallback: true });
+    let mocPath = await toolchain.bin("moc");
     let deps = (await sourcesArgs({ cwd: rootDir })).flat();
     let globalMocArgs = getGlobalMocArgs(readConfig());
 

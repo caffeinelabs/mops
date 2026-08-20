@@ -21,7 +21,16 @@ import {
   getPackageFilesInfo,
 } from "../../api/downloadPackageFiles.js";
 import { installDeps } from "./install-deps.js";
+import {
+  fileThreadsPerPackage,
+  noteTransientNetworkError,
+} from "./install-concurrency.js";
 import { getDepName } from "../../helpers/get-dep-name.js";
+import { verifyDownloadedPackageFiles } from "../../integrity.js";
+
+// Each task holds one file descriptor, so an unbounded fan-out over a large
+// package can hit the FD soft limit; pnpm bounds its fs pools the same way.
+const FS_WRITE_CONCURRENCY = 16;
 
 type InstallMopsDepOptions = {
   verbose?: boolean;
@@ -42,12 +51,12 @@ export async function installMopsDep(
     ignoreTransitive,
   }: InstallMopsDepOptions = {},
 ): Promise<boolean> {
-  threads = threads || 12;
+  // Direct calls install a single package, so it gets the whole budget;
+  // installDeps passes each pool member its share instead.
+  threads = threads || fileThreadsPerPackage(1);
   let depName = getDepName(pkg);
 
-  if (!checkConfigFile()) {
-    return false;
-  }
+  checkConfigFile();
   let logUpdate = createLogUpdate(process.stdout, { showCursor: true });
 
   // progress
@@ -85,17 +94,12 @@ export async function installMopsDep(
   }
   // download
   else {
-    // GitHub Actions fails with "fetch failed" if there are multiple concurrent actions
-    if (process.env.GITHUB_ENV) {
-      threads = 4;
-    }
-
     try {
       let { storageId, fileIds } = await getPackageFilesInfo(depName, version);
 
       total = fileIds.length + 2;
 
-      let filesData = new Map();
+      let filesData = new Map<string, Uint8Array>();
       let storage = await storageActor(storageId);
 
       await parallel(threads, fileIds, async (fileId: string) => {
@@ -104,16 +108,46 @@ export async function installMopsDep(
         progress();
       });
 
+      // Integrity is checked here, once, on the bytes that just arrived —
+      // nothing reaches the cache unless it matches the registry's hashes.
+      let verification = await verifyDownloadedPackageFiles(
+        cacheName,
+        filesData,
+      );
+      if (verification.errors.length) {
+        logUpdate.clear();
+        console.error(
+          chalk.red("Error: ") +
+            `integrity check failed for ${depName}@${version}`,
+        );
+        for (let error of verification.errors) {
+          console.error("  " + error);
+        }
+        return false;
+      }
+      if (verification.unverified && !silent) {
+        logUpdate.clear();
+        console.warn(
+          chalk.yellow("Warning: ") +
+            `${depName}@${version} publishes no file hashes, so its contents could not be verified`,
+        );
+      }
+
       let stagingDir = createStagingDir(cacheDir);
       let onSigInt = () => {
         fs.rmSync(stagingDir, { recursive: true, force: true });
+        // eslint-disable-next-line no-restricted-properties
         process.exit(130);
       };
       process.on("SIGINT", onSigInt);
 
       try {
-        await Promise.all(
-          Array.from(filesData.entries()).map(async ([filePath, data]) => {
+        // A halved-budget retry after EMFILE must lower write pressure too,
+        // so the pool follows the package's thread share down.
+        await parallel(
+          Math.min(FS_WRITE_CONCURRENCY, threads * 4),
+          Array.from(filesData.entries()),
+          async ([filePath, data]) => {
             await fs.promises.mkdir(
               path.join(stagingDir, path.dirname(filePath)),
               { recursive: true },
@@ -122,10 +156,11 @@ export async function installMopsDep(
               path.join(stagingDir, filePath),
               Buffer.from(data),
             );
-          }),
+          },
         );
         commitStagingDir(stagingDir, cacheDir);
       } catch (err) {
+        noteTransientNetworkError(err);
         console.error(chalk.red("Error: ") + err);
         fs.rmSync(stagingDir, { recursive: true, force: true });
         return false;
@@ -133,6 +168,7 @@ export async function installMopsDep(
         process.off("SIGINT", onSigInt);
       }
     } catch (err) {
+      noteTransientNetworkError(err);
       console.error(chalk.red("Error: ") + err);
       return false;
     }

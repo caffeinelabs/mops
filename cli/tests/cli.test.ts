@@ -20,6 +20,44 @@ describe("cli", () => {
   test("--help", async () => {
     expect((await cli(["--help"])).stdout).toMatch(/^Usage: mops/m);
   });
+
+  // Network selection is `MOPS_NETWORK` only. The removed commands persisted
+  // it inside the install directory, which is often read-only and shared
+  // between projects.
+  test.each(["set-network", "sn", "get-network", "gn"])(
+    "`%s` is not a command",
+    async (name) => {
+      const result = await cli([name, "local"]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/unknown command/);
+    },
+  );
+
+  test("MOPS_NETWORK selects the network", async () => {
+    const result = await cli(["cache", "show"], {
+      env: { MOPS_NETWORK: "staging" },
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toMatch(/mops\/staging$/);
+  });
+
+  // These set up and tore down the `DFX_MOC_PATH=moc-wrapper` bridge, which
+  // only ever existed to make `dfx build` compile with the pinned moc.
+  test.each(["init", "reset"])(
+    "`toolchain %s` is not a command",
+    async (name) => {
+      const result = await cli(["toolchain", name]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/unknown command/);
+    },
+  );
+
+  test("`watch` no longer offers dfx generate/deploy tasks", async () => {
+    const result = await cli(["watch", "--help"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/--test/);
+    expect(result.stdout).not.toMatch(/--generate|--deploy/);
+  });
 });
 
 describe("install", () => {
@@ -60,25 +98,7 @@ describe("install", () => {
     }
   });
 
-  test("does not create mops.lock when --lock ignore is passed", async () => {
-    const cwd = path.join(import.meta.dirname, "install/success");
-    const lockFile = path.join(cwd, "mops.lock");
-    rmSync(lockFile, { force: true });
-    try {
-      // Unset CI for consistency; --lock ignore bypasses auto-detection regardless
-      const result = await cli(["install", "--lock", "ignore"], {
-        cwd,
-        env: { CI: undefined },
-      });
-      expect(result.exitCode).toBe(0);
-      expect(existsSync(lockFile)).toBe(false);
-    } finally {
-      rmSync(lockFile, { force: true });
-      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
-    }
-  });
-
-  // mops add/remove/update/sync are not separately tested here because they
+  // `mops add/remove/update/sync` are not separately tested here because they
   // all route through the same checkIntegrity code path tested above.
 
   // Regression: aliases pinning the same package@version (e.g. `core` and
@@ -102,195 +122,32 @@ describe("install", () => {
     }
   });
 
-  // Regression: `install --lock update` used to early-return if mops.toml's
-  // deps hash was unchanged, even when the lockfile's per-file hashes were
-  // stale/corrupt. The subsequent checkLockFile would then fail and exit 1,
-  // so `--lock update` could never recover a broken lock — the only escape
-  // was `rm mops.lock`. See issue #514.
-  test("--lock update rewrites a lockfile with a corrupt file hash", async () => {
-    const cwd = path.join(import.meta.dirname, "install/success");
-    const lockFile = path.join(cwd, "mops.lock");
-    rmSync(lockFile, { force: true });
-    try {
-      const first = await cli(["install"], { cwd, env: { CI: undefined } });
-      expect(first.exitCode).toBe(0);
-      expect(existsSync(lockFile)).toBe(true);
+  // `--lock <check|update|ignore>` is gone in v3. `check` became `--locked`,
+  // `update` became plain `mops install` (self-healing), and `ignore` has no
+  // successor — the lock is always maintained.
 
-      const bad =
-        "BAD0000000000000000000000000000000000000000000000000000000000BAD";
-      const original = readFileSync(lockFile, "utf8");
-      const corrupted = original.replace(
-        /"core@1\.0\.0\/mops\.toml":\s*"[0-9a-f]{64}"/,
-        `"core@1.0.0/mops.toml": "${bad}"`,
-      );
-      expect(corrupted).not.toBe(original);
-      writeFileSync(lockFile, corrupted);
-
-      const result = await cli(["install", "--lock", "update"], {
-        cwd,
-        env: { CI: undefined },
-      });
-      expect(result.exitCode).toBe(0);
-      expect(readFileSync(lockFile, "utf8")).not.toContain(bad);
-    } finally {
-      rmSync(lockFile, { force: true });
-      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
-    }
-  });
-
-  // Regression: when a file under `.mops/` was edited locally (an unsupported
-  // but common AI-agent workflow), `--lock update` would regenerate the
-  // lockfile from registry hashes, then fail the per-file check, and tell the
-  // user to "Run `mops install --lock update` to regenerate it" — the exact
-  // command that just failed. The post-regen message now says the local copy
-  // was modified and points at the actual fix.
-  test("--lock update flags a locally edited .mops/ file with a clear recovery hint", async () => {
-    const cwd = path.join(import.meta.dirname, "install/success");
-    const lockFile = path.join(cwd, "mops.lock");
-    const localDep = path.join(cwd, ".mops", "core@1.0.0", "mops.toml");
-    rmSync(lockFile, { force: true });
-    rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
-    try {
-      const first = await cli(["install"], { cwd, env: { CI: undefined } });
-      expect(first.exitCode).toBe(0);
-      expect(existsSync(localDep)).toBe(true);
-
-      writeFileSync(
-        localDep,
-        readFileSync(localDep, "utf8") + "\n# tampered\n",
-      );
-
-      const result = await cli(["install", "--lock", "update"], {
-        cwd,
-        env: { CI: undefined },
-      });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(
-        /\.mops\/core@1\.0\.0\/mops\.toml differs from the registry/,
-      );
-      expect(result.stderr).toMatch(
-        /delete the `\.mops\/core@1\.0\.0` directory and run `mops install`/,
-      );
-      expect(result.stderr).not.toMatch(/Run `mops install --lock update`/);
-    } finally {
-      rmSync(lockFile, { force: true });
-      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
-    }
-  });
-
-  // AGE-291: with CI set, install defaults to `--lock check` and used to abort
-  // on a stale deps hash with no recovery hint — a deadlock for agents that
-  // cannot `rm mops.lock`. Hint + deprecation warning for the CI auto-path.
-  test("CI install on a stale lock hints --lock update and warns about CI auto-detect", async () => {
+  // The `CI` env var used to silently switch install to `--lock check`
+  // (deprecated since 2.18). CI must now opt in with `--locked`. See GH #516.
+  test("CI=1 no longer forces lockfile check mode", async () => {
     const cwd = path.join(import.meta.dirname, "install/success");
     const lockFile = path.join(cwd, "mops.lock");
     const tomlFile = path.join(cwd, "mops.toml");
     const originalToml = readFileSync(tomlFile, "utf8");
     rmSync(lockFile, { force: true });
     try {
-      const first = await cli(["install"], { cwd, env: { CI: undefined } });
-      expect(first.exitCode).toBe(0);
-
+      expect((await cli(["install"], { cwd, env: { CI: "1" } })).exitCode).toBe(
+        0,
+      );
+      // Change mops.toml: under the old CI auto-detection this aborted.
       writeFileSync(
         tomlFile,
         '[dependencies]\ncore = "1.0.0"\nfuzz = "1.0.0"\n',
       );
-
       const result = await cli(["install"], { cwd, env: { CI: "1" } });
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(/Mismatched mops\.toml dependencies hash/);
-      expect(result.stderr).toMatch(/Run `mops install --lock update`/);
-      expect(result.stdout + result.stderr).toMatch(
-        /`CI` environment variable.*deprecated/,
-      );
-
-      const recovered = await cli(["install", "--lock", "update"], {
-        cwd,
-        env: { CI: "1" },
-      });
-      expect(recovered.exitCode).toBe(0);
-      expect(readFileSync(lockFile, "utf8")).toMatch(/fuzz@1\.0\.0/);
-    } finally {
-      writeFileSync(tomlFile, originalToml);
-      rmSync(lockFile, { force: true });
-      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
-    }
-  });
-
-  test("CI install --lock check does not emit the CI auto-detect deprecation", async () => {
-    const cwd = path.join(import.meta.dirname, "install/success");
-    const lockFile = path.join(cwd, "mops.lock");
-    rmSync(lockFile, { force: true });
-    try {
-      const first = await cli(["install"], { cwd, env: { CI: undefined } });
-      expect(first.exitCode).toBe(0);
-
-      const result = await cli(["install", "--lock", "check"], {
-        cwd,
-        env: { CI: "1" },
-      });
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout + result.stderr).not.toMatch(
-        /`CI` environment variable.*deprecated/,
-      );
-    } finally {
-      rmSync(lockFile, { force: true });
-      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
-    }
-  });
-
-  // Mutating commands bypass CI→check so agents can add deps under CI=1.
-  test("mops add under CI updates the lockfile (does not abort on check)", async () => {
-    const cwd = path.join(import.meta.dirname, "install/success");
-    const lockFile = path.join(cwd, "mops.lock");
-    const tomlFile = path.join(cwd, "mops.toml");
-    const originalToml = readFileSync(tomlFile, "utf8");
-    rmSync(lockFile, { force: true });
-    try {
-      const first = await cli(["install"], { cwd, env: { CI: undefined } });
-      expect(first.exitCode).toBe(0);
-
-      const result = await cli(["add", "fuzz@1.0.0"], {
-        cwd,
-        env: { CI: "1" },
-      });
       expect(result.exitCode).toBe(0);
       expect(result.stderr).not.toMatch(/Integrity check failed/);
-      expect(result.stdout + result.stderr).not.toMatch(
-        /`CI` environment variable.*deprecated/,
-      );
-      expect(readFileSync(tomlFile, "utf8")).toMatch(/fuzz/);
+      expect(result.stdout + result.stderr).not.toMatch(/deprecated/);
       expect(readFileSync(lockFile, "utf8")).toMatch(/fuzz@1\.0\.0/);
-    } finally {
-      writeFileSync(tomlFile, originalToml);
-      rmSync(lockFile, { force: true });
-      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
-    }
-  });
-
-  test("mops remove under CI updates the lockfile", async () => {
-    const cwd = path.join(import.meta.dirname, "install/success");
-    const lockFile = path.join(cwd, "mops.lock");
-    const tomlFile = path.join(cwd, "mops.toml");
-    const originalToml = readFileSync(tomlFile, "utf8");
-    rmSync(lockFile, { force: true });
-    try {
-      writeFileSync(
-        tomlFile,
-        '[dependencies]\ncore = "1.0.0"\nfuzz = "1.0.0"\n',
-      );
-      const first = await cli(["install"], { cwd, env: { CI: undefined } });
-      expect(first.exitCode).toBe(0);
-      expect(readFileSync(lockFile, "utf8")).toMatch(/fuzz@1\.0\.0/);
-
-      const result = await cli(["remove", "fuzz"], {
-        cwd,
-        env: { CI: "1" },
-      });
-      expect(result.exitCode).toBe(0);
-      expect(result.stderr).not.toMatch(/Integrity check failed/);
-      expect(readFileSync(tomlFile, "utf8")).not.toMatch(/fuzz/);
-      expect(readFileSync(lockFile, "utf8")).not.toMatch(/fuzz@1\.0\.0/);
     } finally {
       writeFileSync(tomlFile, originalToml);
       rmSync(lockFile, { force: true });
@@ -512,4 +369,21 @@ describe("update / outdated --patch bound", () => {
       );
     },
   );
+
+  // `update` threads verbose into the installers, the GitHub re-pin and the
+  // requirements check, so it needs the same flag its siblings take.
+  test("mops update accepts --verbose", async () => {
+    const result = await cli(["update", "--verbose", "nosuchpkg"], {
+      cwd,
+      env: { CI: undefined },
+    });
+    expect(result.stderr).not.toMatch(/unknown option/);
+    expect(result.stdout).toMatch(/Package "nosuchpkg" is not installed!/);
+    expect(result.exitCode).toBe(2);
+  });
+
+  test("mops update --help lists --verbose", async () => {
+    const result = await cli(["update", "--help"]);
+    expect(result.stdout).toMatch(/--verbose\s+Show more information/);
+  });
 });

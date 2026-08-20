@@ -17,6 +17,26 @@ describe("lint", () => {
     await cliSnapshot(["lint", "DoesNotExist"], { cwd }, 1);
   });
 
+  test("flags after -- are forwarded to lintoko", async () => {
+    const cwd = path.join(import.meta.dirname, "lint");
+    // with filter
+    let result = await cli(["lint", "Ok", "--", "--format", "text"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Lint succeeded/);
+    // without filter (all files fail on no-bool-switch, but parsing must succeed)
+    result = await cli(["lint", "--", "--format", "text"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).not.toMatch(/too many arguments/);
+    expect(result.stderr).toMatch(/Lint failed/);
+  });
+
+  test("unknown flag before -- is rejected", async () => {
+    const cwd = path.join(import.meta.dirname, "lint");
+    const result = await cli(["lint", "--nope"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/unknown option '--nope'/);
+  });
+
   test("[lint] rules - additional config rules directory is used", async () => {
     const cwd = path.join(import.meta.dirname, "lint-config-rules");
     const result = await cli(["lint"], { cwd });

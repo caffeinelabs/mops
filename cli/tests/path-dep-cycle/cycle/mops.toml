@@ -1,0 +1,6 @@
+[package]
+name = "cycle-root"
+version = "1.0.0"
+
+[dependencies]
+a = "./a"

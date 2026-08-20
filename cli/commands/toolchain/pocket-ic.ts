@@ -4,6 +4,8 @@ import fs from "node:fs";
 
 import { globalCacheDir } from "../../mops.js";
 import * as toolchainUtils from "./toolchain-utils.js";
+import { assertMinimumVersion } from "./pocket-ic-versions.js";
+import { cliError } from "../../error.js";
 
 let cacheDir = path.join(globalCacheDir, "pocket-ic");
 
@@ -27,9 +29,9 @@ export let download = async (
   { silent = false, verbose = false } = {},
 ) => {
   if (!version) {
-    console.error("version is not defined");
-    process.exit(1);
+    cliError("version is not defined");
   }
+  assertMinimumVersion(version);
   if (isCached(version)) {
     if (verbose) {
       console.log(`pocket-ic ${version} is already installed`);

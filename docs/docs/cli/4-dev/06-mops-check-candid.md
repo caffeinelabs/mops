@@ -50,3 +50,9 @@ Breaking changes:
 :::info
 The [`mops build`](./03-mops-build.md) command automatically runs Candid compatibility checks when a `candid` field is specified in the canister configuration.
 :::
+
+## Options
+
+### `--locked`
+
+Require an up-to-date [`mops.lock`](../../10-mops.lock.md) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](../1-deps/02-mops-install.md#--locked).

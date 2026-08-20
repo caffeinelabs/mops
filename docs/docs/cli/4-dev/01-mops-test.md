@@ -40,7 +40,7 @@ Available reporters:
 - `compact` - pretty progress bar
 - `silent` - print only errors
 
-Default `verbose` if there is only one file to test and `files` otherwise.
+Default `verbose`.
 
 :::note
 Only `verbose` reporter prints `Debug.print` output.
@@ -67,7 +67,7 @@ Available modes:
 
 - `interpreter` - run tests via `moc -r` (default)
 - `wasi` - compile test file to wasm and execute it with `wasmtime`. Useful, when you use `to_candid`/`from_candid`, or if you get stackoverflow errors.
-- `replica` - deploy test files as canisters to a local replica ([`--replica`](#--replica) selects which one). See [Replica tests](#replica-tests).
+- `replica` - deploy test files as canisters to a local [PocketIC](https://github.com/dfinity/pocketic) replica. See [Replica tests](#replica-tests).
 
 
 You can also specify `wasi` or `replica` mode for a specific test file by adding one of these markers to the file (on a line of its own, with nothing else on the line):
@@ -77,20 +77,6 @@ You can also specify `wasi` or `replica` mode for a specific test file by adding
 ```
 
 Test files that define an actor run in `replica` mode automatically.
-
-### `--replica`
-
-Which replica to use to run actor tests.
-
-Default `pocket-ic` if `pocket-ic` is specified in `mops.toml` in `[toolchain]` section or `MOPS_POCKET_IC_URL` points at an already-running PocketIC server, otherwise `dfx` (deprecated, see below).
-
-Possible values:
-- `pocket-ic` - use [PocketIC](https://github.com/dfinity/pocketic) light replica via [pic.js](https://github.com/dfinity/pic-js). Recommended.
-- `dfx` - **deprecated**. Uses `dfx` local replica. Will be removed in a future release. Run `mops toolchain use pocket-ic 15.0.0` to pin a PocketIC version and `mops test` will use it directly.
-
-:::info
-If you run `mops test --replica pocket-ic` AND neither `pocket-ic` in `[toolchain]` nor `MOPS_POCKET_IC_URL` is set, Mops will use the pocket-ic replica that comes with dfx (`dfx start --pocketic`). This fallback path is also deprecated.
-:::
 
 ### `--verbose`
 
@@ -103,6 +89,10 @@ Pass extra flags directly to the Motoko compiler for this invocation. Appended a
 ```
 mops test -- -Werror
 ```
+
+### `--locked`
+
+Require an up-to-date [`mops.lock`](../../10-mops.lock.md) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](../1-deps/02-mops-install.md#--locked).
 
 ## Replica tests
 
@@ -144,7 +134,9 @@ Make sure your actor has `runTests` method.
 
 See example [here](https://github.com/caffeinelabs/mops/blob/main/test/storage-actor.test.mo).
 
+Replica tests run on [PocketIC](https://github.com/dfinity/pocketic), which Mops downloads and manages itself — `dfx` is not involved and does not need to be installed. Pin a version with [`mops toolchain use pocket-ic 15.0.0`](../5-toolchain/03-mops-toolchain-use.md). There is no default: an unpinned project errors, unless [`MOPS_POCKET_IC_URL`](../7-misc/06-environment-variables.md#mops_pocket_ic_url) points at an already-running PocketIC server (Mops then attaches to it instead of spawning one, and an existing pin is ignored). See [supported versions](../5-toolchain/01-toolchain-overview.md#pocket-ic-versions).
+
 Under the hood, Mops will:
-- Start a local replica on port `4945`
+- Start a PocketIC server on an ephemeral port (or attach to the `MOPS_POCKET_IC_URL` server)
 - Compile test files and deploy them
 - Call `runTests` method of the deployed canister

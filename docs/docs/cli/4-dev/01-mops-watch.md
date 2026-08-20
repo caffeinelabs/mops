@@ -6,18 +6,20 @@ sidebar_position: 5
 
 # `mops watch`
 
-Watch Motoko files and check for syntax errors, warnings, run tests, generate declarations and deploy canisters
+Watch Motoko files, check them for syntax errors and warnings, and format them
 
 ```
 mops watch
 ```
 
-By default, `mops watch` will:
+By default, `mops watch` runs the safe informative set:
 - Check for syntax errors
 - Check for warnings
-- Run tests
-- Generate declarations for Motoko canisters
-- Deploy Motoko canisters to the local replica
+- Format Motoko files
+
+Tests are **opt-in** — they run only when requested with `--test`.
+
+Passing any flag runs only the selected tasks (error checking is always on).
 
 ## Options
 
@@ -35,6 +37,8 @@ mops watch --error
 
 Check Motoko files for warnings.
 
+Part of the default set (runs when no flags are passed).
+
 ```
 mops watch --warning
 ```
@@ -43,58 +47,54 @@ mops watch --warning
 
 Format Motoko files.
 
+Part of the default set (runs when no flags are passed).
+
 ```
 mops watch --format
 ```
 
 ### `--test`
 
-Run Motoko tests.
+Run Motoko tests. Opt-in — never runs unless this flag is passed.
 
 ```
 mops watch --test
 ```
 
 :::info
-Replica tests use `pocket-ic` if it's pinned in `mops.toml` under `[toolchain]` or `MOPS_POCKET_IC_URL` points at an already-running PocketIC server; otherwise they fall back to the `dfx` replica, which is **deprecated** and will be removed in a future release. Run `mops toolchain use pocket-ic 15.0.0` to pin a PocketIC version and silence the warning.
+Replica tests run on [PocketIC](https://github.com/dfinity/pocketic), using the `pocket-ic` version pinned in `mops.toml` under `[toolchain]`, or an already-running server when [`MOPS_POCKET_IC_URL`](../7-misc/06-environment-variables.md#mops_pocket_ic_url) is set. There is no default — pin one with [`mops toolchain use pocket-ic 15.0.0`](../5-toolchain/03-mops-toolchain-use.md).
 :::
-
-### `--generate`
-
-Generate declarations for Motoko canisters from `dfx.json` that have `declarations` field.
-
-```
-mops watch --generate
-```
-
-### `--deploy`
-
-Deploy Motoko canisters to the local replica.
-
-```
-mops watch --deploy
-```
 
 ## Examples
 
-Check syntax errors, show warnings, run tests, generate declarations and deploy canisters
+Check syntax errors, show warnings and format files (the default set)
 
 ```
 mops watch
 ```
 
-Check syntax errors and show warnings
+Check syntax errors and show warnings (no formatting)
 
 ```
 mops watch --warning
 ```
 
-Check syntax errors, run tests, generate declarations and deploy canisters
+Check syntax errors and run tests
 
 ```
-mops watch --test --generate --deploy
+mops watch --test
 ```
 or
 ```
-mops watch -tgd
+mops watch -t
 ```
+
+Everything: warnings, formatting and tests
+
+```
+mops watch -wtf
+```
+
+:::note
+Because passing any flag selects only the named tasks, `-t` does **not** include the warning check or formatting — add `-w` and `-f` when you want them.
+:::

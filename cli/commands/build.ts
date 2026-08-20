@@ -3,19 +3,15 @@ import { execa } from "execa";
 import { exists } from "fs-extra";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { lock, unlockSync } from "proper-lockfile";
-import { cliError, cliExit } from "../error.js";
+import { lock } from "proper-lockfile";
+import { CliError, cliError, cliErrorFrom, cliExit } from "../error.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import {
   filterCanisters,
   resolveCanisterConfigs,
 } from "../helpers/resolve-canisters.js";
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
-import { optimizeWasm } from "../helpers/optimize-wasm.js";
-import {
-  assertDfinityClientSupportsPocketIc,
-  getPocketIcUrl,
-} from "../helpers/pocket-ic-startup.js";
+import { checkOptimizeConfig, optimizeWasm } from "../helpers/optimize-wasm.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
@@ -64,27 +60,15 @@ export async function build(
     options.checkWasm ?? config.build?.["check-wasm"] ?? false;
   const checkDeployEnabled =
     options.checkDeploy ?? config.build?.["check-deploy"] ?? false;
-  // A malformed MOPS_POCKET_IC_URL is rejected by the preAction hook in
-  // cli.ts before any command runs, so getPocketIcUrl() cannot throw here.
-  if (checkDeployEnabled && !getPocketIcUrl()) {
-    const pocketIcVersion = config.toolchain?.["pocket-ic"];
-    if (!pocketIcVersion) {
-      cliError(
-        "PocketIC deployment check requires `pocket-ic` in `[toolchain]`. Run `mops toolchain use pocket-ic 15.0.0` to pin it.",
-      );
-    }
-    try {
-      assertDfinityClientSupportsPocketIc(pocketIcVersion);
-    } catch (err) {
-      cliError(err instanceof Error ? err.message : String(err));
-    }
-  }
   let outputDir = resolveBuildOutputDir(config, options.outputDir);
   let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {
     cliError(`No Motoko canisters found in mops.toml configuration`);
   }
-  let mocPath = await toolchain.bin("moc", { fallback: true });
+  if (options.optimize !== false) {
+    checkOptimizeConfig(config);
+  }
+  let mocPath = await toolchain.bin("moc");
 
   if (!(await exists(outputDir))) {
     await mkdir(outputDir, { recursive: true });
@@ -114,24 +98,15 @@ export async function build(
       );
     }
 
-    // proper-lockfile registers its own signal-exit handler, but it doesn't reliably
-    // fire on process.exit(). This manual handler covers that gap. Double-unlock is
-    // harmless (the second call throws and is caught).
-    const exitCleanup = () => {
-      try {
-        unlockSync(lockTarget);
-      } catch {}
-    };
-    process.on("exit", exitCleanup);
-
-    const prepared = await prepareMocArgs(config, canister, canisterName, {
-      mode: "build",
-      managedFlags: BUILD_MANAGED_FLAGS,
-      commandName: "mops build",
-      verbose: options.verbose,
-      extraArgs: options.extraArgs,
-    });
+    let prepared: Awaited<ReturnType<typeof prepareMocArgs>> | undefined;
     try {
+      prepared = await prepareMocArgs(config, canister, canisterName, {
+        mode: "build",
+        managedFlags: BUILD_MANAGED_FLAGS,
+        commandName: "mops build",
+        verbose: options.verbose,
+        extraArgs: options.extraArgs,
+      });
       let args = [
         "-c",
         "--idl",
@@ -205,9 +180,10 @@ export async function build(
                 ),
               );
             }
-          } catch (err: any) {
-            cliError(
-              `Error during Candid compatibility check for canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
+          } catch (err) {
+            cliErrorFrom(
+              err,
+              `Error during Candid compatibility check for canister ${canisterName}`,
             );
           }
         }
@@ -254,17 +230,11 @@ export async function build(
             wasmMemoryLimit: canister.wasmMemoryLimit,
           });
         }
-      } catch (err: any) {
-        if (err.message?.includes("Build failed for canister")) {
-          throw err;
-        }
-        cliError(
-          `Error while compiling canister ${canisterName}${err?.message ? `\n${err.message}` : ""}`,
-        );
+      } catch (err) {
+        cliErrorFrom(err, `Error while compiling canister ${canisterName}`);
       }
     } finally {
-      await prepared.cleanup();
-      process.removeListener("exit", exitCleanup);
+      await prepared?.cleanup();
       try {
         await release?.();
       } catch {}
@@ -279,6 +249,9 @@ export async function build(
         mocPath,
       });
     } catch (err) {
+      if (err instanceof CliError) {
+        throw err;
+      }
       cliError(err instanceof Error ? err.message : String(err));
     }
   }

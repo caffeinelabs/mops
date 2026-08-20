@@ -11,12 +11,29 @@ Mops CLI supports several environment variables to customize its behavior.
 
 ### `MOPS_NETWORK`
 
-Override the active network (`local`, `staging`, or `ic`). Equivalent to `mops set-network` but without persisting to disk. Useful in CI/CD pipelines and Docker containers where `mops set-network` may not have write access.
+Select the network (`local`, `staging`, or `ic`). This is the only way to change it — mops defaults to `ic` and never persists a network selection to disk, so every process that should talk to a different registry needs the variable set.
 
 When set to `local`, the agent fetches the root key from the replica (required for local replicas) and defaults to `http://127.0.0.1:4943`.
 
+:::note
+Since mops 3.0.0 the agent makes update calls over the IC HTTP API `v3` synchronous-call endpoint. A local replica has to serve it — [`icp`](https://js.icp.build/) and recent `dfx` do; a pre-`v3` replica does not.
+:::
+
 ```bash
 export MOPS_NETWORK="local"
+mops install
+```
+
+## Install Tuning
+
+### `MOPS_CONCURRENCY`
+
+Cap the number of simultaneous registry requests during package installs (an integer ≥ 1). Applies to every command that installs packages — `mops install`, `mops add`, `mops build`, `mops test`, `mops sources`, and so on. Equivalent to [`mops install --concurrency <n>`](../1-deps/02-mops-install.md#--concurrency-n); the flag wins when both are set.
+
+The default is derived from the CPU count (2 × cores, clamped to 4–16) and capped by the file-descriptor soft limit. Transient network failures retry on their own with the concurrency halved, but a low explicit value still helps environments that are constrained in ways mops cannot see — an egress proxy capping concurrent connections, for example:
+
+```bash
+export MOPS_CONCURRENCY=2
 mops install
 ```
 
@@ -35,6 +52,8 @@ envdep = "./envs/{MOPS_ENV}/dep"
 export MOPS_ENV="staging"
 mops install
 ```
+
+The lockfile stores the expanded path, so it is specific to the `MOPS_ENV` it was generated under — a lockfile generated under a different value counts as stale, and `mops install --locked` fails on it. See [`{MOPS_ENV}` path dependencies](../../10-mops.lock.md#mops_env-path-dependencies).
 
 ### `MOPS_CWD`
 
@@ -91,7 +110,7 @@ export MOPS_POCKET_IC_URL="http://127.0.0.1:8001"
 mops build --check-deploy
 ```
 
-The URL must be `http` or `https` and must speak the PocketIC control API, not the IC HTTP gateway. A malformed value fails every `mops` command with an error — broken environment config is rejected loudly rather than ignored. `--replica dfx` is unaffected.
+The URL must be `http` or `https` and must speak the PocketIC control API, not the IC HTTP gateway. A malformed value fails every `mops` command with an error — broken environment config is rejected loudly rather than ignored.
 
 Limitations of attached mode:
 

@@ -27,6 +27,8 @@ jobs:
         run: |
           npm ci --ignore-scripts
           npm run ci:postinstall
+      - name: Typecheck
+        run: npm run check
       - name: Lint
         run: npm run lint
       - name: Format

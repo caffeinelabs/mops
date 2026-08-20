@@ -8,4 +8,4 @@ args = ["--default-persistent-actors"]
 main = "main.mo"
 
 [canisters.backend.check-stable]
-path = "old.mo"
+path = "old.most"

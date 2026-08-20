@@ -1,0 +1,7 @@
+[package]
+name = "same-major"
+version = "1.0.0"
+
+[dependencies]
+test = "2.1.2"
+legacy = "./legacy"

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import chalk from "chalk";
 import { globSync } from "glob";
 import { docs } from "./docs.js";
+import { cliError } from "../error.js";
 
 export type DocsCoverageReporter =
   | "compact"
@@ -80,7 +81,7 @@ export async function docsCoverage(options: Partial<DocsCoverageOptions> = {}) {
   }
 
   if (threshold > 0 && totalCoverage < threshold) {
-    process.exit(1);
+    cliError();
   }
 
   return totalCoverage;

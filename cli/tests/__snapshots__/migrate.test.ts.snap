@@ -78,7 +78,7 @@ exports[`migrate check check with trimming shows reduced chain 1`] = `
   "stdout": "check Using --all-libs for richer diagnostics
 migrations Prepared 2 migration(s) for backend (trimmed from 3)
 check Checking canister backend:
-<CACHE>moc-wrapper ["src/main.mo","--check","--all-libs","--stable-baseline","deployed.most","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
+<CACHE><MOC> ["src/main.mo","--check","--all-libs","--stable-baseline","deployed.most","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
 ✓ backend
 ✓ Stable compatibility check passed for canister 'backend'",
 }

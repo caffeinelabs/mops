@@ -23,7 +23,7 @@ For each canister, three files are written to the output directory (default `.mo
 
 If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against it.
 
-When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Failures warn and leave the unoptimized module. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
+When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Requires a `[toolchain] wasm-opt` pin, and a `wasm-opt` failure fails the build. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
 
 When `--check-wasm` or `[build].check-wasm = true` enables static validation, Mops uses Walrus to estimate each function's IC0505 compilation complexity in the final Wasm:
 
@@ -94,6 +94,10 @@ Skip the [`[optimize]`](../../09-mops.toml.md#optimize) `wasm-opt` post-pass for
 mops build --no-optimize
 ```
 
+### `--locked`
+
+Require an up-to-date [`mops.lock`](../../10-mops.lock.md) and never write it — fails if the lockfile is missing or no longer matches `mops.toml` and the registry. Intended for CI, so that a job can run this command without a preceding `mops install`. See [`mops install --locked`](../1-deps/02-mops-install.md#--locked).
+
 ### `--check-wasm`
 
 Analyze each final Wasm for likely IC0505 function-complexity risks without starting PocketIC. This check emits actionable warnings and never fails the build.
@@ -123,10 +127,10 @@ Enable the same validation for every plain `mops build` invocation:
 check-deploy = true
 ```
 
-PocketIC 9.0.0 or newer, or a local PocketIC binary path, must be pinned in
-`[toolchain]`. Mops cannot verify compatibility for a path pin.
-Set `MOPS_POCKET_IC_URL` to use an already-running PocketIC server instead;
-the pin is then ignored.
+Requires a `[toolchain] pocket-ic` pin — with no pin the build fails and names
+`mops toolchain use pocket-ic 15.0.0`. Set
+[`MOPS_POCKET_IC_URL`](../7-misc/06-environment-variables.md#mops_pocket_ic_url)
+to use an already-running PocketIC server instead; the pin is then ignored.
 ```toml
 [toolchain]
 pocket-ic = "15.0.0"

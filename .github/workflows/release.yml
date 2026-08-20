@@ -1,5 +1,12 @@
 name: Release CLI
 
+# Handles both stable releases and prereleases, all tagged on main.
+#
+# The preview path lives here rather than in its own workflow because npm
+# allows exactly one trusted publisher per package and pins it to a single
+# workflow filename — a second workflow could never authenticate. Do not split
+# it back out. Every prerelease deviation below is an explicit conditional; with
+# them all false this is the stable path unchanged.
 on:
   push:
     tags:
@@ -22,6 +29,37 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Whether this is a prerelease is decided by parsing the version with
+      # semver and asking for a prerelease component, not by matching the tag
+      # string. `-beta.1` and `-rc.1` both take the preview path, and a typo is
+      # an invalid version that aborts rather than quietly taking the stable one.
+      - name: Extract version from tag
+        id: version
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#cli-v}"
+
+          # The official semver.org regex, applied strictly and with no dependency.
+          # Strictness is the point: a lax parser accepts "v3.0.0" or " 3.0.0 " and
+          # normalises it, so the published version stops matching the tag and the
+          # mismatch only surfaces after the publish has happened. Rejecting here
+          # means $VERSION is the version, verbatim, everywhere downstream.
+          PRERELEASE=$(VERSION="$VERSION" node -e '
+            const re = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
+            const m = re.exec(process.env.VERSION);
+            if (!m) {
+              console.error("::error::Tag " + process.env.GITHUB_REF_NAME + " does not contain a valid semver version");
+              process.exit(1);
+            }
+            process.stdout.write(m[4] === undefined ? "false" : "true");
+          ')
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION (prerelease: $PRERELEASE)"
+
+      # `main` is the only branch that releases. `v2` archives the 2.x line and
+      # has no release path, so a `cli-v2.*` tag aborts here by design.
       - name: Abort if tag is not on main
         run: |
           set -euo pipefail
@@ -33,18 +71,8 @@ jobs:
             exit 1
           fi
 
-      - name: Extract version from tag
-        id: version
-        run: |
-          VERSION="${GITHUB_REF_NAME#cli-v}"
-          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
-            echo "::error::Could not extract a valid version from tag '${GITHUB_REF_NAME}'"
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Version: $VERSION"
-
       - name: Validate version matches package.json
+        if: steps.version.outputs.prerelease == 'false'
         working-directory: cli
         env:
           TAG_VERSION: ${{ steps.version.outputs.version }}
@@ -54,6 +82,18 @@ jobs:
             echo "::error::Tag version ($TAG_VERSION) does not match package.json ($PKG_VERSION)"
             exit 1
           fi
+
+      # Previews take the version from the tag instead, so main needs no churn
+      # commit per beta and cli/package.json keeps the last released version
+      # that `mops --version` reports and the test suite asserts on.
+      - name: Set package version from tag
+        if: steps.version.outputs.prerelease == 'true'
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
 
       # --- Docker build ---
 
@@ -105,6 +145,7 @@ jobs:
         run: npm ci
 
       - name: Extract changelog
+        if: steps.version.outputs.prerelease == 'false'
         working-directory: cli
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -133,9 +174,116 @@ jobs:
             echo '```'
           } >> /tmp/release-notes.md
 
+      # Previews have no changelog heading of their own — work accumulates
+      # under `## Next` — so this takes everything above the first released
+      # heading instead of requiring a per-beta entry.
+      - name: Build prerelease notes
+        if: steps.version.outputs.prerelease == 'true'
+        working-directory: cli
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_HASH: ${{ steps.hash.outputs.hash }}
+          COMMIT_HASH: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          {
+            echo "Preview build of the 3.x line. Not published to the \`latest\` dist-tag."
+            echo ""
+            echo '```bash'
+            echo "npm i -g ic-mops@${VERSION}   # or: npm i -g ic-mops@next"
+            echo '```'
+            echo ""
+            echo "> \`mops self update\` still serves the latest stable release — preview builds are"
+            echo "> published to npm only and are not uploaded to the cli-releases canister."
+            echo "> Use the npm command above to move between betas."
+            echo ""
+            echo "Docs: https://docs.mops.one"
+            echo ""
+          } > /tmp/release-notes.md
+
+          awk 'NR>1 && /^## [0-9]+\.[0-9]+\.[0-9]+$/{exit} NR>1' \
+            CHANGELOG.md > /tmp/changelog-section.md
+
+          if grep -q '[^[:space:]]' /tmp/changelog-section.md; then
+            cat /tmp/changelog-section.md >> /tmp/release-notes.md
+          else
+            echo "::warning::No unreleased changelog entries found — publishing with minimal notes."
+          fi
+
+          {
+            echo ""
+            echo "---"
+            echo "**SHA256:** \`${BUILD_HASH}\`"
+            echo ""
+            echo "**Verify build:**"
+            echo '```bash'
+            echo "cd cli"
+            echo "docker build . --build-arg COMMIT_HASH=${COMMIT_HASH} --build-arg MOPS_VERSION=${VERSION} -t mops"
+            echo "docker run --rm --env SHASUM=${BUILD_HASH} mops"
+            echo '```'
+          } >> /tmp/release-notes.md
+
       - name: Publish to npm
         working-directory: cli
-        run: npm publish --provenance --ignore-scripts
+        env:
+          IS_PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            # --tag next is load-bearing. Publishing with no tag sets `latest`,
+            # which would serve a beta to every `npm i -g ic-mops`.
+            npm publish --provenance --ignore-scripts --tag next
+          else
+            npm publish --provenance --ignore-scripts
+          fi
+
+      # The one mistake here with blast radius across the whole user base is a
+      # preview landing on `latest`, so it is checked rather than assumed.
+      - name: Verify npm dist-tags
+        if: steps.version.outputs.prerelease == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -uo pipefail
+          # The registry can lag a moment behind a publish.
+          sleep 15
+          echo "Current dist-tags for ic-mops:"
+          npm dist-tag ls ic-mops || true
+
+          LATEST=$(npm view ic-mops dist-tags.latest 2>/dev/null || echo "")
+          NEXT=$(npm view ic-mops dist-tags.next 2>/dev/null || echo "")
+          fail=0
+
+          # Single-quoted where the text contains backticks: inside double
+          # quotes they would run as command substitution.
+          if [ "$LATEST" = "$VERSION" ]; then
+            echo '::error::The latest dist-tag now points at this preview. Every "npm i -g ic-mops" would install a beta.'
+            echo '::error::Fix immediately: npm dist-tag add ic-mops@<last stable version> latest'
+            fail=1
+          fi
+
+          # Deliberately not "latest is on the 2.x line": that would start failing
+          # every preview after the 3.0.0 GA, and only after publishing. The property
+          # that actually matters is version-agnostic — latest must never be a
+          # prerelease, which also catches a stale beta left there by an earlier run.
+          if [ -z "$LATEST" ]; then
+            echo '::error::Could not read the latest dist-tag — verify it by hand.'
+            fail=1
+          elif printf '%s' "$LATEST" | grep -q -- '-'; then
+            echo "::error::latest is ${LATEST}, which is a prerelease. Fix: npm dist-tag add ic-mops@<last stable> latest"
+            fail=1
+          else
+            echo "ok    latest is a stable release ($LATEST)"
+          fi
+
+          if [ "$NEXT" = "$VERSION" ]; then
+            echo "ok    next points at $NEXT"
+          else
+            echo "::error::The next dist-tag is '${NEXT}', expected '${VERSION}'."
+            fail=1
+          fi
+
+          exit $fail
 
       # --- GitHub Release ---
 
@@ -144,16 +292,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           VERSION: ${{ steps.version.outputs.version }}
+          IS_PRERELEASE: ${{ steps.version.outputs.prerelease }}
         run: |
-          gh release create "$TAG" \
-            cli/bundle/cli.tgz#cli.tgz \
-            --title "CLI v${VERSION}" \
-            --notes-file /tmp/release-notes.md
+          set -euo pipefail
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            gh release create "$TAG" \
+              cli/bundle/cli.tgz#cli.tgz \
+              --title "CLI v${VERSION} (preview)" \
+              --prerelease \
+              --notes-file /tmp/release-notes.md
+          else
+            gh release create "$TAG" \
+              cli/bundle/cli.tgz#cli.tgz \
+              --title "CLI v${VERSION}" \
+              --notes-file /tmp/release-notes.md
+          fi
 
       # --- Notify caffeinelabs/app to bump ic-mops pins ---
       # Dispatch before canister deploy / artifacts so those failures cannot block the bump.
+      # Skipped for previews: a beta must not bump production ic-mops pins.
 
       - name: Create GitHub App Token for app repo
+        if: steps.version.outputs.prerelease == 'false'
         continue-on-error: true
         uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
         id: app-dispatch-token
@@ -163,6 +323,7 @@ jobs:
           repositories: app
 
       - name: Trigger ic-mops bump in app repo
+        if: steps.version.outputs.prerelease == 'false'
         continue-on-error: true
         uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3
         with:
@@ -176,8 +337,15 @@ jobs:
             }
 
       # --- On-chain release artifacts ---
+      #
+      # Everything from here up to — but not including — the docs deploy is
+      # stable-only. Previews are npm-only: no cli-releases artifacts, no cli
+      # canister upload, so `mops self update` keeps serving the latest stable.
+      # The docs deploy is ungated so documentation can be corrected from a
+      # preview tag, without cutting a stable release.
 
       - name: Generate on-chain release artifacts
+        if: steps.version.outputs.prerelease == 'false'
         working-directory: cli
         env:
           SKIP_BUILD: "1"
@@ -185,49 +353,89 @@ jobs:
         run: npx tsx release-cli.ts
 
       # --- Canister deployments ---
-
-      - uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
+      #
+      # icp-cli and the identity are set up once for the job rather than per
+      # canister: both deploys run on the same runner, so repeating the import
+      # would only give `icp identity import` — which has no --force — an
+      # existing name to fail on. Docs deploy below is not gated on prerelease
+      # because preview tags still have to publish docs.mops.one.
+      - name: Install icp-cli
+        # Keep in step with the pin in ci.yml.
+        run: npm install -g @icp-sdk/icp-cli@1.2.0
 
       - name: Import mops identity
         env:
           MOPS_IDENTITY_PEM: ${{ secrets.MOPS_IDENTITY_PEM }}
         run: |
-          echo "$MOPS_IDENTITY_PEM" > /tmp/mops.pem
-          trap 'rm -f /tmp/mops.pem' EXIT
-          dfx identity import mops /tmp/mops.pem --storage-mode plaintext
-
-      - name: Install cli-releases dependencies
-        working-directory: cli-releases
-        run: npm ci
+          set -euo pipefail
+          umask 077
+          trap 'rm -f "$RUNNER_TEMP/mops.pem"' EXIT
+          printf '%s\n' "$MOPS_IDENTITY_PEM" > "$RUNNER_TEMP/mops.pem"
+          icp identity import mops --from-pem "$RUNNER_TEMP/mops.pem" --storage plaintext
 
       - name: Deploy CLI canister
+        if: steps.version.outputs.prerelease == 'false'
+        uses: ./.github/actions/deploy-canister
+        with:
+          canister: cli
+          domain: cli.mops.one
+          build-deps-dir: cli-releases
+
+      # `mops self update` reads /tags/latest and then installs
+      # /versions/<that>.tgz, and the mops-test.yml matrix installs
+      # /versions/latest.tgz. The action's domain check cannot cover any of it —
+      # this is the one part of the cli deploy that is version-specific.
+      # Unpacking rather than checking the status is deliberate: the asset
+      # canister answers unknown paths with index.html at HTTP 200.
+      - name: Verify the released CLI is served
+        if: steps.version.outputs.prerelease == 'false'
         env:
-          DFX_WARNING: -mainnet_plaintext_identity
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          for i in 1 2 3; do
-            dfx deploy --network ic --no-wallet cli --identity mops && exit 0
-            echo "::warning::CLI canister deploy attempt $i/3 failed"
-            [ "$i" -lt 3 ] && sleep 30
+          set -euo pipefail
+          # Retried like every other network assertion here: a boundary-node 5xx
+          # or a briefly stale cache would otherwise abort the release between
+          # the upload and the artifacts commit, leaving the canister ahead of
+          # the repo and the next release building on a stale releases.json.
+          check() {
+            served=$(curl -sSf --max-time 60 https://cli.mops.one/tags/latest | tr -d '[:space:]') || return 1
+            if [ "$served" != "$VERSION" ]; then
+              echo "tags/latest is '${served}', expected '${VERSION}'"
+              return 1
+            fi
+            for name in "$VERSION" latest; do
+              url="https://cli.mops.one/versions/${name}.tgz"
+              curl -sSf --max-time 180 -o /tmp/served.tgz "$url" || return 1
+              tar -tzf /tmp/served.tgz > /dev/null 2>&1 || { echo "$url is not a readable tarball"; return 1; }
+            done
+            return 0
+          }
+
+          for attempt in 1 2 3; do
+            if check; then
+              echo "ok    tags/latest and both tarballs are served"
+              exit 0
+            fi
+            echo "::warning::CLI serve check attempt $attempt/3 failed"
+            [ "$attempt" -lt 3 ] && sleep 15
           done
+          echo "::error::cli.mops.one is not serving ${VERSION}. \`mops self update\` will not offer this release, and the artifacts commit has not run."
           exit 1
 
-      # No docs deploy here: the `v3` branch owns the docs canister, and that
-      # covers the 2.x docs too. Its Docusaurus build is a superset of this
-      # branch's — the same `docs/versioned_docs/version-2.x/` at the site root,
-      # plus the in-development line under /next — so a 2.x release publishing
-      # docs from here would add nothing and drop /next until v3 redeployed.
-      #
-      # It would also fail. v3 migrated the docs canister to dfinity's
-      # certified-assets canister (`@dfinity/static-site` in `icp.yaml`), which
-      # `dfx deploy` cannot drive: different wasm, different Candid interface.
-      #
-      # So docs changes on this branch reach docs.mops.one only once they are
-      # merged into v3 and v3 deploys. Publish them with, from a v3 checkout:
-      #   icp deploy docs -e ic --identity mops --no-create --yes
-      #
+      # The only publisher of docs.mops.one: `docs/docs/` at the site root and
+      # `versioned_docs/version-2.x/` at /2.x.
+      - name: Deploy docs canister
+        uses: ./.github/actions/deploy-canister
+        with:
+          canister: docs
+          domain: docs.mops.one
+          build-deps-dir: docs
+
       # --- Commit release artifacts ---
+      # Stable-only: previews generate no cli-releases artifacts to commit.
 
       - name: Create GitHub App Token
+        if: steps.version.outputs.prerelease == 'false'
         uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859 # v3
         id: app-token
         with:
@@ -235,6 +443,7 @@ jobs:
           private-key: ${{ secrets.GENERIC_CI_RW_APP_PRIVATE_KEY }}
 
       - name: Create artifacts PR
+        if: steps.version.outputs.prerelease == 'false'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           VERSION: ${{ steps.version.outputs.version }}

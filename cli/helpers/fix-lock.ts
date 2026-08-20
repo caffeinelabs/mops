@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { lock, unlockSync } from "proper-lockfile";
+import { lock } from "proper-lockfile";
 import { getRootDir } from "../mops.js";
 
 // Serializes Motoko-source-writing commands (`check --fix`, `lint --fix`)
@@ -75,22 +75,11 @@ export async function withFixLock<T>(fn: () => Promise<T>): Promise<T> {
       }
     }
 
-    // proper-lockfile registers its own signal-exit handler, but it doesn't reliably
-    // fire on process.exit(). This manual handler covers that gap. Double-unlock is
-    // harmless (the second call throws and is caught).
-    const exitCleanup = () => {
-      try {
-        unlockSync(lockTarget);
-      } catch {}
-    };
-    process.on("exit", exitCleanup);
-
     depth = 1;
     try {
       return await fn();
     } finally {
       depth = 0;
-      process.removeListener("exit", exitCleanup);
       try {
         await release();
       } catch {}

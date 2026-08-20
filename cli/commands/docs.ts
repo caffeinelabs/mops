@@ -10,8 +10,7 @@ import streamToPromise from "stream-to-promise";
 
 import { getRootDir } from "../mops.js";
 import { toolchain } from "./toolchain/index.js";
-
-let moDocPath: string;
+import { CliError } from "../error.js";
 
 type DocsOptions = {
   source: string;
@@ -41,20 +40,11 @@ export async function docs(options: Partial<DocsOptions> = {}) {
 
   deleteSync([docsDir], { force: true });
 
-  // detect mocv (legacy)
-  if (
-    process.env.DFX_MOC_PATH &&
-    process.env.DFX_MOC_PATH.includes("mocv/versions")
-  ) {
-    moDocPath = process.env.DFX_MOC_PATH.replace(/\/moc$/, "/mo-doc");
-  } else {
-    // fallbacks to dfx moc if not specified in config
-    let mocPath = await toolchain.bin("moc", { fallback: true });
-    moDocPath = mocPath.replace(/\/moc$/, "/mo-doc");
-  }
+  let mocPath = await toolchain.bin("moc");
+  let moDocPath = mocPath.replace(/\/moc$/, "/mo-doc");
 
   // generate docs
-  await new Promise<void>((resolve) => {
+  await new Promise<void>((resolve, reject) => {
     let proc = spawn(moDocPath, [
       `--source=${path.join(rootDir, source)}`,
       `--output=${docsDirRelative}`,
@@ -79,8 +69,9 @@ export async function docs(options: Partial<DocsOptions> = {}) {
     proc.stderr.on("data", (data) => {
       let text = data.toString().trim();
       if (text.includes("syntax error")) {
-        console.log(chalk.red("Error:"), text);
-        process.exit(1);
+        proc.kill();
+        reject(new CliError("Error: " + text));
+        return;
       }
       if (
         text.includes("No such file or directory") ||
@@ -100,8 +91,8 @@ export async function docs(options: Partial<DocsOptions> = {}) {
         return;
       }
       if (code !== 0) {
-        console.log(chalk.red("Error:"), code, stderr);
-        process.exit(1);
+        reject(new CliError(`Error: ${code} ${stderr}`));
+        return;
       }
       resolve();
     });

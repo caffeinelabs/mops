@@ -13,7 +13,7 @@ Run from the repo root:
 
 ```bash
 npm run lint
-npm run build-frontend
+MOPS_FRONTEND_NETWORK=local npm run build-frontend
 npm run build-cli-releases
 ```
 
@@ -30,7 +30,7 @@ lsof -ti:3000,3001 | xargs kill -9 2>/dev/null; echo "ports cleared"
 Start the main frontend dev server (from repo root):
 
 ```bash
-cd frontend && DFX_NETWORK=ic npx vite --port 3000
+cd frontend && MOPS_FRONTEND_NETWORK=ic npx vite --port 3000
 ```
 
 Start the cli-releases frontend (from repo root, in a separate terminal):
@@ -51,7 +51,7 @@ Kill the dev servers after checks pass.
 
 ## Phase 3: Deploy to Staging (Human)
 
-**This phase must be run by the human in their terminal.** The agent cannot reliably run `dfx deploy` due to a `ColorOutOfRange` TTY panic in dfx v0.29.1 within Cursor's shell, and potential macOS keychain prompts for identity access.
+**This phase must be run by the human in their terminal.** It deploys to a mainnet canister with the `mops` identity, and may prompt the macOS keychain for access to it.
 
 Print the following instructions for the human and wait for confirmation before proceeding to Phase 4.
 
@@ -62,16 +62,14 @@ Print the following instructions for the human and wait for confirmation before 
 Deploy the frontend to the staging `assets` canister.
 
 **Prerequisites**:
-- `dfx` installed via `dfxvm`
-- `dfx identity` with controller access to staging canisters (e.g. `mops`)
+- `icp` installed at the version `DEVELOPMENT.md` pins
+- An `icp identity` with controller access to the staging canisters (e.g. `mops`)
 - Dependencies installed (`npm install` in repo root)
-
-**Important**: `dfxvm` automatically uses the dfx version pinned in `dfx.json`. Do NOT run `dfxvm update`, `dfxvm install`, or `dfxvm default` to "fix" the version — this is correct behavior.
 
 **Run from the repo root:**
 
 ```bash
-dfx deploy assets --network staging -y
+npm run deploy-staging assets
 ```
 
 After deployment, tell the agent to continue with Phase 4 verification.
@@ -105,5 +103,5 @@ Key things to check: fonts, button styles, layout, package detail pages, search.
 
 ### Troubleshooting
 
-- **Page blank or doesn't load**: Check `dfx canister status assets --network staging` for cycle balance.
+- **Page blank or doesn't load**: Check `icp canister status assets -e staging` for cycle balance.
 - **`Package not found` errors**: The `ic-mops` npm package may be querying the wrong backend. Ensure the code has `window.MOPS_NETWORK` set to `"ic"` for non-local deployments (see `frontend/components/package/Package.svelte`).

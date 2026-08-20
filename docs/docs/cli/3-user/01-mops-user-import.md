@@ -11,7 +11,7 @@ Import `.pem` file data to use as identity.
 mops user import -- <pem_data>
 ```
 
-To be able to publish packages to the `mops` registry, you need to import an identity from DFX.
+To be able to publish packages to the `mops` registry, you need to import an existing identity.
 
 :::note
 This command accepts PEM file contents, not a path to a file.
@@ -27,22 +27,24 @@ Do not ask for a password to encrypt the identity. The identity is stored unencr
 mops user import --no-encrypt -- <pem_data>
 ```
 
-### Import identity from DFX
+### Import an identity from `icp`
 
 ```
-mops user import -- "$(dfx identity export <identity_name>)"
+mops user import -- "$(icp identity export <identity_name>)"
 ```
+
+`dfx identity export` produces the same PEM formats and works too, though mops itself does not use or require `dfx`.
 
 ### Example
 
-1. Create new identity in DFX named `mops`
+1. Create a new identity named `mops`
 
 ```
-dfx identity new mops
+icp identity new mops
 ```
 
-2. Import identity into `mops`
+2. Import it into `mops`
 
 ```
-mops user import -- "$(dfx identity export mops)"
+mops user import -- "$(icp identity export mops)"
 ```

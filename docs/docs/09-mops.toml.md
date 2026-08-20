@@ -63,7 +63,7 @@ See [toolchain management](./cli/5-toolchain/01-toolchain-overview.md) page for 
 | -------------------- | ------------------------------------------------ |
 | moc                  | Motoko compiler version (e.g. `1.0.0`) or file path (e.g. `./tools/moc`, `/usr/local/bin/moc`)   |
 | wasmtime             | WASM runtime version (e.g. `41.0.0`) or file path used to run [tests](./cli/4-dev/01-mops-test.md#--mode) in `wasi` mode   |
-| pocket-ic            | Local IC replica version (e.g. `15.0.0`) or file path used to run [benchmarks](./cli/4-dev/02-mops-bench.md#--replica). Versions below `9.0.0` are deprecated and will no longer be supported in mops v3   |
+| pocket-ic            | [PocketIC](https://github.com/dfinity/pocketic) replica version (e.g. `15.0.0`) or file path, used to run [benchmarks](./cli/4-dev/02-mops-bench.md) and [replica tests](./cli/4-dev/01-mops-test.md#replica-tests). Required when those commands (or `--check-deploy`) run — there is no default. Versions below `9.0.0` are no longer supported. See [`pocket-ic` versions](./cli/5-toolchain/01-toolchain-overview.md#pocket-ic-versions)   |
 | lintoko              | Linter version (e.g. `0.7.0`) or file path for Motoko linting   |
 | wasm-opt             | Binaryen version (e.g. `131`) or file path used for `[optimize]` post-build Wasm optimization   |
 
@@ -72,7 +72,7 @@ File paths must start with `/`, `./`, or `../`.
 
 ## [moc]
 
-Global Motoko compiler flags applied to all `moc` invocations (`check`, `check-stable`, `build`, `test`, `bench`, `watch`).
+Global Motoko compiler flags applied to all `moc` invocations (`check`, `check-stable`, `build`, `test`, `bench`, `watch`, `generate candid`).
 
 | Field | Description |
 | ----- | ----------- |
@@ -130,7 +130,7 @@ Configure automatic stable variable compatibility checking for a canister. When 
 
 | Field         | Description                                                     |
 | ------------- | --------------------------------------------------------------- |
-| path          | Path to the deployed version's `.most` or `.mo` file (required). A `.most` file is preferred; when a `.mo` file is provided, stable types are generated from it (the file must compile successfully) |
+| path          | Path to the deployed version's `.most` stable type signature (required). Must be a `.most` file — produce one with [`mops deployed`](./cli/4-dev/09-mops-deployed.md); a `.mo` source is rejected |
 
 Example:
 ```toml
@@ -188,7 +188,7 @@ Global build settings used by [`mops build`](./cli/4-dev/03-mops-build.md).
 | outputDir | Output directory for compiled Wasm and Candid files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
 | args      | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
 | check-wasm | Analyze each final Wasm for likely IC0505 function-complexity risks without starting PocketIC (default `false`). Override for one build with `--check-wasm` or `--no-check-wasm`. |
-| check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Requires `pocket-ic` 9.0.0 or newer in `[toolchain]`, unless `MOPS_POCKET_IC_URL` points at an already-running PocketIC server. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. Incompatible canisters are skipped with `MOPS-CHECK-DEPLOY-SKIPPED`; eligible siblings are still checked. Override for one build with `--check-deploy` or `--no-check-deploy`. |
+| check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Requires a `[toolchain] pocket-ic` pin (below 9.0.0 rejected), unless `MOPS_POCKET_IC_URL` points at an already-running PocketIC server. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. Incompatible canisters are skipped with `MOPS-CHECK-DEPLOY-SKIPPED`; eligible siblings are still checked. Override for one build with `--check-deploy` or `--no-check-deploy`. |
 
 Example:
 ```toml
@@ -225,9 +225,9 @@ keep-names = false
 args = ["--enable-bulk-memory"]
 ```
 
-Pin Binaryen via `[toolchain] wasm-opt` (e.g. `"131"`). If `[optimize]` is set and `wasm-opt` is not pinned, mops auto-pins the latest Binaryen release into `mops.toml` on the next build/bench (rewrites the file like `mops add` — prefer pinning explicitly in CI).
+`[optimize]` requires a Binaryen pin in `[toolchain] wasm-opt` (e.g. `"131"`). Without one, `mops build` and `mops bench` fail before compiling and name the fix — they never resolve a version or write `mops.toml`. Add the pin with [`mops toolchain use wasm-opt <version>`](./cli/5-toolchain/03-mops-toolchain-use.md).
 
-If `wasm-opt` fails, mops warns and keeps the unoptimized Wasm (same soft-fail behavior as dfx). Use `--verbose` for full `wasm-opt` output.
+If `wasm-opt` fails, the build fails. `[optimize]` describes the artifact you asked for, so producing an unoptimized one instead would silently change what downstream tooling hashes or deploys. Use `--verbose` for full `wasm-opt` output, or `--no-optimize` to skip the pass.
 
 Pass `--no-optimize` to [`mops build`](./cli/4-dev/03-mops-build.md#--no-optimize) or [`mops bench`](./cli/4-dev/02-mops-bench.md#--no-optimize) to skip this pass for a single run without editing `mops.toml`.
 

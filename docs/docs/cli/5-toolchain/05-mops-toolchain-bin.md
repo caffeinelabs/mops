@@ -28,6 +28,8 @@ Print path to the `pocket-ic` binary:
 mops toolchain bin pocket-ic
 ```
 
+Every tool must be pinned in `[toolchain]`; `mops toolchain bin` exits with an error otherwise. For `pocket-ic` the error names `mops toolchain use pocket-ic 15.0.0`.
+
 Print path to the `lintoko` binary:
 ```
 mops toolchain bin lintoko
