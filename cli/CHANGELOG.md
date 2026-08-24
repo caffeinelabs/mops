@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops self update` now shows why an update failed. The install ran under npm's `--silent`, which suppresses npm's own error output, so any failure — a permission error on the global prefix, an `engines` mismatch, a cached bad tarball — surfaced as a bare `Failed to update.` with nothing to act on. It now runs with `--loglevel=error`.
 
 ## 3.1.0
 - Temporarily disabled `--stable-baseline` in `mops check` and `mops check-stable` due to a `moc` bug. Upgrade compatibility is still checked, but the moc 1.12.0+ diagnostics are off until moc ships a fix.
