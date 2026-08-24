@@ -35,7 +35,7 @@ main = "src/backend/main.mo"
 
 [canisters.backend.migrations]
 chain = "src/backend/migrations"
-check-limit = 10   # optional — speeds up `mops check` when the chain gets long
+# check-limit = 10   # optional — speeds up `mops check` when the chain gets long
 
 [canisters.backend.check-stable]
 path = "deployed/backend.most"
