@@ -35,7 +35,7 @@ main = "src/backend/main.mo"
 
 [canisters.backend.migrations]
 chain = "src/backend/migrations"
-check-limit = 10   # optional — speeds up `mops check` when the chain gets long
+# check-limit = 10   # optional — speeds up `mops check` when the chain gets long
 
 [canisters.backend.check-stable]
 path = "deployed/backend.most"
@@ -43,8 +43,8 @@ path = "deployed/backend.most"
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
-check-wasm = true    # optional: analyze final Wasm complexity
-check-deploy = true  # optional: verify fresh PocketIC installation after build
+# check-wasm = true    # optional: analyze final Wasm complexity
+# check-deploy = true  # optional: verify fresh PocketIC installation after build
 
 # Opt-in Wasm optimization (Binaryen wasm-opt) for build + bench
 [optimize]
