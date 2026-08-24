@@ -43,8 +43,8 @@ path = "deployed/backend.most"
 [build]
 outputDir = "src/backend/dist"
 args = ["--release"]
-check-wasm = true    # optional: analyze final Wasm complexity
-check-deploy = true  # optional: verify fresh PocketIC installation after build
+# check-wasm = true    # optional: analyze final Wasm complexity
+# check-deploy = true  # optional: verify fresh PocketIC installation after build
 
 # Opt-in Wasm optimization (Binaryen wasm-opt) for build + bench
 [optimize]
