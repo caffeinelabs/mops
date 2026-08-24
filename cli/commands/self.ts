@@ -96,7 +96,9 @@ export async function update({ major = false } = {}) {
     console.log("Updating to version: " + chalk.green(latest));
 
     let pm = detectPackageManager();
-    let npmArgs = pm === "npm" ? ["--no-fund", "--silent"] : [];
+    // Not `--silent`: that suppresses npm's own error output too, leaving
+    // "Failed to update." as the only clue to why.
+    let npmArgs = pm === "npm" ? ["--no-fund", "--loglevel=error"] : [];
 
     await new Promise<void>((resolve, reject) => {
       let proc = child_process.spawn(
