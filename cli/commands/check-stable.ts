@@ -35,16 +35,8 @@ function hasEnhancedMigrationArg(args: string[]): boolean {
   );
 }
 
-// TEMPORARY: `moc --stable-baseline` is buggy, so no pin folds the upgrade check
-// into `moc --check` — everything takes the 3-invocation path. Drop this constant
-// and the guard below once moc ships the fix.
-const STABLE_BASELINE_DISABLED = true;
-
-/** moc 1.12.0+: one `moc --check --stable-baseline` instead of 3 invocations. */
+/** moc 1.15.0+: one `moc --check --stable-baseline` instead of 3 invocations. */
 export function canUseStableBaselineCheck(canisterArgs: string[]): boolean {
-  if (STABLE_BASELINE_DISABLED) {
-    return false;
-  }
   return supportsStableBaselineCheck() && hasEnhancedMigrationArg(canisterArgs);
 }
 
@@ -334,7 +326,7 @@ export async function runStableCheck(
     cliError(`File not found: ${baselineMost}`);
   }
 
-  // moc 1.12.0+ → one --check, no scratch dir.
+  // moc 1.15.0+ → one --check, no scratch dir.
   if (canUseStableBaselineCheck(canisterArgs)) {
     await runFoldedStableCheck({
       canisterMain,

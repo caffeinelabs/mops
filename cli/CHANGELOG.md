@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops check` and `mops check-stable` re-enable the `--stable-baseline` fast path on `moc` 1.15.0+, which fixes the trimmed-baseline bug (`M0267`) that kept the fold disabled since 3.1.0. Upgrades check in one `moc --check` again and the moc 1.12.0+ diagnostics return. On 1.15.0+, `moc` also validates the migration directory against the migration history in the baseline and treats a deleted, edited, or backdated migration as an `M0268` error (by default; demote with `-W=M0268`, silence with `-A=M0268`) — pin at least 1.15.0 before relying on the fold.
 - `mops self update` now shows why an update failed. The install ran under npm's `--silent`, which suppresses npm's own error output, so any failure — a permission error on the global prefix, an `engines` mismatch, a cached bad tarball — surfaced as a bare `Failed to update.` with nothing to act on. It now runs with `--loglevel=error`.
 
 ## 3.1.0
