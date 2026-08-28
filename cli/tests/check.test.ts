@@ -255,4 +255,19 @@ describe("check", () => {
     const result = await cli(["check", "--no-check-limit"], { cwd });
     expect(result.stderr).not.toMatch(/pending migration\(s\) but check-limit/);
   });
+
+  // Regression: a legacy-conversion first migration wrongly edited to the
+  // empty `OldActor = {}` ("nuclear" edit) is invisible to `check`, because
+  // `check-limit = 1` trims it out of the folded `--stable-baseline` run and
+  // moc reconstructs it from the baseline alone. Captured so this green
+  // result on a data-loss-inducing edit stays documented behavior.
+  test("check-limit hides a nuclear OldActor edit from the stable check", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "check-stable/edited-applied-migration",
+    );
+    const result = await cliSnapshot(["check", "--verbose"], { cwd }, 0);
+    expect(result.stdout).toMatch(/--stable-baseline/);
+    expect(result.stderr).not.toMatch(/pending migration\(s\) but check-limit/);
+  });
 });
