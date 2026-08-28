@@ -17,8 +17,10 @@ export function getMocVersion(): string {
   return version;
 }
 
-/** First moc that runs the upgrade check inside `moc --check --stable-baseline`. */
-export const MOC_STABLE_BASELINE_MIN_VERSION = "1.12.0";
+// First moc where `--stable-baseline` gets the upgrade check right: earlier
+// builds that accept the flag mishandle a baseline already past a migration
+// `check-limit` trimmed away, failing valid upgrades with a bogus M0267.
+export const MOC_STABLE_BASELINE_MIN_VERSION = "1.15.0";
 
 export function supportsStableBaselineCheck(): boolean {
   const version = getMocSemVer();
