@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "3.1.0"
+    "latest": "3.2.0"
   },
   "versions": {
     "0.41.0": {
@@ -592,6 +592,14 @@
       "commitHash": "a4857f9609c3ec5dc45a2a807ebb88e8a856eec6",
       "url": "https://cli.mops.one/versions/3.1.0.tgz",
       "hash": "24aea2add35ed4b0063b830be6a3424bc3d1cb55af631ce4aa7501a977b7a522"
+    },
+    "3.2.0": {
+      "time": 1788168596720,
+      "size": 2394971,
+      "relseaseNotes": "* `mops build` now passes the deployed baseline (`--stable-baseline`) to `moc` when `[canisters.<name>.check-stable].path` is configured. `moc` validates the migration directory against the migration history in the baseline, so an applied migration that was edited, deleted, or backdated since deploy fails the build with `M0268` (by default; demote with `-W=M0268`, silence with `-A=M0268`) instead of emitting a wasm that could wipe data on upgrade. This is the built-in backstop for `mops check` when `check-limit` trims a divergent migration out of the folded check.\n* `mops check` and `mops check-stable` re-enable the `--stable-baseline` fast path on `moc` 1.15.0+, which fixes the trimmed-baseline bug (`M0267`) that kept the fold disabled since 3.1.0. Upgrades check in one `moc --check` again and the moc 1.12.0+ diagnostics return. On 1.15.0+, `moc` also validates the migration directory against the migration history in the baseline and treats a deleted, edited, or backdated migration as an `M0268` error (by default; demote with `-W=M0268`, silence with `-A=M0268`) — pin at least 1.15.0 before relying on the fold.\n* `mops self update` now shows why an update failed. The install ran under npm's `--silent`, which suppresses npm's own error output, so any failure — a permission error on the global prefix, an `engines` mismatch, a cached bad tarball — surfaced as a bare `Failed to update.` with nothing to act on. It now runs with `--loglevel=error`.\n",
+      "commitHash": "20b9a435096e4e61a7980532a5211716d743770b",
+      "url": "https://cli.mops.one/versions/3.2.0.tgz",
+      "hash": "9003d22aff9137c87da3f648f7f74531bdc6a551dbe16fee3d682bfe3ddc5e5a"
     }
   }
 }
