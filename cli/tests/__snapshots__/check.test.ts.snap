@@ -10,6 +10,19 @@ help: if this is intentional, prefix it with an underscore: \`_unused\`
 }
 `;
 
+exports[`check check-limit hides a nuclear OldActor edit from the stable check 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "check Using --all-libs for richer diagnostics
+migrations Prepared 1 migration(s) for backend (trimmed from 3)
+check Checking canister backend:
+<CACHE><MOC> ["src/main.mo","--check","--all-libs","--stable-baseline","deployed.most","--default-persistent-actors","--enhanced-migration=.migrations-backend","-A=M0254"]
+✓ backend
+✓ Stable compatibility check passed for canister 'backend'",
+}
+`;
+
 exports[`check error 1`] = `
 {
   "exitCode": 1,

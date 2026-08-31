@@ -270,4 +270,28 @@ describe("build", () => {
       }
     });
   });
+
+  // Regression: `check-limit` trims the edited applied migration out of the
+  // folded stable check, so `mops check` passes. `mops build` now folds the
+  // `--stable-baseline` too, so the full chain sees the first migration
+  // diverge from the deployed history and fails with M0268 — refusing to
+  // emit a wasm that would wipe converted legacy data on apply.
+  test("build fails on a nuclear OldActor edit that check-limit hides", async () => {
+    const cwd = path.join(
+      import.meta.dirname,
+      "check-stable/edited-applied-migration",
+    );
+    try {
+      const result = await cliSnapshot(
+        ["build", "backend", "--verbose"],
+        { cwd },
+        1,
+      );
+      expect(result.stdout).toMatch(/--stable-baseline/);
+      expect(result.stderr).toMatch(/M0268/);
+      expect(result.stderr).toMatch(/Build failed for canister backend/);
+    } finally {
+      cleanFixture(cwd, path.join(cwd, "mops.lock"));
+    }
+  });
 });

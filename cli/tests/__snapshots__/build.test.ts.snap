@@ -1,5 +1,18 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`build build fails on a nuclear OldActor edit that check-limit hides 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "migrations/20250101_000000.mo:0.1: type error [M0268], migration \`20250101_000000\` no longer matches the deployed history: it now has type
+  {} -> {a : Nat; b : Text}
+but the stable baseline records
+  {x : Nat} -> {a : Nat; b : Text}
+Build failed for canister backend (exit code: 1)",
+  "stdout": "build canister backend
+<CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/backend.wasm","src/main.mo","--stable-baseline","deployed.most","--default-persistent-actors","--enhanced-migration=migrations","--public-metadata","candid:service","--public-metadata","candid:args"]",
+}
+`;
+
 exports[`build error 1`] = `
 {
   "exitCode": 0,

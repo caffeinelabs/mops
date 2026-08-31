@@ -205,6 +205,8 @@ When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `m
 
 If `mops check` passes but `mops build` fails while [`check-limit`](./08-mops-migrate.md#chain-trimming) is set, re-run `mops check --no-check-limit` to surface the issue — `check` trims the chain, while `build` compiles all of it.
 
+When a canister also sets [`[canisters.<name>.check-stable].path`](../../09-mops.toml.md#canistersnamecheck-stable), `mops build` passes the deployed `.most` to `moc` as `--stable-baseline` for that canister. `moc` then validates the migration directory against the migration history recorded in the baseline, so an applied migration that was edited, deleted, or backdated fails the build with `M0268` instead of emitting a wasm that could wipe data on upgrade. This is the built-in backstop for `mops check` when `check-limit` trims the edited migration out of the folded check. Demote or silence the diagnostic on older `moc` as described under [`mops check`](./04-mops-check.md#stable-compatibility-checking).
+
 ## Candid Compatibility
 
 If a `candid` field is specified in the canister configuration, the build command will automatically check that the generated Candid interface is compatible with the specified interface.

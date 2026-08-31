@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { execa } from "execa";
 import { exists } from "fs-extra";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { lock } from "proper-lockfile";
@@ -17,6 +18,10 @@ import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
 import { Config } from "../types.js";
+import {
+  canUseStableBaselineCheck,
+  requireMostBaseline,
+} from "./check-stable.js";
 import { toolchain } from "./toolchain/index.js";
 
 export interface BuildOptions {
@@ -107,6 +112,22 @@ export async function build(
         verbose: options.verbose,
         extraArgs: options.extraArgs,
       });
+
+      const stableConfigPath = canister["check-stable"]?.path;
+      if (stableConfigPath) {
+        requireMostBaseline(
+          stableConfigPath,
+          `[canisters.${canisterName}.check-stable].path`,
+        );
+      }
+      const configuredMost =
+        stableConfigPath && resolveConfigPath(stableConfigPath);
+      const foldStableBaseline =
+        !!configuredMost &&
+        existsSync(configuredMost) &&
+        canUseStableBaselineCheck(prepared.args);
+      const stableBaseline = foldStableBaseline ? configuredMost : null;
+
       let args = [
         "-c",
         "--idl",
@@ -114,6 +135,7 @@ export async function build(
         "-o",
         wasmPath,
         prepared.motokoPath,
+        ...(stableBaseline ? ["--stable-baseline", stableBaseline] : []),
         ...prepared.args,
       ];
 

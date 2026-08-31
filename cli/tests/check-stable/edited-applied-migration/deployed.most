@@ -1,0 +1,11 @@
+// Version: 4.0.0
+{
+  "20250101_000000" : {x : Nat} -> {a : Nat; b : Text};
+  "20250201_000000" :
+    (old : {a : Nat; b : Text}) -> {a : Nat; b : Text; c : Bool}
+}
+actor  {
+  stable a : Nat;
+  stable b : Text;
+  stable c : Bool
+};

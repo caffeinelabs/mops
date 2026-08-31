@@ -126,7 +126,7 @@ main = "src/frontend/main.mo"
 
 ### `[canisters.<name>.check-stable]`
 
-Configure automatic stable variable compatibility checking for a canister. When set, [`mops check`](./cli/4-dev/04-mops-check.md) will verify that the current canister is compatible with the deployed version.
+Configure automatic stable variable compatibility checking for a canister. When set, [`mops check`](./cli/4-dev/04-mops-check.md) will verify that the current canister is compatible with the deployed version — and [`mops build`](./cli/4-dev/03-mops-build.md) passes the baseline to `moc` as `--stable-baseline`, so an applied migration edited, deleted, or backdated since deploy fails the build with `M0268` instead of emitting a broken wasm.
 
 | Field         | Description                                                     |
 | ------------- | --------------------------------------------------------------- |
