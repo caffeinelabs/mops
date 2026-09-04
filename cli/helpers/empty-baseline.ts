@@ -13,6 +13,8 @@ const SCRATCH_PREFIX = ".empty-baseline-";
 
 export interface EmptyBaselineResult {
   compatible: boolean;
+  /** `undefined` when moc could not be spawned at all. */
+  exitCode: number | undefined;
   /** moc stderr+stdout on failure, for callers that surface a reason. */
   compilerOutput: string;
 }
@@ -45,7 +47,11 @@ export async function checkEmptyBaselineCompatibility(
       .filter((output) => output?.trim())
       .join("\n")
       .trim();
-    return { compatible: result.exitCode === 0, compilerOutput };
+    return {
+      compatible: result.exitCode === 0,
+      exitCode: result.exitCode ?? undefined,
+      compilerOutput,
+    };
   } finally {
     await rm(scratchDir, { recursive: true, force: true });
   }

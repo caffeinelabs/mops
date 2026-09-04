@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { checkEmptyBaselineCompatibility } from "./empty-baseline.js";
 import { getMocVersion } from "./get-moc-version.js";
@@ -33,11 +33,16 @@ export async function writeBuildManifest(
 ): Promise<string> {
   const { canisterName, mocPath, wasmPath, didPath, mostPath } = params;
 
-  const { compatible } = await checkEmptyBaselineCompatibility(
-    mocPath,
-    mostPath,
-    { verbose: params.verbose },
-  );
+  const { compatible, exitCode, compilerOutput } =
+    await checkEmptyBaselineCompatibility(mocPath, mostPath, {
+      verbose: params.verbose,
+    });
+  // A check that never ran must not be recorded as an upgrade-only wasm.
+  if (exitCode === undefined) {
+    throw new Error(
+      `stable-compatibility check failed to run${compilerOutput ? `:\n${compilerOutput}` : ""}`,
+    );
+  }
 
   const manifest = {
     version: MANIFEST_VERSION,
@@ -57,7 +62,18 @@ export async function writeBuildManifest(
     ],
   };
 
-  const manifestPath = join(dirname(wasmPath), `${canisterName}.build.json`);
-  await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+  const manifestPath = buildManifestPath(dirname(wasmPath), canisterName);
+  // Written last as the "artifacts are final" signal; rename keeps a watcher
+  // from ever observing truncated JSON.
+  const tmpPath = manifestPath + ".tmp";
+  await writeFile(tmpPath, JSON.stringify(manifest, null, 2) + "\n");
+  await rename(tmpPath, manifestPath);
   return manifestPath;
+}
+
+export function buildManifestPath(
+  outputDir: string,
+  canisterName: string,
+): string {
+  return join(outputDir, `${canisterName}.build.json`);
 }

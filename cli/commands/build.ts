@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { exists } from "fs-extra";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { lock } from "proper-lockfile";
 import { CliError, cliError, cliErrorFrom, cliExit } from "../error.js";
@@ -14,7 +14,10 @@ import {
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { checkOptimizeConfig, optimizeWasm } from "../helpers/optimize-wasm.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
-import { writeBuildManifest } from "../helpers/build-manifest.js";
+import {
+  buildManifestPath,
+  writeBuildManifest,
+} from "../helpers/build-manifest.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
@@ -107,6 +110,10 @@ export async function build(
 
     let prepared: Awaited<ReturnType<typeof prepareMocArgs>> | undefined;
     try {
+      // Unconditional: a manifest from a previous build must never outlive the
+      // artifacts it describes, including after the feature is turned off.
+      await rm(buildManifestPath(outputDir, canisterName), { force: true });
+
       prepared = await prepareMocArgs(config, canister, canisterName, {
         mode: "build",
         managedFlags: BUILD_MANAGED_FLAGS,
@@ -255,18 +262,25 @@ export async function build(
           });
         }
         if (manifestEnabled) {
-          const manifestPath = await writeBuildManifest({
-            canisterName,
-            mocPath,
-            wasmPath,
-            didPath: generatedDidPath,
-            mostPath,
-            verbose: options.verbose,
-          });
-          options.verbose &&
-            console.log(
-              chalk.gray(`Build manifest written to ${manifestPath}`),
+          try {
+            const manifestPath = await writeBuildManifest({
+              canisterName,
+              mocPath,
+              wasmPath,
+              didPath: generatedDidPath,
+              mostPath,
+              verbose: options.verbose,
+            });
+            options.verbose &&
+              console.log(
+                chalk.gray(`Build manifest written to ${manifestPath}`),
+              );
+          } catch (err) {
+            cliErrorFrom(
+              err,
+              `Error writing build manifest for canister ${canisterName}`,
             );
+          }
         }
       } catch (err) {
         cliErrorFrom(err, `Error while compiling canister ${canisterName}`);

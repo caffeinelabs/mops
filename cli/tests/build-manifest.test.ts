@@ -1,9 +1,9 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "path";
 import { cleanFixture } from "./build-helpers";
-import { cliSnapshot } from "./helpers";
+import { cli, cliSnapshot } from "./helpers";
 
 // Unstable `[build] manifest` feature — <canister>.build.json records next to
 // the built artifacts. Split out of build.test.ts like the other build
@@ -56,6 +56,18 @@ describe("build manifest", () => {
         "fresh.build.json",
         "upgrade-only.build.json",
       ]);
+
+      // Off by default, and a rebuild without the flag removes stale records
+      // so a manifest never outlives the artifacts it describes.
+      const tomlPath = path.join(cwd, "mops.toml");
+      const toml = readFileSync(tomlPath, "utf-8");
+      try {
+        writeFileSync(tomlPath, toml.replace("manifest = true\n", ""));
+        expect((await cli(["build", "fresh"], { cwd })).exitCode).toBe(0);
+        expect(existsSync(path.join(outDir, "fresh.build.json"))).toBe(false);
+      } finally {
+        writeFileSync(tomlPath, toml);
+      }
     } finally {
       cleanFixture(cwd, path.join(cwd, "mops.lock"));
     }
