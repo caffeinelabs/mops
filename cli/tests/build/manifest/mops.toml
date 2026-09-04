@@ -1,0 +1,11 @@
+[toolchain]
+moc = "1.5.0"
+
+[build]
+manifest = true
+
+[canisters.fresh]
+main = "src/Fresh.mo"
+
+[canisters.upgrade-only]
+main = "src/UpgradeOnly.mo"

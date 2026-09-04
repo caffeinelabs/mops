@@ -14,6 +14,7 @@ import {
 import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { checkOptimizeConfig, optimizeWasm } from "../helpers/optimize-wasm.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
+import { writeBuildManifest } from "../helpers/build-manifest.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
 import { CustomSection, getWasmBindings } from "../wasm.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
@@ -65,6 +66,7 @@ export async function build(
     options.checkWasm ?? config.build?.["check-wasm"] ?? false;
   const checkDeployEnabled =
     options.checkDeploy ?? config.build?.["check-deploy"] ?? false;
+  const manifestEnabled = config.build?.manifest ?? false;
   let outputDir = resolveBuildOutputDir(config, options.outputDir);
   let canisters = resolveCanisterConfigs(config);
   if (!Object.keys(canisters).length) {
@@ -251,6 +253,20 @@ export async function build(
             initArg: canister.initArg,
             wasmMemoryLimit: canister.wasmMemoryLimit,
           });
+        }
+        if (manifestEnabled) {
+          const manifestPath = await writeBuildManifest({
+            canisterName,
+            mocPath,
+            wasmPath,
+            didPath: generatedDidPath,
+            mostPath,
+            verbose: options.verbose,
+          });
+          options.verbose &&
+            console.log(
+              chalk.gray(`Build manifest written to ${manifestPath}`),
+            );
         }
       } catch (err) {
         cliErrorFrom(err, `Error while compiling canister ${canisterName}`);

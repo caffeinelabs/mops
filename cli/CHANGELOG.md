@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- New **unstable** build manifest: with `[build] manifest = true` in `mops.toml`, `mops build` writes a `<canister>.build.json` record next to each built `.wasm`/`.did`/`.most` — artifact SHA-256 hashes, the pinned `moc` version, and the outcome of a non-gating `moc --stable-compatible` check against an empty-actor baseline (is the canister installable on a fresh canister, or upgrade-only). Unstable: schema and behavior may change in any release; documented only on the new "Unstable features" docs page.
 
 ## 3.2.0
 - `mops build` now passes the deployed baseline (`--stable-baseline`) to `moc` when `[canisters.<name>.check-stable].path` is configured. `moc` validates the migration directory against the migration history in the baseline, so an applied migration that was edited, deleted, or backdated since deploy fails the build with `M0268` (by default; demote with `-W=M0268`, silence with `-A=M0268`) instead of emitting a wasm that could wipe data on upgrade. This is the built-in backstop for `mops check` when `check-limit` trims a divergent migration out of the folded check.
