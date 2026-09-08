@@ -15,10 +15,10 @@ mops toolchain use <tool> [version]
 
 Install specific tool version
 ```
-mops toolchain use moc 1.0.0
+mops toolchain use moc 1.15.1
 mops toolchain use wasmtime 41.0.0
 mops toolchain use pocket-ic 15.0.0
-mops toolchain use lintoko 0.7.0
+mops toolchain use lintoko 0.11.0
 ```
 
 You can specify `latest` as version to install the latest available version.

@@ -61,10 +61,10 @@ See [toolchain management](./cli/5-toolchain/01-toolchain-overview.md) page for 
 
 | Field                | Description                                      |
 | -------------------- | ------------------------------------------------ |
-| moc                  | Motoko compiler version (e.g. `1.0.0`) or file path (e.g. `./tools/moc`, `/usr/local/bin/moc`)   |
+| moc                  | Motoko compiler version (e.g. `1.15.1`) or file path (e.g. `./tools/moc`, `/usr/local/bin/moc`)   |
 | wasmtime             | WASM runtime version (e.g. `41.0.0`) or file path used to run [tests](./cli/4-dev/01-mops-test.md#--mode) in `wasi` mode   |
 | pocket-ic            | [PocketIC](https://github.com/dfinity/pocketic) replica version (e.g. `15.0.0`) or file path, used to run [benchmarks](./cli/4-dev/02-mops-bench.md) and [replica tests](./cli/4-dev/01-mops-test.md#replica-tests). Required when those commands (or `--check-deploy`) run — there is no default. Versions below `9.0.0` are no longer supported. See [`pocket-ic` versions](./cli/5-toolchain/01-toolchain-overview.md#pocket-ic-versions)   |
-| lintoko              | Linter version (e.g. `0.7.0`) or file path for Motoko linting   |
+| lintoko              | Linter version (e.g. `0.11.0`) or file path for Motoko linting   |
 | wasm-opt             | Binaryen version (e.g. `131`) or file path used for `[optimize]` post-build Wasm optimization   |
 
 File paths must start with `/`, `./`, or `../`.
