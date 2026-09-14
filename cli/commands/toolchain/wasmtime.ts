@@ -45,5 +45,10 @@ export let download = async (
     console.log(`Downloading ${url}`);
   }
 
-  await toolchainUtils.downloadAndExtract(url, path.join(cacheDir, version));
+  await toolchainUtils.installVersion(path.join(cacheDir, version), {
+    label: `wasmtime ${version}`,
+    isComplete: () => isCached(version),
+    populate: (stagingDir) =>
+      toolchainUtils.downloadAndExtract(url, stagingDir),
+  });
 };

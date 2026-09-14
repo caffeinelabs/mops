@@ -6,6 +6,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { lock } from "proper-lockfile";
 import { CliError, cliError, cliErrorFrom, cliExit } from "../error.js";
+import { describeExecFailure } from "../helpers/exec-failure.js";
 import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
 import {
   filterCanisters,
@@ -166,7 +167,7 @@ export async function build(
           }
           cliExit(
             result.exitCode ?? 1,
-            `Build failed for canister ${canisterName} (exit code: ${result.exitCode})`,
+            `Build failed for canister ${canisterName} (${describeExecFailure(result)})`,
           );
         }
 

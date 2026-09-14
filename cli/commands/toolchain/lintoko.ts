@@ -46,9 +46,10 @@ export let download = async (
     console.log(`Downloading ${url}`);
   }
 
-  await toolchainUtils.downloadAndExtract(
-    url,
-    path.join(cacheDir, version),
-    "lintoko",
-  );
+  await toolchainUtils.installVersion(path.join(cacheDir, version), {
+    label: `lintoko ${version}`,
+    isComplete: () => isCached(version),
+    populate: (stagingDir) =>
+      toolchainUtils.downloadAndExtract(url, stagingDir, "lintoko"),
+  });
 };

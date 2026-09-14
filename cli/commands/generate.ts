@@ -3,6 +3,7 @@ import { execa } from "execa";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { cliError, cliExit } from "../error.js";
+import { describeExecFailure } from "../helpers/exec-failure.js";
 import {
   filterCanisters,
   resolveCanisterConfigs,
@@ -106,7 +107,7 @@ export async function generateCandid(
         }
         cliExit(
           result.exitCode ?? 1,
-          `Failed to generate Candid for canister ${canisterName} (exit code: ${result.exitCode})`,
+          `Failed to generate Candid for canister ${canisterName} (${describeExecFailure(result)})`,
         );
       }
 

@@ -47,9 +47,10 @@ export let download = async (
     console.log(`Downloading ${url}`);
   }
 
-  await toolchainUtils.downloadAndExtract(
-    url,
-    path.join(cacheDir, version),
-    "pocket-ic",
-  );
+  await toolchainUtils.installVersion(path.join(cacheDir, version), {
+    label: `pocket-ic ${version}`,
+    isComplete: () => isCached(version),
+    populate: (stagingDir) =>
+      toolchainUtils.downloadAndExtract(url, stagingDir, "pocket-ic"),
+  });
 };

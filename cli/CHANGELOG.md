@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+- Concurrent `mops` processes no longer race on a toolchain download. Two `mops build <canister>` runs started together on a cold cache — how icp-cli builds a multi-canister project — used to download and extract `moc` into the same directory at once, which intermittently killed one build (`Build failed for canister x (exit code: undefined)`) or aborted an extraction (`zlib: unexpected end of file`). A version is now extracted into a staging directory and renamed into place under a per-version lock at `<cache>/<tool>/<version>.lock`; the waiting process prints `Waiting for another mops process to install moc <version>...` on stderr and then uses the finished install. Applies to every `[toolchain]` tool. The project-local `.mops/_tmp` scratch directory is gone — archives are extracted from memory. Fixes #818.
+- `mops build`, `mops check`, `mops generate` and `mops check-stable` now say why `moc` failed when it produced no exit code — `killed with SIGKILL: Forced termination`, or the spawn error — instead of `exit code: undefined`.
 
 ## 3.2.0
 - `mops build` now passes the deployed baseline (`--stable-baseline`) to `moc` when `[canisters.<name>.check-stable].path` is configured. `moc` validates the migration directory against the migration history in the baseline, so an applied migration that was edited, deleted, or backdated since deploy fails the build with `M0268` (by default; demote with `-W=M0268`, silence with `-A=M0268`) instead of emitting a wasm that could wipe data on upgrade. This is the built-in backstop for `mops check` when `check-limit` trims a divergent migration out of the folded check.

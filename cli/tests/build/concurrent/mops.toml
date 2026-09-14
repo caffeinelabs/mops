@@ -1,0 +1,11 @@
+[toolchain]
+moc = "1.3.0"
+
+[canisters.a]
+main = "src/A.mo"
+
+[canisters.b]
+main = "src/B.mo"
+
+[canisters.c]
+main = "src/C.mo"

@@ -1,0 +1,5 @@
+[toolchain]
+moc = "./mock-moc"
+
+[canisters.main]
+main = "src/Main.mo"

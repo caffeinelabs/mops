@@ -96,37 +96,43 @@ export let download = async (
     console.log(`Downloading ${url}`);
   }
 
-  let destDir = path.join(cacheDir, version);
-  // Fresh extract into a temp sibling, then replace — avoids a half-cached broken install.
-  let stagingDir = path.join(cacheDir, `.${version}.staging`);
-  await fs.remove(stagingDir);
-  await fs.remove(destDir);
-  await toolchainUtils.downloadAndExtract(url, stagingDir);
+  await toolchainUtils.installVersion(path.join(cacheDir, version), {
+    label: `wasm-opt ${version}`,
+    isComplete: () => isCached(version),
+    populate: async (stagingDir) => {
+      let extractDir = path.join(stagingDir, ".archive");
+      await toolchainUtils.downloadAndExtract(url, extractDir);
 
-  // Keep bin/ + lib/ (wasm-opt is linked with @rpath → ../lib/libbinaryen).
-  let nestedRoot = path.join(stagingDir, `binaryen-${tag}`);
-  let nestedBin = path.join(nestedRoot, "bin", "wasm-opt");
-  if (!fs.existsSync(nestedBin)) {
-    await fs.remove(stagingDir);
-    cliError(`wasm-opt binary not found in Binaryen archive: ${nestedBin}`);
-  }
-  try {
-    await fs.move(path.join(nestedRoot, "bin"), path.join(destDir, "bin"));
-    await fs.move(path.join(nestedRoot, "lib"), path.join(destDir, "lib"));
-    chmodSync(path.join(destDir, "bin", "wasm-opt"), 0o700);
-    await fs.remove(stagingDir);
+      // Keep bin/ + lib/ (wasm-opt is linked with @rpath → ../lib/libbinaryen).
+      let nestedRoot = path.join(extractDir, `binaryen-${tag}`);
+      let nestedBin = path.join(nestedRoot, "bin", "wasm-opt");
+      if (!fs.existsSync(nestedBin)) {
+        cliError(`wasm-opt binary not found in Binaryen archive: ${nestedBin}`);
+      }
+      try {
+        await fs.move(
+          path.join(nestedRoot, "bin"),
+          path.join(stagingDir, "bin"),
+        );
+        await fs.move(
+          path.join(nestedRoot, "lib"),
+          path.join(stagingDir, "lib"),
+        );
+        await fs.remove(extractDir);
 
-    let smoke = await execa(binaryPath(version), ["--version"], {
-      reject: false,
-    });
-    if (smoke.exitCode !== 0) {
-      throw new Error(smoke.stderr?.trim() || `exit code ${smoke.exitCode}`);
-    }
-  } catch (err: any) {
-    await fs.remove(destDir);
-    await fs.remove(stagingDir);
-    cliError(
-      `wasm-opt ${version} failed to install${err?.message ? `: ${err.message}` : ""}`,
-    );
-  }
+        let stagedBin = path.join(stagingDir, "bin", "wasm-opt");
+        chmodSync(stagedBin, 0o700);
+        let smoke = await execa(stagedBin, ["--version"], { reject: false });
+        if (smoke.exitCode !== 0) {
+          throw new Error(
+            smoke.stderr?.trim() || `exit code ${smoke.exitCode}`,
+          );
+        }
+      } catch (err: any) {
+        cliError(
+          `wasm-opt ${version} failed to install${err?.message ? `: ${err.message}` : ""}`,
+        );
+      }
+    },
+  });
 };

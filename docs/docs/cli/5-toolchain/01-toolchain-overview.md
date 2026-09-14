@@ -71,6 +71,12 @@ moc = "/usr/local/bin/moc"
 lintoko = "../custom-lintoko/bin/lintoko"
 ```
 
+## Toolchain cache
+
+Downloaded tools live under the mops cache directory: `~/.cache/mops/<tool>/<version>` on Linux, `~/Library/Caches/mops/<tool>/<version>` on macOS, or `$XDG_CACHE_HOME/mops/<tool>/<version>` when that variable is set. A version is extracted into a staging directory and renamed into place, so the cache never holds a half-extracted tool.
+
+Concurrent `mops` processes that need the same uninstalled version — for example a build tool running one `mops build <canister>` per canister — serialize on an advisory lock at `<cache>/<tool>/<version>.lock`. The waiting processes print `Waiting for another mops process to install moc 1.15.1...` on stderr and continue once the install finishes. If the installing process was killed, the lock is reclaimed after a minute; remove the `.lock` directory to recover sooner.
+
 ## Toolchain management commands
 
 - [`mops toolchain use`](./03-mops-toolchain-use.md)
