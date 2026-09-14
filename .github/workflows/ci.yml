@@ -93,14 +93,12 @@ jobs:
           MOPS_FRONTEND_NETWORK: local
         run: npm run build-frontend
 
-      - name: Build docs
-        run: npm run build-docs
-
       - name: Build blog
         run: npm run build-blog
 
-      - name: Build CLI releases
-        run: npm run build-cli-releases
+      # The canisters release.yml deploys. icp build also resolves their recipes and wasms.
+      - name: Build release canisters
+        run: icp build docs cli -e ic
 
   # MOPS_TEST_GLOBAL runs the suite against the globally-installed compiled
   # binary, which is the path a user gets from `npm i -g ic-mops`. The other
