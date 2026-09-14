@@ -1,0 +1,8 @@
+#!/bin/bash
+# Dies the way a binary replaced under a running build does: no exit code,
+# only a signal.
+if [[ " $* " == *" --version "* ]]; then
+  echo "Motoko compiler 1.3.0"
+  exit 0
+fi
+kill -KILL $$

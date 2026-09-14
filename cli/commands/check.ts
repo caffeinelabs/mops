@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError, cliErrorFrom, cliExit } from "../error.js";
+import { describeExecFailure } from "../helpers/exec-failure.js";
 import {
   getGlobalMocArgs,
   getRootDir,
@@ -270,7 +271,7 @@ async function checkCanisters(
           }
           cliExit(
             result.exitCode ?? 1,
-            `✗ Check failed for canister ${canisterName} (exit code: ${result.exitCode})`,
+            `✗ Check failed for canister ${canisterName} (${describeExecFailure(result)})`,
           );
         }
 
@@ -366,7 +367,7 @@ async function checkFiles(
       if (result.exitCode !== 0) {
         cliExit(
           result.exitCode ?? 1,
-          `✗ Check failed for file ${file} (exit code: ${result.exitCode})`,
+          `✗ Check failed for file ${file} (${describeExecFailure(result)})`,
         );
       }
 

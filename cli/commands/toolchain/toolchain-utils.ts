@@ -1,15 +1,16 @@
 import path from "node:path";
 import { Buffer } from "node:buffer";
 import { unzipSync } from "node:zlib";
-import { chmodSync, createReadStream } from "node:fs";
+import { chmodSync } from "node:fs";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import chalk from "chalk";
 import fs from "fs-extra";
-import { deleteSync } from "del";
 import { Octokit } from "octokit";
+import { lock } from "proper-lockfile";
 import { extract as extractTar } from "tar";
 
-import { getRootDir } from "../../mops.js";
+import { commitStagingDir, createStagingDir } from "../../cache.js";
 import { cliError } from "../../error.js";
 import { stableReleaseTags, type ReleaseInfo } from "./release-tags.js";
 
@@ -36,6 +37,9 @@ export let tryDownloadFile = async (url: string): Promise<Buffer | null> => {
   return Buffer.from(arrayBuffer);
 };
 
+// Extracts straight from memory: no archive on disk means nothing a
+// concurrent `mops` process can clobber or delete from under this one.
+// `destDir` is normally the staging dir handed out by `installVersion`.
 export let downloadAndExtract = async (
   url: string,
   destDir: string,
@@ -49,45 +53,114 @@ export let downloadAndExtract = async (
 
   let arrayBuffer = await res.arrayBuffer();
   let buffer = Buffer.from(arrayBuffer);
-
-  let tmpDir = path.join(getRootDir(), ".mops", "_tmp");
-  let archive = path.join(tmpDir, path.basename(url));
-
-  fs.mkdirSync(tmpDir, { recursive: true });
-  fs.writeFileSync(archive, buffer);
+  let archiveName = path.basename(url);
 
   fs.mkdirSync(destDir, { recursive: true });
 
+  if (archiveName.endsWith(".xz")) {
+    // Imported lazily so the xz WASM blob only loads for .xz archives.
+    let xz = await import("xz-decompress");
+    // xz-decompress is CJS: tsx exposes the class as a named export, plain
+    // node ESM nests it under `default`.
+    let XzReadableStream = xz.XzReadableStream ?? xz.default.XzReadableStream;
+    // Toolchain .tar.xz archives wrap everything in one top-level directory,
+    // so `strip: 1` lands their contents directly in destDir.
+    await pipeline(
+      Readable.fromWeb(
+        new XzReadableStream(Readable.toWeb(Readable.from(buffer))),
+      ),
+      extractTar({ cwd: destDir, strip: 1 }),
+    );
+  } else if (archiveName.endsWith("tar.gz")) {
+    await pipeline(Readable.from(buffer), extractTar({ cwd: destDir }));
+  } else if (archiveName.endsWith(".gz")) {
+    let destFile = path.join(
+      destDir,
+      destFileName || path.parse(archiveName).name,
+    );
+    fs.writeFileSync(destFile, unzipSync(buffer));
+    chmodSync(destFile, 0o700);
+  }
+};
+
+// A killed holder stops refreshing the lock's mtime; the next installer
+// reclaims it after this long. Live holders refresh every half of it.
+const INSTALL_LOCK_STALE_MS = 60_000;
+
+// Installs one tool version into `destDir` exactly once across concurrent
+// `mops` processes — icp-cli runs one `mops build <canister>` per canister
+// in parallel, all on a cold cache. The winner populates a staging sibling
+// and renames it into place, so `destDir` is either absent or complete and
+// never a half-extracted binary a peer could exec. Losers wait on the lock
+// and then find it cached.
+export let installVersion = async (
+  destDir: string,
+  {
+    label,
+    isComplete,
+    populate,
+  }: {
+    /** `<tool> <version>`, for the wait message. */
+    label: string;
+    isComplete: () => boolean;
+    /** Fills the empty staging dir that becomes `destDir` on success. */
+    populate: (stagingDir: string) => Promise<void>;
+  },
+) => {
+  if (isComplete()) {
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(destDir), { recursive: true });
+  let release = await acquireInstallLock(destDir, label);
   try {
-    if (archive.endsWith(".xz")) {
-      // Imported lazily so the xz WASM blob only loads for .xz archives.
-      let xz = await import("xz-decompress");
-      // xz-decompress is CJS: tsx exposes the class as a named export, plain
-      // node ESM nests it under `default`.
-      let XzReadableStream = xz.XzReadableStream ?? xz.default.XzReadableStream;
-      // Toolchain .tar.xz archives wrap everything in one top-level directory,
-      // so `strip: 1` lands their contents directly in destDir.
-      await pipeline(
-        Readable.fromWeb(
-          new XzReadableStream(Readable.toWeb(createReadStream(archive))),
-        ),
-        extractTar({ cwd: destDir, strip: 1 }),
-      );
-    } else if (archive.endsWith("tar.gz")) {
-      await extractTar({
-        file: archive,
-        cwd: destDir,
-      });
-    } else if (archive.endsWith(".gz")) {
-      let destFile = path.join(
-        destDir,
-        destFileName || path.parse(archive).name,
-      );
-      fs.writeFileSync(destFile, unzipSync(buffer));
-      chmodSync(destFile, 0o700);
+    // A peer finished the install while we waited.
+    if (isComplete()) {
+      return;
     }
+    // A present-but-incomplete dir is a leftover from an interrupted
+    // pre-staging install. Under the lock nobody else is writing it.
+    fs.rmSync(destDir, { recursive: true, force: true });
+
+    let staging = createStagingDir(destDir);
+    try {
+      await populate(staging);
+    } catch (err) {
+      fs.rmSync(staging, { recursive: true, force: true });
+      throw err;
+    }
+    commitStagingDir(staging, destDir);
   } finally {
-    deleteSync([tmpDir], { force: true });
+    await release().catch(() => {});
+  }
+};
+
+// Cargo-style: fail the first acquire fast, announce the wait once, then
+// retry with backoff. The lock lives at `<destDir>.lock` next to the
+// version dir, so it needs no marker file and survives `destDir` appearing.
+let acquireInstallLock = async (destDir: string, label: string) => {
+  let options = { realpath: false, stale: INSTALL_LOCK_STALE_MS };
+  try {
+    return await lock(destDir, { ...options, retries: 0 });
+  } catch (err: any) {
+    if (err?.code !== "ELOCKED") {
+      throw err;
+    }
+  }
+  // stderr on purpose: `mops toolchain bin` prints the binary path on stdout
+  // and callers command-substitute it.
+  console.error(
+    chalk.gray(`Waiting for another mops process to install ${label}...`),
+  );
+  try {
+    return await lock(destDir, {
+      ...options,
+      retries: { retries: 240, minTimeout: 250, maxTimeout: 2_000 },
+    });
+  } catch (err: any) {
+    cliError(
+      `Failed to acquire the install lock for ${label} at ${destDir}.lock — another mops process may be stuck. Remove that directory to recover.${err?.message ? `\n${err.message}` : ""}`,
+    );
   }
 };
 

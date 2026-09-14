@@ -4,6 +4,7 @@ import { rm } from "node:fs/promises";
 import chalk from "chalk";
 import { execa } from "execa";
 import { cliError, cliExit } from "../error.js";
+import { describeExecFailure } from "../helpers/exec-failure.js";
 import {
   getCheckLimitPendingIssue,
   prepareMigrationArgs,
@@ -426,7 +427,7 @@ async function generateStableTypes(
     }
     cliExit(
       result.exitCode ?? 1,
-      `Failed to generate stable types for ${moFile} (exit code: ${result.exitCode})`,
+      `Failed to generate stable types for ${moFile} (${describeExecFailure(result)})`,
     );
   }
 
