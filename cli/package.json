@@ -76,7 +76,7 @@
     "prompts": "2.4.2",
     "proper-lockfile": "4.1.2",
     "semver": "7.7.1",
-    "smol-toml": "1.6.1",
+    "smol-toml": "1.7.1",
     "stream-to-promise": "3.0.0",
     "string-width": "7.2.0",
     "tar": "7.5.22",
