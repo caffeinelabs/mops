@@ -71,6 +71,19 @@ moc = "/usr/local/bin/moc"
 lintoko = "../custom-lintoko/bin/lintoko"
 ```
 
+### Intel Macs {#intel-macs}
+
+Motoko has dropped its Intel-Mac (macOS x86_64) release leg, so `moc` versions released after that have no such build; `lintoko` has never published one. On an Intel Mac, pinning such a version fails with `moc <version> has no Intel-Mac build` naming the URL it asked for, rather than a bare `ERROR 404`.
+
+Already-installed versions keep working — the failure only happens when the binary has to be downloaded, so a version that still has an Intel-Mac build can be installed and used as before. To move past it, [build the tool from source and point `mops.toml` at the binary](#option-3-use-explicit-file-paths):
+
+```toml
+[toolchain]
+moc = "./tools/moc"
+```
+
+On Apple Silicon this never applies. If you see the message there, mops is running under an x64 Node.js — under Rosetta, or installed from an x64 package — and resolving the arm64 build instead is a matter of running mops under an arm64 Node.js.
+
 ## Toolchain cache
 
 Downloaded tools live under the mops cache directory: `~/.cache/mops/<tool>/<version>` on Linux, `~/Library/Caches/mops/<tool>/<version>` on macOS, or `$XDG_CACHE_HOME/mops/<tool>/<version>` when that variable is set. A version is extracted into a staging directory and renamed into place, so the cache never holds a half-extracted tool.

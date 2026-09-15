@@ -44,11 +44,16 @@ export let downloadAndExtract = async (
   url: string,
   destDir: string,
   destFileName: string = "",
+  { missingAssetHint }: { missingAssetHint?: () => string | undefined } = {},
 ) => {
   let res = await fetch(url);
 
   if (res.status !== 200) {
-    cliError(`ERROR ${res.status} ${url}`);
+    // Only a 404 is a dropped asset; a 403 or 500 is not, so it keeps the
+    // plain message. The hint is a thunk so the platforms it does not apply
+    // to never build it, and so it is only ever computed on this path.
+    let hint = res.status === 404 ? missingAssetHint?.() : undefined;
+    cliError(hint ?? `ERROR ${res.status} ${url}`);
   }
 
   let arrayBuffer = await res.arrayBuffer();

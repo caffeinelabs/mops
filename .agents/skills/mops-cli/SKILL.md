@@ -206,6 +206,8 @@ mops toolchain bin moc               # print path to binary
 
 **Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
 
+**Intel Macs**: Motoko dropped its x86_64-darwin release leg, so newer `moc` versions have no Intel-Mac tarball, and `lintoko` never shipped one. Pinning one on an Intel Mac fails with `moc <version> has no Intel-Mac build` naming the URL. Not a bug to work around by changing the version — for `moc`, build from source and set `moc = "./tools/moc"` in `[toolchain]`; for `lintoko`, do the same or drop the pin. Already-cached versions keep working, so an existing pin that installed is not retested. The message says *x86_64-darwin* rather than *Intel* because an x64 Node.js under Rosetta reports identically — if the machine is Apple Silicon, run mops under an arm64 Node.js instead.
+
 ### Enhanced migrations
 
 When `[canisters.<name>.migrations]` is configured, `mops check`, `mops build`, and `mops check-stable` automatically inject `--enhanced-migration`. Do not add `--enhanced-migration` to `[canisters.<name>].args` — mops will error.

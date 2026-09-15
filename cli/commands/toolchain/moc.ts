@@ -1,10 +1,12 @@
 import process from "node:process";
 import path from "node:path";
+import chalk from "chalk";
 import fs from "fs-extra";
 import { SemVer } from "semver";
 
 import { globalCacheDir } from "../../mops.js";
 import * as toolchainUtils from "./toolchain-utils.js";
+import { x64DarwinMissingBuildHint } from "./platform-support.js";
 import { cliError } from "../../error.js";
 
 let cacheDir = path.join(globalCacheDir, "moc");
@@ -53,7 +55,19 @@ export let download = async (
         if (verbose && !silent) {
           console.log(`Downloading ${url}`);
         }
-        await toolchainUtils.downloadAndExtract(url, stagingDir);
+        await toolchainUtils.downloadAndExtract(url, stagingDir, "", {
+          missingAssetHint: () =>
+            x64DarwinMissingBuildHint({
+              tool: "moc",
+              version,
+              url,
+              reason:
+                "Motoko has dropped its Intel-Mac release leg, so moc versions released after that have no such asset.",
+              alternative: `Build moc from source and set ${chalk.green(
+                'moc = "./tools/moc"',
+              )} in [toolchain] to use it.`,
+            }),
+        });
       },
     });
   }

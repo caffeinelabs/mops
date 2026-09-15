@@ -1,9 +1,11 @@
 import process from "node:process";
 import path from "node:path";
+import chalk from "chalk";
 import fs from "node:fs";
 
 import { globalCacheDir } from "../../mops.js";
 import * as toolchainUtils from "./toolchain-utils.js";
+import { x64DarwinMissingBuildHint } from "./platform-support.js";
 import { cliError } from "../../error.js";
 
 let cacheDir = path.join(globalCacheDir, "lintoko");
@@ -50,6 +52,17 @@ export let download = async (
     label: `lintoko ${version}`,
     isComplete: () => isCached(version),
     populate: (stagingDir) =>
-      toolchainUtils.downloadAndExtract(url, stagingDir, "lintoko"),
+      toolchainUtils.downloadAndExtract(url, stagingDir, "lintoko", {
+        missingAssetHint: () =>
+          x64DarwinMissingBuildHint({
+            tool: "lintoko",
+            version,
+            url,
+            reason: "lintoko has never published an Intel-Mac build.",
+            alternative: `Build lintoko from source and set ${chalk.green(
+              'lintoko = "./tools/lintoko"',
+            )} in [toolchain] to use it, or remove the pin to skip linting.`,
+          }),
+      }),
   });
 };

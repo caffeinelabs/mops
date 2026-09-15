@@ -2,6 +2,8 @@
 
 ## Next
 
+- Intel Macs get an actionable error when a toolchain version has no x86_64-darwin build. Motoko is dropping its Intel-Mac release leg ([caffeinelabs/motoko#6355](https://github.com/caffeinelabs/motoko/pull/6355)), so newer `moc` versions ship no such tarball; `lintoko` has never shipped one, which meant `mops check` with a `lintoko` pin already failed on an Intel Mac with a bare `ERROR 404 <url>`. Both now report `moc <version> has no Intel-Mac build`, name the URL, and point at pinning a locally built binary — and both say *x86_64-darwin* rather than *Intel*, because an x64 Node.js under Rosetta reports the same. Already-installed versions are untouched: the message is produced at the 404, so a complete cache install keeps working offline, and versions predating the drop still download.
+
 ## 3.2.2
 - `smol-toml` is updated to 1.7.1, which closes GHSA-7w5x-hrqm-74c2 (high severity): a malformed TOML document could hang the parser. `mops` parses `mops.toml` on nearly every command, and reads each installed dependency's own `mops.toml` during resolution, so the fix also covers manifests that did not come from you.
 
