@@ -2,6 +2,9 @@
 
 ## Next
 
+## 3.2.2
+- `smol-toml` is updated to 1.7.1, which closes GHSA-7w5x-hrqm-74c2 (high severity): a malformed TOML document could hang the parser. `mops` parses `mops.toml` on nearly every command, and reads each installed dependency's own `mops.toml` during resolution, so the fix also covers manifests that did not come from you.
+
 ## 3.2.1
 - Concurrent `mops` processes no longer race on a toolchain download. Two `mops build <canister>` runs started together on a cold cache — how icp-cli builds a multi-canister project — used to download and extract `moc` into the same directory at once, which intermittently killed one build (`Build failed for canister x (exit code: undefined)`) or aborted an extraction (`zlib: unexpected end of file`). A version is now extracted into a staging directory and renamed into place under a per-version lock at `<cache>/<tool>/<version>.lock`; the waiting process prints `Waiting for another mops process to install moc <version>...` on stderr and then uses the finished install. Applies to every `[toolchain]` tool. The project-local `.mops/_tmp` scratch directory is gone — archives are extracted from memory. Fixes #818.
 - `mops build`, `mops check`, `mops generate` and `mops check-stable` now say why `moc` failed when it produced no exit code — `killed with SIGKILL: Forced termination`, or the spawn error — instead of `exit code: undefined`.
