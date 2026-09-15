@@ -40,6 +40,12 @@ Install a preview with `npm i -g ic-mops@next` or a pinned `ic-mops@X.Y.Z-beta.N
 
 After the release pipeline completes, it creates and auto-merges a `cli-releases: vX.Y.Z artifacts` PR. No action needed unless it fails — monitor at [Actions → Release CLI](https://github.com/caffeinelabs/mops/actions/workflows/release.yml) and merge the artifacts PR manually if needed.
 
+## If a release run fails
+
+Rerun it: `gh run rerun --failed <run-id>`, or the **Re-run failed jobs** button on the run. The job restarts from its first step, and each publishing step skips what an earlier attempt already did — npm publish when the version is on the registry, the GitHub Release when the tag has a published one, the artifacts PR when `main` already carries the version's tarball.
+
+A rerun executes the workflow file from the tag's own commit, so runs tagged before this behavior landed still fail at `npm publish`. Recover those with the manual fallback below.
+
 ## Manual fallback
 
 ### 1. Update changelog

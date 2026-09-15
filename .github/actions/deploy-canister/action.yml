@@ -33,10 +33,12 @@ runs:
         CANISTER: ${{ inputs.canister }}
       run: |
         set -euo pipefail
-        for i in 1 2 3; do
+        # Recipes, wasms and sync plugins come from GitHub releases, where a 5xx can last minutes.
+        delay=30
+        for attempt in 1 2 3 4 5; do
           icp deploy "$CANISTER" --environment ic --identity mops --no-create --yes && exit 0
-          echo "::warning::${CANISTER} canister deploy attempt $i/3 failed"
-          if [ "$i" -lt 3 ]; then sleep 30; fi
+          echo "::warning::${CANISTER} canister deploy attempt ${attempt}/5 failed"
+          if [ "$attempt" -lt 5 ]; then sleep "$delay"; delay=$((delay * 2)); fi
         done
         exit 1
 
