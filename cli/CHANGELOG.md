@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- New **unstable** build manifest: with `[build] manifest = true` in `mops.toml`, `mops build` writes a `<canister>.build.json` record next to each built `.wasm`/`.did`/`.most` — artifact SHA-256 hashes, the pinned `moc` version, and the outcome of a non-gating `moc --stable-compatible` check against an empty-actor baseline (is the canister installable on a fresh canister, or upgrade-only). `mops build` deletes a stale `<canister>.build.json` at the start of each canister build even when the feature is off, so a record never outlives the artifacts it describes. Unstable: schema and behavior may change in any release; documented only on the new "Unstable features" docs page.
 
 ## 3.2.1
 - Concurrent `mops` processes no longer race on a toolchain download. Two `mops build <canister>` runs started together on a cold cache — how icp-cli builds a multi-canister project — used to download and extract `moc` into the same directory at once, which intermittently killed one build (`Build failed for canister x (exit code: undefined)`) or aborted an extraction (`zlib: unexpected end of file`). A version is now extracted into a staging directory and renamed into place under a per-version lock at `<cache>/<tool>/<version>.lock`; the waiting process prints `Waiting for another mops process to install moc <version>...` on stderr and then uses the finished install. Applies to every `[toolchain]` tool. The project-local `.mops/_tmp` scratch directory is gone — archives are extracted from memory. Fixes #818.

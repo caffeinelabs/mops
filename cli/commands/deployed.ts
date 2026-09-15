@@ -14,11 +14,10 @@ import {
   writeConfig,
 } from "../mops.js";
 import { CanisterConfig, Config } from "../types.js";
+import { EMPTY_ACTOR_MOST } from "../helpers/empty-baseline.js";
 import { resolveBuildOutputDir } from "./build.js";
 
 export const DEFAULT_DEPLOYED_DIR = "deployed";
-
-const EMPTY_ACTOR_MOST = "// Version: 1.0.0\nactor { };\n";
 
 export interface DeployedOptions {
   buildDir?: string;
