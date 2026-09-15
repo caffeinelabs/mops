@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "3.2.0"
+    "latest": "3.2.2"
   },
   "versions": {
     "0.41.0": {
@@ -600,6 +600,14 @@
       "commitHash": "20b9a435096e4e61a7980532a5211716d743770b",
       "url": "https://cli.mops.one/versions/3.2.0.tgz",
       "hash": "9003d22aff9137c87da3f648f7f74531bdc6a551dbe16fee3d682bfe3ddc5e5a"
+    },
+    "3.2.2": {
+      "time": 1789470118624,
+      "size": 2395269,
+      "relseaseNotes": "* `smol-toml` is updated to 1.7.1, which closes GHSA-7w5x-hrqm-74c2 (high severity): a malformed TOML document could hang the parser. `mops` parses `mops.toml` on nearly every command, and reads each installed dependency's own `mops.toml` during resolution, so the fix also covers manifests that did not come from you.\n",
+      "commitHash": "6dd67c0c92ff4df601dde93bfaa11e642ad560b2",
+      "url": "https://cli.mops.one/versions/3.2.2.tgz",
+      "hash": "c7dbfc881985f8e13a6908da170ac74f4316884432697b9715d6684a5a9282a4"
     }
   }
 }
