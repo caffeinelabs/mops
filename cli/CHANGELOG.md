@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops self update` no longer prints `Success` when the update did not take effect. It trusted the package manager's exit code, but `npm add -g` installs into npm's own global prefix — when another `mops` install (bun, Volta, a second Node) shadows that prefix on PATH, the shell kept running the old version after a "successful" update. It now checks the version the `mops` on PATH reports and fails, naming the stale binary, when it still reports the old one. A project-local `ic-mops` (`node_modules/.bin/mops`, as under `npx mops self update`) was never reachable by the global install either; it is now refused up front with `npm i -D ic-mops@<version>` as the fix.
 - `mops self update` no longer prints `Success` when the update did not take effect. It trusted the package manager's exit code, but `npm add -g` installs into npm's own global prefix — when another `mops` install (bun, Volta, a second Node) shadows that prefix on PATH, the shell kept running the old version after a "successful" update. It now checks the version the `mops` on PATH reports and fails, naming the stale binary, when it still reports the old one.
 
 ## 3.2.2

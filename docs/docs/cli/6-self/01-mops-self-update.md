@@ -11,8 +11,6 @@ Update the Mops CLI to the latest version.
 mops self update
 ```
 
-After installing, it checks that the `mops` on your PATH reports the new version. If another install shadows the updated one (for example a bun or Volta install ahead of the npm global prefix), the command fails and names the stale binary instead of reporting success.
-
 When the latest version is a new **major** release, it contains breaking changes, so `mops self update` asks for confirmation and links the release notes instead of updating right away.
 
 ## `--major`
@@ -24,3 +22,9 @@ mops self update --major
 ```
 
 Updates within the same major (new minor or patch versions) never prompt.
+
+## Global installs only
+
+`mops self update` updates the CLI installed globally with npm or pnpm (`npm i -g ic-mops` or `cli.mops.one/install.sh`). It does not update `ic-mops` declared as a project dependency: when the `mops` on PATH is a `node_modules/.bin/mops` (as with `npx mops self update`), the command fails and points to `npm i -D ic-mops@<version>` instead.
+
+After installing, it checks that the `mops` on your PATH reports the new version. If another install shadows the updated one (for example a bun or Volta install ahead of the npm global prefix), the command fails and names the stale binary instead of reporting success.

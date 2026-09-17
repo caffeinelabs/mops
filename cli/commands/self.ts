@@ -113,10 +113,18 @@ export async function update({ major = false } = {}) {
       return;
     }
 
-    console.log("Updating to version: " + chalk.green(latest));
-
     let bin = detectMopsBinary();
+    // `add -g` cannot reach a project dependency, which is what `npx mops` or
+    // an `npm run` script puts first on PATH via `node_modules/.bin`.
+    if (bin.includes("/node_modules/.bin/")) {
+      cliError(
+        `mops self update manages a global install, but ${chalk.yellow(bin)} is a project dependency.\n` +
+          `Update it with ${chalk.green(`npm i -D ic-mops@${latest}`)} instead.`,
+      );
+    }
     let pm = detectPackageManager(bin);
+
+    console.log("Updating to version: " + chalk.green(latest));
     // Not `--silent`: that suppresses npm's own error output too, leaving
     // "Failed to update." as the only clue to why.
     let npmArgs = pm === "npm" ? ["--no-fund", "--loglevel=error"] : [];
