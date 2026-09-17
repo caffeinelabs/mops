@@ -40,6 +40,7 @@ mops.lock
 - an older format version
 - inconsistent with the `[dependencies]` / `[dev-dependencies]` in `mops.toml`
 - pinning a dependency to a different version than `mops.toml` declares
+- missing a transitive dependency that one of its own locked packages declares (a botched merge, a hand edit)
 - recording file hashes for packages that are not in its own `deps`
 - missing the resolved commit and content hash of a `repo = "..."` dependency, or recording a commit that `mops.toml` no longer declares
 - carrying absolute local `path` dependencies written by an older CLI
@@ -58,7 +59,7 @@ Pass `--locked` and commit `mops.lock`:
 - run: mops test --locked
 ```
 
-`--locked` requires an up-to-date lockfile and never writes it. It fails when the lockfile is missing, unparseable, not the current format, does not pin the dependencies declared in `mops.toml`, was generated before a local `path` dependency's `mops.toml` changed, does not record the resolved commit of a GitHub dependency, or records a file hash that disagrees with the Mops registry.
+`--locked` requires an up-to-date lockfile and never writes it. It fails when the lockfile is missing, unparseable, not the current format, does not pin the dependencies declared in `mops.toml`, is missing a transitive dependency that one of its locked packages declares, was generated before a local `path` dependency's `mops.toml` changed, does not record the resolved commit of a GitHub dependency, or records a file hash that disagrees with the Mops registry.
 
 A lockfile whose project has a `repo = "..."` dependency (possibly transitive) but that lacks the integrity record for it — because it was written by a CLI predating GitHub-dependency coverage — fails `--locked` until a plain `mops install` regenerates it. Projects with no GitHub dependencies are unaffected.
 
@@ -72,7 +73,7 @@ The `CI` environment variable does not affect lockfile behavior. Releases before
 
 ### What `--locked` does not check
 
-`--locked` does not re-walk the dependency graph from scratch. Installing from a lockfile deliberately skips the dependency versions that lost a version conflict, so their manifests are never downloaded and a full re-resolve is not possible without giving up that optimization. In practice this is not a gap for registry dependencies: published versions are immutable, so a transitive version cannot change underneath a lockfile.
+`--locked` does not re-walk the dependency graph from scratch. Installing from a lockfile deliberately skips the dependency versions that lost a version conflict, so their manifests are never downloaded and a full re-resolve is not possible without giving up that optimization. In practice this is not a gap for registry dependencies: published versions are immutable, so a transitive version cannot change underneath a lockfile. What is checked instead is that `deps` is closed under the dependencies the lockfile's own `graph` section records for each locked package — so a transitive package that was dropped from the lockfile is reported rather than silently left uninstalled. Lockfiles written by a CLI that predates `graph` carry no edges to check against.
 
 GitHub dependencies are not a gap either: the lockfile pins a commit and a hash of its contents, and the install fetches that commit and checks it (see [GitHub dependencies](#github-dependencies) below).
 

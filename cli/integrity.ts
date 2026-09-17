@@ -222,7 +222,12 @@ export function readLockFile(): LockFile | null {
 // ones) without it — so a pre-graph or malformed `graph` yields {} rather
 // than an error.
 export function readLockFileGraph(): Record<string, Record<string, string>> {
-  let lock = readLockFile();
+  return lockFileGraph(readLockFile());
+}
+
+function lockFileGraph(
+  lock: LockFile | null,
+): Record<string, Record<string, string>> {
   if (lock?.version !== CURRENT_LOCK_VERSION || !lock.graph) {
     return {};
   }
@@ -251,6 +256,7 @@ type LockDefect =
   | { kind: "absolute-paths" }
   | { kind: "deps-mismatch"; problems: string[] }
   | { kind: "hashes-deps-mismatch"; detail: string }
+  | { kind: "transitive-missing"; detail: string }
   | { kind: "github-integrity"; detail: string };
 
 // The single source of truth for "is this lock usable". `checkLockFileLight`
@@ -328,6 +334,13 @@ function inspectLockFile(): LockDefect | null {
         detail: `package ${packageId} has file hashes but is not a locked dependency`,
       };
     }
+  }
+
+  // A transitive package dropped from `deps` (and from `hashes` with it, as a botched merge leaves it) passes both checks above,
+  // and a lock-driven install resolves nothing, so it is simply never installed. The edges `graph` records catch it offline.
+  let closureProblem = checkLockedClosure(lock);
+  if (closureProblem) {
+    return { kind: "transitive-missing", detail: closureProblem };
   }
 
   // A github dep with no recorded commit is neither verifiable nor
@@ -554,6 +567,52 @@ function checkLockedGithubDeps(lock: LockFileV3): string | null {
     }
   }
   return null;
+}
+
+// Offline closure of `deps` under the edges the lock records.
+//
+// The walk that wrote the lock put every dependency of every reachable winner into `deps`, keyed by the declaring manifest's own key,
+// so an edge naming something `deps` lacks means the entry was removed afterwards. Versions are not compared:
+// an edge names what the package asked for, `deps` records which version of that name won.
+// Registry packages contribute the edges `graph` recorded for them; a package with no entry (a pre-graph lock,
+// or one declaring a local `path` dep, which is never recorded) is skipped rather than guessed at.
+// Local `path` deps are live directories, so their manifest is read from disk, the same files `localDepsHash` reads;
+// a manifest that is missing or fails to parse is left to resolution, which reports it properly.
+function checkLockedClosure(lock: LockFileV3): string | null {
+  let graph = lockFileGraph(lock);
+  let rootDir = getRootDir();
+  for (let [name, value] of Object.entries(lock.deps)) {
+    let type = getDependencyType(value);
+    let edges: string[];
+    let dependent: string;
+    if (type === "mops") {
+      dependent = `package ${getPackageId(name, value)}`;
+      edges = Object.keys(graph[getPackageId(name, value)] ?? {});
+    } else if (type === "local") {
+      dependent = `local dependency ${name}`;
+      edges = readLocalDepEdges(path.resolve(rootDir, expandMopsEnv(value)));
+    } else {
+      continue;
+    }
+    for (let depName of edges) {
+      if (!(depName in lock.deps)) {
+        return `${dependent} depends on ${depName}, which is not a locked dependency`;
+      }
+    }
+  }
+  return null;
+}
+
+function readLocalDepEdges(dir: string): string[] {
+  let mopsToml = path.join(dir, "mops.toml");
+  if (!fs.existsSync(mopsToml)) {
+    return [];
+  }
+  try {
+    return Object.keys(readConfig(mopsToml).dependencies || {});
+  } catch {
+    return [];
+  }
 }
 
 // Deterministic digest of an extracted GitHub archive: every file's
@@ -949,6 +1008,12 @@ function describeLockDefect(defect: LockDefect): string[] {
         `  ${defect.detail}`,
         REGENERATE_HINT,
       ];
+    case "transitive-missing":
+      return [
+        "mops.lock does not lock every transitive dependency, but --locked was passed.",
+        `  ${defect.detail}`,
+        REGENERATE_HINT,
+      ];
     case "github-integrity":
       return [
         "mops.lock does not record the integrity of a GitHub dependency, but --locked was passed.",
@@ -1000,8 +1065,10 @@ function checkLockedDeps(lock: LockFileV3): string[] {
 // What is checked instead:
 //
 //   1. every dependency declared in mops.toml is pinned to that same value
-//   2. the `deps` and `hashes` maps agree on the set of registry packages
-//   3. every file hash in `hashes` matches the registry
+//   2. `deps` is closed under the edges recorded in `graph` (and the manifests
+//      of local `path` deps), so no transitive dependency is missing
+//   3. the `deps` and `hashes` maps agree on the set of registry packages
+//   4. every file hash in `hashes` matches the registry
 //
 // Together with the `mopsTomlDepsHash` / `localDepsHash` checks this catches the
 // realistic drift (an edited mops.toml, an edited local dependency's manifest, a
@@ -1015,6 +1082,11 @@ async function checkLockConsistency(lock: LockFileV3): Promise<string[]> {
   let githubProblem = checkLockedGithubDeps(lock);
   if (githubProblem) {
     problems.push(githubProblem);
+  }
+
+  let closureProblem = checkLockedClosure(lock);
+  if (closureProblem) {
+    problems.push(closureProblem);
   }
 
   let packageIds = mopsPackageIds(lock.deps);

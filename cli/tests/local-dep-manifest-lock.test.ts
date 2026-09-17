@@ -157,6 +157,36 @@ describe("local path dependency manifests keep mops.lock honest", () => {
     expect(result.stderr).not.toMatch(/RangeError|Maximum call stack/);
   });
 
+  // `localDepsHash` only says the manifests have not changed since the lock was written, not whether `deps` still lists
+  // what they declare, so the manifest is read to cover a path dep the way `graph` covers registry packages (see locked.test.ts).
+  test("a lock missing a path dependency's own dependency is stale", async () => {
+    const cwd = makeProject({
+      "mops.toml": '[dependencies]\nlib = "./lib"\n',
+      "lib/mops.toml": pkg("lib", 'nested = "../nested"\n'),
+      "lib/src/lib.mo": "module {}\n",
+      "nested/mops.toml": pkg("nested"),
+      "nested/src/lib.mo": "module {}\n",
+    });
+
+    expect((await install(cwd)).exitCode).toBe(0);
+    const lock = readLock(cwd);
+    expect(lock.deps).toEqual({ lib: "./lib", nested: "./nested" });
+    delete lock.deps.nested;
+    writeFileSync(path.join(cwd, "mops.lock"), JSON.stringify(lock, null, 2));
+
+    const locked = await cli(["install", "--locked"], {
+      cwd,
+      env: { CI: undefined },
+    });
+    expect(locked.exitCode).toBe(1);
+    expect(locked.stderr).toMatch(
+      /local dependency lib depends on nested, which is not a locked dependency/,
+    );
+
+    expect((await install(cwd)).exitCode).toBe(0);
+    expect(readLock(cwd).deps).toEqual({ lib: "./lib", nested: "./nested" });
+  });
+
   // The freshness signal is only recorded for projects that declare a path
   // dependency, so locks written by a CLI that predates it stay valid.
   test("a project without path dependencies records no localDepsHash", async () => {
