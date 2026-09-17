@@ -11,7 +11,8 @@ uninstall() {
 
 install_with_npm() {
 	echo "Installing mops with npm..."
-	npm add -g --no-fund --no-audit $url || exit 1
+	# npm 12 refuses remote tarballs unless allowed
+	npm add -g --no-fund --no-audit --allow-remote=root $url || exit 1
 }
 
 install_with_pnpm() {

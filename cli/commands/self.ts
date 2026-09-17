@@ -1,4 +1,5 @@
 import process from "node:process";
+import path from "node:path";
 import child_process, { execSync } from "node:child_process";
 import chalk from "chalk";
 import prompts from "prompts";
@@ -43,6 +44,21 @@ function installedVersion(bin: string) {
         stdio: ["ignore", "pipe", "ignore"],
       }).toString(),
     );
+  } catch (e) {
+    return "";
+  }
+}
+
+// Where the package manager links `mops`; when it is not the directory of
+// the `mops` on PATH, the update went somewhere the shell never looks.
+function globalBinDir(pm: string) {
+  try {
+    let out = execSync(pm === "pnpm" ? "pnpm bin -g" : "npm prefix -g", {
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+    return pm === "pnpm" ? out : path.join(out, "bin");
   } catch (e) {
     return "";
   }
@@ -127,7 +143,12 @@ export async function update({ major = false } = {}) {
     console.log("Updating to version: " + chalk.green(latest));
     // Not `--silent`: that suppresses npm's own error output too, leaving
     // "Failed to update." as the only clue to why.
-    let npmArgs = pm === "npm" ? ["--no-fund", "--loglevel=error"] : [];
+    // npm 12 refuses remote tarballs by default (`allow-remote=none`);
+    // `root` admits only the top-level one. Older npm accepts the flag too.
+    let npmArgs =
+      pm === "npm"
+        ? ["--no-fund", "--loglevel=error", "--allow-remote=root"]
+        : [];
 
     await new Promise<void>((resolve, reject) => {
       let proc = child_process.spawn(
@@ -151,9 +172,16 @@ export async function update({ major = false } = {}) {
     // version — so check the binary the shell actually resolves.
     let installed = installedVersion(bin);
     if (installed !== latest) {
+      let binDir = globalBinDir(pm);
+      let state = installed
+        ? `is still ${installed}`
+        : "did not report a version";
+      let hint =
+        binDir && binDir !== path.dirname(bin)
+          ? `${pm} installs to ${chalk.yellow(binDir)} (${pm === "pnpm" ? "pnpm bin -g" : "npm prefix -g"}). Put it first in PATH or remove the other install, then run ${chalk.green("mops self update")} again.`
+          : `${pm} reported success without replacing it. Reinstall with ${chalk.green("curl -fsSL cli.mops.one/install.sh | sh")}.`;
       cliError(
-        `Failed to update: ${pm} installed ${latest}, but ${chalk.yellow(bin)} on your PATH ${installed ? `is still ${installed}` : "did not report a version"}.\n` +
-          `Remove that install, then run ${chalk.green("mops self update")} again.`,
+        `Failed to update: ${pm} installed ${latest}, but ${chalk.yellow(bin)} on your PATH ${state}.\n${hint}`,
       );
     }
     console.log(chalk.green("Success"));
