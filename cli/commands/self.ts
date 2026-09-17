@@ -4,27 +4,47 @@ import chalk from "chalk";
 import prompts from "prompts";
 import { version, globalConfigDir } from "../mops.js";
 import { cleanCache } from "../cache.js";
-import { classifySelfUpdate } from "../helpers/self-update-kind.js";
+import {
+  classifySelfUpdate,
+  parseCliVersion,
+} from "../helpers/self-update-kind.js";
 import { CliError, cliAbort, cliError } from "../error.js";
 
 let url = "https://x344g-ziaaa-aaaap-abl7a-cai.icp0.io";
 
-function detectPackageManager() {
+// The `mops` the shell resolves — the one an update has to end up replacing.
+function detectMopsBinary() {
   let res = "";
   try {
-    res = execSync("which mops").toString();
+    res = execSync("which mops").toString().trim();
   } catch (e) {}
   if (!res) {
     cliError("Couldn't detect package manager");
   }
-  if (res.includes("pnpm/")) {
+  return res;
+}
+
+function detectPackageManager(bin: string) {
+  if (bin.includes("pnpm/")) {
     return "pnpm";
   }
-  // else if (res.includes('bun/')) {
+  // else if (bin.includes('bun/')) {
   // 	return 'bun';
   // }
   else {
     return "npm";
+  }
+}
+
+function installedVersion(bin: string) {
+  try {
+    return parseCliVersion(
+      execSync(`"${bin}" --version`, {
+        stdio: ["ignore", "pipe", "ignore"],
+      }).toString(),
+    );
+  } catch (e) {
+    return "";
   }
 }
 
@@ -95,7 +115,8 @@ export async function update({ major = false } = {}) {
 
     console.log("Updating to version: " + chalk.green(latest));
 
-    let pm = detectPackageManager();
+    let bin = detectMopsBinary();
+    let pm = detectPackageManager(bin);
     // Not `--silent`: that suppresses npm's own error output too, leaving
     // "Failed to update." as the only clue to why.
     let npmArgs = pm === "npm" ? ["--no-fund", "--loglevel=error"] : [];
@@ -112,10 +133,22 @@ export async function update({ major = false } = {}) {
           reject(new CliError("Failed to update."));
           return;
         }
-        console.log(chalk.green("Success"));
         resolve();
       });
     });
+
+    // A zero exit only means the package manager installed into its own
+    // global prefix. When another install of `mops` shadows that prefix on
+    // PATH (bun, Volta, a second Node), the shell keeps running the old
+    // version — so check the binary the shell actually resolves.
+    let installed = installedVersion(bin);
+    if (installed !== latest) {
+      cliError(
+        `Failed to update: ${pm} installed ${latest}, but ${chalk.yellow(bin)} on your PATH ${installed ? `is still ${installed}` : "did not report a version"}.\n` +
+          `Remove that install, then run ${chalk.green("mops self update")} again.`,
+      );
+    }
+    console.log(chalk.green("Success"));
   }
 }
 
@@ -124,7 +157,7 @@ export async function uninstall() {
   cleanCache();
 
   console.log("Uninstalling mops CLI...");
-  let pm = detectPackageManager();
+  let pm = detectPackageManager(detectMopsBinary());
   child_process.spawn(pm, ["remove", "-g", "--silent", "ic-mops"], {
     stdio: "inherit",
     detached: false,

@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops self update` no longer prints `Success` when the update did not take effect. It trusted the package manager's exit code, but `npm add -g` installs into npm's own global prefix — when another `mops` install (bun, Volta, a second Node) shadows that prefix on PATH, the shell kept running the old version after a "successful" update. It now checks the version the `mops` on PATH reports and fails, naming the stale binary, when it still reports the old one.
 
 ## 3.2.2
 - `smol-toml` is updated to 1.7.1, which closes GHSA-7w5x-hrqm-74c2 (high severity): a malformed TOML document could hang the parser. `mops` parses `mops.toml` on nearly every command, and reads each installed dependency's own `mops.toml` during resolution, so the fix also covers manifests that did not come from you.

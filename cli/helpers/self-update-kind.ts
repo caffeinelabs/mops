@@ -18,3 +18,9 @@ export function classifySelfUpdate(
     ? "same-major"
     : "major";
 }
+
+// `mops --version` prints `CLI <version>` on its first line, `API <version>`
+// on the second.
+export function parseCliVersion(output: string): string {
+  return output.match(/^CLI (\S+)/m)?.[1] ?? "";
+}
