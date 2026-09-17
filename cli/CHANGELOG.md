@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- A `mops.lock` missing a transitive dependency is now treated as stale instead of accepted as fresh. A lock-driven install takes the lock's `deps` as the complete list and resolves nothing, so a transitive package dropped from it — a botched merge, a hand edit that took its `hashes` entry along — passed every freshness check, was never installed, and the build failed on the import. The lock's own `graph` section records what each locked package declares (and a local `path` dependency's `mops.toml` is on disk), so `deps` is now checked for closure under those edges, offline. Plain `mops install` re-resolves and repairs the lock; `--locked` fails with `mops.lock does not lock every transitive dependency` naming the package and the missing dependency; `mops verify` reports it; `mops sources` re-resolves instead of handing `moc` the truncated package list. Locks written by a CLI that predates `graph` carry no edges to check, so they are unaffected.
 
 ## 3.2.2
 - `smol-toml` is updated to 1.7.1, which closes GHSA-7w5x-hrqm-74c2 (high severity): a malformed TOML document could hang the parser. `mops` parses `mops.toml` on nearly every command, and reads each installed dependency's own `mops.toml` during resolution, so the fix also covers manifests that did not come from you.

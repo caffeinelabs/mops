@@ -17,6 +17,7 @@ It checks that:
 - `mops.lock` exists, parses and is the current format version
 - every file listed in `mops.lock` exists under `.mops/` with the recorded hash
 - `mops.lock` pins every dependency declared in `mops.toml` to the same value
+- `mops.lock` locks every dependency that its locked packages declare (from the `graph` section, and from the `mops.toml` of local `path` dependencies), so no transitive dependency is missing
 - `mops.lock`'s `deps` and `hashes` sections agree on the set of registry packages
 - every file hash in `mops.lock` matches the Mops registry
 - every GitHub dependency's directory under `.mops/_github/` still hashes to the tree `mops.lock` recorded for the pinned commit

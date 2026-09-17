@@ -47,6 +47,7 @@ Require an up-to-date [lockfile](../../10-mops.lock.md) and never write it. This
 - `mops.lock` is missing
 - `mops.lock` cannot be parsed, or is not the current format version
 - `mops.toml` declares dependencies that `mops.lock` does not pin to the same values
+- a locked package declares a dependency that `mops.lock` does not lock (a transitive entry dropped by a merge or a hand edit)
 - a local `path` dependency's `mops.toml` changed since the lockfile was written, or the lockfile was generated under a different `MOPS_ENV`
 - the lockfile carries absolute local `path` entries written by an older CLI
 - a GitHub dependency lacks its recorded commit and content hash, or records a commit that `mops.toml` no longer declares

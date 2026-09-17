@@ -360,6 +360,124 @@ describe("--locked", () => {
   });
 });
 
+// A lock-driven install takes `deps` as the complete list and resolves nothing,
+// so a transitive package that fell out of `deps` — and out of `hashes` with it,
+// which is what a botched merge or a hand edit leaves — used to pass every
+// freshness check and simply never get installed; the build then failed on the
+// import. The lock's own `graph` records what each package declares, which is
+// enough to notice offline.
+describe("a lock missing a transitive dependency", () => {
+  jest.setTimeout(180_000);
+
+  // `test@2.1.1` declares `base = "0.14.5"`.
+  const cwd = path.join(import.meta.dirname, "install/locked-transitive");
+  const lockFile = path.join(cwd, "mops.lock");
+  const mopsDir = path.join(cwd, ".mops");
+
+  const cleanup = () => {
+    rmSync(lockFile, { force: true });
+    rmSync(mopsDir, { recursive: true, force: true });
+  };
+
+  const readLock = () => JSON.parse(readFileSync(lockFile, "utf8"));
+
+  // Install, then drop the transitive package from the lock the way a merge
+  // resolution would: its `deps` entry and its `hashes` entry together, so the
+  // structural deps/hashes check has nothing to object to.
+  const installAndTruncate = async () => {
+    const result = await cli(["install"], { cwd, env: { CI: undefined } });
+    expect(result.exitCode).toBe(0);
+    const lock = readLock();
+    expect(lock.deps).toEqual({ test: "2.1.1", base: "0.14.5" });
+    expect(lock.graph["test@2.1.1"]).toEqual({ base: "0.14.5" });
+    delete lock.deps.base;
+    delete lock.hashes["base@0.14.5"];
+    writeFileSync(lockFile, JSON.stringify(lock, null, 2));
+    return readFileSync(lockFile, "utf8");
+  };
+
+  test("--locked rejects it before installing anything", async () => {
+    cleanup();
+    try {
+      const truncated = await installAndTruncate();
+      rmSync(mopsDir, { recursive: true, force: true });
+
+      const result = await cli(["install", "--locked"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        /mops\.lock does not lock every transitive dependency, but --locked/,
+      );
+      expect(result.stderr).toMatch(
+        /package test@2\.1\.1 depends on base, which is not a locked dependency/,
+      );
+      expect(result.stderr).toMatch(/Run `mops install` \(without --locked\)/);
+      expect(readFileSync(lockFile, "utf8")).toBe(truncated);
+      expect(existsSync(mopsDir)).toBe(false);
+    } finally {
+      cleanup();
+    }
+  });
+
+  test("plain install re-resolves, installs it and repairs the lock", async () => {
+    cleanup();
+    try {
+      await installAndTruncate();
+      rmSync(mopsDir, { recursive: true, force: true });
+
+      const result = await cli(["install"], { cwd, env: { CI: undefined } });
+      expect(result.exitCode).toBe(0);
+      expect(existsSync(path.join(mopsDir, "base@0.14.5"))).toBe(true);
+      const lock = readLock();
+      expect(lock.deps).toEqual({ test: "2.1.1", base: "0.14.5" });
+      expect(lock.hashes["base@0.14.5"]).toBeDefined();
+
+      const locked = await cli(["install", "--locked"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(locked.exitCode).toBe(0);
+    } finally {
+      cleanup();
+    }
+  });
+
+  // `mops sources` never writes the lock, so it must not hand moc the
+  // truncated package list either.
+  test("mops sources does not serve the truncated lock", async () => {
+    cleanup();
+    try {
+      await installAndTruncate();
+
+      const result = await cli(["sources", "--no-install"], {
+        cwd,
+        env: { CI: undefined },
+      });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toMatch(/--package base /);
+    } finally {
+      cleanup();
+    }
+  });
+
+  test("mops verify reports it", async () => {
+    cleanup();
+    try {
+      await installAndTruncate();
+
+      const result = await cli(["verify"], { cwd, env: { CI: undefined } });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        /package test@2\.1\.1 depends on base, which is not a locked dependency/,
+      );
+    } finally {
+      cleanup();
+    }
+  });
+});
+
 describe("mops verify", () => {
   jest.setTimeout(180_000);
 
