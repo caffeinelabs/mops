@@ -1,5 +1,8 @@
 import { describe, expect, test } from "@jest/globals";
-import { classifySelfUpdate } from "../helpers/self-update-kind.js";
+import {
+  classifySelfUpdate,
+  parseCliVersion,
+} from "../helpers/self-update-kind.js";
 
 // The network fetch and the npm install around this are not testable here;
 // the decision table is, and it is what gates the major-update confirmation.
@@ -33,5 +36,18 @@ describe("classifySelfUpdate", () => {
     expect(classifySelfUpdate("2.20.0", "")).toBe("invalid");
     expect(classifySelfUpdate("2.20.0", "<html>error</html>")).toBe("invalid");
     expect(classifySelfUpdate("2.20.0", "latest")).toBe("invalid");
+  });
+});
+
+// After the install, `mops self update` checks the version the `mops` on PATH
+// reports, so a shadowed install cannot be mistaken for a success.
+describe("parseCliVersion", () => {
+  test("reads the CLI version from `mops --version` output", () => {
+    expect(parseCliVersion("CLI 3.2.2\nAPI 1.3\n")).toBe("3.2.2");
+  });
+
+  test("returns an empty string for anything else", () => {
+    expect(parseCliVersion("")).toBe("");
+    expect(parseCliVersion("error: unknown option '--version'")).toBe("");
   });
 });

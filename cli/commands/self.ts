@@ -1,30 +1,66 @@
 import process from "node:process";
+import path from "node:path";
 import child_process, { execSync } from "node:child_process";
 import chalk from "chalk";
 import prompts from "prompts";
 import { version, globalConfigDir } from "../mops.js";
 import { cleanCache } from "../cache.js";
-import { classifySelfUpdate } from "../helpers/self-update-kind.js";
+import {
+  classifySelfUpdate,
+  parseCliVersion,
+} from "../helpers/self-update-kind.js";
 import { CliError, cliAbort, cliError } from "../error.js";
 
 let url = "https://x344g-ziaaa-aaaap-abl7a-cai.icp0.io";
 
-function detectPackageManager() {
+// The `mops` the shell resolves — the one an update has to end up replacing.
+function detectMopsBinary() {
   let res = "";
   try {
-    res = execSync("which mops").toString();
+    res = execSync("which mops").toString().trim();
   } catch (e) {}
   if (!res) {
     cliError("Couldn't detect package manager");
   }
-  if (res.includes("pnpm/")) {
+  return res;
+}
+
+function detectPackageManager(bin: string) {
+  if (bin.includes("pnpm/")) {
     return "pnpm";
   }
-  // else if (res.includes('bun/')) {
+  // else if (bin.includes('bun/')) {
   // 	return 'bun';
   // }
   else {
     return "npm";
+  }
+}
+
+function installedVersion(bin: string) {
+  try {
+    return parseCliVersion(
+      execSync(`"${bin}" --version`, {
+        stdio: ["ignore", "pipe", "ignore"],
+      }).toString(),
+    );
+  } catch (e) {
+    return "";
+  }
+}
+
+// Where the package manager links `mops`; when it is not the directory of
+// the `mops` on PATH, the update went somewhere the shell never looks.
+function globalBinDir(pm: string) {
+  try {
+    let out = execSync(pm === "pnpm" ? "pnpm bin -g" : "npm prefix -g", {
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+    return pm === "pnpm" ? out : path.join(out, "bin");
+  } catch (e) {
+    return "";
   }
 }
 
@@ -93,12 +129,26 @@ export async function update({ major = false } = {}) {
       return;
     }
 
-    console.log("Updating to version: " + chalk.green(latest));
+    let bin = detectMopsBinary();
+    // `add -g` cannot reach a project dependency, which is what `npx mops` or
+    // an `npm run` script puts first on PATH via `node_modules/.bin`.
+    if (bin.includes("/node_modules/.bin/")) {
+      cliError(
+        `mops self update manages a global install, but ${chalk.yellow(bin)} is a project dependency.\n` +
+          `Update it with ${chalk.green(`npm i -D ic-mops@${latest}`)} instead.`,
+      );
+    }
+    let pm = detectPackageManager(bin);
 
-    let pm = detectPackageManager();
+    console.log("Updating to version: " + chalk.green(latest));
     // Not `--silent`: that suppresses npm's own error output too, leaving
     // "Failed to update." as the only clue to why.
-    let npmArgs = pm === "npm" ? ["--no-fund", "--loglevel=error"] : [];
+    // npm 12 refuses remote tarballs by default (`allow-remote=none`);
+    // `root` admits only the top-level one. Older npm accepts the flag too.
+    let npmArgs =
+      pm === "npm"
+        ? ["--no-fund", "--loglevel=error", "--allow-remote=root"]
+        : [];
 
     await new Promise<void>((resolve, reject) => {
       let proc = child_process.spawn(
@@ -112,10 +162,40 @@ export async function update({ major = false } = {}) {
           reject(new CliError("Failed to update."));
           return;
         }
-        console.log(chalk.green("Success"));
         resolve();
       });
     });
+
+    // A zero exit only means the package manager installed into its own
+    // global prefix. When another install of `mops` shadows that prefix on
+    // PATH (bun, Volta, a second Node), the shell keeps running the old
+    // version — so check the binary the shell actually resolves.
+    let after = detectMopsBinary();
+    let installed = installedVersion(after);
+    if (installed !== latest) {
+      let binDir = globalBinDir(pm);
+      let state = installed
+        ? `is still ${installed}`
+        : "did not report a version";
+      let hint =
+        binDir && binDir !== path.dirname(after)
+          ? `${pm} installs to ${chalk.yellow(binDir)} (${pm === "pnpm" ? "pnpm bin -g" : "npm prefix -g"}). Put it first in PATH or remove the other install, then run ${chalk.green("mops self update")} again.`
+          : `${pm} reported success without replacing it. Reinstall with ${chalk.green("curl -fsSL cli.mops.one/install.sh | sh")}.`;
+      cliError(
+        `Failed to update: ${pm} installed ${latest}, but ${chalk.yellow(after)} on your PATH ${state}.\n${hint}`,
+      );
+    }
+    // The update landed earlier on PATH than the copy that was running (two
+    // nvm Node versions, say). It wins from now on, but zsh caches command
+    // locations, so the current shell may keep reporting the old one.
+    if (after !== bin) {
+      console.log(
+        chalk.yellow(
+          `mops now runs from ${after}. The previous install at ${bin} is still there; remove it, and run ${chalk.green("hash -r")} if this shell still reports ${current}.`,
+        ),
+      );
+    }
+    console.log(chalk.green("Success"));
   }
 }
 
@@ -124,7 +204,7 @@ export async function uninstall() {
   cleanCache();
 
   console.log("Uninstalling mops CLI...");
-  let pm = detectPackageManager();
+  let pm = detectPackageManager(detectMopsBinary());
   child_process.spawn(pm, ["remove", "-g", "--silent", "ic-mops"], {
     stdio: "inherit",
     detached: false,
