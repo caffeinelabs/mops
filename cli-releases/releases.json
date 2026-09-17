@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "3.2.2"
+    "latest": "3.2.3"
   },
   "versions": {
     "0.41.0": {
@@ -608,6 +608,14 @@
       "commitHash": "6dd67c0c92ff4df601dde93bfaa11e642ad560b2",
       "url": "https://cli.mops.one/versions/3.2.2.tgz",
       "hash": "c7dbfc881985f8e13a6908da170ac74f4316884432697b9715d6684a5a9282a4"
+    },
+    "3.2.3": {
+      "time": 1789645598582,
+      "size": 2394411,
+      "relseaseNotes": "* A `mops.lock` missing a transitive dependency is now treated as stale instead of accepted as fresh. A lock-driven install takes the lock's `deps` as the complete list and resolves nothing, so a transitive package dropped from it — a botched merge, a hand edit that took its `hashes` entry along — passed every freshness check, was never installed, and the build failed on the import. The lock's own `graph` section records what each locked package declares (and a local `path` dependency's `mops.toml` is on disk), so `deps` is now checked for closure under those edges, offline. Plain `mops install` re-resolves and repairs the lock; `--locked` fails with `mops.lock does not lock every transitive dependency` naming the package and the missing dependency; `mops verify` reports it; `mops sources` re-resolves instead of handing `moc` the truncated package list. Locks written by a CLI that predates `graph` carry no edges to check, so they are unaffected.\n* `mops self update` no longer prints `Success` when the update did not take effect. It trusted the package manager's exit code, but `npm add -g` installs into npm's own global prefix — when another `mops` install (bun, Volta, a second Node) shadows that prefix on PATH, the shell kept running the old version after a \"successful\" update. It now checks the version the `mops` on PATH reports and fails when it still reports the old one, naming the stale binary and where the package manager installs (`npm prefix -g`). When the update lands earlier on PATH than the copy that was running (two nvm Node versions, say), it succeeds and names the leftover copy, with a `hash -r` hint for a shell that still reports the old version. A project-local `ic-mops` (`node_modules/.bin/mops`, as under `npx mops self update`) was never reachable by the global install either; it is now refused up front with `npm i -D ic-mops@<version>` as the fix.\n* `mops self update` and `cli.mops.one/install.sh` work on npm 12, which refuses remote tarballs by default (`EALLOWREMOTE`, `allow-remote=none`). Both now pass `--allow-remote=root`, which admits only the top-level tarball; npm 10 and 11 accept the flag as well.\n",
+      "commitHash": "87239126f99a12c0c991d5a05e39ec7ef20a59f8",
+      "url": "https://cli.mops.one/versions/3.2.3.tgz",
+      "hash": "ac9e57986191ec5dd010b1225d0c5678949a7e7f3f1a3069cb2723f549eba3df"
     }
   }
 }
