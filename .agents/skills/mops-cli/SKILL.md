@@ -250,6 +250,10 @@ mops sync --dry-run       # print what would change, write nothing
 
 ## Other Commands
 
+### `mops self update`
+
+Updates a global install (npm/pnpm `-g`) only, and fails if the `mops` on PATH did not end up on the new version. For `ic-mops` as a project dependency, run `npm i -D ic-mops@<version>` instead.
+
 ### `mops publish`
 
 ```bash
