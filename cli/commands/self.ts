@@ -170,18 +170,29 @@ export async function update({ major = false } = {}) {
     // global prefix. When another install of `mops` shadows that prefix on
     // PATH (bun, Volta, a second Node), the shell keeps running the old
     // version — so check the binary the shell actually resolves.
-    let installed = installedVersion(bin);
+    let after = detectMopsBinary();
+    let installed = installedVersion(after);
     if (installed !== latest) {
       let binDir = globalBinDir(pm);
       let state = installed
         ? `is still ${installed}`
         : "did not report a version";
       let hint =
-        binDir && binDir !== path.dirname(bin)
+        binDir && binDir !== path.dirname(after)
           ? `${pm} installs to ${chalk.yellow(binDir)} (${pm === "pnpm" ? "pnpm bin -g" : "npm prefix -g"}). Put it first in PATH or remove the other install, then run ${chalk.green("mops self update")} again.`
           : `${pm} reported success without replacing it. Reinstall with ${chalk.green("curl -fsSL cli.mops.one/install.sh | sh")}.`;
       cliError(
-        `Failed to update: ${pm} installed ${latest}, but ${chalk.yellow(bin)} on your PATH ${state}.\n${hint}`,
+        `Failed to update: ${pm} installed ${latest}, but ${chalk.yellow(after)} on your PATH ${state}.\n${hint}`,
+      );
+    }
+    // The update landed earlier on PATH than the copy that was running (two
+    // nvm Node versions, say). It wins from now on, but zsh caches command
+    // locations, so the current shell may keep reporting the old one.
+    if (after !== bin) {
+      console.log(
+        chalk.yellow(
+          `mops now runs from ${after}. The previous install at ${bin} is still there; remove it, and run ${chalk.green("hash -r")} if this shell still reports ${current}.`,
+        ),
       );
     }
     console.log(chalk.green("Success"));
