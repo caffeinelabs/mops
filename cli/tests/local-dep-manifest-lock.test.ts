@@ -157,11 +157,8 @@ describe("local path dependency manifests keep mops.lock honest", () => {
     expect(result.stderr).not.toMatch(/RangeError|Maximum call stack/);
   });
 
-  // `localDepsHash` says the manifests have not changed since the lock was
-  // written; it says nothing about whether `deps` still lists what they
-  // declare. A path dep's transitive dependency dropped from `deps` by hand
-  // is caught by reading the manifest, the same way `graph` covers registry
-  // packages (see locked.test.ts).
+  // `localDepsHash` only says the manifests have not changed since the lock was written, not whether `deps` still lists
+  // what they declare, so the manifest is read to cover a path dep the way `graph` covers registry packages (see locked.test.ts).
   test("a lock missing a path dependency's own dependency is stale", async () => {
     const cwd = makeProject({
       "mops.toml": '[dependencies]\nlib = "./lib"\n',

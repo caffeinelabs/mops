@@ -336,12 +336,8 @@ function inspectLockFile(): LockDefect | null {
     }
   }
 
-  // `deps` must be closed under the edges the lock itself records: a lock-driven
-  // install takes `deps` as the complete list and resolves nothing, so a
-  // transitive package dropped from it (a botched merge, a hand edit that also
-  // took its `hashes` entry) is simply never installed, and the build fails on
-  // the import instead. The two checks above cannot see it — the root deps are
-  // all pinned and `deps` / `hashes` agree — but `graph` can.
+  // A transitive package dropped from `deps` (and from `hashes` with it, as a botched merge leaves it) passes both checks above,
+  // and a lock-driven install resolves nothing, so it is simply never installed. The edges `graph` records catch it offline.
   let closureProblem = checkLockedClosure(lock);
   if (closureProblem) {
     return { kind: "transitive-missing", detail: closureProblem };
@@ -573,19 +569,15 @@ function checkLockedGithubDeps(lock: LockFileV3): string | null {
   return null;
 }
 
-// Offline closure of `deps` under the declared edges of what it locks. The
-// walk that wrote the lock put every dependency of every reachable winner into
-// `deps` (keyed by the declaring manifest's own key, aliases included), so a
-// name an edge points at that `deps` no longer has can only mean the entry was
-// removed after the fact. Versions are not compared: an edge names what the
-// package asked for, `deps` records which version of that name won.
+// Offline closure of `deps` under the edges the lock records.
 //
-// Registry packages contribute the edges `graph` recorded for them; a package
-// with no entry (a pre-graph lock, or one declaring a local `path` dep, which
-// is never recorded) is skipped rather than guessed at. Local `path` deps are
-// live directories, so their manifest is read from disk — `localDepsHash`
-// already reads exactly these files, and a manifest that is missing or fails
-// to parse is left to resolution, which reports it properly.
+// The walk that wrote the lock put every dependency of every reachable winner into `deps`, keyed by the declaring manifest's own key,
+// so an edge naming something `deps` lacks means the entry was removed afterwards. Versions are not compared:
+// an edge names what the package asked for, `deps` records which version of that name won.
+// Registry packages contribute the edges `graph` recorded for them; a package with no entry (a pre-graph lock,
+// or one declaring a local `path` dep, which is never recorded) is skipped rather than guessed at.
+// Local `path` deps are live directories, so their manifest is read from disk, the same files `localDepsHash` reads;
+// a manifest that is missing or fails to parse is left to resolution, which reports it properly.
 function checkLockedClosure(lock: LockFileV3): string | null {
   let graph = lockFileGraph(lock);
   let rootDir = getRootDir();

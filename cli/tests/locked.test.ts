@@ -360,12 +360,8 @@ describe("--locked", () => {
   });
 });
 
-// A lock-driven install takes `deps` as the complete list and resolves nothing,
-// so a transitive package that fell out of `deps` — and out of `hashes` with it,
-// which is what a botched merge or a hand edit leaves — used to pass every
-// freshness check and simply never get installed; the build then failed on the
-// import. The lock's own `graph` records what each package declares, which is
-// enough to notice offline.
+// A transitive package dropped from `deps` and `hashes` together, as a botched merge leaves them, must not pass as fresh:
+// a lock-driven install resolves nothing, so the package would never be installed and the build would fail on the import.
 describe("a lock missing a transitive dependency", () => {
   jest.setTimeout(180_000);
 
@@ -381,9 +377,8 @@ describe("a lock missing a transitive dependency", () => {
 
   const readLock = () => JSON.parse(readFileSync(lockFile, "utf8"));
 
-  // Install, then drop the transitive package from the lock the way a merge
-  // resolution would: its `deps` entry and its `hashes` entry together, so the
-  // structural deps/hashes check has nothing to object to.
+  // Drops the transitive package the way a merge resolution would: `deps` and `hashes` entries together,
+  // so the structural deps/hashes check has nothing to object to.
   const installAndTruncate = async () => {
     const result = await cli(["install"], { cwd, env: { CI: undefined } });
     expect(result.exitCode).toBe(0);
@@ -444,8 +439,7 @@ describe("a lock missing a transitive dependency", () => {
     }
   });
 
-  // `mops sources` never writes the lock, so it must not hand moc the
-  // truncated package list either.
+  // `mops sources` never writes the lock, so it must not hand moc the truncated package list either.
   test("mops sources does not serve the truncated lock", async () => {
     cleanup();
     try {
