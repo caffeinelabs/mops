@@ -204,7 +204,9 @@ export async function testWithReporter(
   maxMocExit = 0;
   let rootDir = getRootDir();
   let files: string[] = [];
-  let libFiles = globSync("**/test?(s)/lib.mo", MOTOKO_GLOB_CONFIG);
+  let libFiles = globSync("**/test?(s)/lib.mo", MOTOKO_GLOB_CONFIG).filter(
+    (file) => !isNestedCheckout(file, rootDir),
+  );
   if (libFiles[0]) {
     files = [libFiles[0]];
   } else {
