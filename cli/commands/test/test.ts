@@ -204,9 +204,12 @@ export async function testWithReporter(
   maxMocExit = 0;
   let rootDir = getRootDir();
   let files: string[] = [];
-  let libFiles = globSync("**/test?(s)/lib.mo", MOTOKO_GLOB_CONFIG).filter(
-    (file) => !isNestedCheckout(file, rootDir),
-  );
+  // Anchored to the project root, not cwd: a cwd-relative result would resolve
+  // against the wrong base in `isNestedCheckout` when run from a subdirectory.
+  let libFiles = globSync(
+    path.join(rootDir, "**/test?(s)/lib.mo"),
+    MOTOKO_GLOB_CONFIG,
+  ).filter((file) => !isNestedCheckout(file, rootDir));
   if (libFiles[0]) {
     files = [libFiles[0]];
   } else {

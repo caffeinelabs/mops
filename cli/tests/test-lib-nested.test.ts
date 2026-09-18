@@ -16,17 +16,22 @@ describe("test lib.mo discovery", () => {
     path.join(import.meta.dirname, "test-lib-nested"),
   );
 
+  // The nested checkout sits under `src/`, alongside `src/test/`, so a
+  // cwd-relative `lib.mo` glob still sees it when the command runs from `src`.
   const makeProject = async ({ ownLib }: { ownLib: boolean }) => {
     let cwd = await makeTempFixture("nested-lib");
-    fs.mkdirSync(path.join(cwd, "worktree/test"), { recursive: true });
-    fs.writeFileSync(path.join(cwd, "worktree/.git"), "gitdir: /elsewhere\n");
-    fs.writeFileSync(
-      path.join(cwd, "worktree/test/lib.mo"),
+    let write = (file: string, contents: string) => {
+      fs.mkdirSync(path.dirname(path.join(cwd, file)), { recursive: true });
+      fs.writeFileSync(path.join(cwd, file), contents);
+    };
+    write("src/worktree/.git", "gitdir: /elsewhere\n");
+    write(
+      "src/worktree/test/lib.mo",
       'import Prim "mo:prim";\nPrim.debugPrint("copy ran");\nassert 1 == 1;\n',
     );
     if (ownLib) {
-      fs.writeFileSync(
-        path.join(cwd, "test/lib.mo"),
+      write(
+        "src/test/lib.mo",
         'import Prim "mo:prim";\nPrim.debugPrint("own lib ran");\nassert 1 == 1;\n',
       );
     }
@@ -36,6 +41,18 @@ describe("test lib.mo discovery", () => {
   test("a nested worktree's lib.mo does not hijack the run", async () => {
     let cwd = await makeProject({ ownLib: false });
     let result = await cli(["test"], { cwd });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/own ran/);
+    expect(result.stdout).not.toMatch(/copy ran/);
+  });
+
+  // The `lib.mo` glob returned cwd-relative paths, so running from a
+  // subdirectory that contains the nested checkout resolved them against the
+  // wrong base and the copy won the short-circuit.
+  test("run from a subdirectory does not resurrect the hijack", async () => {
+    let cwd = await makeProject({ ownLib: false });
+    let result = await cli(["test"], { cwd: path.join(cwd, "src") });
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/own ran/);
