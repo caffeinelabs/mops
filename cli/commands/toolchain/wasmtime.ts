@@ -37,6 +37,7 @@ export let isCached = (version: string) => {
   let dir = path.join(cacheDir, version);
   return fs.existsSync(dir) && fs.existsSync(path.join(dir, "wasmtime"));
 };
+
 export let download = async (
   version: string,
   { silent = false, verbose = false } = {},

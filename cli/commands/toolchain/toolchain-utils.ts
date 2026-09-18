@@ -12,9 +12,14 @@ import { extract as extractTar } from "tar";
 
 import { commitStagingDir, createStagingDir } from "../../cache.js";
 import { cliError } from "../../error.js";
-import { releaseRows, releaseTags, type ReleaseInfo } from "./release-tags.js";
+import {
+  releaseRows,
+  releaseTags,
+  type ReleaseFilter,
+  type ReleaseInfo,
+} from "./release-tags.js";
 
-export type { ReleaseInfo } from "./release-tags.js";
+export type { ReleaseFilter, ReleaseInfo } from "./release-tags.js";
 export { releaseTags, releaseRows, sortReleaseTags } from "./release-tags.js";
 
 export const TOOLCHAINS = [
@@ -164,11 +169,9 @@ let acquireInstallLock = async (destDir: string, label: string) => {
   }
 };
 
-export type ReleaseTagOptions = {
+export type ReleaseTagOptions = ReleaseFilter & {
+  /** Fetch every release page instead of the first page only. */
   all?: boolean;
-  prerelease?: boolean;
-  /** Tags to drop from every path: not versions, and not flagged by GitHub. */
-  exclude?: string[];
 };
 
 let withExclusions = (tags: string[], exclude?: string[]): string[] => {

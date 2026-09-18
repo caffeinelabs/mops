@@ -7,6 +7,12 @@ export type ReleaseInfo = {
   draft: boolean;
 };
 
+/** Which releases to list. `exclude` drops tags GitHub does not flag. */
+export type ReleaseFilter = {
+  prerelease?: boolean;
+  exclude?: string[];
+};
+
 export let sortReleaseTags = (tags: string[]): string[] => {
   return [...tags].sort((a, b) => {
     try {
@@ -21,10 +27,7 @@ export let sortReleaseTags = (tags: string[]): string[] => {
 // the repo's own maintainers. Callers only choose whether prereleases show.
 let filterReleases = (
   releases: ReleaseInfo[],
-  {
-    prerelease = false,
-    exclude,
-  }: { prerelease?: boolean; exclude?: string[] } = {},
+  { prerelease = false, exclude }: ReleaseFilter = {},
 ): ReleaseInfo[] => {
   return releases.filter(
     (release) =>
@@ -37,7 +40,7 @@ let filterReleases = (
 /** Tags matching what `mops toolchain update` would resolve to, newest first. */
 export let releaseTags = (
   releases: ReleaseInfo[],
-  options?: { prerelease?: boolean; exclude?: string[] },
+  options?: ReleaseFilter,
 ): string[] => {
   return sortReleaseTags(
     filterReleases(releases, options).map((release) => release.tag_name),
@@ -47,7 +50,7 @@ export let releaseTags = (
 /** Tags in GitHub publish order, for display. */
 export let releaseRows = (
   releases: ReleaseInfo[],
-  options?: { prerelease?: boolean; exclude?: string[] },
+  options?: ReleaseFilter,
 ): ReleaseInfo[] => {
   let kept = new Set(filterReleases(releases, options).map((r) => r.tag_name));
   return releases.filter((release) => kept.has(release.tag_name));
