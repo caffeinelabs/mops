@@ -244,9 +244,8 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
 
   let prerelease = options.prerelease ?? false;
 
-  // Tags come from the module's `getReleaseTags`, so each tool owns its own
-  // tag shape in one place: `wasm-opt` normalizes `version_131` into pin form,
-  // `wasmtime` drops its floating `dev` tag, the rest pass through.
+  // Each tool module owns its tag shape, so `wasm-opt`'s `version_131` and
+  // `wasmtime`'s `dev` are fixed up in one place rather than here.
   if (options.versions) {
     let { tags } = await toolUtils.getReleaseTags({
       all: options.all,
@@ -258,14 +257,13 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
     return;
   }
 
-  // Preview only, so the list is capped: a short history plus the latest line.
+  // Capped: a short history plus the `latest` line.
   let { tags, truncated, publishedLatest } = await toolUtils.getReleaseTags({
     prerelease,
   });
   tags = tags.slice(0, 100);
 
-  let latest =
-    publishedLatest ?? (await toolUtils.getLatestReleaseTag({ prerelease }));
+  let latest = publishedLatest;
 
   let configFile = getClosestConfigFile();
   let pinned = configFile

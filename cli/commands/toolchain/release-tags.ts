@@ -21,17 +21,23 @@ export let sortReleaseTags = (tags: string[]): string[] => {
 // the repo's own maintainers. Callers only choose whether prereleases show.
 let filterReleases = (
   releases: ReleaseInfo[],
-  { prerelease = false } = {},
+  {
+    prerelease = false,
+    exclude,
+  }: { prerelease?: boolean; exclude?: string[] } = {},
 ): ReleaseInfo[] => {
   return releases.filter(
-    (release) => !release.draft && (prerelease || !release.prerelease),
+    (release) =>
+      !release.draft &&
+      (prerelease || !release.prerelease) &&
+      !exclude?.includes(release.tag_name),
   );
 };
 
 /** Tags matching what `mops toolchain update` would resolve to, newest first. */
 export let releaseTags = (
   releases: ReleaseInfo[],
-  options?: { prerelease?: boolean },
+  options?: { prerelease?: boolean; exclude?: string[] },
 ): string[] => {
   return sortReleaseTags(
     filterReleases(releases, options).map((release) => release.tag_name),
@@ -41,7 +47,7 @@ export let releaseTags = (
 /** Tags in GitHub publish order, for display. */
 export let releaseRows = (
   releases: ReleaseInfo[],
-  options?: { prerelease?: boolean },
+  options?: { prerelease?: boolean; exclude?: string[] },
 ): ReleaseInfo[] => {
   let kept = new Set(filterReleases(releases, options).map((r) => r.tag_name));
   return releases.filter((release) => kept.has(release.tag_name));

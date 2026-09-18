@@ -2,8 +2,9 @@
 
 ## Next
 - `mops toolchain use <tool>` no longer offers prereleases in its version picker. The picker listed raw GitHub releases, so draft and prerelease tags appeared alongside real ones — internal branch builds like `1.15.1-dedup-stable-types-3` and `2.0.0-beta.0` for `moc`. Prereleases are now excluded by default, matching what `mops toolchain update` and `mops toolchain use <tool> latest` already resolved to. Opt back in with `mops toolchain use <tool> --prerelease`, which also lets `latest` resolve to a prerelease.
-- `mops toolchain info <tool> --versions` gains `--prerelease` to include prereleases. Without it, the listing is stable-only, including the preview and `latest` line in `mops toolchain info <tool>`.
-- `wasmtime`'s floating `dev` tag is no longer listed anywhere. GitHub does not flag it as a prerelease, but it is not a version, so it is excluded by name from pickers, `latest` and `--versions`.
+- `mops toolchain info <tool>` gains `--prerelease` to include prereleases in the version history and in the `latest` line. Without it both are stable-only, as before.
+- `wasmtime`'s floating `dev` tag is no longer listed anywhere — picker, `latest`, or `--versions`. GitHub does not flag it as a prerelease, but it is not a version, so it is excluded by name.
+- `mops toolchain use` and `mops toolchain info` read releases through the paginated fetcher instead of a single unpaged request, which GitHub caps at 1000 releases. No behaviour change for the tools shipped today.
 
 
 ## 3.2.3

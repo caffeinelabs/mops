@@ -167,6 +167,14 @@ let acquireInstallLock = async (destDir: string, label: string) => {
 export type ReleaseTagOptions = {
   all?: boolean;
   prerelease?: boolean;
+  /** Tags to drop from every path: not versions, and not flagged by GitHub. */
+  exclude?: string[];
+};
+
+let withExclusions = (tags: string[], exclude?: string[]): string[] => {
+  return exclude && exclude.length > 0
+    ? tags.filter((tag) => !exclude.includes(tag))
+    : tags;
 };
 
 export type ReleaseTagsResult = {
@@ -174,9 +182,8 @@ export type ReleaseTagsResult = {
   /** True when only the first page was fetched and GitHub may have more. */
   truncated: boolean;
   /**
-   * The tag `mops toolchain update` would resolve to — the newest by semver, not
-   * by publish order. Modules that filter tags must supply this themselves, so
-   * it can never disagree with `tags`.
+   * First tag in GitHub publish order, matching `getLatestReleaseTag`. Modules
+   * that filter `tags` further must drop it too, or the two disagree.
    */
   publishedLatest?: string;
 };
@@ -238,23 +245,24 @@ let fetchReleasePages = async (
 /** Release tags, newest first. Default: first GitHub page only. */
 export let getReleaseTags = async (
   repo: string,
-  { all = false, prerelease = false }: ReleaseTagOptions = {},
+  { all = false, prerelease = false, exclude }: ReleaseTagOptions = {},
 ): Promise<ReleaseTagsResult> => {
   let { releases, truncated } = await fetchReleasePages(repo, {
     maxPages: all ? undefined : 1,
   });
+  let rows = releaseRows(releases, { prerelease, exclude });
   return {
-    tags: releaseTags(releases, { prerelease }),
+    tags: withExclusions(releaseTags(releases, { prerelease }), exclude),
     truncated: all ? false : truncated,
-    // GitHub publish order, matching `getLatestReleaseTag`. Callers that filter
-    // `tags` further must drop it too, or the two disagree.
-    publishedLatest: releaseRows(releases, { prerelease })[0]?.tag_name,
+    // Derived from the same filtered rows, so it can never name a tag that
+    // `tags` leaves out.
+    publishedLatest: rows[0]?.tag_name,
   };
 };
 
 export let getLatestReleaseTag = async (
   repo: string,
-  { prerelease = false } = {},
+  { prerelease = false, exclude }: ReleaseTagOptions = {},
 ): Promise<string> => {
   let octokit = new Octokit();
 
@@ -273,8 +281,12 @@ export let getLatestReleaseTag = async (
       break;
     }
     for (let release of res.data) {
+      let tag = release.tag_name.replace(/^v/, "");
+      if (exclude?.includes(tag)) {
+        continue;
+      }
       if (!release.draft && (prerelease || !release.prerelease)) {
-        return release.tag_name.replace(/^v/, "");
+        return tag;
       }
     }
     if (res.data.length < 100) {
@@ -291,17 +303,10 @@ export let getLatestReleaseTag = async (
  */
 export let getReleases = async (
   repo: string,
-  { prerelease = false } = {},
+  { prerelease = false, exclude }: ReleaseTagOptions = {},
 ): Promise<ReleaseInfo[]> => {
-  let octokit = new Octokit();
-  let res = await octokit.request(`GET /repos/${repo}/releases`, {
-    per_page: 100,
-    headers: {
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-  });
-  if (res.status !== 200) {
-    cliError("Releases fetch error");
-  }
-  return releaseRows(res.data.map(mapRelease), { prerelease });
+  // One page via `fetchReleasePages`, matching what `info` previews. A bare
+  // unpaged request reads the same page but stops at GitHub's 1000-release cap.
+  let { releases } = await fetchReleasePages(repo, { maxPages: 1 });
+  return releaseRows(releases, { prerelease, exclude });
 };

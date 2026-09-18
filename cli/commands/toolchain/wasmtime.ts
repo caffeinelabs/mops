@@ -10,29 +10,27 @@ let cacheDir = path.join(globalCacheDir, "wasmtime");
 
 export let repo = "bytecodealliance/wasmtime";
 
+/**
+ * `wasmtime` publishes a floating `dev` tag that GitHub does not flag as a
+ * prerelease and that is not a version, so it is excluded by name everywhere.
+ */
+let devTag = ["dev"];
+
 export let getLatestReleaseTag = async ({ prerelease = false } = {}) => {
-  return toolchainUtils.getLatestReleaseTag(repo, { prerelease });
+  return toolchainUtils.getLatestReleaseTag(repo, {
+    prerelease,
+    exclude: devTag,
+  });
 };
 
 export let getReleases = async ({ prerelease = false } = {}) => {
-  return toolchainUtils.getReleases(repo, { prerelease });
+  return toolchainUtils.getReleases(repo, { prerelease, exclude: devTag });
 };
 
-/**
- * `wasmtime` publishes a floating `dev` tag that GitHub does not flag as a
- * prerelease and that is not a version. Excluded by name; every other tag is a
- * real release.
- */
 export let getReleaseTags = async (
   options: toolchainUtils.ReleaseTagOptions = {},
 ) => {
-  let res = await toolchainUtils.getReleaseTags(repo, options);
-  return {
-    ...res,
-    tags: res.tags.filter((tag) => tag !== "dev"),
-    publishedLatest:
-      res.publishedLatest === "dev" ? undefined : res.publishedLatest,
-  };
+  return toolchainUtils.getReleaseTags(repo, { ...options, exclude: devTag });
 };
 
 export let isCached = (version: string) => {
