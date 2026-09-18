@@ -1,9 +1,9 @@
 # Mops CLI Changelog
 
 ## Next
-- `mops toolchain use <tool>` no longer offers prereleases in its version picker. The picker listed raw GitHub releases, so draft and prerelease tags appeared alongside real ones — internal branch builds like `1.15.1-dedup-stable-types-3` and `2.0.0-beta.0` for `moc`, and the floating `dev` tag for `wasmtime`. Prereleases are now excluded by default, matching what `mops toolchain update` and `mops toolchain use <tool> latest` already resolved to. Opt back in with `mops toolchain use <tool> --prerelease`, which also lets `latest` resolve to a prerelease.
-- `mops toolchain info <tool> --versions` gains `--prerelease` to include prereleases. The preview and `latest` line in `mops toolchain info <tool>` are stable-only, as before.
-- `mops toolchain info <tool>` no longer lists `wasmtime`'s `dev` tag, which GitHub does not flag as a prerelease but which is not a version.
+- `mops toolchain use <tool>` no longer offers prereleases in its version picker. The picker listed raw GitHub releases, so draft and prerelease tags appeared alongside real ones — internal branch builds like `1.15.1-dedup-stable-types-3` and `2.0.0-beta.0` for `moc`. Prereleases are now excluded by default, matching what `mops toolchain update` and `mops toolchain use <tool> latest` already resolved to. Opt back in with `mops toolchain use <tool> --prerelease`, which also lets `latest` resolve to a prerelease.
+- `mops toolchain info <tool> --versions` gains `--prerelease` to include prereleases. Without it, the listing is stable-only, including the preview and `latest` line in `mops toolchain info <tool>`.
+- `wasmtime`'s floating `dev` tag is no longer listed anywhere. GitHub does not flag it as a prerelease, but it is not a version, so it is excluded by name from pickers, `latest` and `--versions`.
 
 
 ## 3.2.3

@@ -936,7 +936,7 @@ toolchainCommand
   )
   .option(
     "--prerelease",
-    "Include prereleases in the picker and in what `latest` resolves to",
+    "Include prereleases in the picker, and let `latest` resolve to one",
   )
   .action(async (tool, version, options) => {
     checkConfigFile();
@@ -973,7 +973,7 @@ toolchainCommand
   )
   .option(
     "--prerelease",
-    "Include prereleases, in the picker, in `latest` and in --versions",
+    "With --versions, include prereleases instead of stable releases only",
   )
   .action(async (tool: Tool, options) => {
     await toolchain.info(tool, options);

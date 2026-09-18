@@ -35,16 +35,16 @@ export let getReleases = async ({ prerelease = false } = {}): Promise<
   }));
 };
 
-/** `--versions` tags, normalized into the `131` form mops pins. */
+/** Tags normalized into the `131` form mops pins, for pickers and `--versions`. */
 export let getReleaseTags = async ({
   all = false,
   prerelease = false,
-}: toolchainUtils.ReleaseTagOptions = {}): Promise<string[]> => {
-  let { tags } = await toolchainUtils.getReleaseTags(repo, {
-    all,
-    prerelease,
-  });
-  return tags.map(normalizeBinaryenVersion);
+}: toolchainUtils.ReleaseTagOptions = {}) => {
+  let res = await toolchainUtils.getReleaseTags(repo, { all, prerelease });
+  return {
+    ...res,
+    tags: res.tags.map(normalizeBinaryenVersion),
+  };
 };
 
 export let isCached = (version: string) => {

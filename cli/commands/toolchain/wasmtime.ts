@@ -19,25 +19,25 @@ export let getReleases = async ({ prerelease = false } = {}) => {
 };
 
 /**
- * `wasmtime` publishes a floating, non-version tag `dev` that GitHub does not
- * flag as a prerelease. Excluded by name; everything else is a real release.
+ * `wasmtime` publishes a floating `dev` tag that GitHub does not flag as a
+ * prerelease and that is not a version. Excluded by name; every other tag is a
+ * real release.
  */
 export let getReleaseTags = async ({
   all = false,
   prerelease = false,
-}: toolchainUtils.ReleaseTagOptions = {}): Promise<string[]> => {
-  let { tags } = await toolchainUtils.getReleaseTags(repo, {
-    all,
-    prerelease,
-  });
-  return tags.filter((tag) => tag !== "dev");
+}: toolchainUtils.ReleaseTagOptions = {}) => {
+  let res = await toolchainUtils.getReleaseTags(repo, { all, prerelease });
+  return {
+    ...res,
+    tags: res.tags.filter((tag) => tag !== "dev"),
+  };
 };
 
 export let isCached = (version: string) => {
   let dir = path.join(cacheDir, version);
   return fs.existsSync(dir) && fs.existsSync(path.join(dir, "wasmtime"));
 };
-
 export let download = async (
   version: string,
   { silent = false, verbose = false } = {},

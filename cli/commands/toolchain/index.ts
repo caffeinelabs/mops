@@ -20,7 +20,6 @@ import * as wasmOpt from "./wasm-opt.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
 import { cliError } from "../../error.js";
 import { getPocketIcUrl } from "../../helpers/pocket-ic-startup.js";
-import * as toolchainUtils from "./toolchain-utils.js";
 import { RECOMMENDED_POCKET_IC_VERSION } from "./pocket-ic-versions.js";
 import type { ReleaseInfo } from "./release-tags.js";
 import { normalizeBinaryenVersion } from "../../helpers/binaryen-version.js";
@@ -242,16 +241,6 @@ async function update(tool?: Tool) {
   }
 }
 
-function hasReleaseTags(
-  toolUtils: ReturnType<typeof getToolUtils>,
-): toolUtils is ReturnType<typeof getToolUtils> & {
-  getReleaseTags: (
-    options: toolchainUtils.ReleaseTagOptions,
-  ) => Promise<string[]>;
-} {
-  return "getReleaseTags" in toolUtils;
-}
-
 async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   let toolUtils = getToolUtils(tool);
 
@@ -261,32 +250,24 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
 
   let prerelease = options.prerelease ?? false;
 
-  // Tags come from the shared fetch path so `--versions` paginates identically
-  // for every tool. Two tools add a `getReleaseTags` override to fix up their
-  // tag shape: `wasm-opt` normalizes `version_131` into pin form, and
-  // `wasmtime` drops its floating `dev` tag because it is not a version. An
-  // override already returns pin-form tags; the shared path needs normalizing.
-  let tags = hasReleaseTags(toolUtils)
-    ? await toolUtils.getReleaseTags({ all: options.all, prerelease })
-    : (
-        await toolchainUtils.getReleaseTags(toolUtils.repo, {
-          all: options.all,
-          prerelease,
-        })
-      ).tags.map((tag) => normalizeReleaseTag(tool, tag));
-
+  // Tags come from the module's `getReleaseTags`, so each tool owns its own
+  // tag shape in one place: `wasm-opt` normalizes `version_131` into pin form,
+  // `wasmtime` drops its floating `dev` tag, the rest pass through.
   if (options.versions) {
+    let { tags } = await toolUtils.getReleaseTags({
+      all: options.all,
+      prerelease,
+    });
     for (let ver of tags) {
       console.log(ver);
     }
     return;
   }
 
-  // First page only — enough for latest + a short history preview.
-  let { truncated, publishedLatest } = await toolchainUtils.getReleaseTags(
-    toolUtils.repo,
-    { prerelease },
-  );
+  // Preview only, so the list is capped: a short history plus the latest line.
+  let { tags, truncated, publishedLatest } = await toolUtils.getReleaseTags({
+    prerelease,
+  });
   tags = tags.slice(0, 100);
 
   let latest = publishedLatest

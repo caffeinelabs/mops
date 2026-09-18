@@ -19,6 +19,12 @@ export let getReleases = async ({ prerelease = false } = {}) => {
   return toolchainUtils.getReleases(repo, { prerelease });
 };
 
+export let getReleaseTags = async (
+  options: toolchainUtils.ReleaseTagOptions = {},
+) => {
+  return toolchainUtils.getReleaseTags(repo, options);
+};
+
 export let isCached = (version: string, filename: "moc" | "moc.js") => {
   let dir = path.join(cacheDir, version);
   return fs.existsSync(dir) && fs.existsSync(path.join(dir, filename));
