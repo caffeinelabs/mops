@@ -36,14 +36,16 @@ export let getReleases = async ({ prerelease = false } = {}): Promise<
 };
 
 /** Tags normalized into the `131` form mops pins, for pickers and `--versions`. */
-export let getReleaseTags = async ({
-  all = false,
-  prerelease = false,
-}: toolchainUtils.ReleaseTagOptions = {}) => {
-  let res = await toolchainUtils.getReleaseTags(repo, { all, prerelease });
+export let getReleaseTags = async (
+  options: toolchainUtils.ReleaseTagOptions = {},
+) => {
+  let res = await toolchainUtils.getReleaseTags(repo, options);
   return {
     ...res,
     tags: res.tags.map(normalizeBinaryenVersion),
+    publishedLatest: res.publishedLatest
+      ? normalizeBinaryenVersion(res.publishedLatest)
+      : undefined,
   };
 };
 

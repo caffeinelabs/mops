@@ -197,8 +197,8 @@ mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
 mops toolchain info <tool>           # show release info (latest, pinned, history)
-mops toolchain info <tool> --versions # list recent stable releases, newest first
-mops toolchain info <tool> --versions --all # full stable history (cache warming)
+mops toolchain info <tool> --versions # list recent releases, newest first
+mops toolchain info <tool> --versions --all # full release history (cache warming)
 mops toolchain info <tool> --versions --prerelease # include prereleases
 mops toolchain bin moc               # print path to binary
 ```

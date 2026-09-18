@@ -173,7 +173,11 @@ export type ReleaseTagsResult = {
   tags: string[];
   /** True when only the first page was fetched and GitHub may have more. */
   truncated: boolean;
-  /** First release in GitHub publish order, if any. */
+  /**
+   * The tag `mops toolchain update` would resolve to — the newest by semver, not
+   * by publish order. Modules that filter tags must supply this themselves, so
+   * it can never disagree with `tags`.
+   */
   publishedLatest?: string;
 };
 
@@ -239,11 +243,12 @@ export let getReleaseTags = async (
   let { releases, truncated } = await fetchReleasePages(repo, {
     maxPages: all ? undefined : 1,
   });
-  let rows = releaseRows(releases, { prerelease });
   return {
     tags: releaseTags(releases, { prerelease }),
     truncated: all ? false : truncated,
-    publishedLatest: rows[0]?.tag_name,
+    // GitHub publish order, matching `getLatestReleaseTag`. Callers that filter
+    // `tags` further must drop it too, or the two disagree.
+    publishedLatest: releaseRows(releases, { prerelease })[0]?.tag_name,
   };
 };
 

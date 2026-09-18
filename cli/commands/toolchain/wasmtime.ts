@@ -23,14 +23,15 @@ export let getReleases = async ({ prerelease = false } = {}) => {
  * prerelease and that is not a version. Excluded by name; every other tag is a
  * real release.
  */
-export let getReleaseTags = async ({
-  all = false,
-  prerelease = false,
-}: toolchainUtils.ReleaseTagOptions = {}) => {
-  let res = await toolchainUtils.getReleaseTags(repo, { all, prerelease });
+export let getReleaseTags = async (
+  options: toolchainUtils.ReleaseTagOptions = {},
+) => {
+  let res = await toolchainUtils.getReleaseTags(repo, options);
   return {
     ...res,
     tags: res.tags.filter((tag) => tag !== "dev"),
+    publishedLatest:
+      res.publishedLatest === "dev" ? undefined : res.publishedLatest,
   };
 };
 

@@ -47,9 +47,10 @@ mops toolchain info moc --versions --all
 
 ### `--prerelease`
 
-With `--versions`, include prereleases instead of listing stable releases only. Drafts are never listed.
+Include prereleases instead of listing stable releases only. Applies to the version history and to the `latest` line. Drafts are never listed.
 
 ```
+mops toolchain info moc --prerelease
 mops toolchain info moc --versions --prerelease
 ```
 

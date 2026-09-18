@@ -22,15 +22,9 @@ import { cliError } from "../../error.js";
 import { getPocketIcUrl } from "../../helpers/pocket-ic-startup.js";
 import { RECOMMENDED_POCKET_IC_VERSION } from "./pocket-ic-versions.js";
 import type { ReleaseInfo } from "./release-tags.js";
-import { normalizeBinaryenVersion } from "../../helpers/binaryen-version.js";
 
 function label(text: string): string {
   return chalk.bold(text.padEnd(16));
-}
-
-/** Map GitHub tags to the pin format stored in mops.toml (Binaryen: `version_131` → `131`). */
-function normalizeReleaseTag(tool: Tool, tag: string): string {
-  return tool === "wasm-opt" ? normalizeBinaryenVersion(tag) : tag;
 }
 
 export interface ToolchainInfoOptions {
@@ -270,9 +264,8 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   });
   tags = tags.slice(0, 100);
 
-  let latest = publishedLatest
-    ? normalizeReleaseTag(tool, publishedLatest)
-    : await toolUtils.getLatestReleaseTag({ prerelease });
+  let latest =
+    publishedLatest ?? (await toolUtils.getLatestReleaseTag({ prerelease }));
 
   let configFile = getClosestConfigFile();
   let pinned = configFile

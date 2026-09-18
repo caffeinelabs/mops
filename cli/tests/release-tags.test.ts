@@ -81,4 +81,23 @@ describe("toolchain release tags", () => {
       releaseRows(releases, { prerelease: true }).map((r) => r.tag_name),
     ).toEqual(["1.0.0"]);
   });
+
+  // `getReleaseTags` derives `publishedLatest` from `releaseRows`, and `latest`
+  // falls back to it. A module that filters `tags` further must drop it too, or
+  // `latest` can name a tag the same command filtered out.
+  test("releaseTags and releaseRows agree on membership", () => {
+    let releases = [
+      release("49.0.0-rc.1", { prerelease: true }),
+      release("48.0.2"),
+      release("dev", { prerelease: true }),
+      release("48.0.1"),
+    ];
+
+    for (let options of [undefined, { prerelease: true }]) {
+      let tags = new Set(releaseTags(releases, options));
+      expect(releaseRows(releases, options).map((r) => r.tag_name)).toEqual(
+        releases.map((r) => r.tag_name).filter((tag) => tags.has(tag)),
+      );
+    }
+  });
 });

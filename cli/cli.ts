@@ -971,10 +971,7 @@ toolchainCommand
     "--all",
     "With --versions, fetch every release page instead of the first page only",
   )
-  .option(
-    "--prerelease",
-    "With --versions, include prereleases instead of stable releases only",
-  )
+  .option("--prerelease", "Include prereleases instead of stable releases only")
   .action(async (tool: Tool, options) => {
     await toolchain.info(tool, options);
   });
