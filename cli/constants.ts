@@ -30,6 +30,10 @@ export const MOTOKO_GLOB_CONFIG = {
   ignore: MOTOKO_IGNORE_PATTERNS,
 };
 
+// Keyed by absolute directory, so one process may serve several projects
+// (`mops check` takes arbitrary file arguments, and a fixture tree holds many
+// mops.toml's) without a verdict leaking between them. A relative key collides:
+// `<rootA>/other` and `<rootB>/other` are the same string.
 const nestedCheckoutCache = new Map<string, boolean>();
 
 /**
@@ -47,16 +51,17 @@ export function isNestedCheckout(absPath: string, rootDir: string): boolean {
     return false;
   }
   let root = path.resolve(rootDir);
-  let dir = absPath;
   // Glob results arrive in two spellings: absolute (a root-prefixed glob) and
   // root-relative (a `cwd`-relative glob). Only the former can be stripped back
   // to a relative path — `path.resolve` would anchor the latter to the process
   // cwd, not the project root.
-  if (dir.startsWith(root + path.sep)) {
-    dir = dir.slice(root.length + 1);
-  }
-  dir = path.dirname(dir);
-  if (!dir || dir === "." || dir.startsWith("..")) {
+  let abs = absPath.startsWith(root + path.sep)
+    ? path.join(root, absPath.slice(root.length + 1))
+    : path.resolve(root, absPath);
+  let dir = path.dirname(abs);
+  let rel = path.relative(root, dir);
+  // Dir at or above the root, or outside it: no strict ancestor to walk.
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) {
     return false;
   }
 
@@ -66,16 +71,16 @@ export function isNestedCheckout(absPath: string, rootDir: string): boolean {
   }
 
   let nested = false;
-  let current = "";
-  for (let part of dir.split(path.sep)) {
+  let current = root;
+  for (let part of rel.split(path.sep)) {
     if (!part || part === ".") {
       continue;
     }
-    current = current ? path.join(current, part) : part;
+    current = path.join(current, part);
     // Memoizing the ancestor answers "is this *directory* a repo root", which
     // makes the walk stop at the first one on every later path.
     let isRepo = nestedCheckoutCache.get(current);
-    if (isRepo ?? fs.existsSync(path.resolve(root, current, ".git"))) {
+    if (isRepo ?? fs.existsSync(path.join(current, ".git"))) {
       nested = true;
       if (isRepo === undefined) {
         nestedCheckoutCache.set(current, true);

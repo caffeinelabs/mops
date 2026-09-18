@@ -67,6 +67,34 @@ describe("isNestedCheckout", () => {
       false,
     );
   });
+
+  // The ancestor memo is keyed by absolute directory. A root-relative key
+  // collides across projects — `<rootA>/other` and `<rootB>/other` are the
+  // same string — and each verdict then leaks into the other tree, dropping
+  // real sources (sticky true) or re-admitting a nested copy (sticky false).
+  test("a verdict does not leak between two project roots", () => {
+    let a = makeProject(["other/.git/HEAD", "src/A.mo"]);
+    let b = makeProject(["other/x.mo", "src/B.mo"]);
+
+    expect(isNestedCheckout(path.join(a, "other/.git/HEAD"), a)).toBe(true);
+    expect(isNestedCheckout(path.join(b, "other/x.mo"), b)).toBe(false);
+    expect(isNestedCheckout(path.join(b, "src/B.mo"), b)).toBe(false);
+
+    // And the inverse order: a memoized `false` must not hide a real repo.
+    let c = makeProject(["src/C.mo"]);
+    let d = makeProject(["src/.git/HEAD", "src/D.mo"]);
+
+    expect(isNestedCheckout(path.join(c, "src/C.mo"), c)).toBe(false);
+    expect(isNestedCheckout(path.join(d, "src/D.mo"), d)).toBe(true);
+  });
+
+  test("absolute and root-relative spellings agree", () => {
+    let root = makeProject(["worktree/.git", "worktree/test/copy.test.mo"]);
+    expect(isNestedCheckout("worktree/test/copy.test.mo", root)).toBe(true);
+    expect(
+      isNestedCheckout(path.join(root, "worktree/test/copy.test.mo"), root),
+    ).toBe(true);
+  });
 });
 
 describe("isIgnoredDir", () => {
