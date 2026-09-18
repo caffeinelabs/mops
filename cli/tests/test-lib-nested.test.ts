@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "@jest/globals";
 import fs from "node:fs";
 import path from "node:path";
 import { useTempFixtures } from "./helpers";
@@ -7,25 +7,34 @@ import { cli } from "./helpers";
 // A `test/lib.mo` short-circuits discovery — it becomes the only file run. It
 // was the one glob left unfiltered, so a nested copy's `lib.mo` hijacked the
 // run and the project's own tests never executed.
+//
+// Both markers are written per-test rather than committed: a `.git` file cannot
+// be stored in git, and a committed `lib.mo` under a `test/` directory would
+// itself short-circuit this repo's own `mops test` at the root.
 describe("test lib.mo discovery", () => {
   const makeTempFixture = useTempFixtures(
     path.join(import.meta.dirname, "test-lib-nested"),
   );
 
-  // A linked worktree's `.git` is a file, which cannot be committed — add the
-  // marker to the scratch copy.
-  const makeProject = async () => {
+  const makeProject = async ({ ownLib }: { ownLib: boolean }) => {
     let cwd = await makeTempFixture("nested-lib");
+    fs.mkdirSync(path.join(cwd, "worktree/test"), { recursive: true });
     fs.writeFileSync(path.join(cwd, "worktree/.git"), "gitdir: /elsewhere\n");
+    fs.writeFileSync(
+      path.join(cwd, "worktree/test/lib.mo"),
+      'import Prim "mo:prim";\nPrim.debugPrint("copy ran");\nassert 1 == 1;\n',
+    );
+    if (ownLib) {
+      fs.writeFileSync(
+        path.join(cwd, "test/lib.mo"),
+        'import Prim "mo:prim";\nPrim.debugPrint("own lib ran");\nassert 1 == 1;\n',
+      );
+    }
     return cwd;
   };
 
-  afterEach(() => {
-    // Nothing outside the fixture dir; `useTempFixtures` cleans the rest.
-  });
-
   test("a nested worktree's lib.mo does not hijack the run", async () => {
-    let cwd = await makeProject();
+    let cwd = await makeProject({ ownLib: false });
     let result = await cli(["test"], { cwd });
 
     expect(result.exitCode).toBe(0);
@@ -34,11 +43,7 @@ describe("test lib.mo discovery", () => {
   });
 
   test("the project's own lib.mo still short-circuits", async () => {
-    let cwd = await makeProject();
-    fs.writeFileSync(
-      path.join(cwd, "test/lib.mo"),
-      'import Prim "mo:prim";\nPrim.debugPrint("own lib ran");\nassert 1 == 1;\n',
-    );
+    let cwd = await makeProject({ ownLib: true });
     let result = await cli(["test"], { cwd });
 
     expect(result.exitCode).toBe(0);
