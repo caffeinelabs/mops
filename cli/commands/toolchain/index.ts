@@ -37,6 +37,7 @@ function normalizeReleaseTag(tool: Tool, tag: string): string {
 export interface ToolchainInfoOptions {
   versions?: boolean;
   all?: boolean;
+  prerelease?: boolean;
 }
 
 function getToolUtils(tool: Tool) {
@@ -128,21 +129,33 @@ async function installAll({ silent = false, verbose = false } = {}) {
   }
 }
 
-async function promptVersion(tool: Tool): Promise<string> {
+async function promptVersion(
+  tool: Tool,
+  { prerelease = false } = {},
+): Promise<string> {
   let config = readConfig();
   config.toolchain = config.toolchain || {};
   let current = config.toolchain[tool];
 
   let toolUtils = getToolUtils(tool);
-  let releases = await toolUtils.getReleases();
-  let versions = releases.map((item: { tag_name: any }) => item.tag_name);
-  let currentIndex = versions.indexOf(current);
+  let releases = await toolUtils.getReleases({ prerelease });
+  let currentIndex = releases.findIndex(
+    (release: ReleaseInfo) => release.tag_name === current,
+  );
+
+  if (releases.length === 0) {
+    // An empty picker would only offer an exit code. Name the flag that widens it.
+    cliError(
+      `No ${prerelease ? "" : "stable "}${tool} releases found.\n` +
+        `Run ${chalk.green(`mops toolchain use ${tool} <version>`)} to pin a version explicitly.`,
+    );
+  }
 
   let res = await prompts({
     type: "select",
     name: "version",
     message: `Select ${tool} version`,
-    choices: releases.map((release: ReleaseInfo, i) => {
+    choices: releases.map((release: ReleaseInfo) => {
       let date = release.published_at
         ? new Date(release.published_at).toLocaleDateString(undefined, {
             year: "numeric",
@@ -154,7 +167,7 @@ async function promptVersion(tool: Tool): Promise<string> {
         title:
           release.tag_name +
           chalk.gray(
-            `  ${date}${currentIndex === i ? chalk.italic(" (current)") : ""}`,
+            `  ${date}${release.tag_name === current ? chalk.italic(" (current)") : ""}`,
           ),
         value: release.tag_name,
       };
@@ -166,15 +179,15 @@ async function promptVersion(tool: Tool): Promise<string> {
 }
 
 // download binary and set version in mops.toml
-async function use(tool: Tool, version?: string) {
+async function use(tool: Tool, version?: string, { prerelease = false } = {}) {
   if (!version) {
-    version = await promptVersion(tool);
+    version = await promptVersion(tool, { prerelease });
   }
   if (!version) {
     return;
   }
   if (version === "latest") {
-    version = await getToolUtils(tool).getLatestReleaseTag();
+    version = await getToolUtils(tool).getLatestReleaseTag({ prerelease });
   }
 
   await download(tool, version);
@@ -229,6 +242,16 @@ async function update(tool?: Tool) {
   }
 }
 
+function hasReleaseTags(
+  toolUtils: ReturnType<typeof getToolUtils>,
+): toolUtils is ReturnType<typeof getToolUtils> & {
+  getReleaseTags: (
+    options: toolchainUtils.ReleaseTagOptions,
+  ) => Promise<string[]>;
+} {
+  return "getReleaseTags" in toolUtils;
+}
+
 async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   let toolUtils = getToolUtils(tool);
 
@@ -236,27 +259,39 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
     cliError("--all requires --versions");
   }
 
+  let prerelease = options.prerelease ?? false;
+
+  // Tags come from the shared fetch path so `--versions` paginates identically
+  // for every tool. Two tools add a `getReleaseTags` override to fix up their
+  // tag shape: `wasm-opt` normalizes `version_131` into pin form, and
+  // `wasmtime` drops its floating `dev` tag because it is not a version. An
+  // override already returns pin-form tags; the shared path needs normalizing.
+  let tags = hasReleaseTags(toolUtils)
+    ? await toolUtils.getReleaseTags({ all: options.all, prerelease })
+    : (
+        await toolchainUtils.getReleaseTags(toolUtils.repo, {
+          all: options.all,
+          prerelease,
+        })
+      ).tags.map((tag) => normalizeReleaseTag(tool, tag));
+
   if (options.versions) {
-    let { tags } = await toolchainUtils.getStableReleaseTags(toolUtils.repo, {
-      all: options.all,
-    });
     for (let ver of tags) {
-      console.log(normalizeReleaseTag(tool, ver));
+      console.log(ver);
     }
     return;
   }
 
   // First page only — enough for latest + a short history preview.
-  let {
-    tags: rawTags,
-    truncated,
-    publishedLatest,
-  } = await toolchainUtils.getStableReleaseTags(toolUtils.repo);
-  let tags = rawTags.map((tag) => normalizeReleaseTag(tool, tag));
+  let { truncated, publishedLatest } = await toolchainUtils.getReleaseTags(
+    toolUtils.repo,
+    { prerelease },
+  );
+  tags = tags.slice(0, 100);
 
   let latest = publishedLatest
     ? normalizeReleaseTag(tool, publishedLatest)
-    : await toolUtils.getLatestReleaseTag();
+    : await toolUtils.getLatestReleaseTag({ prerelease });
 
   let configFile = getClosestConfigFile();
   let pinned = configFile

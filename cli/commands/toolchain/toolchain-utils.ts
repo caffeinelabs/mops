@@ -12,10 +12,10 @@ import { extract as extractTar } from "tar";
 
 import { commitStagingDir, createStagingDir } from "../../cache.js";
 import { cliError } from "../../error.js";
-import { stableReleaseTags, type ReleaseInfo } from "./release-tags.js";
+import { releaseRows, releaseTags, type ReleaseInfo } from "./release-tags.js";
 
 export type { ReleaseInfo } from "./release-tags.js";
-export { sortReleaseTags, stableReleaseTags } from "./release-tags.js";
+export { releaseTags, releaseRows, sortReleaseTags } from "./release-tags.js";
 
 export const TOOLCHAINS = [
   "moc",
@@ -164,11 +164,16 @@ let acquireInstallLock = async (destDir: string, label: string) => {
   }
 };
 
-export type StableReleaseTagsResult = {
+export type ReleaseTagOptions = {
+  all?: boolean;
+  prerelease?: boolean;
+};
+
+export type ReleaseTagsResult = {
   tags: string[];
   /** True when only the first page was fetched and GitHub may have more. */
   truncated: boolean;
-  /** First stable tag in GitHub publish order from the fetched pages, if any. */
+  /** First release in GitHub publish order, if any. */
   publishedLatest?: string;
 };
 
@@ -226,24 +231,26 @@ let fetchReleasePages = async (
   return { releases, truncated };
 };
 
-/** Stable release tags, newest first. Default: first GitHub page only. */
-export let getStableReleaseTags = async (
+/** Release tags, newest first. Default: first GitHub page only. */
+export let getReleaseTags = async (
   repo: string,
-  { all = false } = {},
-): Promise<StableReleaseTagsResult> => {
+  { all = false, prerelease = false }: ReleaseTagOptions = {},
+): Promise<ReleaseTagsResult> => {
   let { releases, truncated } = await fetchReleasePages(repo, {
     maxPages: all ? undefined : 1,
   });
+  let rows = releaseRows(releases, { prerelease });
   return {
-    tags: stableReleaseTags(releases),
+    tags: releaseTags(releases, { prerelease }),
     truncated: all ? false : truncated,
-    publishedLatest: releases.find(
-      (release) => !release.draft && !release.prerelease,
-    )?.tag_name,
+    publishedLatest: rows[0]?.tag_name,
   };
 };
 
-export let getLatestReleaseTag = async (repo: string): Promise<string> => {
+export let getLatestReleaseTag = async (
+  repo: string,
+  { prerelease = false } = {},
+): Promise<string> => {
   let octokit = new Octokit();
 
   for (let page = 1; ; page++) {
@@ -261,7 +268,7 @@ export let getLatestReleaseTag = async (repo: string): Promise<string> => {
       break;
     }
     for (let release of res.data) {
-      if (!release.draft && !release.prerelease) {
+      if (!release.draft && (prerelease || !release.prerelease)) {
         return release.tag_name.replace(/^v/, "");
       }
     }
@@ -273,10 +280,17 @@ export let getLatestReleaseTag = async (repo: string): Promise<string> => {
   cliError(`Failed to fetch latest release tag for ${repo}`);
 };
 
-export let getReleases = async (repo: string): Promise<ReleaseInfo[]> => {
+/**
+ * Recent release rows, newest first, for prompts and the `info` preview.
+ * Drafts and prereleases are excluded unless asked for explicitly.
+ */
+export let getReleases = async (
+  repo: string,
+  { prerelease = false } = {},
+): Promise<ReleaseInfo[]> => {
   let octokit = new Octokit();
   let res = await octokit.request(`GET /repos/${repo}/releases`, {
-    per_page: 10,
+    per_page: 100,
     headers: {
       "X-GitHub-Api-Version": "2022-11-28",
     },
@@ -284,5 +298,5 @@ export let getReleases = async (repo: string): Promise<ReleaseInfo[]> => {
   if (res.status !== 200) {
     cliError("Releases fetch error");
   }
-  return res.data.map(mapRelease);
+  return releaseRows(res.data.map(mapRelease), { prerelease });
 };

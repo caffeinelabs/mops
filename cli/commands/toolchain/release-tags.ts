@@ -17,11 +17,32 @@ export let sortReleaseTags = (tags: string[]): string[] => {
   });
 };
 
-/** Stable tags, newest (highest semver) first. */
-export let stableReleaseTags = (releases: ReleaseInfo[]): string[] => {
+// Drafts are excluded unconditionally: GitHub never exposes them to anyone but
+// the repo's own maintainers. Callers only choose whether prereleases show.
+let filterReleases = (
+  releases: ReleaseInfo[],
+  { prerelease = false } = {},
+): ReleaseInfo[] => {
+  return releases.filter(
+    (release) => !release.draft && (prerelease || !release.prerelease),
+  );
+};
+
+/** Tags matching what `mops toolchain update` would resolve to, newest first. */
+export let releaseTags = (
+  releases: ReleaseInfo[],
+  options?: { prerelease?: boolean },
+): string[] => {
   return sortReleaseTags(
-    releases
-      .filter((release) => !release.draft && !release.prerelease)
-      .map((release) => release.tag_name),
+    filterReleases(releases, options).map((release) => release.tag_name),
   ).reverse();
+};
+
+/** Tags in GitHub publish order, for display. */
+export let releaseRows = (
+  releases: ReleaseInfo[],
+  options?: { prerelease?: boolean },
+): ReleaseInfo[] => {
+  let kept = new Set(filterReleases(releases, options).map((r) => r.tag_name));
+  return releases.filter((release) => kept.has(release.tag_name));
 };

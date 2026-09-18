@@ -199,12 +199,13 @@ mops toolchain update                # update all tools to latest
 mops toolchain info <tool>           # show release info (latest, pinned, history)
 mops toolchain info <tool> --versions # list recent stable releases, newest first
 mops toolchain info <tool> --versions --all # full stable history (cache warming)
+mops toolchain info <tool> --versions --prerelease # include prereleases
 mops toolchain bin moc               # print path to binary
 ```
 
 **`pocket-ic` versions**: pin anything from `9.0.0` up, `latest` included — mops keeps no list of blessed versions. Pins below `9.0.0` error with a migration message (they ran on the legacy client that mops 3.0.0 removed). With no pin, replica tests / `mops bench` / `--check-deploy` / `mops toolchain bin pocket-ic` error naming `mops toolchain use pocket-ic 15.0.0`. That version is a hint, not a fallback.
 
-**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
+**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. The picker only offers stable releases unless `--prerelease` is passed, as are `latest` and `--versions`. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
 
 ### Enhanced migrations
 
