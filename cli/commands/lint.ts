@@ -13,7 +13,7 @@ import {
 import { resolvePackages } from "../resolve-packages.js";
 import { withFixLock } from "../helpers/fix-lock.js";
 import { toolchain } from "./toolchain/index.js";
-import { MOTOKO_GLOB_CONFIG } from "../constants.js";
+import { isNestedCheckout, MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { existsSync } from "node:fs";
 import { Config } from "../types.js";
 import { getTrimmedMigrationFiles } from "../helpers/migrations.js";
@@ -206,7 +206,7 @@ async function lintImpl(
     filesToLint = globSync(path.join(rootDir, globStr), {
       ...MOTOKO_GLOB_CONFIG,
       cwd: rootDir,
-    });
+    }).filter((file) => !isNestedCheckout(file, rootDir));
     if (filesToLint.length === 0) {
       cliError(
         filter
@@ -274,7 +274,7 @@ async function lintImpl(
       let matchedFiles = globSync(path.join(rootDir, globPattern), {
         ...MOTOKO_GLOB_CONFIG,
         cwd: rootDir,
-      });
+      }).filter((file) => !isNestedCheckout(file, rootDir));
 
       if (baseFileSet) {
         matchedFiles = matchedFiles.filter((f) =>

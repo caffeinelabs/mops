@@ -8,7 +8,7 @@ import motokoPlugin from "prettier-plugin-motoko";
 import { getRootDir } from "../mops.js";
 import { absToRel } from "./test/utils.js";
 import { parallel } from "../parallel.js";
-import { MOTOKO_GLOB_CONFIG } from "../constants.js";
+import { isNestedCheckout, MOTOKO_GLOB_CONFIG } from "../constants.js";
 
 type FormatOptions = {
   check: boolean;
@@ -38,7 +38,7 @@ export async function format(
   let files = globSync(path.join(rootDir, globStr), {
     ...MOTOKO_GLOB_CONFIG,
     cwd: rootDir,
-  });
+  }).filter((file) => !isNestedCheckout(file, rootDir));
   let invalidFiles = 0;
   let checkedFiles = 0;
 

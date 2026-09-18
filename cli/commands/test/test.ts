@@ -30,7 +30,11 @@ import { SilentReporter } from "./reporters/silent-reporter.js";
 import { toolchain } from "../toolchain/index.js";
 import { Replica } from "../replica.js";
 import { TestMode } from "../../types.js";
-import { MOTOKO_GLOB_CONFIG, MOTOKO_IGNORE_PATTERNS } from "../../constants.js";
+import {
+  isIgnoredDir,
+  isNestedCheckout,
+  MOTOKO_GLOB_CONFIG,
+} from "../../constants.js";
 import { cliErrorFrom, cliExit } from "../../error.js";
 
 type ReporterName = "verbose" | "files" | "compact" | "silent";
@@ -131,7 +135,12 @@ export async function test(filter = "", options: Partial<TestOptions> = {}) {
     let watcher = chokidar.watch(
       [path.join(rootDir, "**/*.mo"), path.join(rootDir, "mops.toml")],
       {
-        ignored: MOTOKO_IGNORE_PATTERNS,
+        // A predicate replaces glob-based ignoring, so it has to carry both
+        // rules: the build/dependency dirs and the checkout boundary (a linked
+        // worktree's `.git` is a file, which no ignore glob can prune at).
+        ignored: (filePath: string) =>
+          isIgnoredDir(filePath, rootDir) ||
+          isNestedCheckout(filePath, rootDir),
         ignoreInitial: true,
       },
     );
@@ -202,7 +211,9 @@ export async function testWithReporter(
     let globStr = filter
       ? `**/test?(s)/**/*${filter}*.mo`
       : "**/test?(s)/**/*.test.mo";
-    files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG);
+    files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG).filter(
+      (file) => !isNestedCheckout(file, rootDir),
+    );
   }
   if (!files.length) {
     if (filter) {
