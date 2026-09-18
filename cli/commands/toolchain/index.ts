@@ -261,9 +261,6 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   let { tags, truncated, publishedLatest } = await toolUtils.getReleaseTags({
     prerelease,
   });
-  tags = tags.slice(0, 100);
-
-  let latest = publishedLatest;
 
   let configFile = getClosestConfigFile();
   let pinned = configFile
@@ -273,8 +270,8 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   console.log("");
   console.log(chalk.green.bold(tool));
 
-  if (latest) {
-    console.log(chalk.yellow(`latest: ${latest}`));
+  if (publishedLatest) {
+    console.log(chalk.yellow(`latest: ${publishedLatest}`));
   }
 
   if (pinned) {
