@@ -3,22 +3,17 @@ import type { ReleaseInfo } from "../commands/toolchain/release-tags";
 
 // Published newest-first, the order GitHub returns, with the non-version `dev`
 // tag at the top — the case that let `latest` name a tag the picker filtered out.
-let releases = (
-  rows: [string, { prerelease?: boolean; draft?: boolean }][],
-): ReleaseInfo[] =>
-  rows.map(([tag_name, flags]) => ({
-    tag_name,
-    published_at: "2024-06-01T00:00:00Z",
-    prerelease: flags.prerelease ?? false,
-    draft: flags.draft ?? false,
-  }));
-
-let page = releases([
+let page: ReleaseInfo[] = [
   ["dev", { prerelease: true }],
   ["49.0.0-rc.1", { prerelease: true }],
   ["v48.0.2", {}],
   ["v48.0.1", {}],
-]);
+].map(([tag_name, flags]: any) => ({
+  tag_name,
+  published_at: "2024-06-01T00:00:00Z",
+  prerelease: flags.prerelease ?? false,
+  draft: flags.draft ?? false,
+}));
 
 jest.unstable_mockModule("octokit", () => ({
   Octokit: class {
@@ -26,19 +21,16 @@ jest.unstable_mockModule("octokit", () => ({
   },
 }));
 
-describe("toolchain module tag fixups", () => {
-  test("every module derives publishedLatest from its own tags", async () => {
-    let mods = await Promise.all([
-      import("../commands/toolchain/wasmtime.js"),
-      import("../commands/toolchain/wasm-opt.js"),
-      import("../commands/toolchain/moc.js"),
-      import("../commands/toolchain/lintoko.js"),
-      import("../commands/toolchain/pocket-ic.js"),
-    ]);
+let { getReleaseTags, getLatestReleaseTag, getReleases } =
+  await import("../commands/toolchain/toolchain-utils.js");
 
-    for (let mod of mods) {
+describe("getReleaseTags", () => {
+  // `publishedLatest` is what `mops toolchain info` renders as `latest`, so a
+  // tag dropped from `tags` must never survive there.
+  test("publishedLatest is always a member of tags", async () => {
+    for (let exclude of [undefined, ["dev"]]) {
       for (let options of [{}, { prerelease: true }, { all: true }]) {
-        let res = await mod.getReleaseTags(options);
+        let res = await getReleaseTags("a/b", { ...options, exclude });
         if (res.publishedLatest !== undefined) {
           expect(res.tags).toContain(res.publishedLatest);
         }
@@ -46,21 +38,26 @@ describe("toolchain module tag fixups", () => {
     }
   });
 
+  test("an excluded tag is dropped from every field", async () => {
+    let res = await getReleaseTags("a/b", { exclude: ["dev"] });
+
+    expect(res.tags).not.toContain("dev");
+    expect(res.publishedLatest).toBe("48.0.2");
+  });
+
   // `wasmtime` publishes `dev`, which GitHub does not flag as a prerelease but
-  // which is not a version. It has to stay out of every path, including the
-  // `latest` line that `info` renders from `publishedLatest`.
-  test("wasmtime excludes the dev tag from every path", async () => {
-    let wasmtime = await import("../commands/toolchain/wasmtime.js");
+  // which is not a version. It reaches the shared fetcher as an exclusion.
+  test("excluded tags stay out of the other fetch paths too", async () => {
+    expect(await getLatestReleaseTag("a/b", { exclude: ["dev"] })).toBe(
+      "48.0.2",
+    );
+    let rows = await getReleases("a/b", { exclude: ["dev"] });
+    expect(rows.map((r) => r.tag_name)).not.toContain("dev");
+  });
 
-    for (let options of [{}, { prerelease: true }, { all: true }]) {
-      let res = await wasmtime.getReleaseTags(options);
-      expect(res.tags).not.toContain("dev");
-      expect(res.publishedLatest).not.toBe("dev");
-      expect(await wasmtime.getLatestReleaseTag(options)).not.toBe("dev");
-      let rows = await wasmtime.getReleases(options);
-      expect(rows.map((r) => r.tag_name)).not.toContain("dev");
-    }
+  test("without an exclusion, dev is still listed", async () => {
+    let res = await getReleaseTags("a/b", { prerelease: true });
 
-    expect((await wasmtime.getReleaseTags()).publishedLatest).toBe("48.0.2");
+    expect(res.tags).toContain("dev");
   });
 });
