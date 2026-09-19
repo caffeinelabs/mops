@@ -13,6 +13,8 @@ mops bench [filter]
 
 Put your benchmark code in `*.bench.mo` files inside a `bench/` or `benchmark/` directory (nested subdirectories work too). With a `[filter]` argument, every `*<filter>*.mo` file under those directories runs — the `.bench.mo` suffix is not required for filtered files.
 
+Directories below the project root that are their own checkout — a git worktree, a submodule, a nested clone — are skipped, so a copy of the project checked out beside it does not contribute benchmarks.
+
 It is necessary to use [bench package](https://mops.one/bench) to write benchmarks.
 
 The output format is a markdown table, so you can copy-paste it into your `README.md`.

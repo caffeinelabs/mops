@@ -7,7 +7,7 @@ import { add } from "./add.js";
 import { remove } from "./remove.js";
 import { checkIntegrity } from "../integrity.js";
 import { toolchain } from "./toolchain/index.js";
-import { MOTOKO_IGNORE_PATTERNS } from "../constants.js";
+import { isNestedCheckout, MOTOKO_IGNORE_PATTERNS } from "../constants.js";
 
 export type SyncOptions = {
   dryRun?: boolean;
@@ -137,8 +137,14 @@ export function getSourceFiles(rootDir: string): {
     nocase: true,
     ignore: MOTOKO_IGNORE_PATTERNS,
   };
-  let devFiles = new Set(globSync(DEV_SOURCE_PATTERNS, globOptions));
-  let files = globSync("**/*.mo", globOptions);
+  // Filtered, never transformed: callers compare raw glob strings and
+  // `path.resolve(rootDir, f)` them, so entries must stay as glob returned them.
+  let skip = (file: string) =>
+    !isNestedCheckout(path.join(rootDir, file), rootDir);
+  let devFiles = new Set(
+    globSync(DEV_SOURCE_PATTERNS, globOptions).filter(skip),
+  );
+  let files = globSync("**/*.mo", globOptions).filter(skip);
   return {
     prod: files.filter((file) => !devFiles.has(file)),
     dev: files.filter((file) => devFiles.has(file)),

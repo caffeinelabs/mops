@@ -22,6 +22,8 @@ Alias `mops fmt`
 
 Uses [Prettier](https://prettier.io) with [Motoko](https://github.com/caffeinelabs/prettier-plugin-motoko) plugin.
 
+Files inside `node_modules/`, `.mops/`, `.git/`, `.dfx/`, `dist/`, `build/` and `bundle/` are skipped, as are directories below the project root that are their own checkout — a git worktree, a submodule, a nested clone — so a copy of the project checked out beside it is never reformatted.
+
 ## Configuration
 
 Add `.prettierrc` file to the root of the project.

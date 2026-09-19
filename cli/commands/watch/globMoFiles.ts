@@ -1,17 +1,8 @@
 import { globSync } from "glob";
-
-let globConfig = {
-  nocase: true,
-  ignore: [
-    "**/node_modules/**",
-    "**/.mops/**",
-    "**/.git/**",
-    // not dfx support — just a build dir users may still have lying around
-    "**/.dfx/**",
-    "**/{build,bundle,dist}/**",
-  ],
-};
+import { isNestedCheckout, MOTOKO_GLOB_CONFIG } from "../../constants.js";
 
 export function globMoFiles(rootDir: string) {
-  return globSync("**/*.mo", { cwd: rootDir, ...globConfig });
+  return globSync("**/*.mo", { cwd: rootDir, ...MOTOKO_GLOB_CONFIG }).filter(
+    (file) => !isNestedCheckout(file, rootDir),
+  );
 }

@@ -137,6 +137,34 @@ describe("getSourceFiles", () => {
       "tests/nested/other.test.mo",
     ]);
   });
+
+  test("skips a nested repo whose .git is a directory", () => {
+    let root = makeProject([
+      "src/Main.mo",
+      "test/main.test.mo",
+      "vendor/clone/.git/HEAD",
+      "vendor/clone/src/Vendored.mo",
+      "vendor/clone/test/vendored.test.mo",
+    ]);
+    expect(getSourceFiles(root)).toEqual({
+      prod: ["src/Main.mo"],
+      dev: ["test/main.test.mo"],
+    });
+  });
+
+  test("skips a linked worktree whose .git is a file", () => {
+    let root = makeProject([
+      "src/Main.mo",
+      "test/main.test.mo",
+      "worktree/.git",
+      "worktree/src/Copy.mo",
+      "worktree/test/copy.test.mo",
+    ]);
+    expect(getSourceFiles(root)).toEqual({
+      prod: ["src/Main.mo"],
+      dev: ["test/main.test.mo"],
+    });
+  });
 });
 
 describe("computeSyncPlan dev classification", () => {

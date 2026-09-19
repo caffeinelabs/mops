@@ -7,8 +7,7 @@ import { WarningChecker } from "./warning-checker.js";
 import { getRootDir } from "../../mops.js";
 import { Tester } from "./tester.js";
 import { Formatter } from "./formatter.js";
-
-let ignore = ["**/node_modules/**", "**/.mops/**", "**/.git/**"];
+import { isIgnoredDir, isNestedCheckout } from "../../constants.js";
 
 export async function watch(options: {
   error: boolean;
@@ -38,7 +37,10 @@ export async function watch(options: {
   let watcher = chokidar.watch(
     [path.join(rootDir, "**/*.mo"), path.join(rootDir, "mops.toml")],
     {
-      ignored: ignore,
+      // A predicate replaces glob-based ignoring, so it has to carry both
+      // rules: the build/dependency dirs and the checkout boundary.
+      ignored: (filePath: string) =>
+        isIgnoredDir(filePath, rootDir) || isNestedCheckout(filePath, rootDir),
       ignoreInitial: true,
     },
   );
