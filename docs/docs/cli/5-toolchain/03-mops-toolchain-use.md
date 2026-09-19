@@ -35,6 +35,13 @@ mops toolchain use moc
 
 ![user prompt image](mops-toolchain-use-moc.png)
 
+The picker lists stable releases only, matching what `mops toolchain update` resolves to. Pass `--prerelease` to include prereleases (and let `latest` resolve to one):
+```
+mops toolchain use moc --prerelease
+```
+
+The flag only affects the picker and `latest`. With an explicit version, `mops toolchain use moc 2.0.0-beta.0 --prerelease` and `mops toolchain use moc 2.0.0-beta.0` install the same thing.
+
 ## Using explicit file paths
 
 You can also specify file paths to toolchain binaries instead of version numbers. This is useful when building a tool from source. File paths must start with `/`, `./`, or `../`.

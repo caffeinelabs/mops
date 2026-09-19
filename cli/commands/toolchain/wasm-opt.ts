@@ -2,7 +2,6 @@ import process from "node:process";
 import path from "node:path";
 import fs from "fs-extra";
 import { chmodSync } from "node:fs";
-import { Octokit } from "octokit";
 import { execa } from "execa";
 
 import { globalCacheDir } from "../../mops.js";
@@ -21,38 +20,33 @@ export let repo = "WebAssembly/binaryen";
 export let binaryPath = (version: string) =>
   path.join(cacheDir, version, "bin", "wasm-opt");
 
-export let getLatestReleaseTag = async () => {
-  let octokit = new Octokit();
-  for (let page = 1; ; page++) {
-    let res = await octokit.request(`GET /repos/${repo}/releases`, {
-      per_page: 100,
-      page,
-      headers: { "X-GitHub-Api-Version": "2022-11-28" },
-    });
-    if (res.status !== 200) {
-      cliError("Releases fetch error");
-    }
-    if (res.data.length === 0) {
-      break;
-    }
-    for (let release of res.data) {
-      if (!release.draft && !release.prerelease) {
-        return normalizeBinaryenVersion(release.tag_name);
-      }
-    }
-    if (res.data.length < 100) {
-      break;
-    }
-  }
-  cliError(`Failed to fetch latest release tag for ${repo}`);
+export let getLatestReleaseTag = async ({ prerelease = false } = {}) => {
+  let tag = await toolchainUtils.getLatestReleaseTag(repo, { prerelease });
+  return normalizeBinaryenVersion(tag);
 };
 
-export let getReleases = async (): Promise<ReleaseInfo[]> => {
-  let releases = await toolchainUtils.getReleases(repo);
+export let getReleases = async ({ prerelease = false } = {}): Promise<
+  ReleaseInfo[]
+> => {
+  let releases = await toolchainUtils.getReleases(repo, { prerelease });
   return releases.map((r) => ({
     ...r,
     tag_name: normalizeBinaryenVersion(r.tag_name),
   }));
+};
+
+/** Tags normalized into the `131` form mops pins, for pickers and `--versions`. */
+export let getReleaseTags = async (
+  options: toolchainUtils.ReleaseTagOptions = {},
+) => {
+  let res = await toolchainUtils.getReleaseTags(repo, options);
+  return {
+    ...res,
+    tags: res.tags.map(normalizeBinaryenVersion),
+    publishedLatest: res.publishedLatest
+      ? normalizeBinaryenVersion(res.publishedLatest)
+      : undefined,
+  };
 };
 
 export let isCached = (version: string) => {

@@ -1,6 +1,11 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops toolchain use <tool>` no longer offers prereleases in its version picker. The picker listed raw GitHub releases, so draft and prerelease tags appeared alongside real ones — internal branch builds like `1.15.1-dedup-stable-types-3` and `2.0.0-beta.0` for `moc`. Prereleases are now excluded by default, matching what `mops toolchain update` and `mops toolchain use <tool> latest` already resolved to. Opt back in with `mops toolchain use <tool> --prerelease`, which also lets `latest` resolve to a prerelease.
+- `mops toolchain info <tool>` gains `--prerelease` to include prereleases in the version history and in the `latest` line. Without it both are stable-only, as before.
+- `wasmtime`'s floating `dev` tag is no longer listed anywhere — picker, `latest`, or `--versions`. GitHub does not flag it as a prerelease, but it is not a version, so it is excluded by name.
+- `mops toolchain use` and `mops toolchain info` read releases through the paginated fetcher instead of a single unpaged request, which GitHub caps at 1000 releases. No behaviour change for the tools shipped today.
+
 
 ## 3.2.3
 - A `mops.lock` missing a transitive dependency is now treated as stale instead of accepted as fresh. A lock-driven install takes the lock's `deps` as the complete list and resolves nothing, so a transitive package dropped from it — a botched merge, a hand edit that took its `hashes` entry along — passed every freshness check, was never installed, and the build failed on the import. The lock's own `graph` section records what each locked package declares (and a local `path` dependency's `mops.toml` is on disk), so `deps` is now checked for closure under those edges, offline. Plain `mops install` re-resolves and repairs the lock; `--locked` fails with `mops.lock does not lock every transitive dependency` naming the package and the missing dependency; `mops verify` reports it; `mops sources` re-resolves instead of handing `moc` the truncated package list. Locks written by a CLI that predates `graph` carry no edges to check, so they are unaffected.

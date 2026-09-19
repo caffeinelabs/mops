@@ -10,12 +10,18 @@ let cacheDir = path.join(globalCacheDir, "lintoko");
 
 export let repo = "caffeinelabs/lintoko";
 
-export let getLatestReleaseTag = async () => {
-  return toolchainUtils.getLatestReleaseTag(repo);
+export let getLatestReleaseTag = async ({ prerelease = false } = {}) => {
+  return toolchainUtils.getLatestReleaseTag(repo, { prerelease });
 };
 
-export let getReleases = async () => {
-  return toolchainUtils.getReleases(repo);
+export let getReleases = async ({ prerelease = false } = {}) => {
+  return toolchainUtils.getReleases(repo, { prerelease });
+};
+
+export let getReleaseTags = async (
+  options: toolchainUtils.ReleaseTagOptions = {},
+) => {
+  return toolchainUtils.getReleaseTags(repo, options);
 };
 
 export let isCached = (version: string) => {

@@ -934,9 +934,13 @@ toolchainCommand
       "version to install (defaults to interactive picker)",
     ),
   )
-  .action(async (tool, version) => {
+  .option(
+    "--prerelease",
+    "Include prereleases in the picker, and let `latest` resolve to one",
+  )
+  .action(async (tool, version, options) => {
     checkConfigFile();
-    await toolchain.use(tool, version);
+    await toolchain.use(tool, version, { prerelease: options.prerelease });
   });
 
 toolchainCommand
@@ -961,12 +965,13 @@ toolchainCommand
   .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
   .option(
     "--versions",
-    "List stable release versions, one per line (newest first; first GitHub page by default)",
+    "List release versions, one per line (newest first; first GitHub page by default)",
   )
   .option(
     "--all",
     "With --versions, fetch every release page instead of the first page only",
   )
+  .option("--prerelease", "Include prereleases instead of stable releases only")
   .action(async (tool: Tool, options) => {
     await toolchain.info(tool, options);
   });

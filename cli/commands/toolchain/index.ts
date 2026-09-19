@@ -20,23 +20,17 @@ import * as wasmOpt from "./wasm-opt.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
 import { cliError } from "../../error.js";
 import { getPocketIcUrl } from "../../helpers/pocket-ic-startup.js";
-import * as toolchainUtils from "./toolchain-utils.js";
 import { RECOMMENDED_POCKET_IC_VERSION } from "./pocket-ic-versions.js";
 import type { ReleaseInfo } from "./release-tags.js";
-import { normalizeBinaryenVersion } from "../../helpers/binaryen-version.js";
 
 function label(text: string): string {
   return chalk.bold(text.padEnd(16));
 }
 
-/** Map GitHub tags to the pin format stored in mops.toml (Binaryen: `version_131` → `131`). */
-function normalizeReleaseTag(tool: Tool, tag: string): string {
-  return tool === "wasm-opt" ? normalizeBinaryenVersion(tag) : tag;
-}
-
 export interface ToolchainInfoOptions {
   versions?: boolean;
   all?: boolean;
+  prerelease?: boolean;
 }
 
 function getToolUtils(tool: Tool) {
@@ -128,21 +122,33 @@ async function installAll({ silent = false, verbose = false } = {}) {
   }
 }
 
-async function promptVersion(tool: Tool): Promise<string> {
+async function promptVersion(
+  tool: Tool,
+  { prerelease = false } = {},
+): Promise<string> {
   let config = readConfig();
   config.toolchain = config.toolchain || {};
   let current = config.toolchain[tool];
 
   let toolUtils = getToolUtils(tool);
-  let releases = await toolUtils.getReleases();
-  let versions = releases.map((item: { tag_name: any }) => item.tag_name);
-  let currentIndex = versions.indexOf(current);
+  let releases = await toolUtils.getReleases({ prerelease });
+  let currentIndex = releases.findIndex(
+    (release: ReleaseInfo) => release.tag_name === current,
+  );
+
+  if (releases.length === 0) {
+    // An empty picker would only offer an exit code. Name the flag that widens it.
+    cliError(
+      `No ${prerelease ? "" : "stable "}${tool} releases found.\n` +
+        `Run ${chalk.green(`mops toolchain use ${tool} <version>`)} to pin a version explicitly.`,
+    );
+  }
 
   let res = await prompts({
     type: "select",
     name: "version",
     message: `Select ${tool} version`,
-    choices: releases.map((release: ReleaseInfo, i) => {
+    choices: releases.map((release: ReleaseInfo) => {
       let date = release.published_at
         ? new Date(release.published_at).toLocaleDateString(undefined, {
             year: "numeric",
@@ -154,7 +160,7 @@ async function promptVersion(tool: Tool): Promise<string> {
         title:
           release.tag_name +
           chalk.gray(
-            `  ${date}${currentIndex === i ? chalk.italic(" (current)") : ""}`,
+            `  ${date}${release.tag_name === current ? chalk.italic(" (current)") : ""}`,
           ),
         value: release.tag_name,
       };
@@ -166,15 +172,15 @@ async function promptVersion(tool: Tool): Promise<string> {
 }
 
 // download binary and set version in mops.toml
-async function use(tool: Tool, version?: string) {
+async function use(tool: Tool, version?: string, { prerelease = false } = {}) {
   if (!version) {
-    version = await promptVersion(tool);
+    version = await promptVersion(tool, { prerelease });
   }
   if (!version) {
     return;
   }
   if (version === "latest") {
-    version = await getToolUtils(tool).getLatestReleaseTag();
+    version = await getToolUtils(tool).getLatestReleaseTag({ prerelease });
   }
 
   await download(tool, version);
@@ -236,27 +242,25 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
     cliError("--all requires --versions");
   }
 
+  let prerelease = options.prerelease ?? false;
+
+  // Each tool module owns its tag shape, so `wasm-opt`'s `version_131` and
+  // `wasmtime`'s `dev` are fixed up in one place rather than here.
   if (options.versions) {
-    let { tags } = await toolchainUtils.getStableReleaseTags(toolUtils.repo, {
+    let { tags } = await toolUtils.getReleaseTags({
       all: options.all,
+      prerelease,
     });
     for (let ver of tags) {
-      console.log(normalizeReleaseTag(tool, ver));
+      console.log(ver);
     }
     return;
   }
 
-  // First page only — enough for latest + a short history preview.
-  let {
-    tags: rawTags,
-    truncated,
-    publishedLatest,
-  } = await toolchainUtils.getStableReleaseTags(toolUtils.repo);
-  let tags = rawTags.map((tag) => normalizeReleaseTag(tool, tag));
-
-  let latest = publishedLatest
-    ? normalizeReleaseTag(tool, publishedLatest)
-    : await toolUtils.getLatestReleaseTag();
+  // Capped: a short history plus the `latest` line.
+  let { tags, truncated, publishedLatest } = await toolUtils.getReleaseTags({
+    prerelease,
+  });
 
   let configFile = getClosestConfigFile();
   let pinned = configFile
@@ -266,8 +270,8 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   console.log("");
   console.log(chalk.green.bold(tool));
 
-  if (latest) {
-    console.log(chalk.yellow(`latest: ${latest}`));
+  if (publishedLatest) {
+    console.log(chalk.yellow(`latest: ${publishedLatest}`));
   }
 
   if (pinned) {
