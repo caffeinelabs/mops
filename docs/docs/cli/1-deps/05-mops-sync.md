@@ -15,6 +15,8 @@ mops sync
 
 `mops sync` compiles nothing, but it does read your imports with `moc`, so it requires a pinned [`[toolchain] moc`](../5-toolchain/01-toolchain-overview.md).
 
+`mops sync` reads the same set of sources as `mops test` and `mops lint`: files inside `node_modules/`, `.mops/`, `.git/`, `.dfx/`, `dist/`, `build/` and `bundle/` are skipped, as are directories below the project root that are their own checkout — a git worktree, a submodule, a nested clone. An import that only appears in such a copy does not keep a package looking used.
+
 ### `--dry-run`
 
 Print what would be added and removed without touching `mops.toml`, the local cache or the [lockfile](../../10-mops.lock.md).

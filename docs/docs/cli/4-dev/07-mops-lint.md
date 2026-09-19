@@ -13,6 +13,8 @@ mops lint [filter]
 
 Runs `lintoko` on all `.mo` files in the project. If a filter is provided, only files matching `**/*<filter>*.mo` are linted.
 
+Files inside `node_modules/`, `.mops/`, `.git/`, `.dfx/`, `dist/`, `build/` and `bundle/` are skipped, as are directories below the project root that are their own checkout — a git worktree, a submodule, a nested clone — so a copy of the project checked out beside it is never linted.
+
 Rules are loaded from a `lint/` or `lints/` directory in the project root (if present), or can be specified with `--rules`. Rules from installed package dependencies can also be included via the `extends` config option.
 
 ### Examples
