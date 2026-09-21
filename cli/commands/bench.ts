@@ -24,7 +24,7 @@ import {
   optimizeWasm,
 } from "../helpers/optimize-wasm.js";
 import { sourcesArgs } from "./sources.js";
-import { MOTOKO_GLOB_CONFIG } from "../constants.js";
+import { isNestedCheckout, MOTOKO_GLOB_CONFIG } from "../constants.js";
 
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
@@ -126,7 +126,9 @@ export async function bench(
   if (filter) {
     globStr = `**/bench?(mark)/**/*${filter}*.mo`;
   }
-  let files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG);
+  let files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG).filter(
+    (file) => !isNestedCheckout(file, rootDir),
+  );
   if (!files.length) {
     if (filter) {
       options.silent ||

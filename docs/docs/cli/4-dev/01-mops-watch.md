@@ -12,6 +12,8 @@ Watch Motoko files, check them for syntax errors and warnings, and format them
 mops watch
 ```
 
+Files inside `node_modules/`, `.mops/`, `.git/`, `.dfx/`, `dist/`, `build/` and `bundle/` — and inside any nested checkout such as a git worktree, submodule or clone — are skipped, as they are for every other discovery command.
+
 By default, `mops watch` runs the safe informative set:
 - Check for syntax errors
 - Check for warnings
