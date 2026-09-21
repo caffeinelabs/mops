@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- New **unstable** build manifest: with `[build] manifest = true` in `mops.toml`, `mops build` writes a `<canister>.build.json` record next to each built `.wasm`/`.did`/`.most` — artifact SHA-256 hashes, the pinned `moc` version, and the outcome of a non-gating `moc --stable-compatible` check against an empty-actor baseline (is the canister installable on a fresh canister, or upgrade-only). `mops build` deletes a stale `<canister>.build.json` at the start of each canister build even when the feature is off, so a record never outlives the artifacts it describes. Unstable: schema and behavior may change in any release; documented only on the new "Unstable features" docs page.
 
 ## 3.3.0
 - `mops toolchain use <tool>` no longer offers prereleases in its version picker. The picker listed raw GitHub releases, so draft and prerelease tags appeared alongside real ones — internal branch builds like `1.15.1-dedup-stable-types-3` and `2.0.0-beta.0` for `moc`. Prereleases are now excluded by default, matching what `mops toolchain update` and `mops toolchain use <tool> latest` already resolved to. Opt back in with `mops toolchain use <tool> --prerelease`, which also lets `latest` resolve to a prerelease.
