@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "3.2.3"
+    "latest": "3.3.0"
   },
   "versions": {
     "0.41.0": {
@@ -616,6 +616,14 @@
       "commitHash": "87239126f99a12c0c991d5a05e39ec7ef20a59f8",
       "url": "https://cli.mops.one/versions/3.2.3.tgz",
       "hash": "ac9e57986191ec5dd010b1225d0c5678949a7e7f3f1a3069cb2723f549eba3df"
+    },
+    "3.3.0": {
+      "time": 1789982622152,
+      "size": 2395301,
+      "relseaseNotes": "* `mops toolchain use <tool>` no longer offers prereleases in its version picker. The picker listed raw GitHub releases, so draft and prerelease tags appeared alongside real ones — internal branch builds like `1.15.1-dedup-stable-types-3` and `2.0.0-beta.0` for `moc`. Prereleases are now excluded by default, matching what `mops toolchain update` and `mops toolchain use <tool> latest` already resolved to. Opt back in with `mops toolchain use <tool> --prerelease`, which also lets `latest` resolve to a prerelease.\n* `mops toolchain info <tool>` gains `--prerelease` to include prereleases in the version history and in the `latest` line. Without it both are stable-only, as before.\n* `wasmtime`'s floating `dev` tag is no longer listed anywhere — picker, `latest`, or `--versions`. GitHub does not flag it as a prerelease, but it is not a version, so it is excluded by name.\n* `mops toolchain use` and `mops toolchain info` read releases through the paginated fetcher instead of a single unpaged request, which GitHub caps at 1000 releases. No behaviour change for the tools shipped today.\n* `mops test`, `mops bench`, `mops format`, `mops lint`, `mops sync` and `mops watch` no longer pick up sources from a git worktree or submodule nested inside the project. The ignore list only pruned the *contents* of `.git`, never the checkout beside it — and a linked worktree has `.git` as a file, which no ignore glob can prune — so a `worktree/` directory in the project made `mops test` run the copy's tests (and `mops lint`/`mops format`/`mops sync` treat its sources as the project's). Any directory below the project root that is its own checkout is now skipped, whether `.git` is a file or a directory.\n* `mops test`/`lint`/`format`/`sync`/`bench` now ignore `build/` and `bundle/`, and `mops watch` joins them and the rest in ignoring `.dfx/` and `dist/`. Those three directories were previously ignored on the watch command's own path only, so build output left behind by other tooling was skipped when watching but treated as project sources by every other command.\n",
+      "commitHash": "e2affb5ece0627ffc59bb1c8dcb655423fa69f56",
+      "url": "https://cli.mops.one/versions/3.3.0.tgz",
+      "hash": "4bd6ec57434a08ee85ea1167fdb74455ec594ff19b8a879a2d6ec846b1fd42c0"
     }
   }
 }
