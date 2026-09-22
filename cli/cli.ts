@@ -1226,7 +1226,7 @@ program
     ),
   )
   .description("Lint Motoko code")
-  .addOption(new Option("--verbose", "Verbose output"))
+  .addOption(moreInfoOption())
   .addOption(new Option("--fix", "Apply fixes"))
   .addOption(
     new Option(
