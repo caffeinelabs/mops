@@ -35,9 +35,11 @@ describe("root help", () => {
     const unique = new Set(names);
     expect(names.length).toBe(unique.size);
 
-    // Every one of these is a top-level command the docs describe; a missing
-    // one means it fell out of the listing or was filed nowhere.
-    for (const command of [
+    // Every one of these is a top-level command the docs describe. Pinning the
+    // exact set — not just membership — is what makes an unfiled command fail:
+    // it would otherwise show up under the catch-all "Other:" and leave the
+    // listing silently out of date with the CLI.
+    const expected = [
       "init",
       "template",
       "add",
@@ -73,9 +75,9 @@ describe("root help", () => {
       "sources",
       "moc-args",
       "help",
-    ]) {
-      expect(unique).toContain(command);
-    }
+    ];
+    expect([...unique].sort()).toEqual([...expected].sort());
+    expect(text).not.toContain("\nOther:\n");
   });
 
   test("starts with the usage line", async () => {

@@ -7,10 +7,10 @@ export interface CommandGroup {
 
 // Root `mops --help` groups. The categories follow the docs sidebar under
 // `docs/docs/cli/` (which files `init` outside the categories), so a user who
-// reads `--help` and a user who reads the docs meet the same mental map. Every
-// top-level command belongs to exactly one group — `cli/tests/help.test.ts`
-// enforces that, and `MopsHelp` prints anything unfiled under a catch-all
-// "Other:" rather than dropping it.
+// reads `--help` and a user who reads the docs meet the same mental map.
+// `cli/tests/help.test.ts` pins the commands listed here, so one cannot be
+// dropped or filed twice unnoticed; a new command that nobody files is still
+// printed, under a catch-all "Other:", rather than disappearing.
 export const COMMAND_GROUPS: CommandGroup[] = [
   {
     title: "Start a project:",
