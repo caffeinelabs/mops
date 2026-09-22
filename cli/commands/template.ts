@@ -6,11 +6,9 @@ import { kebabCase, pascalCase } from "change-case";
 import { getRootDir, readConfig } from "../mops.js";
 import { copyTemplateFileSync } from "../templates.js";
 
-// Template names offered by the interactive picker and accepted by
-// `mops template <name>`, so the picker can never offer one the argument form
-// rejects (and vice versa). The dispatch below is what each name actually
-// writes, and is keyed by these strings — add a name here only alongside a
-// branch there, or the choice validates and does nothing.
+// Template names the picker offers and `mops template <name>` accepts. The
+// dispatch below is keyed by these strings — add a name here only alongside a
+// branch there, or the choice validates and writes nothing.
 export const TEMPLATES: { name: string; label: string }[] = [
   { name: "readme", label: "README.md" },
   { name: "lib.mo", label: "src/lib.mo" },

@@ -5,12 +5,8 @@ export interface CommandGroup {
   commands: string[];
 }
 
-// Root `mops --help` groups. The categories follow the docs sidebar under
-// `docs/docs/cli/` (which files `init` outside the categories), so a user who
-// reads `--help` and a user who reads the docs meet the same mental map.
-// `cli/tests/help.test.ts` pins the commands listed here, so one cannot be
-// dropped or filed twice unnoticed; a new command that nobody files is still
-// printed, under a catch-all "Other:", rather than disappearing.
+// Root `mops --help` groups, following the docs sidebar under `docs/docs/cli/`
+// so a `--help` reader and a docs reader meet the same mental map.
 export const COMMAND_GROUPS: CommandGroup[] = [
   {
     title: "Start a project:",
@@ -68,19 +64,11 @@ export const COMMAND_GROUPS: CommandGroup[] = [
   },
 ];
 
-// Every command renders through `MopsHelp`, at every depth, and prints its own
-// usage after a usage error. `createHelp` is assigned per command rather than
-// inherited: commander gives no child its parent's, whether the child was
-// registered with `.command("name")` or `addCommand`, so each one needs its
-// own. Walking the tree also covers depth beyond the root's children — `mops
-// docs generate` — without each site repeating the wiring.
+// Installs `MopsHelp` and usage-after-error on every command in the tree.
+// `createHelp` is assigned per command rather than inherited — commander gives
+// no child its parent's, however it was registered — so the walk is required.
 export function installMopsHelp(cmd: Command): void {
   cmd.createHelp = () => new MopsHelp();
-  // `error: missing required argument 'pkg'` on its own leaves a user with
-  // nowhere to go; the usage block names the argument they owe and the flags
-  // that exist. A bare invocation of a command group needs no help here —
-  // commander prints the listing and exits 1 on its own when a parent with
-  // subcommands and no handler is given no arguments.
   cmd.showHelpAfterError();
   for (const child of cmd.commands) {
     installMopsHelp(child);
@@ -94,21 +82,15 @@ const DEFAULT_OPTION_DESCRIPTIONS: Record<string, string> = {
 };
 
 export class MopsHelp extends Help {
-  // The `-h, --help` option is registered by commander on every command, so it
-  // cannot be re-described at the call site the way a mops option can. Its
-  // default text is a lowercase fragment ("display help for command") sitting
-  // in a list of sentences, and `subcommandDescription` has the command
-  // equivalent covered — this is the option half.
+  // Commander's default texts are lowercase fragments; mops options all read as
+  // sentences. Neither of these can be set at the call site.
   override optionDescription(option: Option): string {
     const description = super.optionDescription(option);
     return DEFAULT_OPTION_DESCRIPTIONS[option.description] ?? description;
   }
 
-  // Commander's own `help` command carries the lowercase fragment "display
-  // help for command", and subcommands create their own copy lazily, before a
-  // `helpCommand()` call on the root can be inherited — so it is not enough to
-  // name it once at the root. Matching on the default text leaves a
-  // user-defined command that happens to be called `help` alone.
+  // Subcommands create their own `help` copy lazily, so this has to match on the
+  // default text rather than name the root's once.
   override subcommandDescription(cmd: Command): string {
     if (cmd.description() === "display help for command") {
       return "Show help for a command";
@@ -117,21 +99,18 @@ export class MopsHelp extends Help {
   }
 
   override formatHelp(cmd: Command, helper: Help): string {
-    // Grouping only earns its keep on the root's long list. Subcommand help
-    // (`mops cache --help`) keeps commander's layout, which shows the
-    // arguments and options each child accepts — worth more there than a name.
+    // Grouping earns its keep only on the root's long list; subcommand help
+    // keeps commander's layout, which shows what each child accepts.
     if (cmd.parent) {
       return super.formatHelp(cmd, helper);
     }
 
     const helpWidth = helper.helpWidth ?? 80;
 
-    // `formatItem` derives its padding *and* its wrap budget from the termWidth
-    // it is handed, so measure the terms as they will actually render — and
-    // across the options too, since both lists share the one width. Taking
-    // commander's own `padWidth` would count the `[options]` and `<args>`
-    // suffixes root entries drop, and a term wider than the width it was given
-    // cannot be padded up, leaving that column ragged.
+    // `formatItem` takes its padding and wrap budget from termWidth, so measure
+    // the terms as they render — options included, since both lists share the
+    // width. Commander's `padWidth` counts suffixes root entries drop, and a
+    // term wider than the width it was given cannot be padded up.
     const termWidth = Math.max(
       0,
       ...helper
@@ -185,9 +164,8 @@ export class MopsHelp extends Help {
     return output.join("\n");
   }
 
-  // `name, alias`, not commander's `name|alias`, and never the `[options]` and
-  // `<args>` suffix `subcommandTerm` appends: a root entry says what a command
-  // is for, and `mops <command> --help` says what it takes.
+  // `name, alias` rather than commander's `name|alias`, and without the
+  // `[options]` suffix: a root entry says what a command is for.
   private commandTerm(cmd: Command): string {
     const aliases = cmd.aliases();
     return [cmd.name(), ...aliases].join(", ");
@@ -226,8 +204,7 @@ export class MopsHelp extends Help {
       }
     }
 
-    // A command nobody filed still has to be discoverable, so it lands in a
-    // catch-all instead of disappearing from `--help`.
+    // An unfiled command lands in the catch-all rather than disappearing.
     if (ungrouped.size > 0) {
       groups.push({
         title: "Other:",

@@ -6,18 +6,11 @@ import { COMMAND_GROUPS } from "../help.js";
 const plain = (s: string) =>
   s.replace(new RegExp(`\u001b\\[[0-9;]*m`, "g"), "");
 
-// `mops --help` has to be a map of the CLI, not a wall: every top-level
-// command is listed, grouped by task, on a line that fits a standard terminal.
-// These tests pin that contract so a new command cannot be added without
-// deciding where it belongs, and a long summary cannot quietly stop wrapping.
 describe("root help", () => {
   test("lists every command in a group exactly once", async () => {
     const { stdout } = await cli(["--help"]);
     const text = plain(stdout);
 
-    // The group headers come from `COMMAND_GROUPS` in `cli/help.ts`; a group
-    // with no members is skipped, so this also catches a group emptied by a
-    // rename without the group being updated with it.
     const headers = text
       .split("\n")
       .filter(
@@ -26,15 +19,11 @@ describe("root help", () => {
           !line.startsWith("Usage") &&
           line !== "Options:",
       );
-    // Every group that has commands is headed by its title, in order, and no
-    // others: a typo'd or invented header is a heading no group backs.
     const filled = COMMAND_GROUPS.filter((group) =>
       group.commands.some((name) => text.includes(name)),
     );
     expect(headers).toEqual(filled.map((group) => group.title));
 
-    // Commands are indented two spaces under their group header. Count each
-    // name once, so a command filed twice or missed entirely fails here.
     const commandLines = text
       .split("\n")
       .filter((line) => /^ {2}[a-z][\w-]*(\s|,|$)/.test(line));
@@ -42,10 +31,8 @@ describe("root help", () => {
     const unique = new Set(names);
     expect(names.length).toBe(unique.size);
 
-    // Every one of these is a top-level command the docs describe. Pinning the
-    // exact set — not just membership — is what makes an unfiled command fail:
-    // it would otherwise show up under the catch-all "Other:" and leave the
-    // listing silently out of date with the CLI.
+    // The exact set, not just membership: an unfiled command would otherwise
+    // show up under the catch-all "Other:" and pass unnoticed.
     const expected = [
       "init",
       "template",
@@ -92,9 +79,8 @@ describe("root help", () => {
     expect(plain(stdout)).toMatch(/^Usage: mops/);
   });
 
-  // A root entry is a name, an optional alias list, and a one-line summary.
-  // The terminal width is fixed at 80 because `helpWidth` is not read from
-  // `COLUMNS` when stdout is a pipe, which is the case under test and in CI.
+  // Width is fixed at 80: `helpWidth` is not read from `COLUMNS` under a pipe,
+  // which is how the suite and CI run it.
   test("fits an 80-column terminal", async () => {
     const { stdout } = await cli(["--help"]);
     const tooLong = plain(stdout)
@@ -103,10 +89,8 @@ describe("root help", () => {
     expect(tooLong).toEqual([]);
   });
 
-  // The `help` command and the `--help`/`--version` flags are commander's, so
-  // their descriptions cannot be set at the call site. They are normalised to
-  // mops' sentence case in `MopsHelp`, and this pins that they stay that way
-  // rather than regressing to commander's lowercase fragments.
+  // Commander's own entries cannot be re-described at the call site, so
+  // `MopsHelp` normalises their lowercase defaults.
   test("describes commander's own entries in sentence case", async () => {
     const { stdout } = await cli(["--help"]);
     const text = plain(stdout);
@@ -118,8 +102,7 @@ describe("root help", () => {
   });
 });
 
-// The complaint that started this: `mops cache` printed nothing useful, and
-// `mops cache --help` did not say what the command could do.
+// A bare group name has to be a way in, not a dead end.
 describe("command groups", () => {
   test.each([
     "cache",
@@ -136,17 +119,14 @@ describe("command groups", () => {
     async (name) => {
       const result = await cli([name]);
       expect(result.exitCode).toBe(1);
-      // The listing goes to stderr: the command did not do the work asked of it,
-      // so it must not claim stdout as a result.
       expect(result.stdout).toBe("");
       expect(plain(result.stderr)).toMatch(/^Usage: mops/);
       expect(plain(result.stderr)).toContain("Commands:");
     },
   );
 
-  // A group is only explorable if `--help` names every subcommand it takes, so
-  // these lists are spelled out rather than read from `COMMAND_GROUPS`: the
-  // point is to notice when a subcommand is added and its help does not say so.
+  // Spelled out rather than read from `COMMAND_GROUPS`, so a subcommand added
+  // without its help saying so is caught.
   test.each([
     ["cache", ["show", "size", "clean"]],
     ["toolchain", ["use", "update", "info", "bin"]],
@@ -165,8 +145,6 @@ describe("command groups", () => {
     }
   });
 
-  // The command group the user named: `mops toolchain bin --help` has to say
-  // which tools the argument accepts, not just that it wants one.
   test("`mops toolchain bin --help` and a missing argument both name the tools", async () => {
     const toolNames = ["moc", "wasmtime", "pocket-ic", "lintoko", "wasm-opt"];
 
@@ -178,8 +156,6 @@ describe("command groups", () => {
       expect(help).toContain(tool);
     }
 
-    // Omitting the argument is the other way a user arrives here, so the
-    // usage block that follows the error has to name the tools too.
     const missing = await cli(["toolchain", "bin"]);
     expect(missing.exitCode).toBe(1);
     for (const tool of toolNames) {
@@ -187,9 +163,8 @@ describe("command groups", () => {
     }
   });
 
-  // `--global` used to hang off `cache` itself, so it was accepted before the
-  // subcommand. It now belongs to `clean`, the only subcommand that reads it,
-  // which is what the docs and the skill both show.
+  // `--global` belongs to `clean`, the only subcommand that reads it, so it has
+  // to follow `clean` rather than precede it.
   test("`--global` is an option of `cache clean`, not of `cache`", async () => {
     const { stdout } = await cli(["cache", "clean", "--help"]);
     expect(plain(stdout)).toMatch(
@@ -202,9 +177,8 @@ describe("command groups", () => {
   });
 });
 
-// `error: missing required argument 'pkg'` with nothing after it leaves a user
-// with no way forward. Commander only appends the usage block once
-// `showHelpAfterError()` is set, which `installMopsHelp` does for every command.
+// A missing argument must name the argument and show its usage, not stop at the
+// error line.
 describe("usage errors", () => {
   test.each([
     [["add"], "'pkg'"],

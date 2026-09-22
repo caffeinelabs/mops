@@ -77,9 +77,8 @@ if (cwd) {
 
 let program = new Command();
 
-// The wording is shared verbatim so `--locked` and `--verbose` read the same
-// wherever they appear; only the ones with identical meaning are centralised
-// (`mops bench --verbose` prints a benchmark trace, not "more information").
+// Shared wording for the two flags that mean the same thing wherever they
+// appear; `bench --verbose` prints a pipeline trace, so it keeps its own.
 const lockedOption = () =>
   new Option(
     "--locked",
@@ -166,17 +165,14 @@ program.hook("preAction", () => {
   }
 });
 
-// --version. Commander renders a short flag and a long one comma-separated
-// only when it parses the pair itself; the combined form leaves the entry
-// reading `-v --version`, so the flags are registered separately.
+// --version. The short and long flag render comma-separated only when commander
+// parses the pair itself, so they are registered separately.
 program.version(
   `CLI ${version()}\nAPI ${apiVersion}`,
   "-v, --version",
   "Show the version",
 );
 
-// Built-in `help` command, given a sentence-case description like every other
-// root entry and a `[command]` placeholder so its argument is discoverable.
 program.helpCommand("help [command]", "Show help for a command");
 
 // init
@@ -1310,8 +1306,7 @@ program.addCommand(docsCommand);
 // instead of Node's unhandled-rejection crash banner.
 process.on("unhandledRejection", handleCliError);
 
-// Last, so it reaches every command registered above: the root listing groups
-// by task and each subcommand listing gains its own entries (see `help.ts`).
+// Last, so the walk reaches every command registered above.
 installMopsHelp(program);
 
 program.parseAsync().catch(handleCliError);
