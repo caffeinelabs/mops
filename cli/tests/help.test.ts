@@ -11,6 +11,11 @@ describe("root help", () => {
     const { stdout } = await cli(["--help"]);
     const text = plain(stdout);
 
+    // A command filed in two groups renders once, silently, and the header
+    // check below cannot see it.
+    const filed = COMMAND_GROUPS.flatMap((group) => group.commands);
+    expect(new Set(filed).size).toBe(filed.length);
+
     const headers = text
       .split("\n")
       .filter(
