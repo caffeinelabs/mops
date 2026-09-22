@@ -186,6 +186,20 @@ describe("command groups", () => {
       expect(plain(missing.stderr)).toContain(tool);
     }
   });
+
+  // `--global` used to hang off `cache` itself, so it was accepted before the
+  // subcommand. It now belongs to `clean`, the only subcommand that reads it,
+  // which is what the docs and the skill both show.
+  test("`--global` is an option of `cache clean`, not of `cache`", async () => {
+    const { stdout } = await cli(["cache", "clean", "--help"]);
+    expect(plain(stdout)).toMatch(
+      /--global\s+Delete only the global cache, keep the project's \.mops/,
+    );
+
+    const misplaced = await cli(["cache", "--global", "clean"]);
+    expect(misplaced.exitCode).toBe(1);
+    expect(plain(misplaced.stderr)).toContain("unknown option '--global'");
+  });
 });
 
 // `error: missing required argument 'pkg'` with nothing after it leaves a user
