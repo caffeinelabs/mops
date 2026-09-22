@@ -256,12 +256,12 @@ All of these are explorable from the CLI: run any command group bare (`mops cach
 ### `mops template <name>`
 
 ```bash
-mops template readme                     # README.md
-mops template lib.mo                     # src/lib.mo
-mops template lib.test.mo                # test/lib.test.mo
-mops template license:MIT                # LICENSE (Apache-2.0 also available)
-mops template --copyright-owner "Acme"   # substitute the holder into a license
-mops template github-workflow:mops-test  # .github/workflows/mops-test.yml
+mops template readme                                # README.md
+mops template lib.mo                                # src/lib.mo
+mops template lib.test.mo                           # test/lib.test.mo
+mops template license:MIT                           # LICENSE (Apache-2.0 also available)
+mops template license:MIT --copyright-owner "Acme"  # substitute the holder into a license
+mops template github-workflow:mops-test             # .github/workflows/mops-test.yml
 ```
 
 Writes a starter file, creating parent directories. `github-workflow:mops-publish` adds the publish workflow. With no name it opens a picker — agents should always pass one of the names above (`mops template --help` lists them).
@@ -269,7 +269,7 @@ Writes a starter file, creating parent directories. `github-workflow:mops-publis
 ### `mops cache`
 
 ```bash
-mops cache show    # print the global cache directory
+mops cache show    # print the global cache directory path
 mops cache size    # print the global cache size
 mops cache clean   # delete the local .mops cache and the global one
 mops cache clean --global   # global cache only; keep the project's .mops

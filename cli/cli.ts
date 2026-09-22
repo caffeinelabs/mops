@@ -1001,8 +1001,7 @@ const toolchainCommand = new Command("toolchain")
   .addHelpText(
     "after",
     `\nManages: ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}.`,
-  )
-  .showHelpAfterError();
+  );
 
 toolchainCommand
   .command("use")
@@ -1108,9 +1107,9 @@ migrateCommand
 program.addCommand(migrateCommand);
 
 // generate
-const generateCommand = new Command("generate")
-  .description("Generate source-derived artifacts (Candid, ...)")
-  .showHelpAfterError();
+const generateCommand = new Command("generate").description(
+  "Generate source-derived artifacts (Candid, ...)",
+);
 
 generateCommand
   .command("candid")

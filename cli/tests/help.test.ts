@@ -1,5 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
 import { cli } from "./helpers";
+import { COMMAND_GROUPS } from "../help.js";
 
 // Strips ANSI escapes so assertions read the text a user sees.
 const plain = (s: string) =>
@@ -19,12 +20,18 @@ describe("root help", () => {
     // rename without the group being updated with it.
     const headers = text
       .split("\n")
-      .filter((line) => /^[A-Z].*:$/.test(line) && !line.startsWith("Usage"));
-    expect(headers.length).toBeGreaterThan(0);
-
-    for (const header of headers) {
-      expect(header).toMatch(/^[A-Z][A-Za-z ]*:$/);
-    }
+      .filter(
+        (line) =>
+          /^[A-Z].*:$/.test(line) &&
+          !line.startsWith("Usage") &&
+          line !== "Options:",
+      );
+    // Every group that has commands is headed by its title, in order, and no
+    // others: a typo'd or invented header is a heading no group backs.
+    const filled = COMMAND_GROUPS.filter((group) =>
+      group.commands.some((name) => text.includes(name)),
+    );
+    expect(headers).toEqual(filled.map((group) => group.title));
 
     // Commands are indented two spaces under their group header. Count each
     // name once, so a command filed twice or missed entirely fails here.
