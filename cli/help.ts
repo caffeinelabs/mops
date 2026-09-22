@@ -64,17 +64,16 @@ export const COMMAND_GROUPS: CommandGroup[] = [
   },
   {
     title: "Miscellaneous:",
-    commands: ["search", "info", "cache", "sources", "moc-args", "help"],
+    commands: ["search", "info", "cache", "moc-args", "help"],
   },
 ];
 
 // Every command renders through `MopsHelp`, at every depth, and prints its own
-// usage after a usage error. The `createHelp` assignment has to happen here
-// rather than be inherited: it propagates from a parent only to subcommands
-// registered with `.command("name")`, and the grouped parents (`mops cache`,
-// `mops toolchain`, …) are built with `addCommand`, which adds no inheritance.
-// Walking the tree also covers depth beyond the root's children — `mops docs
-// generate` — without each site repeating the wiring.
+// usage after a usage error. `createHelp` is assigned per command rather than
+// inherited: commander gives no child its parent's, whether the child was
+// registered with `.command("name")` or `addCommand`, so each one needs its
+// own. Walking the tree also covers depth beyond the root's children — `mops
+// docs generate` — without each site repeating the wiring.
 export function installMopsHelp(cmd: Command): void {
   cmd.createHelp = () => new MopsHelp();
   // `error: missing required argument 'pkg'` on its own leaves a user with
