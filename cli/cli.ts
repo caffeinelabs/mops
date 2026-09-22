@@ -77,8 +77,6 @@ if (cwd) {
 
 let program = new Command();
 
-// shared option definitions
-
 // The wording is shared verbatim so `--locked` and `--verbose` read the same
 // wherever they appear; only the ones with identical meaning are centralised
 // (`mops bench --verbose` prints a benchmark trace, not "more information").
