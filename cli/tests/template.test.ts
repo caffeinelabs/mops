@@ -52,14 +52,26 @@ describe("template", () => {
     },
   );
 
-  test("rejects an unknown name and lists the valid ones", async () => {
+  // Pins the accepted set to TEMPLATES: a name offered by the picker but not
+  // registered as a choice would be rejected here, and vice versa.
+  test("rejects an unknown name and names every accepted one", async () => {
     const cwd = await makeTempFixture("project");
 
     const result = await cli(["template", "bogus"], { cwd });
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("Allowed choices are");
-    expect(result.stderr).toContain("github-workflow:mops-publish");
+    for (const { name } of TEMPLATES) {
+      expect(result.stderr).toContain(name);
+    }
     expect(existsSync(path.join(cwd, "README.md"))).toBe(false);
+  });
+
+  test("`--help` lists the accepted names", async () => {
+    const result = await cli(["template", "--help"]);
+
+    expect(result.exitCode).toBe(0);
+    for (const { name } of TEMPLATES) {
+      expect(result.stdout).toContain(name);
+    }
   });
 });

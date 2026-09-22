@@ -388,7 +388,12 @@ program
 // search
 program
   .command("search")
-  .addArgument(new Argument("<text>", "text to match against package names"))
+  .addArgument(
+    new Argument(
+      "<text>",
+      "text to match against package names, descriptions and keywords; `owner:` and `keyword:` restrict the match to that field",
+    ),
+  )
   .description("Search the registry for packages")
   .action(async (text) => {
     await search(text);

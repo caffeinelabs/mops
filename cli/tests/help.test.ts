@@ -184,8 +184,10 @@ describe("command groups", () => {
 
     const argumentSection = text.split("Arguments:")[1] ?? "";
     for (const name of declared) {
+      // An undescribed argument renders as the bare term; the gap must be
+      // spaces, not the newline that ends a term with nothing after it.
       expect(argumentSection).toMatch(
-        new RegExp(`^ {2}${name}[\\w<>\\[\\].:-]*\\s{2,}\\S`, "m"),
+        new RegExp(`^ {2}${name}[\\w<>\\[\\].:-]*[^\\S\\n]{2,}\\S`, "m"),
       );
     }
   });

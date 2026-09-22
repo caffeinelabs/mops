@@ -251,7 +251,7 @@ mops sync --dry-run       # print what would change, write nothing
 
 ## Other Commands
 
-All of these are explorable from the CLI: run any command group bare (`mops cache`, `mops toolchain`) to list its subcommands, append `--help` at any depth for the arguments and options, and drop `--` to forward flags to `moc` on the commands that accept it.
+All of these are explorable from the CLI: run any command group bare (`mops cache`, `mops toolchain`) to list its subcommands, append `--help` at any depth for the arguments and options, and drop `--` to forward flags to the underlying tool on the commands that accept it.
 
 ### `mops template <name>`
 
