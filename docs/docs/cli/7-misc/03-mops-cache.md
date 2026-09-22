@@ -34,3 +34,5 @@ mops cache clean --global
 ```
 
 Run outside a project (no `mops.toml` in any parent directory), `mops cache clean` only cleans the global cache.
+
+Run `mops cache` with no subcommand to list what it can do.
