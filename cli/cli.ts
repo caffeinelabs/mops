@@ -87,6 +87,12 @@ const lockedOption = () =>
 
 const moreInfoOption = () => new Option("--verbose", "Show more information");
 
+// Commands that print the underlying tool invocation say what the flag shows.
+const verboseConsoleOption = () =>
+  new Option("--verbose", "Verbose console output");
+
+const verboseOutputOption = () => new Option("--verbose", "Verbose output");
+
 function parseExtraArgs(variadicArgs?: string[]): {
   extraArgs: string[];
   args: string[];
@@ -448,7 +454,7 @@ program
     ),
   )
   .description("Build a canister")
-  .addOption(moreInfoOption())
+  .addOption(verboseConsoleOption())
   .addOption(new Option("--output, -o <output>", "Output directory"))
   .addOption(
     new Option(
@@ -518,7 +524,7 @@ program
     "after",
     "\nAlso checks stable compatibility for canisters with [check-stable]\nconfigured, and lints when lintoko is pinned in [toolchain] (--no-lint skips).",
   )
-  .addOption(moreInfoOption())
+  .addOption(verboseConsoleOption())
   .addOption(
     new Option(
       "--fix",
@@ -579,7 +585,7 @@ program
       "canister names, or a baseline .most path followed by an optional canister name (default: every canister with [check-stable] configured)",
     ),
   )
-  .addOption(moreInfoOption())
+  .addOption(verboseConsoleOption())
   .addOption(
     new Option(
       "--no-check-limit",
@@ -675,7 +681,7 @@ program
       .default("interpreter"),
   )
   .option("-w, --watch", "Enable watch mode")
-  .addOption(moreInfoOption())
+  .addOption(verboseOutputOption())
   .addHelpText(
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops test -- -Werror",
@@ -790,7 +796,7 @@ userCommand
 // user import
 userCommand
   .command("import")
-  .addArgument(new Argument("<data>", ".pem file contents, or a path to one"))
+  .addArgument(new Argument("<data>", ".pem file contents (not a path)"))
   .description("Import .pem file data to use as identity")
   .addOption(
     new Option("--no-encrypt", "Do not ask for a password to encrypt identity"),
@@ -1126,7 +1132,7 @@ generateCommand
       "Write the generated .did to <output> (single-canister only; does not touch mops.toml)",
     ),
   )
-  .addOption(moreInfoOption())
+  .addOption(verboseConsoleOption())
   .addHelpText(
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops generate candid -- -Werror",
@@ -1218,11 +1224,11 @@ program
   .addArgument(
     new Argument(
       "[filter...]",
-      "lint only .mo files whose path contains one of these (default: all)",
+      "lint only .mo files whose path contains this filter (default: all)",
     ),
   )
   .description("Lint Motoko code")
-  .addOption(moreInfoOption())
+  .addOption(verboseOutputOption())
   .addOption(new Option("--fix", "Apply fixes"))
   .addOption(
     new Option(

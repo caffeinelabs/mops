@@ -71,7 +71,7 @@ Flags are applied in this order (later overrides earlier):
 2. `[build].args` — build only (e.g. `--release`)
 3. `[canisters.<name>.migrations]` — auto-injected `--enhanced-migration` (managed by mops)
 4. `[canisters.<name>].args` — per-canister
-5. CLI `-- <flags>` — one-off overrides; supported by `mops check`, `mops build`, `mops check-stable`, `mops generate`, `mops migrate`, `mops test`, and `mops bench`
+5. CLI `-- <flags>` — one-off overrides; supported by `mops build`, `mops check`, `mops check-stable`, `mops test`, `mops bench`, `mops generate candid`, and `mops lint`
 
 ## Core Commands
 

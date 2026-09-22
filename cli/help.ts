@@ -5,8 +5,8 @@ export interface CommandGroup {
   commands: string[];
 }
 
-// Root `mops --help` groups, following the docs sidebar under `docs/docs/cli/`
-// so a `--help` reader and a docs reader meet the same mental map.
+// Root `mops --help` groups, largely following the docs sidebar under
+// `docs/docs/cli/` so a `--help` reader and a docs reader meet a similar map.
 export const COMMAND_GROUPS: CommandGroup[] = [
   {
     title: "Start a project:",

@@ -386,4 +386,18 @@ describe("update / outdated --patch bound", () => {
     const result = await cli(["update", "--help"]);
     expect(result.stdout).toMatch(/--verbose\s+Show more information/);
   });
+
+  // Commands that print the tool invocation word this flag their own way.
+  test.each([
+    ["build", "Verbose console output"],
+    ["check", "Verbose console output"],
+    ["check-stable", "Verbose console output"],
+    ["generate candid", "Verbose console output"],
+    ["test", "Verbose output"],
+    ["lint", "Verbose output"],
+  ])("mops %s --help describes its own --verbose", async (command, wording) => {
+    const result = await cli([...command.split(" "), "--help"]);
+
+    expect(result.stdout).toMatch(new RegExp(`--verbose\\s+${wording}`));
+  });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, jest, test } from "@jest/globals";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { TEMPLATES } from "../commands/template.js";
 import { cli, useTempFixtures } from "./helpers";
 
 // `mops template <name>` is the non-interactive form the docs recommend; a
@@ -36,6 +37,20 @@ describe("template", () => {
       "Acme Corp",
     );
   });
+
+  // Every branch writes files and logs "Created"; a listed name with no branch
+  // validates, does nothing and still exits 0.
+  test.each(TEMPLATES.map((t) => t.name))(
+    "writes something for the offered name %s",
+    async (name) => {
+      const cwd = await makeTempFixture("project");
+
+      const result = await cli(["template", name], { cwd });
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("Created");
+    },
+  );
 
   test("rejects an unknown name and lists the valid ones", async () => {
     const cwd = await makeTempFixture("project");

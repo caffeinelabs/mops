@@ -6,10 +6,6 @@ import { cliError } from "../error.js";
 export async function bump(part: string) {
   checkConfigFile();
 
-  if (part && !["major", "minor", "patch"].includes(part)) {
-    cliError("Unknown version part. Available parts: major, minor, patch");
-  }
-
   let config = readConfig();
 
   if (!config.package) {

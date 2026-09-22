@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, jest, test } from "@jest/globals";
 import { cli } from "./helpers";
 import { COMMAND_GROUPS } from "../help.js";
 
@@ -94,6 +94,21 @@ describe("root help", () => {
     expect(tooLong).toEqual([]);
   });
 
+  // Pins the term column, not just the total width: a wider or narrower term
+  // column still fits 80 columns, so the check above cannot see it.
+  test("aligns every description in one column", async () => {
+    const { stdout } = await cli(["--help"]);
+    const columns = plain(stdout)
+      .split("\n")
+      .filter((line) => /^ {2}\S/.test(line))
+      .map((line) => {
+        const gap = line.slice(2).match(/\s{2,}\S/);
+        return gap ? gap.index! + gap[0].length + 1 : -1;
+      });
+    expect(new Set(columns).size).toBe(1);
+    expect(columns[0]).toBe(17);
+  });
+
   // Commander's own entries cannot be re-described at the call site, so
   // `MopsHelp` normalises their lowercase defaults.
   test("describes commander's own entries in sentence case", async () => {
@@ -108,18 +123,22 @@ describe("root help", () => {
 });
 
 // A bare group name has to be a way in, not a dead end.
+const SUBCOMMANDS: [string, string[]][] = [
+  ["cache", ["show", "size", "clean"]],
+  ["toolchain", ["use", "update", "info", "bin"]],
+  ["user", ["get-principal", "import", "set", "get"]],
+  ["self", ["update", "uninstall"]],
+  ["owner", ["list", "add", "remove"]],
+  ["maintainer", ["list", "add", "remove"]],
+  ["migrate", ["new", "freeze"]],
+  ["generate", ["candid"]],
+  ["docs", ["generate", "coverage"]],
+];
+
 describe("command groups", () => {
-  test.each([
-    "cache",
-    "toolchain",
-    "user",
-    "self",
-    "owner",
-    "maintainer",
-    "migrate",
-    "generate",
-    "docs",
-  ])(
+  jest.setTimeout(180_000);
+
+  test.each(SUBCOMMANDS)(
     "`mops %s` bare prints its subcommands and exits non-zero",
     async (name) => {
       const result = await cli([name]);
@@ -132,21 +151,42 @@ describe("command groups", () => {
 
   // Spelled out rather than read from `COMMAND_GROUPS`, so a subcommand added
   // without its help saying so is caught.
+  test.each(SUBCOMMANDS)(
+    "`mops %s --help` names its subcommands",
+    async (name, subcommands) => {
+      const { exitCode, stdout } = await cli([name, "--help"]);
+      expect(exitCode).toBe(0);
+      for (const subcommand of subcommands) {
+        expect(plain(stdout)).toContain(subcommand);
+      }
+    },
+  );
+
+  // AGENTS.md: every option and accepted argument appears in `--help` with a
+  // non-empty description. Commander drops an argument's entry entirely when it
+  // has no description, so read the argument names off the usage line.
   test.each([
-    ["cache", ["show", "size", "clean"]],
-    ["toolchain", ["use", "update", "info", "bin"]],
-    ["user", ["get-principal", "import", "set", "get"]],
-    ["self", ["update", "uninstall"]],
-    ["owner", ["list", "add", "remove"]],
-    ["maintainer", ["list", "add", "remove"]],
-    ["migrate", ["new", "freeze"]],
-    ["generate", ["candid"]],
-    ["docs", ["generate", "coverage"]],
-  ])("`mops %s --help` names its subcommands", async (name, subcommands) => {
-    const { exitCode, stdout } = await cli([name, "--help"]);
-    expect(exitCode).toBe(0);
-    for (const subcommand of subcommands) {
-      expect(plain(stdout)).toContain(subcommand);
+    ...COMMAND_GROUPS.flatMap((group) => group.commands),
+    ...SUBCOMMANDS.flatMap(([name, subs]) =>
+      subs.map((sub) => `${name} ${sub}`),
+    ),
+  ])("`mops %s --help` describes every argument", async (path) => {
+    const { stdout } = await cli([...path.split(" "), "--help"]);
+    const text = plain(stdout);
+
+    const usage = text.split("\n")[0] ?? "";
+    const declared = [...usage.matchAll(/[<[]([a-zA-Z][\w-]*)/g)]
+      .map((m) => m[1])
+      .filter((name) => name !== "options" && name !== "command");
+    if (declared.length === 0) {
+      return;
+    }
+
+    const argumentSection = text.split("Arguments:")[1] ?? "";
+    for (const name of declared) {
+      expect(argumentSection).toMatch(
+        new RegExp(`^ {2}${name}[\\w<>\\[\\].:-]*\\s{2,}\\S`, "m"),
+      );
     }
   });
 
