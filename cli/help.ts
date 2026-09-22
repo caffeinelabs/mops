@@ -64,7 +64,7 @@ export const COMMAND_GROUPS: CommandGroup[] = [
   },
   {
     title: "Miscellaneous:",
-    commands: ["search", "info", "cache", "moc-args", "help"],
+    commands: ["search", "info", "cache", "sources", "moc-args", "help"],
   },
 ];
 
