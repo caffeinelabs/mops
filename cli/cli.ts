@@ -77,8 +77,6 @@ if (cwd) {
 
 let program = new Command();
 
-// Shared wording for the two flags that mean the same thing wherever they
-// appear; `bench --verbose` prints a pipeline trace, so it keeps its own.
 const lockedOption = () =>
   new Option(
     "--locked",
@@ -1084,7 +1082,7 @@ const migrateCommand = new Command("migrate").description(
 
 migrateCommand
   .command("new")
-  .addArgument(new Argument("<name>", "migration name; also the file name"))
+  .addArgument(new Argument("<name>"))
   .addArgument(
     new Argument(
       "[canister]",

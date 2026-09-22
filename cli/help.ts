@@ -82,8 +82,7 @@ const DEFAULT_OPTION_DESCRIPTIONS: Record<string, string> = {
 };
 
 export class MopsHelp extends Help {
-  // Commander's default texts are lowercase fragments; mops options all read as
-  // sentences. Neither of these can be set at the call site.
+  // Commander's own defaults cannot be re-described at the call site.
   override optionDescription(option: Option): string {
     const description = super.optionDescription(option);
     return DEFAULT_OPTION_DESCRIPTIONS[option.description] ?? description;
@@ -164,8 +163,8 @@ export class MopsHelp extends Help {
     return output.join("\n");
   }
 
-  // `name, alias` rather than commander's `name|alias`, and without the
-  // `[options]` suffix: a root entry says what a command is for.
+  // Commander renders `name|alias` and appends `[options]`; a root entry says
+  // what a command is for, so it does neither.
   private commandTerm(cmd: Command): string {
     const aliases = cmd.aliases();
     return [cmd.name(), ...aliases].join(", ");

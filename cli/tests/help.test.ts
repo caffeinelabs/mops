@@ -163,8 +163,8 @@ describe("command groups", () => {
   );
 
   // AGENTS.md: every option and accepted argument appears in `--help` with a
-  // non-empty description. Commander drops an argument's entry entirely when it
-  // has no description, so read the argument names off the usage line.
+  // non-empty description. Read the argument names off the usage line: an
+  // argument with no description may not appear in the list below at all.
   test.each([
     ...COMMAND_GROUPS.flatMap((group) => group.commands),
     ...SUBCOMMANDS.flatMap(([name, subs]) =>
