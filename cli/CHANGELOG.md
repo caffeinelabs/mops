@@ -1,7 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
-- Make the CLI explorable from `--help` alone. Every command and command group now describes what it is for, every argument says what it takes and prints the usage block after a usage error, and `mops --help` groups the commands by task instead of one flat list. `cache` becomes a real command group (`size`/`show`/`clean`), so `mops cache` lists its subcommands rather than erroring, and `mops template <name>` and its `--copyright-owner` flag now work, where the argument form previously errored and the bare form opened a picker. Breaking: `mops cache --global clean` is now `mops cache clean --global`.
+- Make the CLI explorable from `--help` alone. Every command and command group now describes what it is for, every argument says what it takes and prints the usage block after a usage error, and `mops --help` groups the commands by task instead of one flat list. `cache` becomes a real command group (`size`/`show`/`clean`), so `mops cache` lists its subcommands rather than erroring, and `mops template <name>` and its `--copyright-owner` flag now work, where previously only the interactive picker did. Breaking: `mops cache --global clean` is now `mops cache clean --global`.
 
 ## 3.3.0
 - `mops toolchain use <tool>` no longer offers prereleases in its version picker. The picker listed raw GitHub releases, so draft and prerelease tags appeared alongside real ones — internal branch builds like `1.15.1-dedup-stable-types-3` and `2.0.0-beta.0` for `moc`. Prereleases are now excluded by default, matching what `mops toolchain update` and `mops toolchain use <tool> latest` already resolved to. Opt back in with `mops toolchain use <tool> --prerelease`, which also lets `latest` resolve to a prerelease.

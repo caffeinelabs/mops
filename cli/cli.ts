@@ -343,7 +343,7 @@ program
   .description("Print compiler --package flags for resolved dependencies")
   .addHelpText(
     "after",
-    "\nOutput is machine-parsed: one `--package` flag per line, and nothing else.",
+    "\nOutput is machine-parsed: one `--package <name> <dir>` line per dependency,\nand nothing else on stdout.",
   )
   .option("--no-install", "Do not install dependencies before running sources")
   .addOption(
