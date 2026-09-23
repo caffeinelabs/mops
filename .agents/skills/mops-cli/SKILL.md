@@ -71,7 +71,7 @@ Flags are applied in this order (later overrides earlier):
 2. `[build].args` — build only (e.g. `--release`)
 3. `[canisters.<name>.migrations]` — auto-injected `--enhanced-migration` (managed by mops)
 4. `[canisters.<name>].args` — per-canister
-5. CLI `-- <flags>` — one-off overrides; supported by `mops check`, `mops build`, `mops check-stable`, `mops generate`, `mops migrate`, `mops test`, and `mops bench`
+5. CLI `-- <flags>` — one-off overrides; supported by `mops build`, `mops check`, `mops check-stable`, `mops test`, `mops bench`, `mops generate candid`, and `mops lint`
 
 ## Core Commands
 
@@ -250,6 +250,32 @@ mops sync --dry-run       # print what would change, write nothing
 `mops sync` needs a pinned `[toolchain] moc` — it reads imports with `moc --print-deps`. Packages imported only from `test`/`tests`/`bench`/`benchmark` directories are added to `[dev-dependencies]`; already-declared packages are never moved between sections.
 
 ## Other Commands
+
+All of these are explorable from the CLI: run any command group bare (`mops cache`, `mops toolchain`) to list its subcommands, append `--help` at any depth for the arguments and options, and drop `--` to forward flags to the underlying tool on the commands that accept it.
+
+### `mops template <name>`
+
+```bash
+mops template readme                                # README.md
+mops template lib.mo                                # src/lib.mo
+mops template lib.test.mo                           # test/lib.test.mo
+mops template license:MIT                           # LICENSE (Apache-2.0 also available)
+mops template license:MIT --copyright-owner "Acme"  # substitute the holder into a license
+mops template github-workflow:mops-test             # .github/workflows/mops-test.yml
+```
+
+Writes a starter file, creating parent directories. `github-workflow:mops-publish` adds the publish workflow. With no name it opens a picker — agents should always pass one of the names above (`mops template --help` lists them).
+
+### `mops cache`
+
+```bash
+mops cache show    # print the global cache directory path
+mops cache size    # print the global cache size
+mops cache clean   # delete the local .mops cache and the global one
+mops cache clean --global   # global cache only; keep the project's .mops
+```
+
+Outside a project (no `mops.toml` in any parent), `mops cache clean` cleans only the global cache either way.
 
 ### `mops self update`
 

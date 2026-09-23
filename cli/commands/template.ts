@@ -6,6 +6,25 @@ import { kebabCase, pascalCase } from "change-case";
 import { getRootDir, readConfig } from "../mops.js";
 import { copyTemplateFileSync } from "../templates.js";
 
+// Template names the picker offers and `mops template <name>` accepts. The
+// dispatch below is keyed by these strings — add a name here only alongside a
+// branch there, or the choice validates and writes nothing.
+export const TEMPLATES: { name: string; label: string }[] = [
+  { name: "readme", label: "README.md" },
+  { name: "lib.mo", label: "src/lib.mo" },
+  { name: "lib.test.mo", label: "test/lib.test.mo" },
+  { name: "license:MIT", label: "License MIT" },
+  { name: "license:Apache-2.0", label: "License Apache-2.0" },
+  {
+    name: "github-workflow:mops-test",
+    label: "GitHub Workflow to run 'mops test'",
+  },
+  {
+    name: "github-workflow:mops-publish",
+    label: "GitHub Workflow to publish a package",
+  },
+];
+
 export async function template(templateName?: string, options: any = {}) {
   if (!templateName) {
     let res = await prompts({
@@ -13,19 +32,7 @@ export async function template(templateName?: string, options: any = {}) {
       name: "value",
       message: "Select template:",
       choices: [
-        { title: "README.md", value: "readme" },
-        { title: "src/lib.mo", value: "lib.mo" },
-        { title: "test/lib.test.mo", value: "lib.test.mo" },
-        { title: "License MIT", value: "license:MIT" },
-        { title: "License Apache-2.0", value: "license:Apache-2.0" },
-        {
-          title: "GitHub Workflow to run 'mops test'",
-          value: "github-workflow:mops-test",
-        },
-        {
-          title: "GitHub Workflow to publish a package",
-          value: "github-workflow:mops-publish",
-        },
+        ...TEMPLATES.map((t) => ({ title: t.label, value: t.name })),
         { title: "× Cancel", value: "" },
       ],
       initial: 0,

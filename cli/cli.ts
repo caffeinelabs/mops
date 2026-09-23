@@ -6,6 +6,7 @@ import process from "node:process";
 import { resolve } from "node:path";
 import { cliError, handleCliError } from "./error.js";
 import { cacheSize, cleanCache, show } from "./cache.js";
+import { installMopsHelp } from "./help.js";
 import { add } from "./commands/add.js";
 import { bench } from "./commands/bench.js";
 import { build } from "./commands/build.js";
@@ -35,7 +36,7 @@ import { search } from "./commands/search.js";
 import * as self from "./commands/self.js";
 import { sources } from "./commands/sources.js";
 import { sync } from "./commands/sync.js";
-import { template } from "./commands/template.js";
+import { template, TEMPLATES } from "./commands/template.js";
 import { test } from "./commands/test/test.js";
 import { toolchain } from "./commands/toolchain/index.js";
 import { update } from "./commands/update.js";
@@ -75,6 +76,20 @@ if (cwd) {
 }
 
 let program = new Command();
+
+const lockedOption = () =>
+  new Option(
+    "--locked",
+    "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
+  );
+
+const moreInfoOption = () => new Option("--verbose", "Show more information");
+
+// Commands that print the underlying tool invocation say what the flag shows.
+const verboseConsoleOption = () =>
+  new Option("--verbose", "Verbose console output");
+
+const verboseOutputOption = () => new Option("--verbose", "Verbose output");
 
 function parseExtraArgs(variadicArgs?: string[]): {
   extraArgs: string[];
@@ -154,13 +169,20 @@ program.hook("preAction", () => {
   }
 });
 
-// --version
-program.version(`CLI ${version()}\nAPI ${apiVersion}`, "-v --version");
+// --version. The short and long flag render comma-separated only when commander
+// parses the pair itself, so they are registered separately.
+program.version(
+  `CLI ${version()}\nAPI ${apiVersion}`,
+  "-v, --version",
+  "Show the version",
+);
+
+program.helpCommand("help [command]", "Show help for a command");
 
 // init
 program
   .command("init")
-  .description("Initialize a new project or package in the current directory")
+  .description("Create a new project or package here")
   .option("-y, --yes", "Accept all defaults")
   .action(async (options) => {
     await init(options);
@@ -168,13 +190,14 @@ program
 
 // add
 program
-  .command("add <pkg>")
-  .description("Install the package and save it to mops.toml")
+  .command("add")
+  .addArgument(new Argument("<pkg>", "package to install (forms listed below)"))
+  .description("Install a package and save it to mops.toml")
   .option(
     "--dev",
     "Add to [dev-dependencies] section (moves an existing dependency)",
   )
-  .option("--verbose", "Show more information")
+  .addOption(moreInfoOption())
   .addHelpText(
     "after",
     `
@@ -195,11 +218,14 @@ Accepted <pkg> forms:
 
 // remove
 program
-  .command("remove <pkg>")
+  .command("remove")
   .alias("rm")
-  .description("Remove package and update mops.toml")
+  .addArgument(
+    new Argument("<pkg>", "package to remove, as written in mops.toml"),
+  )
+  .description("Remove a package from mops.toml")
   .option("--dev", "Only remove from [dev-dependencies]")
-  .option("--verbose", "Show more information")
+  .addOption(moreInfoOption())
   .option("--dry-run", "Do not actually remove anything")
   .action(async (pkg, options) => {
     checkConfigFile();
@@ -212,21 +238,16 @@ program
 program
   .command("install")
   .alias("i")
-  .description("Install all dependencies specified in mops.toml")
+  .description("Install every dependency from mops.toml")
   .option("--no-toolchain", "Do not install toolchain")
-  .option("--verbose", "Show more information")
+  .addOption(moreInfoOption())
   .addOption(
     new Option(
       "--concurrency <n>",
       "Max simultaneous registry requests (default: derived from the CPU count and open-file limit, 4–16; env var MOPS_CONCURRENCY works on every command)",
     ).argParser(parseConcurrency),
   )
-  .addOption(
-    new Option(
-      "--locked",
-      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
-    ),
-  )
+  .addOption(lockedOption())
   .action(async (options) => {
     checkConfigFile();
 
@@ -272,8 +293,10 @@ program
 // verify
 program
   .command("verify")
-  .description(
-    "Audit installed dependencies against mops.lock: re-hash every file under .mops/ and confirm the lock still matches mops.toml and the registry",
+  .description("Audit installed dependencies against mops.lock")
+  .addHelpText(
+    "after",
+    "\nRe-hashes every file under .mops/ and confirms the lock still matches\nmops.toml and the registry.",
   )
   .action(async () => {
     checkConfigFile();
@@ -290,7 +313,7 @@ program
 // publish
 program
   .command("publish")
-  .description("Publish package to the mops registry")
+  .description("Publish the package to the mops registry")
   .option("--no-docs", "Do not generate docs")
   .option("--no-test", "Do not run tests")
   .option("--no-bench", "Do not run benchmarks")
@@ -298,7 +321,7 @@ program
     "--dry-run",
     "Run local publish steps without contacting the registry or uploading",
   )
-  .option("--verbose", "Show more information")
+  .addOption(moreInfoOption())
   .action(async (options) => {
     checkConfigFile();
     // dry-run is local-only — skip registry API compatibility check
@@ -317,8 +340,10 @@ program
 // sources
 program
   .command("sources")
-  .description(
-    "Print the resolved dependencies as `--package` flags for the Motoko compiler",
+  .description("Print compiler --package flags for resolved dependencies")
+  .addHelpText(
+    "after",
+    "\nOutput is machine-parsed: one `--package <name> <dir>` line per dependency,\nand nothing else on stdout.",
   )
   .option("--no-install", "Do not install dependencies before running sources")
   .addOption(
@@ -348,7 +373,7 @@ program
 // moc-args
 program
   .command("moc-args")
-  .description("Print global moc compiler flags from [moc] config section")
+  .description("Print global moc flags from the [moc] config section")
   .action(async () => {
     checkConfigFile();
     let config = readConfig();
@@ -360,47 +385,79 @@ program
 
 // search
 program
-  .command("search <text>")
-  .description("Search for packages")
+  .command("search")
+  .addArgument(
+    new Argument(
+      "<text>",
+      "text to match against package names, descriptions and keywords; `owner:` and `keyword:` restrict the match to that field",
+    ),
+  )
+  .description("Search the registry for packages")
   .action(async (text) => {
     await search(text);
   });
 
 // info
 program
-  .command("info <pkg>")
-  .description("Show detailed information about a package from the registry")
+  .command("info")
+  .addArgument(new Argument("<pkg>", "package name, as written in mops.toml"))
+  .description("Show registry details for a package")
   .option("--versions", "List all published versions, one per line")
   .action(async (pkg: string, options) => {
     await info(pkg, options);
   });
 
 // cache
-program
-  .command("cache")
-  .description("Manage cache")
-  .addArgument(new Argument("<sub>").choices(["size", "clean", "show"]))
-  .option(
-    "--global",
-    "cache clean: clean only the global cache, keep the project's .mops directory",
-  )
-  .action(async (sub, options) => {
-    if (sub == "clean") {
-      await cleanCache(options);
-      console.log("Cache cleaned");
-    } else if (sub == "size") {
-      let size = await cacheSize();
-      console.log("Cache size is " + size);
-    } else if (sub == "show") {
-      console.log(show());
-    }
+const cacheCommand = new Command("cache").description(
+  "Inspect and clean the package cache",
+);
+
+cacheCommand
+  .command("size")
+  .description("Print the global cache size")
+  .action(async () => {
+    let size = await cacheSize();
+    console.log("Cache size is " + size);
   });
+
+cacheCommand
+  .command("show")
+  .description("Print the global cache directory path")
+  .action(() => {
+    console.log(show());
+  });
+
+cacheCommand
+  .command("clean")
+  .description("Delete cached packages, local and global")
+  .addOption(
+    new Option(
+      "--global",
+      "Delete only the global cache, keep the project's .mops directory",
+    ),
+  )
+  .addHelpText(
+    "after",
+    "\nOutside a project, only the global cache is cleaned either way.",
+  )
+  .action(async (options) => {
+    await cleanCache(options);
+    console.log("Cache cleaned");
+  });
+
+program.addCommand(cacheCommand);
 
 // build
 program
-  .command("build [canisters...]")
+  .command("build")
+  .addArgument(
+    new Argument(
+      "[canisters...]",
+      "canister names to build (default: every canister in mops.toml)",
+    ),
+  )
   .description("Build a canister")
-  .addOption(new Option("--verbose", "Verbose console output"))
+  .addOption(verboseConsoleOption())
   .addOption(new Option("--output, -o <output>", "Output directory"))
   .addOption(
     new Option(
@@ -444,12 +501,7 @@ program
       "  [migrations].check-limit is set, re-run with mops check --no-check-limit to\n" +
       "  surface the issue (check trims the chain; build compiles all of it).",
   )
-  .addOption(
-    new Option(
-      "--locked",
-      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
-    ),
-  )
+  .addOption(lockedOption())
   .action(async (canisters, options) => {
     checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(canisters);
@@ -463,11 +515,19 @@ program
 
 // check
 program
-  .command("check [args...]")
-  .description(
-    "Check Motoko canisters or files for syntax errors and type issues. Arguments can be canister names or file paths. If no arguments are given, checks all canisters from mops.toml. Also runs stable compatibility checks for canisters with [check-stable] configured, and runs linting if lintoko is configured in [toolchain] (pass --no-lint to skip)",
+  .command("check")
+  .description("Check canisters or files for errors")
+  .addArgument(
+    new Argument(
+      "[args...]",
+      "canister names or file paths (default: every canister in mops.toml)",
+    ),
   )
-  .option("--verbose", "Verbose console output")
+  .addHelpText(
+    "after",
+    "\nAlso checks stable compatibility for canisters with [check-stable]\nconfigured, and lints when lintoko is pinned in [toolchain] (--no-lint skips).",
+  )
+  .addOption(verboseConsoleOption())
   .addOption(
     new Option(
       "--fix",
@@ -494,12 +554,7 @@ program
     "after",
     enhancedMigrationHelp({ withFix: true, withPendingWarning: true }),
   )
-  .addOption(
-    new Option(
-      "--locked",
-      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
-    ),
-  )
+  .addOption(lockedOption())
   .action(async (args, options) => {
     checkConfigFile();
     const { extraArgs, args: argList } = parseExtraArgs(args);
@@ -512,14 +567,11 @@ program
 
 // check-candid
 program
-  .command("check-candid <new-candid> <original-candid>")
-  .description("Check Candid interface compatibility between two Candid files")
-  .addOption(
-    new Option(
-      "--locked",
-      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
-    ),
-  )
+  .command("check-candid")
+  .description("Check Candid interface compatibility")
+  .addArgument(new Argument("<new-candid>", "path to the newer .did file"))
+  .addArgument(new Argument("<original-candid>", "path to the published .did"))
+  .addOption(lockedOption())
   .action(async (newCandid, originalCandid, options) => {
     checkConfigFile();
     await installAllOrExit(options);
@@ -528,11 +580,15 @@ program
 
 // check-stable
 program
-  .command("check-stable [args...]")
-  .description(
-    "Check stable variable compatibility. With no arguments, checks all canisters with [check-stable] configured. Arguments can be canister names or a baseline .most path followed by an optional canister name. The baseline is always a .most file",
+  .command("check-stable")
+  .description("Check stable variable compatibility")
+  .addArgument(
+    new Argument(
+      "[args...]",
+      "canister names, or a baseline .most path followed by an optional canister name (default: every canister with [check-stable] configured)",
+    ),
   )
-  .option("--verbose", "Verbose console output")
+  .addOption(verboseConsoleOption())
   .addOption(
     new Option(
       "--no-check-limit",
@@ -544,12 +600,7 @@ program
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops check-stable -- -Werror",
   )
   .addHelpText("after", enhancedMigrationHelp({ withPendingWarning: true }))
-  .addOption(
-    new Option(
-      "--locked",
-      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
-    ),
-  )
+  .addOption(lockedOption())
   .action(async (args, options) => {
     checkConfigFile();
     const { extraArgs, args: argList } = parseExtraArgs(args);
@@ -562,10 +613,15 @@ program
 
 // deployed
 const deployedCommand = new Command("deployed")
-  .description(
-    "Post-deploy hook: promote .most stable-types files into the deployed directory so `mops check-stable` compares against the just-deployed version. Pass canister names to scope; with no arguments, all canisters in mops.toml are promoted",
+  .description("Promote built stable-types files for deployment")
+  .argument(
+    "[canisters...]",
+    "canister names to promote (default: every canister in mops.toml)",
   )
-  .argument("[canisters...]")
+  .addHelpText(
+    "after",
+    "\nPost-deploy hook: copies .most files from the build directory into the\ndeployed directory, so `mops check-stable` compares against the version you\njust deployed.",
+  )
   .addOption(
     new Option(
       "--build-dir <dir>",
@@ -584,7 +640,13 @@ const deployedCommand = new Command("deployed")
   });
 
 deployedCommand
-  .command("init [canisters...]")
+  .command("init")
+  .addArgument(
+    new Argument(
+      "[canisters...]",
+      "canister names to bootstrap (default: every canister in mops.toml)",
+    ),
+  )
   .description(
     "Pre-first-deploy bootstrap: create an empty-actor .most baseline in the deployed directory and wire [canisters.<name>.check-stable].path to it. Idempotent",
   )
@@ -603,7 +665,13 @@ program.addCommand(deployedCommand);
 
 // test
 program
-  .command("test [filter...]")
+  .command("test")
+  .addArgument(
+    new Argument(
+      "[filter...]",
+      "test names to run (default: every test in test/)",
+    ),
+  )
   .description("Run tests")
   .addOption(
     new Option("-r, --reporter <reporter>", "Test reporter")
@@ -616,17 +684,12 @@ program
       .default("interpreter"),
   )
   .option("-w, --watch", "Enable watch mode")
-  .option("--verbose", "Verbose output")
+  .addOption(verboseOutputOption())
   .addHelpText(
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops test -- -Werror",
   )
-  .addOption(
-    new Option(
-      "--locked",
-      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
-    ),
-  )
+  .addOption(lockedOption())
   .action(async (filterArr, options) => {
     checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(filterArr);
@@ -637,7 +700,13 @@ program
 
 // bench
 program
-  .command("bench [filter...]")
+  .command("bench")
+  .addArgument(
+    new Argument(
+      "[filter...]",
+      "benchmark names to run (default: every benchmark in bench/)",
+    ),
+  )
   .description("Run benchmarks")
   .addOption(
     new Option(
@@ -685,12 +754,7 @@ program
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops bench -- -Werror",
   )
-  .addOption(
-    new Option(
-      "--locked",
-      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
-    ),
-  )
+  .addOption(lockedOption())
   .action(async (filterArr, options) => {
     checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(filterArr);
@@ -702,14 +766,27 @@ program
 // template
 program
   .command("template")
-  .description("Apply template")
-  .action(async () => {
+  .description("Add a starter file from a built-in template")
+  .addArgument(
+    new Argument(
+      "[name]",
+      "template to apply (default: interactive picker; choices below)",
+    ).choices(TEMPLATES.map((t) => t.name)),
+  )
+  .option(
+    "--copyright-owner <owner>",
+    "Copyright holder to substitute into a license template",
+  )
+  .action(async (name, options) => {
     checkConfigFile();
-    await template();
+    await template(name, options);
   });
 
 // mops user *
-const userCommand = new Command("user").description("User management");
+const USER_PROPS = ["name", "site", "email", "github", "twitter"];
+const userCommand = new Command("user").description(
+  "Manage the registry identity stored on this machine",
+);
 
 // user get-principal
 userCommand
@@ -721,7 +798,8 @@ userCommand
 
 // user import
 userCommand
-  .command("import <data>")
+  .command("import")
+  .addArgument(new Argument("<data>", ".pem file contents (not a path)"))
   .description("Import .pem file data to use as identity")
   .addOption(
     new Option("--no-encrypt", "Do not ask for a password to encrypt identity"),
@@ -736,16 +814,10 @@ userCommand
 userCommand
   .command("set")
   .addArgument(
-    new Argument("<prop>").choices([
-      "name",
-      "site",
-      "email",
-      "github",
-      "twitter",
-    ]),
+    new Argument("<prop>", "profile field to write").choices(USER_PROPS),
   )
-  .addArgument(new Argument("<value>"))
-  .description("Set user property")
+  .addArgument(new Argument("<value>", "new value for the field"))
+  .description("Set a field on the registry profile")
   .action(async (prop, value) => {
     await setUserProp(prop, value);
   });
@@ -754,15 +826,9 @@ userCommand
 userCommand
   .command("get")
   .addArgument(
-    new Argument("<prop>").choices([
-      "name",
-      "site",
-      "email",
-      "github",
-      "twitter",
-    ]),
+    new Argument("<prop>", "profile field to read").choices(USER_PROPS),
   )
-  .description("Get user property")
+  .description("Print a field from the registry profile")
   .action(async (prop) => {
     await getUserProp(prop);
   });
@@ -771,7 +837,7 @@ program.addCommand(userCommand);
 
 // mops owner *
 const ownerCommand = new Command("owner").description(
-  "Package owner management",
+  "Manage who owns a published package",
 );
 
 // mops owner list
@@ -784,7 +850,8 @@ ownerCommand
 
 // mops owner add
 ownerCommand
-  .command("add <principal>")
+  .command("add")
+  .addArgument(new Argument("<principal>", "principal to add as owner"))
   .description("Add package owner")
   .addOption(new Option("--yes", "Do not ask for confirmation"))
   .action(async (data, options) => {
@@ -793,7 +860,8 @@ ownerCommand
 
 // mops owner remove
 ownerCommand
-  .command("remove <principal>")
+  .command("remove")
+  .addArgument(new Argument("<principal>", "principal to remove as owner"))
   .description("Remove package owner")
   .addOption(new Option("--yes", "Do not ask for confirmation"))
   .action(async (data, options) => {
@@ -804,7 +872,7 @@ program.addCommand(ownerCommand);
 
 // mops maintainer *
 const maintainerCommand = new Command("maintainer").description(
-  "Package maintainer management",
+  "Manage who can publish a package",
 );
 
 // mops maintainer list
@@ -817,7 +885,8 @@ maintainerCommand
 
 // mops maintainer add
 maintainerCommand
-  .command("add <principal>")
+  .command("add")
+  .addArgument(new Argument("<principal>", "principal to add as maintainer"))
   .description("Add package maintainer")
   .addOption(new Option("--yes", "Do not ask for confirmation"))
   .action(async (data, options) => {
@@ -826,7 +895,8 @@ maintainerCommand
 
 // mops maintainer remove
 maintainerCommand
-  .command("remove <principal>")
+  .command("remove")
+  .addArgument(new Argument("<principal>", "principal to remove as maintainer"))
   .description("Remove package maintainer")
   .addOption(new Option("--yes", "Do not ask for confirmation"))
   .action(async (data, options) => {
@@ -837,7 +907,13 @@ program.addCommand(maintainerCommand);
 
 // bump
 program
-  .command("bump [major|minor|patch]")
+  .command("bump")
+  .addArgument(
+    new Argument(
+      "[part]",
+      "version component to increment (default: interactive picker)",
+    ).choices(["major", "minor", "patch"]),
+  )
   .description("Bump current package version")
   .action(async (part) => {
     await bump(part);
@@ -846,7 +922,7 @@ program
 // sync
 program
   .command("sync")
-  .description("Add missing packages and remove unused packages")
+  .description("Make mops.toml match the imports used in code")
   .option(
     "--dry-run",
     "Print what would be added and removed without changing mops.toml, the local cache or mops.lock",
@@ -857,9 +933,10 @@ program
 
 // outdated
 program
-  .command("outdated [pkg]")
-  .description(
-    "Print outdated dependencies in mops.toml within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
+  .command("outdated")
+  .description("Print outdated dependencies in mops.toml")
+  .addArgument(
+    new Argument("[pkg]", "check a single package instead of all dependencies"),
   )
   .addOption(
     new Option(
@@ -875,7 +952,8 @@ program
   )
   .addHelpText(
     "after",
-    "\nGitHub dependencies are checked against their branch head (one GitHub API call each).\n" +
+    "\nOnly reports versions within the caret bound: it does not cross major\nversions, or pre-1.0 minor versions. Pass --major to widen that.\n" +
+      "\nGitHub dependencies are checked against their branch head (one GitHub API call each).\n" +
       "\nExit codes:\n" +
       "  0  everything is up to date\n" +
       "  1  updates are available\n" +
@@ -887,9 +965,13 @@ program
 
 // update
 program
-  .command("update [pkg]")
-  .description(
-    "Rewrite the versions in mops.toml to the highest semver-compatible ones within the caret bound (does not cross major versions, or pre-1.0 minor versions)",
+  .command("update")
+  .description("Update dependencies to the newest allowed versions")
+  .addArgument(
+    new Argument(
+      "[pkg]",
+      "update a single package instead of all dependencies",
+    ),
   )
   .addOption(
     new Option(
@@ -903,10 +985,11 @@ program
       "Restrict updates to patch versions only (e.g. 1.2.3 -> 1.2.4, never 1.2.3 -> 1.3.0)",
     ),
   )
-  .option("--verbose", "Show more information")
+  .addOption(moreInfoOption())
   .addHelpText(
     "after",
-    "\nRewrites the new versions into mops.toml, and keeps mops.lock in sync.\n" +
+    "\nOnly versions within the caret bound are considered: it does not cross major\nversions, or pre-1.0 minor versions. Pass --major to widen that.\n" +
+      "\nRewrites the new versions into mops.toml, and keeps mops.lock in sync.\n" +
       "GitHub dependencies are re-pinned to their branch head (one GitHub API call each).\n" +
       "\nExit codes:\n" +
       "  0  mops.toml is up to date\n" +
@@ -919,10 +1002,11 @@ program
 
 // toolchain
 const toolchainCommand = new Command("toolchain")
-  .description(
-    `Toolchain management for ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}`,
-  )
-  .showHelpAfterError();
+  .description("Install and inspect the tools mops builds with")
+  .addHelpText(
+    "after",
+    `\nManages: ${TOOLCHAINS.map((s) => `"${s}"`).join(", ")}.`,
+  );
 
 toolchainCommand
   .command("use")
@@ -962,7 +1046,9 @@ toolchainCommand
 toolchainCommand
   .command("info")
   .description("Show release information about a toolchain tool")
-  .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
+  .addArgument(
+    new Argument("<tool>", "tool to show releases for").choices(TOOLCHAINS),
+  )
   .option(
     "--versions",
     "List release versions, one per line (newest first; first GitHub page by default)",
@@ -979,7 +1065,9 @@ toolchainCommand
 toolchainCommand
   .command("bin")
   .description("Get path to the tool binary")
-  .addArgument(new Argument("<tool>", "tool to look up").choices(TOOLCHAINS))
+  .addArgument(
+    new Argument("<tool>", "tool to get the binary for").choices(TOOLCHAINS),
+  )
   .action(async (tool) => {
     let bin = await toolchain.bin(tool);
     console.log(bin);
@@ -989,11 +1077,18 @@ program.addCommand(toolchainCommand);
 
 // migrate
 const migrateCommand = new Command("migrate").description(
-  "Manage enhanced migration chains",
+  "Manage enhanced migration chains for stable state",
 );
 
 migrateCommand
-  .command("new <name> [canister]")
+  .command("new")
+  .addArgument(new Argument("<name>", "migration name; also the file name"))
+  .addArgument(
+    new Argument(
+      "[canister]",
+      "canister to add the migration for (default: the only canister)",
+    ),
+  )
   .description("Create a new migration file in the next-migration directory")
   .action(async (name, canister) => {
     checkConfigFile();
@@ -1001,7 +1096,13 @@ migrateCommand
   });
 
 migrateCommand
-  .command("freeze [canister]")
+  .command("freeze")
+  .addArgument(
+    new Argument(
+      "[canister]",
+      "canister to freeze for (default: the only canister)",
+    ),
+  )
   .description("Move the next migration into the frozen chain")
   .action(async (canister) => {
     checkConfigFile();
@@ -1011,14 +1112,22 @@ migrateCommand
 program.addCommand(migrateCommand);
 
 // generate
-const generateCommand = new Command("generate")
-  .description("Generate source-derived artifacts (Candid, ...)")
-  .showHelpAfterError();
+const generateCommand = new Command("generate").description(
+  "Generate source-derived artifacts (Candid, ...)",
+);
 
 generateCommand
-  .command("candid [canisters...]")
-  .description(
-    "(Re)generate the curated `.did` file for one or more canisters from current Motoko source. With no canister names, generates for all canisters in mops.toml. When [canisters.<name>].candid is set, overwrites that file; otherwise writes <name>.did next to `main` and sets the field.",
+  .command("candid")
+  .description("Generate the curated .did file from current Motoko source")
+  .addArgument(
+    new Argument(
+      "[canisters...]",
+      "canister names to generate for (default: every canister in mops.toml)",
+    ),
+  )
+  .addHelpText(
+    "after",
+    "\nOverwrites [canisters.<name>].candid when it is set; otherwise writes\n<name>.did next to `main` and sets the field.",
   )
   .addOption(
     new Option(
@@ -1026,17 +1135,12 @@ generateCommand
       "Write the generated .did to <output> (single-canister only; does not touch mops.toml)",
     ),
   )
-  .addOption(new Option("--verbose", "Verbose console output"))
+  .addOption(verboseConsoleOption())
   .addHelpText(
     "after",
     "\nArguments after -- are forwarded directly to moc, e.g.:\n  $ mops generate candid -- -Werror",
   )
-  .addOption(
-    new Option(
-      "--locked",
-      "Require an up-to-date mops.lock and never write it; fails if the lock is missing, stale, or disagrees with mops.toml or the registry (use in CI)",
-    ),
-  )
+  .addOption(lockedOption())
   .action(async (canisters, options) => {
     checkConfigFile();
     const { extraArgs, args } = parseExtraArgs(canisters);
@@ -1050,7 +1154,9 @@ generateCommand
 program.addCommand(generateCommand);
 
 // self
-const selfCommand = new Command("self").description("Mops CLI management");
+const selfCommand = new Command("self").description(
+  "Update or remove the mops CLI itself",
+);
 
 selfCommand
   .command("update")
@@ -1075,9 +1181,7 @@ program.addCommand(selfCommand);
 // watch
 program
   .command("watch")
-  .description(
-    "Watch *.mo files and check for syntax errors and warnings and format code. Pass flags to run only the selected tasks; --test is opt-in only",
-  )
+  .description("Watch *.mo files and rerun checks on change")
   .option("-e, --error", "Check *.mo files for syntax errors (always on)")
   .option("-w, --warning", "Check *.mo files for warnings (on by default)")
   .option("-f, --format", "Format Motoko code (on by default)")
@@ -1097,8 +1201,14 @@ program
 
 // format
 program
-  .command("format [filter]")
+  .command("format")
   .alias("fmt")
+  .addArgument(
+    new Argument(
+      "[filter]",
+      "format only .mo files whose path contains this text",
+    ),
+  )
   .description("Format Motoko code")
   .addOption(
     new Option("--check", "Check code formatting (do not change source files)"),
@@ -1113,9 +1223,15 @@ program
 
 // lint
 program
-  .command("lint [filter...]")
+  .command("lint")
+  .addArgument(
+    new Argument(
+      "[filter...]",
+      "lint only .mo files whose path contains this filter (default: all)",
+    ),
+  )
   .description("Lint Motoko code")
-  .addOption(new Option("--verbose", "Verbose output"))
+  .addOption(verboseOutputOption())
   .addOption(new Option("--fix", "Apply fixes"))
   .addOption(
     new Option(
@@ -1147,7 +1263,9 @@ program
   });
 
 // docs
-const docsCommand = new Command("docs").description("Documentation management");
+const docsCommand = new Command("docs").description(
+  "Generate docs and report documentation coverage",
+);
 
 docsCommand
   .command("generate")
@@ -1196,5 +1314,8 @@ program.addCommand(docsCommand);
 // watch runs, resolve-only promise chains — routed to the single handler
 // instead of Node's unhandled-rejection crash banner.
 process.on("unhandledRejection", handleCliError);
+
+// Last, so the walk reaches every command registered above.
+installMopsHelp(program);
 
 program.parseAsync().catch(handleCliError);
