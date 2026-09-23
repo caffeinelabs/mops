@@ -1082,7 +1082,7 @@ const migrateCommand = new Command("migrate").description(
 
 migrateCommand
   .command("new")
-  .addArgument(new Argument("<name>"))
+  .addArgument(new Argument("<name>", "migration name; also the file name"))
   .addArgument(
     new Argument(
       "[canister]",
