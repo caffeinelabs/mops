@@ -4,7 +4,7 @@ import fs from "node:fs";
 
 import { globalCacheDir } from "../../mops.js";
 import * as toolchainUtils from "./toolchain-utils.js";
-import { assertMinimumVersion } from "./pocket-ic-versions.js";
+import { assertMinimumVersion, assetArch } from "./pocket-ic-versions.js";
 import { cliError } from "../../error.js";
 
 let cacheDir = path.join(globalCacheDir, "pocket-ic");
@@ -46,7 +46,7 @@ export let download = async (
   }
 
   let platfrom = process.platform == "darwin" ? "darwin" : "linux";
-  let arch = "x86_64";
+  let arch = assetArch(version);
   let url = `https://github.com/dfinity/pocketic/releases/download/${version}/pocket-ic-${arch}-${platfrom}.gz`;
 
   if (verbose && !silent) {
