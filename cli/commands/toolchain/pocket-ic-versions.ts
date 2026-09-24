@@ -18,6 +18,21 @@ export const RECOMMENDED_POCKET_IC_VERSION = "15.0.0";
 // blessed versions for any other tool either.
 export const MIN_POCKET_IC_VERSION = "9.0.0";
 
+// The first server release that ships `pocket-ic-arm64-{darwin,linux}.gz`. Older
+// releases only have x86_64 assets, which an Apple-silicon Mac runs under Rosetta.
+export const FIRST_ARM64_POCKET_IC_VERSION = "9.0.2";
+
+// The asset architecture for this machine and server version: the native arm64 build
+// where one exists, else x86_64 (the only build there is, and what mops downloaded on
+// every machine before -- which on Apple silicon meant Rosetta, silently).
+export function assetArch(version: string, processArch: string = process.arch): "arm64" | "x86_64" {
+  let arm = processArch === "arm64" || processArch.startsWith("arm");
+  if (arm && semver.valid(version) && semver.gte(version, FIRST_ARM64_POCKET_IC_VERSION)) {
+    return "arm64";
+  }
+  return "x86_64";
+}
+
 export function assertMinimumVersion(version: string): void {
   // A pin can be a path to a binary, which mops neither downloads nor checks.
   if (!semver.valid(version) || semver.gte(version, MIN_POCKET_IC_VERSION)) {

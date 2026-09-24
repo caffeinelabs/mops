@@ -5,6 +5,8 @@ import { cli, useTempFixtures } from "./helpers";
 import {
   RECOMMENDED_POCKET_IC_VERSION,
   MIN_POCKET_IC_VERSION,
+  FIRST_ARM64_POCKET_IC_VERSION,
+  assetArch,
 } from "../commands/toolchain/pocket-ic-versions";
 
 const fixturesDir = import.meta.dirname;
@@ -20,6 +22,17 @@ async function fixtureWithPin(version: string): Promise<string> {
 }
 
 describe("pocket-ic", () => {
+  // The release asset to fetch: arm64 where the server ships one, x86_64 (Rosetta on
+  // Apple silicon) for the two 9.0.x releases that predate the arm64 builds.
+  test("picks the arm64 asset on arm64 hosts from 9.0.2 on", () => {
+    expect(assetArch(RECOMMENDED_POCKET_IC_VERSION, "arm64")).toBe("arm64");
+    expect(assetArch(FIRST_ARM64_POCKET_IC_VERSION, "arm64")).toBe("arm64");
+    expect(assetArch(MIN_POCKET_IC_VERSION, "arm64")).toBe("x86_64");
+    expect(assetArch("9.0.1", "arm64")).toBe("x86_64");
+    expect(assetArch(RECOMMENDED_POCKET_IC_VERSION, "x64")).toBe("x86_64");
+    expect(assetArch("/some/local/pocket-ic", "arm64")).toBe("x86_64");
+  });
+
   test("runs replica tests with a pinned pocket-ic", async () => {
     const cwd = path.join(fixturesDir, "pocket-ic");
     const result = await cli(["test", "--reporter", "verbose"], { cwd });
