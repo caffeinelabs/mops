@@ -15,6 +15,13 @@ const UNFORMATTED = `module {
 public func sub(a:Nat,b:Nat):Nat{a-b};
 }
 `;
+// Legacy syntax `--syntax moc2` rewrites, and preserve leaves alone.
+const LEGACY = `module {
+  public func sign(x : Int) : Int {
+    if (x < 0) -1 else 1;
+  };
+};
+`;
 
 describe("format with mo-fmt pinned", () => {
   const makeTempFixture = useTempFixtures(import.meta.dirname);
@@ -81,5 +88,62 @@ describe("format with mo-fmt pinned", () => {
     );
     // The other files are still formatted.
     expect(result.stdout).toMatch(/^src\/Messy\.mo$/m);
+  });
+
+  describe("arguments after --", () => {
+    test("are forwarded to mo-fmt", async () => {
+      const cwd = await setup({ "Legacy.mo": LEGACY });
+
+      const result = await cli(["format", "--", "--syntax", "moc2"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(await readFile(path.join(cwd, "src/Legacy.mo"), "utf8")).toBe(
+        LEGACY.replace("if (x < 0) -1 else 1;", "if x < 0 { -1 } else { 1 };"),
+      );
+    });
+
+    test("--check suggests the command with the same flags", async () => {
+      const cwd = await setup({ "Legacy.mo": LEGACY });
+
+      const result = await cli(
+        ["format", "Legacy", "--check", "--", "--syntax", "moc2"],
+        { cwd },
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout).toMatch(
+        /Run 'mops format Legacy -- --syntax moc2' to format your code/,
+      );
+      expect(await readFile(path.join(cwd, "src/Legacy.mo"), "utf8")).toBe(
+        LEGACY,
+      );
+    });
+
+    test("a flag mo-fmt rejects fails the run", async () => {
+      const cwd = await setup({ "Legacy.mo": LEGACY });
+
+      const result = await cli(["format", "--", "--syntax", "nope"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/invalid value 'nope' for '--syntax/);
+    });
+
+    test("are rejected when mo-fmt is not pinned", async () => {
+      const cwd = await setup({ "Legacy.mo": LEGACY });
+      await writeFile(path.join(cwd, "mops.toml"), "[dependencies]\n");
+
+      const result = await cli(["format", "--", "--syntax", "moc2"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(/forwarded to mo-fmt, which is not pinned/);
+      expect(result.stderr).toMatch(/mops toolchain use mo-fmt 0\.2\.0/);
+      expect(await readFile(path.join(cwd, "src/Legacy.mo"), "utf8")).toBe(
+        LEGACY,
+      );
+    });
+  });
+
+  test("more than one filter is rejected", async () => {
+    const cwd = await setup({ "Clean.mo": FORMATTED });
+
+    const result = await cli(["format", "Clean", "Messy"], { cwd });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/mops format takes one filter/);
   });
 });

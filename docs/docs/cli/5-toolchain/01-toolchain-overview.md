@@ -30,7 +30,7 @@ mops toolchain use wasmtime 41.0.0
 mops toolchain use pocket-ic 15.0.0
 mops toolchain use lintoko 0.11.0
 mops toolchain use wasm-opt 131
-mops toolchain use mo-fmt 0.1.0
+mops toolchain use mo-fmt 0.2.0
 ```
 
 No need to run `mops install` when you use `mops toolchain use` command.
@@ -46,7 +46,7 @@ wasmtime = "41.0.0"
 lintoko = "0.11.0"
 pocket-ic = "15.0.0"
 wasm-opt = "131"
-mo-fmt = "0.1.0"
+mo-fmt = "0.2.0"
 ```
 
 You need to run `mops install` command when you edit `mops.toml` file manually.

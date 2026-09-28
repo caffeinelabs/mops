@@ -13,7 +13,10 @@ import { findFormatFiles, format, type FormatResult } from "./format.js";
 
 // `mops check` is the judge of a formatter bug: formatting it rejects is put
 // back. It is not run first, so `--verify` assumes the project already passes.
-export async function formatVerified(filter: string): Promise<FormatResult> {
+export async function formatVerified(
+  filter: string,
+  extraArgs: string[] = [],
+): Promise<FormatResult> {
   // Formats, checks and restores as one unit, so a concurrent `--fix` run
   // cannot edit a file between the snapshot and the revert.
   return withFixLock(async () => {
@@ -27,7 +30,7 @@ export async function formatVerified(filter: string): Promise<FormatResult> {
       ),
     );
 
-    let result = await format(filter);
+    let result = await format(filter, { extraArgs });
 
     // Compared on disk, not parsed from the formatter's report, so this works
     // the same for mo-fmt and the Prettier plugin.
