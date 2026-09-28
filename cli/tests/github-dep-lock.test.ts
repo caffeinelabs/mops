@@ -18,7 +18,7 @@ import { cli } from "./helpers";
 // install-github-dep.test.ts. Every run gets its own XDG_CACHE_HOME so the
 // global cache of one case cannot answer for another (and so a case that
 // replaces a cache entry cannot disturb a concurrent test file).
-const REPO = "https://github.com/ZenVoich/test";
+const REPO = "https://github.com/caffeinelabs/mops-test";
 const COMMIT = "06d7c77accb9fb08830643aa8f0e346295f6b263";
 const SHA256 = /^[0-9a-f]{64}$/;
 
