@@ -11,10 +11,10 @@ import { cli, useTempFixtures } from "./helpers";
 // cli.test.ts hit the mops registry. Deps are pinned to a commit so the
 // archive is immutable; only the `add` case resolves a branch, which is the
 // behavior that test exists to check.
-const REPO = "https://github.com/ZenVoich/test";
+const REPO = "https://github.com/caffeinelabs/mops-test";
 const COMMIT = "06d7c77accb9fb08830643aa8f0e346295f6b263";
 const PINNED_DEP =
-  /test = "https:\/\/github\.com\/ZenVoich\/test#main@[0-9a-f]{40}"/;
+  /mops-test = "https:\/\/github\.com\/caffeinelabs\/mops-test#main@[0-9a-f]{40}"/;
 
 describe("install github dep", () => {
   jest.setTimeout(120_000);
@@ -78,13 +78,15 @@ describe("install github dep", () => {
     );
 
     const lock = JSON.parse(readFileSync(path.join(cwd, "mops.lock"), "utf8"));
-    expect(lock.deps["test"]).toMatch(
-      /^https:\/\/github\.com\/ZenVoich\/test#main@[0-9a-f]{40}$/,
+    expect(lock.deps["mops-test"]).toMatch(
+      /^https:\/\/github\.com\/caffeinelabs\/mops-test#main@[0-9a-f]{40}$/,
     );
 
-    const commit = lock.deps["test"].split("@")[1];
+    const commit = lock.deps["mops-test"].split("@")[1];
     expect(
-      existsSync(path.join(cwd, ".mops/_github", `test#main@${commit}/src`)),
+      existsSync(
+        path.join(cwd, ".mops/_github", `mops-test#main@${commit}/src`),
+      ),
     ).toBe(true);
   });
 
