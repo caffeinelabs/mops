@@ -1,0 +1,31 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`format --verify keeps formatting that passes mops check 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "src/Lib.mo
+Formatted 1 of 2 files.
+
+Verifying 1 formatted file with mops check...
+✓ backend
+✓ mops check passed, kept the formatting of 1 file",
+}
+`;
+
+exports[`format --verify reverts every formatted file when mops check fails 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "src/main.mo:6.14-6.15: syntax error [M0001], unexpected token ';', expected one of token or <phrase> sequence:
+  <exp(ob)>
+  <exp(ob)> else <exp_nest>
+✗ Check failed for canister backend (exit code: 1)
+
+mops check failed after formatting, so the formatting of 2 files was reverted.
+--verify assumes mops check passed before formatting; if it was already failing, fix that first.",
+  "stdout": "src/main.mo
+src/Lib.mo
+
+Verifying 2 formatted files with mops check...",
+}
+`;
