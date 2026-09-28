@@ -49,7 +49,7 @@ export async function formatVerified(filter: string): Promise<FormatResult> {
       chalk.gray(`Verifying ${n} formatted file${plural} with mops check...`),
     );
     try {
-      await runCheck(rootDir, [...formatted.keys()]);
+      await runCheck([...formatted.keys()]);
     } catch (err) {
       let notReverted = await revert(originals, formatted);
       let reason =
@@ -73,17 +73,31 @@ export async function formatVerified(filter: string): Promise<FormatResult> {
   });
 }
 
-// The same check `mops check` runs with no arguments. A package without
-// canisters is checked file by file instead, as `mops check <files>` would.
-async function runCheck(rootDir: string, files: string[]) {
+async function runCheck(files: string[]) {
   if (!(await installAll({ silent: true, lock: "maintain" }))) {
     cliError();
   }
   let hasCanisters =
     Object.keys(resolveCanisterConfigs(readConfig())).length > 0;
-  await check(
-    hasCanisters ? [] : files.map((file) => path.relative(process.cwd(), file)),
-  );
+  if (hasCanisters) {
+    await checkCanisters();
+  } else {
+    await checkFiles(files);
+  }
+}
+
+// The same check `mops check` runs with no arguments. Checking the formatted
+// files instead would cost one moc call per file.
+// TODO: once moc v2 is released, check just the formatted files in a single
+// moc call.
+async function checkCanisters() {
+  await check([]);
+}
+
+// A package without canisters has nothing else to check, so it pays the one
+// moc call per file of `mops check <files>`.
+async function checkFiles(files: string[]) {
+  await check(files.map((file) => path.relative(process.cwd(), file)));
 }
 
 // Restores only files still holding what the formatter wrote; anything else
