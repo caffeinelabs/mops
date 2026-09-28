@@ -1,4 +1,3 @@
-import process from "node:process";
 import path from "node:path";
 import fs from "fs-extra";
 import { chmodSync } from "node:fs";
@@ -63,9 +62,6 @@ export let download = async (
   if (!version) {
     cliError("version is not defined");
   }
-  if (process.platform === "win32") {
-    cliError("wasm-opt toolchain is not supported on Windows");
-  }
   if (isCached(version)) {
     if (verbose) {
       console.log(`wasm-opt ${version} is already installed`);
@@ -73,18 +69,8 @@ export let download = async (
     return;
   }
 
-  // GitHub assets: x86_64-linux, aarch64-linux, x86_64-macos, arm64-macos
-  let platform = process.platform == "darwin" ? "macos" : "linux";
-  let arch =
-    process.platform == "darwin"
-      ? process.arch.startsWith("arm")
-        ? "arm64"
-        : "x86_64"
-      : process.arch.startsWith("arm")
-        ? "aarch64"
-        : "x86_64";
-  let tag = `version_${version}`;
-  let url = `https://github.com/WebAssembly/binaryen/releases/download/${tag}/binaryen-${tag}-${arch}-${platform}.tar.gz`;
+  let tag = binaryenTag(version);
+  let url = assetUrl(version, toolchainUtils.hostTarget("wasm-opt"));
 
   if (verbose && !silent) {
     console.log(`Downloading ${url}`);
@@ -129,4 +115,15 @@ export let download = async (
       }
     },
   });
+};
+
+let binaryenTag = (version: string) => `version_${version}`;
+
+// Binaryen spells Apple silicon arm64 and every other aarch64 host aarch64.
+export let assetUrl = (version: string, host: toolchainUtils.Host) => {
+  let platform = host.os == "darwin" ? "macos" : "linux";
+  let arch =
+    host.os == "darwin" && host.arch == "aarch64" ? "arm64" : host.arch;
+  let tag = binaryenTag(version);
+  return `https://github.com/${repo}/releases/download/${tag}/binaryen-${tag}-${arch}-${platform}.tar.gz`;
 };

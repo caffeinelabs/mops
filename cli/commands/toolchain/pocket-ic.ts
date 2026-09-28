@@ -1,10 +1,11 @@
 import process from "node:process";
 import path from "node:path";
 import fs from "node:fs";
+import semver from "semver";
 
 import { globalCacheDir } from "../../mops.js";
 import * as toolchainUtils from "./toolchain-utils.js";
-import { assertMinimumVersion, assetArch } from "./pocket-ic-versions.js";
+import { assertMinimumVersion } from "./pocket-ic-versions.js";
 import { cliError } from "../../error.js";
 
 let cacheDir = path.join(globalCacheDir, "pocket-ic");
@@ -26,8 +27,16 @@ export let getReleaseTags = async (
 };
 
 export let isCached = (version: string) => {
-  let dir = path.join(cacheDir, version);
-  return fs.existsSync(dir) && fs.existsSync(path.join(dir, "pocket-ic"));
+  let bin = path.join(cacheDir, version, "pocket-ic");
+  if (!fs.existsSync(bin)) {
+    return false;
+  }
+  // An x86_64 build cached on an arm64 host is stale: it needs Rosetta, and the release has a native one.
+  let stale =
+    process.arch === "arm64" &&
+    hasArm64Build(version) &&
+    toolchainUtils.executableArch(bin) === "x86_64";
+  return !stale;
 };
 
 export let download = async (
@@ -45,9 +54,7 @@ export let download = async (
     return;
   }
 
-  let platfrom = process.platform == "darwin" ? "darwin" : "linux";
-  let arch = assetArch(version);
-  let url = `https://github.com/dfinity/pocketic/releases/download/${version}/pocket-ic-${arch}-${platfrom}.gz`;
+  let url = assetUrl(version, toolchainUtils.hostTarget("pocket-ic"));
 
   if (verbose && !silent) {
     console.log(`Downloading ${url}`);
@@ -59,4 +66,13 @@ export let download = async (
     populate: (stagingDir) =>
       toolchainUtils.downloadAndExtract(url, stagingDir, "pocket-ic"),
   });
+};
+
+// Releases before 9.0.2 ship x86_64 only, which Apple silicon runs under Rosetta.
+let hasArm64Build = (version: string) => semver.gte(version, "9.0.2");
+
+export let assetUrl = (version: string, host: toolchainUtils.Host) => {
+  let arch =
+    host.arch == "aarch64" && hasArm64Build(version) ? "arm64" : "x86_64";
+  return `https://github.com/${repo}/releases/download/${version}/pocket-ic-${arch}-${host.os}.gz`;
 };
