@@ -1206,7 +1206,7 @@ program
   .alias("fmt")
   .addArgument(
     new Argument(
-      "[filter]",
+      "[filter...]",
       "format only .mo files whose path contains this text",
     ),
   )
@@ -1224,11 +1224,22 @@ program
     "after",
     "\nRuns mo-fmt instead of the bundled Prettier plugin when mo-fmt is pinned in [toolchain].",
   )
-  .action(async (filter, options) => {
+  .addHelpText(
+    "after",
+    "\nArguments after -- are forwarded directly to mo-fmt, e.g.:\n  $ mops format -- --syntax moc2",
+  )
+  .action(async (filterArr, options) => {
     checkConfigFile();
+    // Variadic filter only to absorb the `--` passthrough operands (Commander
+    // counts them against the declared arity); a single filter is supported.
+    let { extraArgs, args } = parseExtraArgs(filterArr);
+    if (args.length > 1) {
+      cliError(`mops format takes one filter, got: ${args.join(", ")}`);
+    }
+    let filter = args[0] ?? "";
     let { ok } = options.verify
-      ? await formatVerified(filter)
-      : await format(filter, options);
+      ? await formatVerified(filter, extraArgs)
+      : await format(filter, { ...options, extraArgs });
     if (!ok) {
       cliError();
     }

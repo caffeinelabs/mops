@@ -29,12 +29,12 @@ Files inside `node_modules/`, `.mops/`, `.git/`, `.dfx/`, `dist/`, `build/` and 
 `mo-fmt` is the standalone Motoko formatter, released from [caffeinelabs/tree-sitter-motoko](https://github.com/caffeinelabs/tree-sitter-motoko). Pin it to use it:
 
 ```
-mops toolchain use mo-fmt 0.1.0
+mops toolchain use mo-fmt 0.2.0
 ```
 
 ```toml
 [toolchain]
-mo-fmt = "0.1.0"
+mo-fmt = "0.2.0"
 ```
 
 With `mo-fmt` pinned, `mops format` runs that binary and nothing else: there is no fallback to the Prettier plugin, and `.prettierrc` is not read. Without the pin, `mops format` uses the Prettier plugin as before. Builds exist for macOS and Linux, not Windows.
@@ -47,6 +47,8 @@ Configure it with an optional `mo-fmt.toml` in the project root, next to `mops.t
 syntax = "preserve"   # default; or "moc2" to rewrite legacy syntax to the moc 2.0 forms
 indent-width = 2
 ```
+
+Flags passed after [`--`](#mo-fmt-flags) override these keys one by one.
 
 ## Configuration
 
@@ -84,6 +86,24 @@ Check if files are formatted correctly without modifying them.
 
 ```
 mops format --check
+```
+
+### `-- <mo-fmt flags>` {#mo-fmt-flags}
+
+Arguments after `--` are forwarded to `mo-fmt`, ahead of the file list. They override `mo-fmt.toml` key by key, so an option can be tried without writing the file:
+
+```
+mops format -- --syntax moc2
+mops format -- --indent-width 4
+mops format backend/ --check -- --syntax moc2
+```
+
+`mo-fmt --help` lists them; from 0.2.0 they are `--syntax <preserve|moc2>` and `--indent-width <N>`. A flag `mo-fmt` rejects fails the run with its usage error. Without `mo-fmt` pinned, `mops format` refuses them, since the Prettier plugin takes no flags. After a failed `--check`, the suggested command keeps the flags, since they are part of what was checked.
+
+`moc2` rewrites legacy syntax to the moc 2.0 forms: it braces every control body, drops the parentheses around control heads and case patterns where moc 2.0 allows it, and drops the `;` after a braced `case` arm. The result only compiles on moc 2.0 (in beta, e.g. `2.0.0-beta.2`), not on moc 1.x, and the rewrite may change between `mo-fmt` minor versions while moc 2.0 is in beta. Pair it with [`--verify`](#--verify) so a rewrite the pinned `moc` rejects is reverted:
+
+```
+mops format --verify -- --syntax moc2
 ```
 
 ### `--verify`

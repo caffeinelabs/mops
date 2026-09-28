@@ -44,7 +44,7 @@ describe("format --verify", () => {
     await writeFile(
       toml,
       (await readFile(toml, "utf8")).replace(
-        'mo-fmt = "0.1.0"',
+        'mo-fmt = "0.2.0"',
         'mo-fmt = "./fake-mo-fmt"',
       ),
     );
@@ -94,6 +94,32 @@ describe("format --verify", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toMatch(/mops check passed/);
     expect(await read(cwd, "Lib.mo")).not.toBe(MESSY_LIB);
+  });
+
+  // The case --verify exists for: moc 1.x cannot parse the moc2 forms.
+  test("reverts --syntax moc2 output the pinned moc rejects", async () => {
+    const legacy = `module {
+  public func sign(x : Int) : Int {
+    if (x < 0) -1 else 1;
+  };
+};
+`;
+    const cwd = await setup({
+      "main.mo": `import Sign "Sign";
+
+persistent actor {
+  public func get() : async Int { Sign.sign(-3) };
+};
+`,
+      "Sign.mo": legacy,
+    });
+
+    const result = await cli(["format", "--verify", "--", "--syntax", "moc2"], {
+      cwd,
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/formatting of 1 file was reverted/);
+    expect(await read(cwd, "Sign.mo")).toBe(legacy);
   });
 
   test("skips mops check when nothing was reformatted", async () => {

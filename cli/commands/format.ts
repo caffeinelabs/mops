@@ -16,6 +16,8 @@ import { toolchain } from "./toolchain/index.js";
 type FormatOptions = {
   check: boolean;
   silent: boolean;
+  /** Flags after `--`, forwarded to mo-fmt. */
+  extraArgs: string[];
 };
 
 export type FormatResult = {
@@ -43,6 +45,15 @@ export async function format(
   onProgress?: (result: FormatResult) => void,
 ): Promise<FormatResult> {
   let startTime = Date.now();
+
+  let moFmtPinned = Boolean(readConfig().toolchain?.["mo-fmt"]);
+  // The Prettier plugin takes no flags, so there is nothing to forward them to.
+  if (options.extraArgs?.length && !moFmtPinned) {
+    cliError(
+      "Arguments after -- are forwarded to mo-fmt, which is not pinned in [toolchain].\n" +
+        `Run ${chalk.green("mops toolchain use mo-fmt 0.2.0")} to pin it.`,
+    );
+  }
 
   let rootDir = getRootDir();
   let files = findFormatFiles(rootDir, filter);
@@ -78,7 +89,7 @@ export async function format(
   }
 
   // A pinned mo-fmt replaces the bundled formatter outright, no fallback.
-  if (readConfig().toolchain?.["mo-fmt"]) {
+  if (moFmtPinned) {
     let { exitCode, formatted } = await runMoFmt(
       files.map((file) => path.relative(rootDir, file)),
       rootDir,
@@ -95,8 +106,12 @@ export async function format(
       return getResult(false);
     }
     if (exitCode === 1 && !options.silent) {
+      // The forwarded flags are part of what `--check` checked against.
+      let extra = options.extraArgs?.length
+        ? ` -- ${options.extraArgs.join(" ")}`
+        : "";
       console.log(
-        `Run '${chalk.yellow("mops format" + (filter ? ` ${filter}` : ""))}' to format your code`,
+        `Run '${chalk.yellow("mops format" + (filter ? ` ${filter}` : "") + extra)}' to format your code`,
       );
     }
     return getResult(exitCode === 0);
@@ -242,7 +257,13 @@ async function runMoFmt(
   let formatted = 0;
 
   for (let chunk of chunkByLength(files)) {
-    let args = options.check ? ["--check", ...chunk] : chunk;
+    // `--` ends mo-fmt's options, so a path starting with `-` stays a path.
+    let args = [
+      ...(options.check ? ["--check"] : []),
+      ...(options.extraArgs ?? []),
+      "--",
+      ...chunk,
+    ];
     let result = await execa(bin, args, {
       cwd: rootDir,
       stdin: "ignore",
