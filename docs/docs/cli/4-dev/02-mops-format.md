@@ -86,6 +86,20 @@ Check if files are formatted correctly without modifying them.
 mops format --check
 ```
 
+### `--verify`
+
+Format, then run [`mops check`](./04-mops-check.md) and put the files back as they were if it fails. `mops check` is the judge of a formatter bug: formatting that stops the project compiling is not kept.
+
+```
+mops format --verify
+```
+
+- `mops check` is not run before formatting, so run it on a passing project. If the project was already failing, every formatted file is reverted.
+- The check is the one `mops check` runs with no arguments: every canister, stable compatibility where `[check-stable]` is configured, and lint when `lintoko` is pinned. A package without canisters checks the formatted files instead, as `mops check <files>` would.
+- The check only runs when at least one file was reformatted. Files it does not compile — tests, modules no canister imports, and migrations trimmed by `check-limit` — are formatted but not verified.
+- A file edited while the check runs is not reverted, and the error lists it.
+- Works with both `mo-fmt` and the Prettier plugin. Cannot be combined with `--check`.
+
 ## Examples
 
 Format all Motoko files in the project

@@ -338,6 +338,7 @@ When `[canisters.<name>.migrations].check-limit` is set, `mops lint` skips the t
 ```bash
 mops format               # format all .mo files
 mops format --check       # check formatting without modifying
+mops format --verify      # format, run `mops check`, revert the formatting if it fails
 ```
 
 With `mo-fmt` pinned in `[toolchain]`, `mops format` runs it instead of the bundled Prettier plugin — no fallback, `.prettierrc` ignored. Configure it with `mo-fmt.toml` in the project root (`syntax = "preserve" | "moc2"`, `indent-width`). Exit is non-zero on unformatted files under `--check`, and whenever a file fails to format (syntax error; left untouched).
