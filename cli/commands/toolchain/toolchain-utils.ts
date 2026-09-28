@@ -184,9 +184,6 @@ export let installVersion = async (
     if (isComplete()) {
       return;
     }
-    // A present-but-incomplete dir is a leftover from an interrupted
-    // pre-staging install. Under the lock nobody else is writing it.
-    fs.rmSync(destDir, { recursive: true, force: true });
 
     let staging = createStagingDir(destDir);
     try {
@@ -195,6 +192,10 @@ export let installVersion = async (
       fs.rmSync(staging, { recursive: true, force: true });
       throw err;
     }
+    // Replaced only once the new install is ready, so a failed download keeps
+    // what is there: a stale but working binary, or a leftover from an
+    // interrupted pre-staging install. Under the lock nobody else writes it.
+    fs.rmSync(destDir, { recursive: true, force: true });
     commitStagingDir(staging, destDir);
   } finally {
     await release().catch(() => {});

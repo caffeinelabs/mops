@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { afterAll, describe, expect, test } from "@jest/globals";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -7,6 +7,7 @@ import { CliError } from "../error";
 import {
   executableArch,
   hostTarget,
+  installVersion,
   type Host,
 } from "../commands/toolchain/toolchain-utils";
 import * as moc from "../commands/toolchain/moc";
@@ -56,6 +57,7 @@ describe("hostTarget", () => {
 
 describe("executableArch", () => {
   let dir = fs.mkdtempSync(path.join(os.tmpdir(), "mops-arch-"));
+  afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
   let withHeader = (name: string, write: (b: Buffer) => void) => {
     let header = Buffer.alloc(64);
     write(header);
@@ -80,6 +82,28 @@ describe("executableArch", () => {
     expect(
       executableArch(withHeader("sh", (b) => b.write("#!/bin/sh\n"))),
     ).toBeUndefined();
+  });
+});
+
+describe("installVersion", () => {
+  let dir = fs.mkdtempSync(path.join(os.tmpdir(), "mops-install-"));
+  afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  // A stale binary is still a working one until its replacement has landed.
+  test("keeps the existing install when populate fails", async () => {
+    let destDir = path.join(dir, "1.0.0");
+    fs.mkdirSync(destDir);
+    fs.writeFileSync(path.join(destDir, "bin"), "stale");
+    await expect(
+      installVersion(destDir, {
+        label: "tool 1.0.0",
+        isComplete: () => false,
+        populate: async () => {
+          throw new Error("offline");
+        },
+      }),
+    ).rejects.toThrow("offline");
+    expect(fs.readFileSync(path.join(destDir, "bin"), "utf8")).toBe("stale");
   });
 });
 
