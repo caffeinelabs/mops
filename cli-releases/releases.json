@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "3.3.0"
+    "latest": "3.4.0"
   },
   "versions": {
     "0.41.0": {
@@ -624,6 +624,14 @@
       "commitHash": "e2affb5ece0627ffc59bb1c8dcb655423fa69f56",
       "url": "https://cli.mops.one/versions/3.3.0.tgz",
       "hash": "4bd6ec57434a08ee85ea1167fdb74455ec594ff19b8a879a2d6ec846b1fd42c0"
+    },
+    "3.4.0": {
+      "time": 1790603275968,
+      "size": 2399342,
+      "relseaseNotes": "* `mops format -- <flags>` forwards the flags to `mo-fmt`, as `mops lint --` does for lintoko. They override `mo-fmt.toml` key by key, so `mops format -- --syntax moc2` tries the moc 2.0 rewrite without a config file. `mo-fmt` 0.2.0 accepts `--syntax` and `--indent-width`. The flags need `mo-fmt` pinned: the Prettier plugin takes none, so they are refused without it. After a failed `--check`, the suggested `mops format` command keeps them. They combine with `--verify`, which reverts a `moc2` rewrite the pinned `moc` rejects: the rewrite only compiles on moc 2.0.\n* `pocket-ic` is downloaded as the native arm64 build on Apple silicon and arm64 Linux, for every release that ships one (9.0.2 and later). It was always fetched as x86\\_64, which on a Mac only ran under Rosetta and on arm64 Linux did not run at all. A cached `pocket-ic` built for another CPU, such as the x86\\_64 build on an arm64 machine, is replaced with the right one on next use. A pin that is not a release version, such as `latest`, is now reported as an error instead of a download failure.\n* Every `[toolchain]` tool now picks its download for the host the same way, and refuses a host none of them has a build for instead of fetching one that cannot run. On Windows, `lintoko`, `wasmtime` and `pocket-ic` used to download the Linux build; they now fail with `<tool> has no Windows build. Please use WSL.`, as `moc` and `wasm-opt` already did. 32-bit ARM, which was handed the aarch64 build, fails with `<tool> has no arm build.`\n* `mops format --verify` runs `mops check` after formatting and reverts the formatting if the check fails, so a formatter bug cannot leave the project broken. Only reformatted files are touched, a file edited during the check is left alone, and the check is skipped when nothing was reformatted. A package without canisters checks the formatted files instead. It works with both `mo-fmt` and the Prettier plugin, and does not run the check before formatting: run it on a project that already passes `mops check`.\n* New `[toolchain]` tool: `mo-fmt`, the standalone Motoko formatter from [caffeinelabs/tree-sitter-motoko](https://github.com/caffeinelabs/tree-sitter-motoko). Pin it with `mops toolchain use mo-fmt 0.2.0`, and `mops format` (and the format step of `mops watch`) runs it on the same file selection instead of the bundled `prettier-plugin-motoko` — no fallback, and `.prettierrc` is not read; configure it with `mo-fmt.toml` in the project root. Without the pin, `mops format` is unchanged. `mops toolchain use`, `update` and `info` list only the repo's `mo-fmt-v*` releases, not the grammar's `v*` ones that GitHub marks \"Latest\". macOS and Linux only.\n* Make the CLI explorable from `--help` alone. Every command and command group now describes what it is for, every argument says what it takes and prints the usage block after a usage error, and `mops --help` groups the commands by task instead of one flat list. `cache` becomes a real command group (`size`/`show`/`clean`), so `mops cache` lists its subcommands rather than erroring, and `mops template <name>` and its `--copyright-owner` flag now work, where previously only the interactive picker did. Breaking: `mops cache --global clean` is now `mops cache clean --global`.\n",
+      "commitHash": "6d22d3d1b8116ae32e25472c60e8ae212284b125",
+      "url": "https://cli.mops.one/versions/3.4.0.tgz",
+      "hash": "91ba2f1035cf4e75bd62ec7effbae0470936e032868058220186400b18d34ff7"
     }
   }
 }
