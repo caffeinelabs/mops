@@ -1,4 +1,5 @@
 import path from "node:path";
+import process from "node:process";
 import { Buffer } from "node:buffer";
 import { unzipSync } from "node:zlib";
 import { chmodSync } from "node:fs";
@@ -30,6 +31,65 @@ export const TOOLCHAINS = [
   "wasm-opt",
   "mo-fmt",
 ];
+
+/** The machine a toolchain binary is fetched for, spelled as in Rust target triples. Each tool maps it onto its own asset names. */
+export type Host = { os: "darwin" | "linux"; arch: "x86_64" | "aarch64" };
+
+// Reads Node's own arch, so an x64 Node under Rosetta gets x86_64 tools to match.
+export let hostTarget = (
+  tool: string,
+  {
+    platform = process.platform as string,
+    arch = process.arch as string,
+    hint,
+  }: { platform?: string; arch?: string; hint?: string } = {},
+): Host => {
+  let os: Host["os"] | undefined =
+    platform === "darwin"
+      ? "darwin"
+      : platform === "linux"
+        ? "linux"
+        : undefined;
+  if (!os) {
+    let name = platform === "win32" ? "Windows" : platform;
+    let fallbackHint = platform === "win32" ? " Please use WSL." : "";
+    cliError(
+      `${tool} has no ${name} build.${hint ? ` ${hint}` : fallbackHint}`,
+    );
+  }
+  if (arch !== "x64" && arch !== "arm64") {
+    cliError(`${tool} has no ${arch} build.${hint ? ` ${hint}` : ""}`);
+  }
+  return { os, arch: arch === "arm64" ? "aarch64" : "x86_64" };
+};
+
+/** The CPU a Mach-O or ELF executable was built for, read from its header. */
+export let executableArch = (file: string): Host["arch"] | undefined => {
+  let header = Buffer.alloc(20);
+  let fd = fs.openSync(file, "r");
+  try {
+    fs.readSync(fd, header, 0, header.length, 0);
+  } finally {
+    fs.closeSync(fd);
+  }
+  if (header.readUInt32LE(0) === 0xfeedfacf) {
+    let cpu = header.readUInt32LE(4);
+    return cpu === 0x01000007
+      ? "x86_64"
+      : cpu === 0x0100000c
+        ? "aarch64"
+        : undefined;
+  }
+  if (header.readUInt32BE(0) === 0x7f454c46) {
+    let machine = header.readUInt16LE(18);
+    return machine === 0x3e
+      ? "x86_64"
+      : machine === 0xb7
+        ? "aarch64"
+        : undefined;
+  }
+  return undefined;
+};
 
 export let tryDownloadFile = async (url: string): Promise<Buffer | null> => {
   let res = await fetch(url);
@@ -124,9 +184,6 @@ export let installVersion = async (
     if (isComplete()) {
       return;
     }
-    // A present-but-incomplete dir is a leftover from an interrupted
-    // pre-staging install. Under the lock nobody else is writing it.
-    fs.rmSync(destDir, { recursive: true, force: true });
 
     let staging = createStagingDir(destDir);
     try {
@@ -135,6 +192,10 @@ export let installVersion = async (
       fs.rmSync(staging, { recursive: true, force: true });
       throw err;
     }
+    // Replaced only once the new install is ready, so a failed download keeps
+    // what is there: a stale but working binary, or a leftover from an
+    // interrupted pre-staging install. Under the lock nobody else writes it.
+    fs.rmSync(destDir, { recursive: true, force: true });
     commitStagingDir(staging, destDir);
   } finally {
     await release().catch(() => {});

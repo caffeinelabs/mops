@@ -1,4 +1,3 @@
-import process from "node:process";
 import path from "node:path";
 import fs from "node:fs";
 
@@ -43,10 +42,7 @@ export let download = async (
     return;
   }
 
-  let platform =
-    process.platform == "darwin" ? "apple-darwin" : "unknown-linux-gnu";
-  let arch = process.arch.startsWith("arm") ? "aarch64" : "x86_64";
-  let url = `https://github.com/caffeinelabs/lintoko/releases/download/v${version}/lintoko-${arch}-${platform}.tar.xz`;
+  let url = assetUrl(version, toolchainUtils.hostTarget("lintoko"));
 
   if (verbose && !silent) {
     console.log(`Downloading ${url}`);
@@ -58,4 +54,9 @@ export let download = async (
     populate: (stagingDir) =>
       toolchainUtils.downloadAndExtract(url, stagingDir, "lintoko"),
   });
+};
+
+export let assetUrl = (version: string, host: toolchainUtils.Host) => {
+  let platform = host.os == "darwin" ? "apple-darwin" : "unknown-linux-gnu";
+  return `https://github.com/${repo}/releases/download/v${version}/lintoko-${host.arch}-${platform}.tar.xz`;
 };

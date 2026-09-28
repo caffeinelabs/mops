@@ -1,4 +1,3 @@
-import process from "node:process";
 import path from "node:path";
 import fs from "fs-extra";
 
@@ -52,9 +51,7 @@ export let download = async (
     return;
   }
 
-  let platfrom = process.platform == "darwin" ? "macos" : "linux";
-  let arch = process.arch.startsWith("arm") ? "aarch64" : "x86_64";
-  let url = `https://github.com/bytecodealliance/wasmtime/releases/download/v${version}/wasmtime-v${version}-${arch}-${platfrom}.tar.xz`;
+  let url = assetUrl(version, toolchainUtils.hostTarget("wasmtime"));
 
   if (verbose && !silent) {
     console.log(`Downloading ${url}`);
@@ -66,4 +63,9 @@ export let download = async (
     populate: (stagingDir) =>
       toolchainUtils.downloadAndExtract(url, stagingDir),
   });
+};
+
+export let assetUrl = (version: string, host: toolchainUtils.Host) => {
+  let platform = host.os == "darwin" ? "macos" : "linux";
+  return `https://github.com/${repo}/releases/download/v${version}/wasmtime-v${version}-${host.arch}-${platform}.tar.xz`;
 };

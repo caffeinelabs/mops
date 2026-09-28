@@ -156,14 +156,14 @@ describe("add/remove ergonomics", () => {
     test("resolves the org/repo shorthand", async () => {
       const cwd = await makeTempFixture("empty");
 
-      const res = await cli(["add", "ZenVoich/test#main"], {
+      const res = await cli(["add", "caffeinelabs/mops-test#main"], {
         cwd,
         env: { CI: "1" },
       });
 
       expect(res.exitCode).toBe(0);
       expect(toml(cwd)).toMatch(
-        /^\[dependencies\]\ntest = "https:\/\/github\.com\/ZenVoich\/test#main@[0-9a-f]{40}"\n$/,
+        /^\[dependencies\]\nmops-test = "https:\/\/github\.com\/caffeinelabs\/mops-test#main@[0-9a-f]{40}"\n$/,
       );
     });
 
