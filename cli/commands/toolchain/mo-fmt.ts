@@ -1,4 +1,3 @@
-import process from "node:process";
 import path from "node:path";
 import fs from "node:fs";
 
@@ -47,17 +46,10 @@ export let download = async (
     return;
   }
 
-  if (process.platform === "win32") {
-    cliError(
-      "mo-fmt has no Windows build. Remove `mo-fmt` from [toolchain] in mops.toml to format with the bundled formatter.",
-    );
-  }
-
-  // musl builds are static, so one Linux asset runs on any glibc.
-  let platform =
-    process.platform == "darwin" ? "apple-darwin" : "unknown-linux-musl";
-  let arch = process.arch.startsWith("arm") ? "aarch64" : "x86_64";
-  let url = `https://github.com/${repo}/releases/download/${tagPrefix}${version}/mo-fmt-${arch}-${platform}.tar.xz`;
+  let host = toolchainUtils.hostTarget("mo-fmt", {
+    hint: "Remove `mo-fmt` from [toolchain] in mops.toml to format with the bundled formatter.",
+  });
+  let url = assetUrl(version, host);
 
   if (verbose && !silent) {
     console.log(`Downloading ${url}`);
@@ -69,4 +61,10 @@ export let download = async (
     populate: (stagingDir) =>
       toolchainUtils.downloadAndExtract(url, stagingDir, "mo-fmt"),
   });
+};
+
+// musl builds are static, so one Linux asset runs on any glibc.
+export let assetUrl = (version: string, host: toolchainUtils.Host) => {
+  let platform = host.os == "darwin" ? "apple-darwin" : "unknown-linux-musl";
+  return `https://github.com/${repo}/releases/download/${tagPrefix}${version}/mo-fmt-${host.arch}-${platform}.tar.xz`;
 };

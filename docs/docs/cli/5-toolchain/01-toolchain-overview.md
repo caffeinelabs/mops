@@ -15,7 +15,9 @@ When you run `mops install` command, Mops will install the specified version of 
 - `pocket-ic` - PocketIC replica (used by `mops bench`, `mops test --mode replica` and [`mops build --check-deploy`](../4-dev/03-mops-build.md#--check-deploy))
 - `lintoko` - Extensible linter for Motoko ([https://github.com/caffeinelabs/lintoko](https://github.com/caffeinelabs/lintoko))
 - `wasm-opt` - Binaryen Wasm optimizer (used when [`[optimize]`](../../09-mops.toml.md#optimize) is set)
-- `mo-fmt` - Motoko formatter (used by [`mops format`](../4-dev/02-mops-format.md#mo-fmt) when pinned; [https://github.com/caffeinelabs/tree-sitter-motoko](https://github.com/caffeinelabs/tree-sitter-motoko)). macOS and Linux only
+- `mo-fmt` - Motoko formatter (used by [`mops format`](../4-dev/02-mops-format.md#mo-fmt) when pinned; [https://github.com/caffeinelabs/tree-sitter-motoko](https://github.com/caffeinelabs/tree-sitter-motoko))
+
+Each tool is downloaded for the machine it runs on: macOS or Linux, on x86_64 or arm64. None has a Windows build, so on Windows use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). Releases that predate a tool's arm64 builds — `moc` below 0.14.6, `pocket-ic` below 9.0.2 — are downloaded as x86_64, which Apple silicon runs under Rosetta.
 
 ## Specifying tool versions
 
