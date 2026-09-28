@@ -81,9 +81,16 @@ export type Toolchain = {
   "pocket-ic"?: string;
   lintoko?: string;
   "wasm-opt"?: string;
+  "mo-fmt"?: string;
 };
 
-export type Tool = "moc" | "wasmtime" | "pocket-ic" | "lintoko" | "wasm-opt";
+export type Tool =
+  | "moc"
+  | "wasmtime"
+  | "pocket-ic"
+  | "lintoko"
+  | "wasm-opt"
+  | "mo-fmt";
 
 export type Requirements = {
   moc?: string;

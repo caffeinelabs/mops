@@ -66,6 +66,7 @@ See [toolchain management](./cli/5-toolchain/01-toolchain-overview.md) page for 
 | pocket-ic            | [PocketIC](https://github.com/dfinity/pocketic) replica version (e.g. `15.0.0`) or file path, used to run [benchmarks](./cli/4-dev/02-mops-bench.md) and [replica tests](./cli/4-dev/01-mops-test.md#replica-tests). Required when those commands (or `--check-deploy`) run — there is no default. Versions below `9.0.0` are no longer supported. See [`pocket-ic` versions](./cli/5-toolchain/01-toolchain-overview.md#pocket-ic-versions)   |
 | lintoko              | Linter version (e.g. `0.11.0`) or file path for Motoko linting   |
 | wasm-opt             | Binaryen version (e.g. `131`) or file path used for `[optimize]` post-build Wasm optimization   |
+| mo-fmt               | Formatter version (e.g. `0.1.0`) or file path. When set, [`mops format`](./cli/4-dev/02-mops-format.md#mo-fmt) runs it instead of the bundled Prettier plugin   |
 
 File paths must start with `/`, `./`, or `../`.
 

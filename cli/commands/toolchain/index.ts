@@ -17,6 +17,7 @@ import * as pocketIc from "./pocket-ic.js";
 import * as wasmtime from "./wasmtime.js";
 import * as lintoko from "./lintoko.js";
 import * as wasmOpt from "./wasm-opt.js";
+import * as moFmt from "./mo-fmt.js";
 import { FILE_PATH_REGEX } from "../../constants.js";
 import { cliError } from "../../error.js";
 import { getPocketIcUrl } from "../../helpers/pocket-ic-startup.js";
@@ -44,6 +45,8 @@ function getToolUtils(tool: Tool) {
     return lintoko;
   } else if (tool === "wasm-opt") {
     return wasmOpt;
+  } else if (tool === "mo-fmt") {
+    return moFmt;
   } else {
     cliError(`Unknown tool '${tool}'`);
   }
@@ -114,6 +117,9 @@ async function installAll({ silent = false, verbose = false } = {}) {
       silent,
       verbose,
     });
+  }
+  if (config.toolchain?.["mo-fmt"]) {
+    await download("mo-fmt", config.toolchain["mo-fmt"], { silent, verbose });
   }
 
   if (!silent) {

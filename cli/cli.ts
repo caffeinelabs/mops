@@ -1213,6 +1213,10 @@ program
   .addOption(
     new Option("--check", "Check code formatting (do not change source files)"),
   )
+  .addHelpText(
+    "after",
+    "\nRuns mo-fmt instead of the bundled Prettier plugin when mo-fmt is pinned in [toolchain].",
+  )
   .action(async (filter, options) => {
     checkConfigFile();
     let { ok } = await format(filter, options);

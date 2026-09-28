@@ -9,7 +9,7 @@
 - [Node.js](https://nodejs.org/) >= 22.0.0
 - macOS or Linux. On Windows, use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) — the Motoko toolchain has no native Windows builds.
 
-Mops downloads and manages the Motoko toolchain itself — `moc`, `pocket-ic`, `wasmtime`, `lintoko`, `wasm-opt`. It does not need `dfx` installed, and does not support it.
+Mops downloads and manages the Motoko toolchain itself — `moc`, `pocket-ic`, `wasmtime`, `lintoko`, `wasm-opt`, `mo-fmt`. It does not need `dfx` installed, and does not support it.
 
 ## 2. Install Mops CLI
 
