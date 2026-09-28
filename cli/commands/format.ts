@@ -27,6 +27,15 @@ export type FormatResult = {
   formatted: number;
 };
 
+/** Absolute paths of the `.mo` files `mops format [filter]` formats. */
+export function findFormatFiles(rootDir: string, filter: string): string[] {
+  let globStr = filter ? `**/*${filter}*.mo` : "**/*.mo";
+  return globSync(path.join(rootDir, globStr), {
+    ...MOTOKO_GLOB_CONFIG,
+    cwd: rootDir,
+  }).filter((file) => !isNestedCheckout(file, rootDir));
+}
+
 export async function format(
   filter: string,
   options: Partial<FormatOptions> = {},
@@ -36,12 +45,7 @@ export async function format(
   let startTime = Date.now();
 
   let rootDir = getRootDir();
-  let globStr = filter ? `**/*${filter}*.mo` : "**/*.mo";
-
-  let files = globSync(path.join(rootDir, globStr), {
-    ...MOTOKO_GLOB_CONFIG,
-    cwd: rootDir,
-  }).filter((file) => !isNestedCheckout(file, rootDir));
+  let files = findFormatFiles(rootDir, filter);
   let invalidFiles = 0;
   let checkedFiles = 0;
 

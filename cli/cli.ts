@@ -18,6 +18,7 @@ import { deployed, deployedInit } from "./commands/deployed.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
 import { format } from "./commands/format.js";
+import { formatVerified } from "./commands/format-verify.js";
 import { generateCandid } from "./commands/generate.js";
 import { info } from "./commands/info.js";
 import { init } from "./commands/init.js";
@@ -1213,13 +1214,21 @@ program
   .addOption(
     new Option("--check", "Check code formatting (do not change source files)"),
   )
+  .addOption(
+    new Option(
+      "--verify",
+      "Run `mops check` after formatting and revert the formatting if it fails",
+    ).conflicts("check"),
+  )
   .addHelpText(
     "after",
     "\nRuns mo-fmt instead of the bundled Prettier plugin when mo-fmt is pinned in [toolchain].",
   )
   .action(async (filter, options) => {
     checkConfigFile();
-    let { ok } = await format(filter, options);
+    let { ok } = options.verify
+      ? await formatVerified(filter)
+      : await format(filter, options);
     if (!ok) {
       cliError();
     }
