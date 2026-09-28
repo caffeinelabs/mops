@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 3.4.0
 - `mops format -- <flags>` forwards the flags to `mo-fmt`, as `mops lint --` does for lintoko. They override `mo-fmt.toml` key by key, so `mops format -- --syntax moc2` tries the moc 2.0 rewrite without a config file. `mo-fmt` 0.2.0 accepts `--syntax` and `--indent-width`. The flags need `mo-fmt` pinned: the Prettier plugin takes none, so they are refused without it. After a failed `--check`, the suggested `mops format` command keeps them. They combine with `--verify`, which reverts a `moc2` rewrite the pinned `moc` rejects: the rewrite only compiles on moc 2.0.
 - `pocket-ic` is downloaded as the native arm64 build on Apple silicon and arm64 Linux, for every release that ships one (9.0.2 and later). It was always fetched as x86_64, which on a Mac only ran under Rosetta and on arm64 Linux did not run at all. A cached `pocket-ic` built for another CPU, such as the x86_64 build on an arm64 machine, is replaced with the right one on next use. A pin that is not a release version, such as `latest`, is now reported as an error instead of a download failure.
 - Every `[toolchain]` tool now picks its download for the host the same way, and refuses a host none of them has a build for instead of fetching one that cannot run. On Windows, `lintoko`, `wasmtime` and `pocket-ic` used to download the Linux build; they now fail with `<tool> has no Windows build. Please use WSL.`, as `moc` and `wasm-opt` already did. 32-bit ARM, which was handed the aarch64 build, fails with `<tool> has no arm build.`
