@@ -1,0 +1,28 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`format with mo-fmt pinned check, format, check again 1`] = `
+{
+  "exitCode": 1,
+  "stderr": "",
+  "stdout": "src/Messy.mo
+1 of 2 files need formatting.
+Run 'mops format' to format your code",
+}
+`;
+
+exports[`format with mo-fmt pinned check, format, check again 2`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "src/Messy.mo
+Formatted 1 of 2 files.",
+}
+`;
+
+exports[`format with mo-fmt pinned check, format, check again 3`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "All 2 files are formatted.",
+}
+`;

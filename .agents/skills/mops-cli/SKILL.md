@@ -194,6 +194,7 @@ mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.11.0    # pin specific version
 mops toolchain use pocket-ic 15.0.0  # pin for replica tests / benchmarks / --check-deploy
 mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
+mops toolchain use mo-fmt 0.1.0      # standalone formatter used by `mops format`
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
 mops toolchain info <tool>           # show release info (latest, pinned, history)
@@ -338,6 +339,8 @@ When `[canisters.<name>.migrations].check-limit` is set, `mops lint` skips the t
 mops format               # format all .mo files
 mops format --check       # check formatting without modifying
 ```
+
+With `mo-fmt` pinned in `[toolchain]`, `mops format` runs it instead of the bundled Prettier plugin — no fallback, `.prettierrc` ignored. Configure it with `mo-fmt.toml` in the project root (`syntax = "preserve" | "moc2"`, `indent-width`). Exit is non-zero on unformatted files under `--check`, and whenever a file fails to format (syntax error; left untouched).
 
 ### `mops watch`
 

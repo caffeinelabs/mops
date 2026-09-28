@@ -1,0 +1,4 @@
+[dependencies]
+
+[toolchain]
+mo-fmt = "0.1.0"

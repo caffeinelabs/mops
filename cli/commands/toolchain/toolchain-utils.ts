@@ -28,6 +28,7 @@ export const TOOLCHAINS = [
   "pocket-ic",
   "lintoko",
   "wasm-opt",
+  "mo-fmt",
 ];
 
 export let tryDownloadFile = async (url: string): Promise<Buffer | null> => {
@@ -172,6 +173,11 @@ let acquireInstallLock = async (destDir: string, label: string) => {
 export type ReleaseTagOptions = ReleaseFilter & {
   /** Fetch every release page instead of the first page only. */
   all?: boolean;
+  /**
+   * For a repo that releases several things: keep only tags with this prefix,
+   * and strip it. Without it, a leading `v` is stripped and nothing dropped.
+   */
+  tagPrefix?: string;
 };
 
 let withExclusions = (tags: string[], exclude?: string[]): string[] => {
@@ -191,21 +197,17 @@ export type ReleaseTagsResult = {
   publishedLatest?: string;
 };
 
-let mapRelease = (release: {
-  tag_name: string;
-  published_at: string | null;
-  prerelease: boolean;
-  draft: boolean;
-}): ReleaseInfo => ({
-  tag_name: release.tag_name.replace(/^v/, ""),
-  published_at: release.published_at,
-  prerelease: release.prerelease,
-  draft: release.draft,
-});
+// `undefined` for a tag that belongs to another release line of the repo.
+let releaseVersion = (tag: string, tagPrefix?: string): string | undefined => {
+  if (tagPrefix === undefined) {
+    return tag.replace(/^v/, "");
+  }
+  return tag.startsWith(tagPrefix) ? tag.slice(tagPrefix.length) : undefined;
+};
 
 let fetchReleasePages = async (
   repo: string,
-  { maxPages }: { maxPages?: number } = {},
+  { maxPages, tagPrefix }: { maxPages?: number; tagPrefix?: string } = {},
 ): Promise<{ releases: ReleaseInfo[]; truncated: boolean }> => {
   let octokit = new Octokit();
   let releases: ReleaseInfo[] = [];
@@ -231,7 +233,16 @@ let fetchReleasePages = async (
       break;
     }
     for (let release of res.data) {
-      releases.push(mapRelease(release));
+      let version = releaseVersion(release.tag_name, tagPrefix);
+      if (version === undefined) {
+        continue;
+      }
+      releases.push({
+        tag_name: version,
+        published_at: release.published_at,
+        prerelease: release.prerelease,
+        draft: release.draft,
+      });
     }
     if (res.data.length < 100) {
       break;
@@ -248,10 +259,16 @@ let fetchReleasePages = async (
 /** Release tags, newest first. Default: first GitHub page only. */
 export let getReleaseTags = async (
   repo: string,
-  { all = false, prerelease = false, exclude }: ReleaseTagOptions = {},
+  {
+    all = false,
+    prerelease = false,
+    exclude,
+    tagPrefix,
+  }: ReleaseTagOptions = {},
 ): Promise<ReleaseTagsResult> => {
   let { releases, truncated } = await fetchReleasePages(repo, {
     maxPages: all ? undefined : 1,
+    tagPrefix,
   });
   let rows = releaseRows(releases, { prerelease, exclude });
   return {
@@ -265,7 +282,7 @@ export let getReleaseTags = async (
 
 export let getLatestReleaseTag = async (
   repo: string,
-  { prerelease = false, exclude }: ReleaseTagOptions = {},
+  { prerelease = false, exclude, tagPrefix }: ReleaseTagOptions = {},
 ): Promise<string> => {
   let octokit = new Octokit();
 
@@ -284,8 +301,8 @@ export let getLatestReleaseTag = async (
       break;
     }
     for (let release of res.data) {
-      let tag = release.tag_name.replace(/^v/, "");
-      if (exclude?.includes(tag)) {
+      let tag = releaseVersion(release.tag_name, tagPrefix);
+      if (tag === undefined || exclude?.includes(tag)) {
         continue;
       }
       if (!release.draft && (prerelease || !release.prerelease)) {
@@ -306,10 +323,13 @@ export let getLatestReleaseTag = async (
  */
 export let getReleases = async (
   repo: string,
-  { prerelease = false, exclude }: ReleaseTagOptions = {},
+  { prerelease = false, exclude, tagPrefix }: ReleaseTagOptions = {},
 ): Promise<ReleaseInfo[]> => {
   // One page via `fetchReleasePages`, matching what `info` previews. A bare
   // unpaged request reads the same page but stops at GitHub's 1000-release cap.
-  let { releases } = await fetchReleasePages(repo, { maxPages: 1 });
+  let { releases } = await fetchReleasePages(repo, {
+    maxPages: 1,
+    tagPrefix,
+  });
   return releaseRows(releases, { prerelease, exclude });
 };
