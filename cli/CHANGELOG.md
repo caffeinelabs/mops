@@ -2,6 +2,7 @@
 
 ## Next
 - `mops test` no longer passes `-ref-system-api` to `moc -r` in interpreter mode. moc 2.0 removes the flag (deprecated as a no-op in 1.x), so the interpreter runner failed with `moc: unknown option '-ref-system-api'` under a moc 2.0 pin. The flag never changed what `moc -r` did, so older pins behave the same.
+- `mops bench` works in projects that promote the dot-notation lint to an error with `-E=M0236` in `[moc] args`. The canister it generates around each benchmark called `Region.grow` and `Nat64.toNat` in module style and failed to compile, so such projects had to pass `mops bench -- -W=M0236`. It now calls the underlying primitives, which compiles under the lint with every `core` version, including 1.x, which has no dot notation.
 
 ## 3.4.0
 - `mops format -- <flags>` forwards the flags to `mo-fmt`, as `mops lint --` does for lintoko. They override `mo-fmt.toml` key by key, so `mops format -- --syntax moc2` tries the moc 2.0 rewrite without a config file. `mo-fmt` 0.2.0 accepts `--syntax` and `--indent-width`. The flags need `mo-fmt` pinned: the Prettier plugin takes none, so they are refused without it. After a failed `--check`, the suggested `mops format` command keeps them. They combine with `--verify`, which reverts a `moc2` rewrite the pinned `moc` rejects: the rewrite only compiles on moc 2.0.

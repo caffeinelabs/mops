@@ -31,6 +31,19 @@ describe("bench", () => {
     }
   });
 
+  // The generated canister wrapper is compiled with the project's `[moc] args`,
+  // so it must not trip lints a project may promote to errors.
+  test("compiles the bench canister with lints as errors in [moc] args", async () => {
+    const cwd = path.join(import.meta.dirname, "bench/moc-args-lint");
+    try {
+      const result = await cli(["bench"], { cwd });
+      expect(result.stderr).not.toMatch(/M0223|M0236|M0237/);
+      expect(result.exitCode).toBe(0);
+    } finally {
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
   test("an invalid MOPS_POCKET_IC_URL fails fast with a clean error", async () => {
     // Validated once per invocation (cli.ts preAction), for every command:
     // a malformed value is broken environment config, and failing loudly
