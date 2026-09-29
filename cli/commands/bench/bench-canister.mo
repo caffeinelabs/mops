@@ -1,8 +1,8 @@
-import Nat64 "mo:core/Nat64";
 import Nat "mo:core/Nat";
 import Runtime "mo:core/Runtime";
 import InternetComputer "mo:core/InternetComputer";
-import Region "mo:core/Region";
+// Calls to `core` functions taking `self` go through `mo:prim`: module-style
+// they trip M0236 under a user `-E=M0236`, and dot notation needs core 2.x.
 import Prim "mo:prim";
 
 import UserBench "./user-bench"; // file path will be replaced with the *.bench.mo file path
@@ -39,7 +39,7 @@ persistent actor class () {
   public func init() : async BenchSchema {
     let bench = UserBench.init();
     benchOpt := ?bench;
-    ignore Region.grow(Region.new(), 1);
+    ignore Prim.regionGrow(Prim.regionNew(), 1);
     bench.getSchema();
   };
 
@@ -82,7 +82,7 @@ persistent actor class () {
     let ?bench = benchOpt else Runtime.trap("bench not initialized");
     let statsBefore = _getStats();
 
-    let instructions = Nat64.toNat(
+    let instructions = Prim.nat64ToNat(
       InternetComputer.countInstructions(
         func() {
           bench.runCell(rowIndex, colIndex);
@@ -98,7 +98,7 @@ persistent actor class () {
     let ?bench = benchOpt else Runtime.trap("bench not initialized");
     let statsBefore = _getStats();
 
-    let instructions = Nat64.toNat(
+    let instructions = Prim.nat64ToNat(
       InternetComputer.countInstructions(
         func() {
           bench.runCell(rowIndex, colIndex);
