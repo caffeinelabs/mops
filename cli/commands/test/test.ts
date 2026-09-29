@@ -327,7 +327,7 @@ export async function testWithReporter(
 
       // interpret
       if (mode === "interpreter") {
-        let proc = spawn(mocPath, ["-r", "-ref-system-api", ...mocArgs], {
+        let proc = spawn(mocPath, ["-r", ...mocArgs], {
           signal,
         });
         proc.addListener("error", (error: any) => {
