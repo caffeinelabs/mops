@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 3.4.1
 - `mops test` no longer passes `-ref-system-api` to `moc -r` in interpreter mode. moc 2.0 removes the flag (deprecated as a no-op in 1.x), so the interpreter runner failed with `moc: unknown option '-ref-system-api'` under a moc 2.0 pin. The flag never changed what `moc -r` did, so older pins behave the same.
 - `mops bench` works in projects that promote the dot-notation lint to an error with `-E=M0236` in `[moc] args`. The canister it generates around each benchmark called `Region.grow` and `Nat64.toNat` in module style and failed to compile, so such projects had to pass `mops bench -- -W=M0236`. It now calls the underlying primitives, which compiles under the lint with every `core` version, including 1.x, which has no dot notation.
 
