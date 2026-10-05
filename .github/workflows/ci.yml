@@ -17,7 +17,8 @@ concurrency:
 
 env:
   MOC_VERSION: "0.14.13"
-  NODE_VERSION: "22"
+  # npm 11, as Dependabot uses: npm 10 rejects some lockfiles npm 11 writes
+  NODE_VERSION: "24"
 
 jobs:
   # The backend still deploys, declarations still generate and every site still
