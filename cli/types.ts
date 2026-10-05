@@ -27,6 +27,8 @@ export type Config = {
     args?: string[];
     "check-wasm"?: boolean;
     "check-deploy"?: boolean;
+    /** Unstable: per-canister <name>.build.json record in the output dir. */
+    manifest?: boolean;
   };
   deployed?: {
     dir?: string;

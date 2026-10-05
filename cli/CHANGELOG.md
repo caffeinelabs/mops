@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- New **unstable** build manifest: with `[build] manifest = true` in `mops.toml`, `mops build` writes a `<canister>.build.json` record next to each built `.wasm`/`.did`/`.most` — artifact SHA-256 hashes, the pinned `moc` version, and the outcome of a non-gating `moc --stable-compatible` check against an empty-actor baseline (is the canister installable on a fresh canister, or upgrade-only). `mops build` deletes a stale `<canister>.build.json` at the start of each canister build even when the feature is off, so a record never outlives the artifacts it describes. Unstable: schema and behavior may change in any release; documented only on the new "Unstable features" docs page.
 
 ## 3.4.1
 - `mops test` no longer passes `-ref-system-api` to `moc -r` in interpreter mode. moc 2.0 removes the flag (deprecated as a no-op in 1.x), so the interpreter runner failed with `moc: unknown option '-ref-system-api'` under a moc 2.0 pin. The flag never changed what `moc -r` did, so older pins behave the same.
