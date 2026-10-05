@@ -31,6 +31,7 @@
     "webpack": "*"
   },
   "overrides": {
+    "image-size": "2.0.3",
     "nanoid": "3.3.18",
     "webpackbar": "^7.0.0",
     "brace-expansion": "1.1.18",
