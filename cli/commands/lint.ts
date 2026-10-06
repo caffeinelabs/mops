@@ -12,6 +12,7 @@ import {
 } from "../mops.js";
 import { resolvePackages } from "../resolve-packages.js";
 import { withFixLock } from "../helpers/fix-lock.js";
+import { dropGitIgnored } from "../helpers/gitignore.js";
 import { toolchain } from "./toolchain/index.js";
 import { isNestedCheckout, MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { existsSync } from "node:fs";
@@ -207,6 +208,7 @@ async function lintImpl(
       ...MOTOKO_GLOB_CONFIG,
       cwd: rootDir,
     }).filter((file) => !isNestedCheckout(file, rootDir));
+    filesToLint = dropGitIgnored(filesToLint, rootDir);
     if (filesToLint.length === 0) {
       cliError(
         filter
@@ -275,6 +277,7 @@ async function lintImpl(
         ...MOTOKO_GLOB_CONFIG,
         cwd: rootDir,
       }).filter((file) => !isNestedCheckout(file, rootDir));
+      matchedFiles = dropGitIgnored(matchedFiles, rootDir);
 
       if (baseFileSet) {
         matchedFiles = matchedFiles.filter((f) =>

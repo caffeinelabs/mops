@@ -2,7 +2,7 @@ import { describe, expect, test, afterEach } from "@jest/globals";
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import path from "path";
-import { cli, cliSnapshot } from "./helpers";
+import { cli, cliSnapshot, useTempFixtures } from "./helpers";
 
 describe("lint", () => {
   test("ok", async () => {
@@ -28,6 +28,34 @@ describe("lint", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).not.toMatch(/too many arguments/);
     expect(result.stderr).toMatch(/Lint failed/);
+  });
+
+  describe("git-ignored files", () => {
+    const makeTempFixture = useTempFixtures(import.meta.dirname);
+
+    test("are not linted", async () => {
+      const cwd = await makeTempFixture("lint");
+      await writeFile(path.join(cwd, ".gitignore"), "/src/NoBoolSwitch.mo\n");
+      const result = await cli(["lint", "--verbose"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toMatch(/Ok\.mo/);
+      expect(result.stdout).not.toMatch(/NoBoolSwitch/);
+    });
+
+    test("are not matched by a [lint.extra] glob", async () => {
+      const cwd = await makeTempFixture("lint");
+      await writeFile(path.join(cwd, ".gitignore"), "/src/NoBoolSwitch.mo\n");
+      await writeFile(
+        path.join(cwd, "mops.toml"),
+        readFileSync(path.join(cwd, "mops.toml"), "utf-8") +
+          '\n[lint.extra]\n"src/NoBool*.mo" = ["lints"]\n',
+      );
+      const result = await cli(["lint"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toMatch(
+        /no files matched glob 'src\/NoBool\*\.mo'/,
+      );
+    });
   });
 
   test("unknown flag before -- is rejected", async () => {

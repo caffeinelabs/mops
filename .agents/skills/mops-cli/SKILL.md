@@ -344,6 +344,8 @@ mops format -- --syntax moc2   # flags after -- go to mo-fmt (needs mo-fmt pinne
 
 With `mo-fmt` pinned in `[toolchain]`, `mops format` runs it instead of the bundled Prettier plugin — no fallback, `.prettierrc` ignored. Configure it with `mo-fmt.toml` in the project root (`syntax = "preserve" | "moc2"`, `indent-width`). Exit is non-zero on unformatted files under `--check`, and whenever a file fails to format (syntax error; left untouched).
 
+`mops format` and `mops lint` skip files the project's `.gitignore` excludes (generated sources); `mops test`, `mops sync` and `mops check <files>` do not.
+
 ### `mops watch`
 
 ```bash

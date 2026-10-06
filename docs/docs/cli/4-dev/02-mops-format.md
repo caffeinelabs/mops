@@ -24,6 +24,8 @@ Uses [Prettier](https://prettier.io) with [Motoko](https://github.com/caffeinela
 
 Files inside `node_modules/`, `.mops/`, `.git/`, `.dfx/`, `dist/`, `build/` and `bundle/` are skipped, as are directories below the project root that are their own checkout — a git worktree, a submodule, a nested clone — so a copy of the project checked out beside it is never reformatted.
 
+Files the project's `.gitignore` excludes are skipped too, such as generated sources. The filter does not bring them back. As in git, every `.gitignore` from the root of the repository down to the file counts, but the global excludes file and `.git/info/exclude` do not, so every machine selects the same files. Whether a file is tracked does not matter. A project outside a repository, or in a directory its repository ignores, reads only its own `.gitignore` files.
+
 ## `mo-fmt` {#mo-fmt}
 
 `mo-fmt` is the standalone Motoko formatter, released from [caffeinelabs/tree-sitter-motoko](https://github.com/caffeinelabs/tree-sitter-motoko). Pin it to use it:
@@ -39,7 +41,7 @@ mo-fmt = "0.2.0"
 
 With `mo-fmt` pinned, `mops format` runs that binary and nothing else: there is no fallback to the Prettier plugin, and `.prettierrc` is not read. Without the pin, `mops format` uses the Prettier plugin as before. Builds exist for macOS and Linux, not Windows.
 
-`mops format` selects the files as above and passes them to `mo-fmt`, run from the project root. The output is `mo-fmt`'s own: one line per file that was formatted (with `--check`, that would change), paths relative to the project root, then a summary line. A file that fails to format — a syntax error, or a result that would parse differently from the original — is reported on stderr, left untouched, and makes `mops format` exit non-zero; the other files are still formatted.
+`mops format` selects the files as above and passes them to `mo-fmt`, run from the project root. `mo-fmt` formats every file it is given, so the `.gitignore` rules above are applied by `mops format`, not by `mo-fmt`. The output is `mo-fmt`'s own: one line per file that was formatted (with `--check`, that would change), paths relative to the project root, then a summary line. A file that fails to format — a syntax error, or a result that would parse differently from the original — is reported on stderr, left untouched, and makes `mops format` exit non-zero; the other files are still formatted.
 
 Configure it with an optional `mo-fmt.toml` in the project root, next to `mops.toml`:
 
