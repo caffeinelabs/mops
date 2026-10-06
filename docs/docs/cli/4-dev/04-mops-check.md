@@ -159,7 +159,7 @@ mops check --fix
 `--fix` is forwarded to both the Motoko compiler and lintoko, so both type-level and lint fixes are applied in a single invocation.
 
 :::note
-When file paths are passed explicitly (e.g. `mops check src/Main.mo`), linting is scoped to those files. When checking canisters (by name or with no arguments), linting covers all `.mo` files in the project.
+When file paths are passed explicitly (e.g. `mops check src/Main.mo`), linting is scoped to those files. When checking canisters (by name or with no arguments), linting covers all `.mo` files [`mops lint`](./07-mops-lint.md) selects, which leaves out those the project's `.gitignore` excludes.
 :::
 
 :::info

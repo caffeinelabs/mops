@@ -11,6 +11,7 @@ import { absToRel } from "./test/utils.js";
 import { parallel } from "../parallel.js";
 import { isNestedCheckout, MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { cliError } from "../error.js";
+import { dropGitIgnored } from "../helpers/gitignore.js";
 import { toolchain } from "./toolchain/index.js";
 
 type FormatOptions = {
@@ -32,10 +33,12 @@ export type FormatResult = {
 /** Absolute paths of the `.mo` files `mops format [filter]` formats. */
 export function findFormatFiles(rootDir: string, filter: string): string[] {
   let globStr = filter ? `**/*${filter}*.mo` : "**/*.mo";
-  return globSync(path.join(rootDir, globStr), {
+  let files = globSync(path.join(rootDir, globStr), {
     ...MOTOKO_GLOB_CONFIG,
     cwd: rootDir,
   }).filter((file) => !isNestedCheckout(file, rootDir));
+  // mo-fmt honours `.gitignore` only when walking a directory, never for a file it is passed.
+  return dropGitIgnored(files, rootDir);
 }
 
 export async function format(

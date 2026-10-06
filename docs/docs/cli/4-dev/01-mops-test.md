@@ -12,7 +12,7 @@ mops test
 
 Put your tests in `*.test.mo` files inside a `test/` or `tests/` directory (nested subdirectories work too).
 
-Directories below the project root that are their own checkout — a git worktree, a submodule, a nested clone — are skipped, so a copy of the project checked out beside it does not contribute tests.
+Directories below the project root that are their own checkout — a git worktree, a submodule, a nested clone — are skipped, so a copy of the project checked out beside it does not contribute tests. Unlike `mops format` and `mops lint`, `mops test` runs files the project's `.gitignore` excludes, so a test that a script generates before the run is picked up.
 
 If a `test/lib.mo` (or `tests/lib.mo`) file exists, it is the **only** file run — use it as an entry point that imports your other tests.
 

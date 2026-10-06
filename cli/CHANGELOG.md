@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops format` and `mops lint` skip files the project's `.gitignore` excludes, such as generated sources. Both pass the files they select to the tool by name, and `mo-fmt` honours `.gitignore` only when it walks a directory, so a generated file was formatted and counted in `mops format --check` (motoko-core reported 104 files for 103 tracked ones). Every `.gitignore` from the repository root down to the file counts, as in git, but the global excludes file and `.git/info/exclude` do not, so every machine selects the same files. A project outside a repository, or in a directory its repository ignores, reads only its own. The format step of `mops watch`, `mops format --verify`, the filter, `[lint.extra]` globs and the lint step of `mops check` follow. `mops test` and `mops sync` deliberately still read git-ignored files, since a generated test is meant to run and its imports to be installed, and files passed by name, as in `mops check src/Main.mo`, are always linted.
 
 ## 3.4.1
 - `mops test` no longer passes `-ref-system-api` to `moc -r` in interpreter mode. moc 2.0 removes the flag (deprecated as a no-op in 1.x), so the interpreter runner failed with `moc: unknown option '-ref-system-api'` under a moc 2.0 pin. The flag never changed what `moc -r` did, so older pins behave the same.
