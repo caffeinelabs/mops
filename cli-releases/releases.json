@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "3.4.1"
+    "latest": "3.4.2"
   },
   "versions": {
     "0.41.0": {
@@ -640,6 +640,14 @@
       "commitHash": "475d34da18a71a2af9d622e860bd54a10a9f2478",
       "url": "https://cli.mops.one/versions/3.4.1.tgz",
       "hash": "67f7b31dd28a6064282d077aaf98208f76be2c8ef6d7da51f27bb4ce7a8da47b"
+    },
+    "3.4.2": {
+      "time": 1791294713933,
+      "size": 2399111,
+      "relseaseNotes": "* `mops format` and `mops lint` skip files the project's `.gitignore` excludes, such as generated sources. Both pass the files they select to the tool by name, and `mo-fmt` honours `.gitignore` only when it walks a directory, so a generated file was formatted and counted in `mops format --check` (motoko-core reported 104 files for 103 tracked ones). Every `.gitignore` from the repository root down to the file counts, as in git, but the global excludes file and `.git/info/exclude` do not, so every machine selects the same files. A project outside a repository, or in a directory its repository ignores, reads only its own. The format step of `mops watch`, `mops format --verify`, the filter, `[lint.extra]` globs and the lint step of `mops check` follow. `mops test` and `mops sync` deliberately still read git-ignored files, since a generated test is meant to run and its imports to be installed, and files passed by name, as in `mops check src/Main.mo`, are always linted.\n",
+      "commitHash": "65e6ff33908e5365ccc2a6d355e2f2511bea367c",
+      "url": "https://cli.mops.one/versions/3.4.2.tgz",
+      "hash": "b92932cb00a8fb19a12f5e15e6f93f87c212400d67fc2fd1a848105e56c9a10e"
     }
   }
 }
