@@ -45,6 +45,20 @@ exports[`check error 2`] = `
 }
 `;
 
+exports[`check moc 2 checks every file in one run 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "Warning.mo:3.9-3.15: warning [M0194], unused identifier: \`unused\`
+help: if this is intentional, prefix it with an underscore: \`_unused\`",
+  "stdout": "check Using --all-libs for richer diagnostics
+check Running moc:
+<CACHE><MOC> ["Ok.mo","Warning.mo","ImportsWarning.mo","--check","--all-libs"]
+✓ Ok.mo
+✓ Warning.mo
+✓ ImportsWarning.mo",
+}
+`;
+
 exports[`check no args checks all canisters 1`] = `
 {
   "exitCode": 0,

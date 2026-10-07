@@ -63,6 +63,8 @@ Canister names or file paths to check.
 
 You cannot mix canister names and file paths in the same invocation.
 
+On `moc` 2.0.0+, all file paths are checked in a single `moc` run. Each file still sees only its own imports, but a library several of them import is checked once and its diagnostics are reported once, and an error in one file does not hide the diagnostics of the others. Older `moc` versions concatenate several files into one program, so there each file gets its own run.
+
 ## Options
 
 ### `--fix`

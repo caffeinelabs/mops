@@ -44,6 +44,32 @@ describe("check", () => {
     expect(result.stderr).toMatch(/unused identifier/);
   });
 
+  test("moc 2 checks every file in one run", async () => {
+    const cwd = path.join(import.meta.dirname, "check/moc2");
+    const result = await cliSnapshot(
+      ["check", "Ok.mo", "Warning.mo", "ImportsWarning.mo", "--verbose"],
+      { cwd },
+      0,
+    );
+    expect(result.stdout.match(/Running moc/g)).toHaveLength(1);
+    // Warning.mo is checked and imported, yet its warning is reported once.
+    expect(result.stderr.match(/warning \[M0194\]/g)).toHaveLength(1);
+  });
+
+  test("moc 2 reports every file when one fails", async () => {
+    const cwd = path.join(import.meta.dirname, "check/moc2");
+    const result = await cli(["check", "Error.mo", "Ok.mo", "Warning.mo"], {
+      cwd,
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(/Error\.mo.*\[M0057\]/);
+    expect(result.stderr).toMatch(/Warning\.mo.*\[M0194\]/);
+    expect(result.stderr).toMatch(
+      /✗ Check failed for 3 files \(exit code: 1\)/,
+    );
+    expect(result.stdout).not.toMatch(/✓/);
+  });
+
   test("[moc] args are passed to moc", async () => {
     const cwd = path.join(import.meta.dirname, "check/moc-args");
     await cliSnapshot(["check", "Warning.mo"], { cwd }, 1);

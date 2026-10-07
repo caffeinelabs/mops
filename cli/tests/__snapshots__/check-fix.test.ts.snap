@@ -1,5 +1,15 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`check --fix (moc 2) fixes several files and their shared import: fix output 1`] = `
+"Fixed run/Lib.mo (1 fix: M0223)
+Fixed run/A.mo (1 fix: M0223)
+Fixed run/B.mo (1 fix: M0223)
+
+✓ 3 fixes applied to 3 files
+✓ <TEST_DIR>/check/fix-moc2/run/A.mo
+✓ <TEST_DIR>/check/fix-moc2/run/B.mo"
+`;
+
 exports[`check --fix M0223 1`] = `
 "// M0223: Redundant type instantiation
 // The type annotation is not needed when it can be inferred
