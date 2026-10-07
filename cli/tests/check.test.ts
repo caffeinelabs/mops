@@ -139,9 +139,8 @@ describe("check", () => {
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
   });
 
-  // Fixture pinned to moc 1.12.0: folding needs --enhanced-migration, so a
-  // non-EM canister keeps the classic path even on a moc that supports it.
-  // (This pin is below the 1.15.0 fold floor, so it holds for EM as well.)
+  // Fixture pinned to moc 1.16.1, past the 1.15.0 fold floor: folding needs
+  // --enhanced-migration, so a non-EM canister keeps the classic path anyway.
   test("deployed: non-EM canister does not fold into --stable-baseline", async () => {
     const cwd = path.join(import.meta.dirname, "check/deployed-compatible");
     const result = await cli(["check", "--verbose"], { cwd });

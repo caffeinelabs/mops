@@ -1,5 +1,5 @@
 [toolchain]
-moc = "1.5.0"
+moc = "1.16.1"
 pocket-ic = "12.0.0"
 
 [canisters.main]

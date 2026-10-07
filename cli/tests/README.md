@@ -7,7 +7,8 @@ Each subdirectory under `check/`, `check-stable/`, etc. is a self-contained test
 1. Create a directory with a `mops.toml` and the `.mo` files your test needs.
 2. Only declare `[dependencies]` if your `.mo` files actually import from them. Unused dependencies cause `moc` to receive `--package` flags pointing to directories that may not exist on CI.
 3. If your fixture declares `[dependencies]`, add a `mops install` step for it in `.github/workflows/ci.yml` under the "Pre-cache" step. Test fixtures' `.mops/` directories are gitignored and don't exist on CI unless explicitly installed.
-4. If your fixture uses a `[toolchain]` moc version that isn't already pre-cached in CI, add a download step for it in the same CI pre-cache block.
+4. Pin `[toolchain] moc` to the newest 1.x release, or to the newest 2.x release when the test is about moc 2 behaviour. An older pin is only for a test about a version gate or a regression on that moc, and the test says so in a comment. Bump these pins when a new moc ships rather than adding fixtures for it.
+5. If your fixture uses a `[toolchain]` moc version that isn't already pre-cached in CI, add a download step for it in the same CI pre-cache block.
 
 ## Why this matters
 

@@ -90,7 +90,7 @@ describe("deployed", () => {
       const tomlPath = path.join(cwd, "mops.toml");
       await writeFile(
         tomlPath,
-        '[toolchain]\nmoc = "1.5.0"\n\n[canisters]\nbackend = "main.mo"\n',
+        '[toolchain]\nmoc = "1.16.1"\n\n[canisters]\nbackend = "main.mo"\n',
       );
 
       const result = await cli(["deployed", "init"], { cwd });

@@ -53,8 +53,8 @@ describe("concurrent builds on a cold toolchain cache", () => {
         }
 
         // one complete version dir, no staging or lock leftovers
-        expect(readdirSync(mocDir)).toEqual(["1.3.0"]);
-        expect(existsSync(path.join(mocDir, "1.3.0", "moc"))).toBe(true);
+        expect(readdirSync(mocDir)).toEqual(["1.16.1"]);
+        expect(existsSync(path.join(mocDir, "1.16.1", "moc"))).toBe(true);
       }
     } finally {
       cleanFixture(cwd, path.join(cwd, "mops.lock"));
