@@ -12,7 +12,7 @@ import {
 } from "../mops.js";
 import { AutofixResult, autofixMotoko } from "../helpers/autofix-motoko.js";
 import { withFixLock } from "../helpers/fix-lock.js";
-import { getMocSemVer } from "../helpers/get-moc-version.js";
+import { getMocSemVer, mocCheckRuns } from "../helpers/get-moc-version.js";
 import {
   filterCanisters,
   looksLikeFile,
@@ -351,9 +351,10 @@ async function checkFiles(
     logAutofixResult(fixResult, options.verbose);
   }
 
-  for (const file of files) {
+  for (const run of mocCheckRuns(files)) {
+    const label = run.length === 1 ? `file ${run[0]}` : `${run.length} files`;
     try {
-      const args = [file, ...mocArgs];
+      const args = [...run, ...mocArgs];
       if (options.verbose) {
         console.log(chalk.blue("check"), chalk.gray("Running moc:"));
         console.log(chalk.gray(mocPath, JSON.stringify(args)));
@@ -367,13 +368,15 @@ async function checkFiles(
       if (result.exitCode !== 0) {
         cliExit(
           result.exitCode ?? 1,
-          `✗ Check failed for file ${file} (${describeExecFailure(result)})`,
+          `✗ Check failed for ${label} (${describeExecFailure(result)})`,
         );
       }
 
-      console.log(chalk.green(`✓ ${file}`));
+      for (const file of run) {
+        console.log(chalk.green(`✓ ${file}`));
+      }
     } catch (err) {
-      cliErrorFrom(err, `Error while checking ${file}`);
+      cliErrorFrom(err, `Error while checking ${label}`);
     }
   }
 }

@@ -28,3 +28,17 @@ export function supportsStableBaselineCheck(): boolean {
     ? version.compare(MOC_STABLE_BASELINE_MIN_VERSION) >= 0
     : false;
 }
+
+// First moc where `moc --check a.mo b.mo` checks each file on its own.
+// Earlier ones concatenate the files into one program, so a file could use
+// another's declarations without importing them.
+export const MOC_MULTI_FILE_CHECK_MIN_VERSION = "2.0.0";
+
+// Splits files into `moc --check` runs: one run for all of them where moc
+// checks each file on its own, else one run per file.
+export function mocCheckRuns(files: string[]): string[][] {
+  const version = getMocSemVer();
+  return version && version.compare(MOC_MULTI_FILE_CHECK_MIN_VERSION) >= 0
+    ? [files]
+    : files.map((file) => [file]);
+}

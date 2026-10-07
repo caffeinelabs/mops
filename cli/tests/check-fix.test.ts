@@ -227,3 +227,43 @@ describe("check --fix", () => {
     expect(a.stdout + b.stdout).toContain("Waiting for another");
   });
 });
+
+// moc 2 checks every file in one run, so a library two files import is
+// reported, and fixed, once.
+describe("check --fix (moc 2)", () => {
+  const fixDir = path.join(import.meta.dirname, "check/fix-moc2");
+  const runDir = path.join(fixDir, "run");
+  const warningFlags = "-W=M0223";
+
+  beforeAll(() => {
+    for (const file of readdirSync(runDir).filter((f) => f.endsWith(".mo"))) {
+      unlinkSync(path.join(runDir, file));
+    }
+  });
+
+  test("fixes several files and their shared import", async () => {
+    const copy = (file: string): string => {
+      const dest = path.join(runDir, file);
+      cpSync(path.join(fixDir, file), dest);
+      return dest;
+    };
+    const a = copy("A.mo");
+    const b = copy("B.mo");
+    const lib = copy("Lib.mo");
+
+    const fixResult = await cli(["check", a, b, "--fix", "--", warningFlags], {
+      cwd: fixDir,
+    });
+    expect(fixResult.exitCode).toBe(0);
+    expect(normalizePaths(fixResult.stdout)).toMatchSnapshot("fix output");
+    for (const file of [a, b, lib]) {
+      expect(readFileSync(file, "utf-8")).not.toMatch(/<Nat>/);
+    }
+
+    const afterResult = await cli(
+      ["check", a, b, "--", warningFlags, "--error-format=json"],
+      { cwd: fixDir },
+    );
+    expect(countCodes(afterResult.stdout)).toEqual({});
+  });
+});

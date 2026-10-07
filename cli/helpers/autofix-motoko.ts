@@ -3,6 +3,7 @@ import { relative, resolve } from "node:path";
 import chalk from "chalk";
 import { execa } from "execa";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { mocCheckRuns } from "./get-moc-version.js";
 
 interface MocSpan {
   file: string;
@@ -190,14 +191,15 @@ export async function autofixMotoko(
   // Frozen migration files are often chmod'd read-only; warn once and skip
   // them rather than aborting the whole run on EACCES/EPERM.
   const readOnlySkipped = new Set<string>();
+  const runs = mocCheckRuns(files);
 
   for (let iteration = 0; iteration < MAX_FIX_ITERATIONS; iteration++) {
     const fixesByFile = new Map<string, DiagnosticFix[]>();
 
-    for (const file of files) {
+    for (const run of runs) {
       const result = await execa(
         mocPath,
-        [file, ...mocArgs, "--error-format=json"],
+        [...run, ...mocArgs, "--error-format=json"],
         { stdio: "pipe", reject: false },
       );
 
