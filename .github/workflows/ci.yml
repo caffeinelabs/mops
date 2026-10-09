@@ -183,9 +183,12 @@ jobs:
           (cd cli/tests/build/optimize && mops install)
           (cd cli/tests/build/optimize-fail && mops install)
 
+      # Resolving a GitHub ref calls api.github.com, which allows 60 anonymous requests/h per IP,
+      # and a runner can be handed an IP whose budget another job already spent.
       - name: Run CLI tests
         env:
           MOPS_TEST_GLOBAL: 1
+          GITHUB_TOKEN: ${{ github.token }}
         run: cd cli && npm test -- --shard=${{ matrix.shard }}/3
 
   bundle-smoke-test:

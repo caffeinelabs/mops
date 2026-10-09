@@ -11,6 +11,7 @@ import {
   checkConfigFile,
   getIdentity,
   getRootDir,
+  githubApiHeaders,
   progressBar,
   readConfig,
 } from "../mops.js";
@@ -484,14 +485,17 @@ async function fetchGitHubReleaseNotes(
   version: string,
 ): Promise<string> {
   let repoPath = new URL(repo).pathname;
+  let headers = githubApiHeaders();
   let res = await fetch(
     `https://api.github.com/repos${repoPath}/releases/tags/${version}`,
+    { headers },
   );
   let release = (await res.json()) as GitHubRelease;
 
   if (release.message === "Not Found") {
     res = await fetch(
       `https://api.github.com/repos${repoPath}/releases/tags/v${version}`,
+      { headers },
     );
     release = (await res.json()) as GitHubRelease;
 

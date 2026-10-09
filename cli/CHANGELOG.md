@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- Set `GITHUB_TOKEN` to authenticate the GitHub API requests mops makes: resolving a GitHub dependency's branch or tag to a commit (`mops add org/repo`, `mops outdated`, `mops update`, and `mops install` when nothing names the commit), looking up `mops toolchain` releases, and reading release notes in `mops publish`. GitHub allows 60 unauthenticated requests an hour per IP address, and a shared CI runner can start a job with that budget spent, which can make `mops add org/repo` fail with `API rate limit exceeded`. In GitHub Actions, pass `GITHUB_TOKEN: ${{ github.token }}`. The token goes only to `api.github.com`, and a token GitHub rejects fails the lookup instead of falling back to an anonymous request.
 - `mops check <files...>` checks all the files in a single `moc` run on `moc` 2.0.0 and later, instead of one run per file. moc 2 checks each file on its own, so a library several of the files import is type-checked once and its warnings are printed once, and an error in one file no longer stops the files after it from being checked. `mops check --fix` collects its fixes from one run the same way. When several files are checked together, a failure reads `✗ Check failed for 3 files`, since moc's diagnostics already name the files at fault. Older `moc` versions concatenate several files into one program, so they keep one run per file.
 
 ## 3.4.2

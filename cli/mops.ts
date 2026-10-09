@@ -122,19 +122,37 @@ export function parseGithubURL(href: string) {
   return { org, gitName, branch, commitHash };
 }
 
+// Anonymous api.github.com requests share 60/h per IP, and a CI runner can be handed an IP whose budget is already spent.
+export function githubToken(): string | undefined {
+  return process.env.GITHUB_TOKEN || undefined;
+}
+
+export function githubApiHeaders(): Record<string, string> {
+  let token = githubToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function getGithubCommit(repo: string, ref: string): Promise<any> {
-  let res = await fetch(`https://api.github.com/repos/${repo}/commits/${ref}`);
+  let headers = githubApiHeaders();
+  let res = await fetch(`https://api.github.com/repos/${repo}/commits/${ref}`, {
+    headers,
+  });
   let json: any = await res.json();
 
   // try on main branch
   if (json.message && ref === "master") {
-    res = await fetch(`https://api.github.com/repos/${repo}/commits/main`);
+    res = await fetch(`https://api.github.com/repos/${repo}/commits/main`, {
+      headers,
+    });
     json = await res.json();
   }
 
   if (!res.ok || !json.sha) {
+    // a stale token fails where an anonymous request would not
+    let hint =
+      res.status === 401 && githubToken() ? " (check GITHUB_TOKEN)" : "";
     throw new Error(
-      `Failed to fetch commit for ${repo}#${ref}: ${json.message || `HTTP ${res.status}`}`,
+      `Failed to fetch commit for ${repo}#${ref}: ${json.message || `HTTP ${res.status}`}${hint}`,
     );
   }
 

@@ -161,7 +161,11 @@ describe("add/remove ergonomics", () => {
         env: { CI: "1" },
       });
 
-      expect(res.exitCode).toBe(0);
+      // stderr is compared too, so a failed GitHub lookup says why on CI
+      expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({
+        exitCode: 0,
+        stderr: "",
+      });
       expect(toml(cwd)).toMatch(
         /^\[dependencies\]\nmops-test = "https:\/\/github\.com\/caffeinelabs\/mops-test#main@[0-9a-f]{40}"\n$/,
       );

@@ -37,6 +37,22 @@ export MOPS_CONCURRENCY=2
 mops install
 ```
 
+## GitHub
+
+### `GITHUB_TOKEN`
+
+Authenticate the requests mops makes to the GitHub API. It makes them to resolve a GitHub dependency's branch or tag to a commit (`mops add org/repo`, `mops outdated`, `mops update`, and `mops install` when neither `mops.toml` nor `mops.lock` names the commit), to look up toolchain releases (`mops toolchain use <tool> latest`, `update`, `info` and the version picker), and to read release notes in `mops publish` when `CHANGELOG.md` has no entry for the version.
+
+Unauthenticated, GitHub allows 60 of these requests an hour per IP address, and a shared CI runner can start a job with that budget already spent. With a token they count against the token's own limit instead. It needs no scopes, since mops reads only public repositories. In GitHub Actions, pass the one the workflow already has:
+
+```yaml
+- run: mops install
+  env:
+    GITHUB_TOKEN: ${{ github.token }}
+```
+
+The token is sent only to `api.github.com`, not with the archive downloads from `github.com`. A token GitHub rejects is not retried anonymously: the lookup fails, and a failed commit lookup names `GITHUB_TOKEN` in its error.
+
 ## Project Environment
 
 ### `MOPS_ENV`
