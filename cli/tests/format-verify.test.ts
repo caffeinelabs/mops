@@ -73,7 +73,7 @@ describe("format --verify", () => {
     const cwd = await setup({ "Lib.mo": MESSY_LIB });
     await writeFile(
       path.join(cwd, "mops.toml"),
-      '[toolchain]\nmoc = "1.3.0"\nmo-fmt = "./fake-mo-fmt"\n',
+      '[toolchain]\nmoc = "1.16.1"\nmo-fmt = "./fake-mo-fmt"\n',
     );
     await pinBreakingFormatter(cwd);
 
@@ -87,7 +87,7 @@ describe("format --verify", () => {
     const cwd = await setup({ "main.mo": MAIN, "Lib.mo": MESSY_LIB });
     await writeFile(
       path.join(cwd, "mops.toml"),
-      '[toolchain]\nmoc = "1.3.0"\n\n[canisters.backend]\nmain = "src/main.mo"\n',
+      '[toolchain]\nmoc = "1.16.1"\n\n[canisters.backend]\nmain = "src/main.mo"\n',
     );
 
     const result = await cli(["format", "--verify"], { cwd });

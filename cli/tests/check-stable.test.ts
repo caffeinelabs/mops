@@ -22,7 +22,7 @@ describe("check-stable", () => {
       cwd,
     });
     expect(result.exitCode).toBe(0);
-    // Fixture pinned to moc 1.3.0 — regression for the classic 3-step path.
+    // Not an EM canister, so the classic 3-step path runs on every moc.
     expect(result.stdout).toMatch(/Generating stable types for new\.mo/);
     expect(result.stdout).toMatch(/--stable-compatible/);
     expect(result.stdout).toMatch(/Stable compatibility check passed/);
@@ -67,7 +67,10 @@ describe("check-stable", () => {
       const tomlPath = path.join(cwd, "mops.toml");
       await writeFile(
         tomlPath,
-        readFileSync(tomlPath, "utf-8").replace('"1.15.0"', '"1.12.0"'),
+        readFileSync(tomlPath, "utf-8").replace(
+          /moc = "[^"]*"/,
+          'moc = "1.12.0"',
+        ),
       );
       const result = await cli(["check-stable", "--verbose"], { cwd });
       expect(result.stdout).not.toMatch(/--stable-baseline/);
@@ -114,7 +117,7 @@ describe("check-stable", () => {
 
   test("[canisters.X].args are passed to moc (enhanced migration)", async () => {
     const cwd = path.join(import.meta.dirname, "check-stable/canister-args");
-    // Pinned to moc 1.5.0 — EM on a moc too old to fold keeps the classic path.
+    // Pinned to moc 1.12.0 — EM on a moc too old to fold keeps the classic path.
     const result = await cli(["check-stable", "old.most", "--verbose"], {
       cwd,
     });

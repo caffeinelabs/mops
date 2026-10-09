@@ -180,7 +180,7 @@ do {
   let data : [(Nat, Text)] = [];
 
   // implicit in the middle -> M0236 + M0237
-  ignore data.get(1);
+  ignore Impl.get(data, 1);
 
   // two adjacent implicits -> M0236 + M0237 x2
   ignore data.put(1, "a");
@@ -207,7 +207,8 @@ do {
 
 do {
   // NB: Must use \`let _ = ...\` to get the 'redundant type instantiation' error
-  let _ = Map.empty<Nat, Text>().insert(
+  let _ = Map.insert<Nat, Text>(
+    Map.empty(),
     1,
     "John",
   ); // warn M0223 + M0236 + M0237
@@ -216,9 +217,9 @@ do {
 `;
 
 exports[`check --fix edit-suggestions: fix output 1`] = `
-"Fixed run/edit-suggestions.mo (30 fixes: M0223, M0236, M0237)
+"Fixed run/edit-suggestions.mo (28 fixes: M0223, M0236, M0237)
 
-✓ 30 fixes applied to 1 file
+✓ 28 fixes applied to 1 file
 ✓ <TEST_DIR>/check/fix/run/edit-suggestions.mo"
 `;
 

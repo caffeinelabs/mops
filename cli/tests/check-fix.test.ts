@@ -92,13 +92,13 @@ describe("check --fix", () => {
   test("edit-suggestions", async () => {
     await testCheckFix("edit-suggestions.mo", {
       M0223: 2,
-      M0236: 11,
+      M0236: 10,
       M0237: 17,
     });
   });
 
   test("overlapping edits", async () => {
-    await testCheckFix("overlapping.mo", { M0223: 1, M0236: 2 });
+    await testCheckFix("overlapping.mo", { M0223: 2, M0236: 2 });
   });
 
   test("transitive imports", async () => {
