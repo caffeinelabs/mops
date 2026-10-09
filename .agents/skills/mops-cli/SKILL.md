@@ -127,6 +127,8 @@ mops add ./pkg            # local package directory
 
 Updates `mops.toml` and `mops.lock`.
 
+A GitHub branch or tag (`org/repo`, `org/repo#main`) is pinned to its current commit through the GitHub API, which allows 60 anonymous requests an hour per IP. If it fails with `API rate limit exceeded`, set `GITHUB_TOKEN` (in GitHub Actions, `${{ github.token }}`); it also authenticates `mops outdated`, `mops update`, and `mops toolchain` release lookups.
+
 Adding a package that is already declared in the other section **moves** it rather than declaring it twice. `<pkg>@<version>` replaces the declared version and reports what it replaced; it leaves pinned aliases like `"core@1.0.0" = "1.0.0"` alone, and there is no flag to create one — write it by hand.
 
 ### `mops check`

@@ -37,6 +37,8 @@ For GitHub-packages you can specify branch, tag, or commit hash by adding `#<bra
 mops add https://github.com/caffeinelabs/motoko-base#moc-0.9.1
 ```
 
+A branch or tag is pinned to the commit it points at, which `mops add` looks up through the GitHub API. Set [`GITHUB_TOKEN`](../7-misc/06-environment-variables.md#github_token) if the anonymous rate limit gets in the way, as it can on shared CI runners.
+
 Add local package
 ```
 mops add ./shared

@@ -13,6 +13,7 @@ import { extract as extractTar } from "tar";
 
 import { commitStagingDir, createStagingDir } from "../../cache.js";
 import { cliError } from "../../error.js";
+import { githubToken } from "../../mops.js";
 import {
   releaseRows,
   releaseTags,
@@ -270,7 +271,7 @@ let fetchReleasePages = async (
   repo: string,
   { maxPages, tagPrefix }: { maxPages?: number; tagPrefix?: string } = {},
 ): Promise<{ releases: ReleaseInfo[]; truncated: boolean }> => {
-  let octokit = new Octokit();
+  let octokit = new Octokit({ auth: githubToken() });
   let releases: ReleaseInfo[] = [];
   let truncated = false;
 
@@ -345,7 +346,7 @@ export let getLatestReleaseTag = async (
   repo: string,
   { prerelease = false, exclude, tagPrefix }: ReleaseTagOptions = {},
 ): Promise<string> => {
-  let octokit = new Octokit();
+  let octokit = new Octokit({ auth: githubToken() });
 
   for (let page = 1; ; page++) {
     let res = await octokit.request(`GET /repos/${repo}/releases`, {
