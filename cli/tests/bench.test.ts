@@ -81,6 +81,8 @@ describe("bench", () => {
     try {
       const result = await cli(["bench", "--save"], { cwd });
       expect(result.exitCode).toBe(0);
+      // nothing is collected during a cell, so the all-zero table is not printed
+      expect(result.stdout).not.toContain("Garbage Collection");
       const saved = JSON.parse(
         readFileSync(path.join(cwd, ".bench/allocation.bench.json"), "utf8"),
       );

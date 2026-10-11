@@ -28,7 +28,7 @@ Under the hood, Mops will:
 - Wrap each `*.bench.mo` file in a canister
 - Compile canisters under enhanced orthogonal persistence (moc's default) with the `--force-gc` flag and deploy them
 - Run each cell of the benchmark file as an update call (or a query call with [`--query`](#--query))
-- For each call measure usage of wasm instructions(`performance_counter`) and heap growth(`rts_heap_size`). The GC does not run during the measurement, so heap growth is exactly what the call allocated, and the Garbage Collection table shows 0
+- For each call measure usage of wasm instructions(`performance_counter`) and heap growth(`rts_heap_size`). The GC does not run during the measurement, so heap growth is exactly what the call allocated. The Garbage Collection table, which would show 0, is not printed
 
 :::caution Instruction counts depend on how the wasm was built
 
