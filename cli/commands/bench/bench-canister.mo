@@ -80,7 +80,10 @@ persistent actor class () {
 
   func _runCell(rowIndex : Nat, colIndex : Nat) : BenchResult {
     let ?bench = benchOpt else Runtime.trap("bench not initialized");
-    let cell = func() { bench.runCell(rowIndex, colIndex) };
+    // Look up the cell function outside the measured closure, so its
+    // instruction count includes only the call.
+    let runCell = bench.runCell;
+    let cell = func() { runCell(rowIndex, colIndex) };
     let statsBefore = _getStats();
     // Read the heap counters immediately around the cell so the harness's own
     // allocations (the stats records, the closure) stay outside the window.
