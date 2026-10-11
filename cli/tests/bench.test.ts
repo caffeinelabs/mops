@@ -1,5 +1,5 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { rmSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import path from "path";
 import { cli } from "./helpers";
 
@@ -73,6 +73,35 @@ describe("bench", () => {
       expect(result.stdout).toContain(path.join("moc", "1.16.1", "moc"));
     } finally {
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
+  test("reports exactly the cell's allocation, without harness overhead", async () => {
+    const cwd = path.join(import.meta.dirname, "bench-allocation");
+    try {
+      const result = await cli(["bench", "--save"], { cwd });
+      expect(result.exitCode).toBe(0);
+      const saved = JSON.parse(
+        readFileSync(path.join(cwd, ".bench/allocation.bench.json"), "utf8"),
+      );
+      const heap = Object.fromEntries(
+        saved.results.map(
+          ([cell, res]: [string, { rts_heap_size: number }]) => [
+            cell,
+            res.rts_heap_size,
+          ],
+        ),
+      );
+      // A 1000-element `[var Nat]` is a 24-byte header plus 8 bytes per slot.
+      expect(heap).toEqual({
+        "noop:a": 0,
+        "noop:b": 0,
+        "array:a": 8024,
+        "array:b": 8024,
+      });
+    } finally {
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+      rmSync(path.join(cwd, ".bench"), { recursive: true, force: true });
     }
   });
 });
