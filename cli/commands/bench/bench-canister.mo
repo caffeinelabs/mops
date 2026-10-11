@@ -89,11 +89,11 @@ persistent actor class () {
     // allocations (the stats records, the closure) stay outside the window.
     // The incremental GC runs only between messages, so nothing is collected
     // inside this synchronous window: heap growth is the cell's allocation.
-    let heapBefore = Prim.rts_heap_size();
-    let allocBefore = Prim.rts_total_allocation();
+    // The heap counter is read innermost: under legacy persistence, reading a
+    // large `rts_total_allocation` can allocate, and that must not count as heap.
+    let (allocBefore, heapBefore) = (Prim.rts_total_allocation(), Prim.rts_heap_size());
     let instructions = Prim.nat64ToNat(InternetComputer.countInstructions(cell));
-    let allocAfter = Prim.rts_total_allocation();
-    let heapAfter = Prim.rts_heap_size();
+    let (heapAfter, allocAfter) = (Prim.rts_heap_size(), Prim.rts_total_allocation());
     let statsAfter = _getStats();
     {
       _diffStats(statsBefore, { statsAfter with instructions }) with
