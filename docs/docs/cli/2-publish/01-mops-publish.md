@@ -20,6 +20,8 @@ Documentation for the package will be generated automatically from the source co
 
 Benchmarks will be run on the PocketIC replica — the `pocket-ic` version pinned in `mops.toml` under `[toolchain]`, or an already-running server when [`MOPS_POCKET_IC_URL`](../7-misc/06-environment-variables.md#mops_pocket_ic_url) is set. There is no default; pin one with [`mops toolchain use pocket-ic 15.0.0`](../5-toolchain/03-mops-toolchain-use.md).
 
+They are run with the same defaults as [`mops bench`](../4-dev/02-mops-bench.md): enhanced orthogonal persistence and the incremental GC.
+
 Benchmark results will be published to the registry.
 
 You can view the results on the package page in the `Benchmarks` tab.

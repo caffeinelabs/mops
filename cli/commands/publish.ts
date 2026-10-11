@@ -315,9 +315,10 @@ export async function publish(
   if (options.bench) {
     console.log("Running benchmarks...");
     try {
+      // Same defaults as `mops bench` (incremental GC under enhanced
+      // orthogonal persistence), so the uploaded results match what
+      // `mops bench` reports.
       benchmarks = await bench("", {
-        gc: "copying",
-        forceGc: true,
         silent: true,
       });
     } catch (err) {
