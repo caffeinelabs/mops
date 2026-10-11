@@ -479,8 +479,12 @@ async function runBenchFile(
       resArr.push(curRow);
     }
 
-    // don't show Stable Memory table if all values are 0
-    if (allZero && prop == "rts_logical_stable_memory_size") {
+    // don't show the Stable Memory and Garbage Collection tables if all values
+    // are 0 (the incremental GC never collects during a measured cell)
+    if (
+      allZero &&
+      (prop == "rts_logical_stable_memory_size" || prop == "rts_reclaimed")
+    ) {
       return "";
     }
 
@@ -505,7 +509,7 @@ async function runBenchFile(
         `Garbage Collection: ${colorizePercent(computeDiff(results, prevResults, schema.rows, schema.cols, "rts_reclaimed"), false)}`,
         `\n\n**Instructions**\n\n${getTable("instructions")}`,
         `\n\n**Heap**\n\n${getTable("rts_heap_size")}`,
-        `\n\n**Garbage Collection**\n\n${getTable("rts_reclaimed")}`,
+        `${getTable("rts_reclaimed") ? `\n\n**Garbage Collection**\n\n${getTable("rts_reclaimed")}` : ""}`,
         `${getTable("rts_logical_stable_memory_size") ? `\n\n**Stable Memory**\n\n${getTable("rts_logical_stable_memory_size")}` : ""}`,
         "\n</details>",
       ].join("\n");
@@ -515,7 +519,7 @@ async function runBenchFile(
 				${schema.description ? "\n" + chalk.gray(schema.description) : ""}
 				\n\n${chalk.blue("Instructions")}\n\n${getTable("instructions")}
 				\n\n${chalk.blue("Heap")}\n\n${getTable("rts_heap_size")}
-				\n\n${chalk.blue("Garbage Collection")}\n\n${getTable("rts_reclaimed")}
+				${getTable("rts_reclaimed") ? `\n\n${chalk.blue("Garbage Collection")}\n\n${getTable("rts_reclaimed")}` : ""}
 				${getTable("rts_logical_stable_memory_size") ? `\n\n${chalk.blue("Stable Memory")}\n\n${getTable("rts_logical_stable_memory_size")}` : ""}
 			`;
     }
