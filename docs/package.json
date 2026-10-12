@@ -44,7 +44,8 @@
     "serialize-javascript": "7.0.7",
     "uuid": "11.1.1",
     "fast-uri": "3.1.6",
-    "browserslist": "4.28.7"
+    "browserslist": "4.28.7",
+    "joi": "17.13.7"
   },
   "browserslist": {
     "production": [
