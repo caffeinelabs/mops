@@ -192,9 +192,32 @@ args = ["-Werror", "-E=M0223,M0236,M0237"]
       expect(savedHeap(cwd, "bench__b__alloc.bench")).toEqual({
         "array:b": 16024,
       });
+
+      // A filter that picks only one of them still finds its saved results.
+      const filtered = await cli(["bench", "a/alloc", "--compare"], { cwd });
+      expect(filtered.exitCode).toBe(0);
+      expect(filtered.stdout).toMatch("Alloc A");
+      expect(filtered.stdout).not.toMatch("Alloc B");
+      expect(filtered.stdout).not.toMatch("No previous results");
     } finally {
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
       rmSync(path.join(cwd, ".bench"), { recursive: true, force: true });
+    }
+  });
+
+  test("refuses two bench files whose results would share a file", async () => {
+    const cwd = path.join(import.meta.dirname, "bench-same-name");
+    const clash = path.join(cwd, "bench/bench__a__alloc.bench.mo");
+    try {
+      writeFileSync(clash, "");
+      const result = await cli(["bench"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        "bench/a/alloc.bench.mo and bench/bench__a__alloc.bench.mo would both save their results to .bench/bench__a__alloc.bench.json",
+      );
+    } finally {
+      rmSync(clash, { force: true });
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
     }
   });
 });

@@ -142,13 +142,12 @@ export async function bench(
   let replica = new BenchReplica(options.verbose);
 
   let rootDir = getRootDir();
-  let globStr = "**/bench?(mark)/**/*.bench.mo";
-  if (filter) {
-    globStr = `**/bench?(mark)/**/*${filter}*.mo`;
-  }
-  let files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG).filter(
-    (file) => !isNestedCheckout(file, rootDir),
-  );
+  let findFiles = (globStr: string) =>
+    globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG).filter(
+      (file) => !isNestedCheckout(file, rootDir),
+    );
+  let allGlob = "**/bench?(mark)/**/*.bench.mo";
+  let files = findFiles(filter ? `**/bench?(mark)/**/*${filter}*.mo` : allGlob);
   if (!files.length) {
     if (filter) {
       options.silent ||
@@ -165,7 +164,9 @@ export async function bench(
   }
 
   files.sort();
-  let keyedFiles = [...benchKeys(files, rootDir)];
+  // Keyed against every bench file, so a filter doesn't move a file's saved results.
+  let peers = filter ? [...files, ...findFiles(allGlob)] : files;
+  let keyedFiles = [...benchKeys(files, peers, rootDir)];
 
   let benchDir = `${getRootDir()}/.mops/.bench/`;
   fs.rmSync(benchDir, { recursive: true, force: true });
@@ -338,14 +339,18 @@ function getMocArgs(options: BenchOptions): string[] {
 }
 
 // Names each bench file's temp dir, canister, timing labels and saved results:
-// the file name, or its path from the root when another bench file shares the name.
+// the file name, or its path from the root when one of `peers` shares the name.
 // Case-insensitive, since on macOS `A.bench` and `a.bench` are one directory.
-function benchKeys(files: string[], rootDir: string): Map<string, string> {
+function benchKeys(
+  files: string[],
+  peers: string[],
+  rootDir: string,
+): Map<string, string> {
   let name = (file: string) => path.parse(file).name;
   let keys = new Map<string, string>();
   let fileByKey = new Map<string, string>();
   for (let file of files) {
-    let shared = files.some(
+    let shared = peers.some(
       (f) => f !== file && name(f).toLowerCase() === name(file).toLowerCase(),
     );
     let key = shared
