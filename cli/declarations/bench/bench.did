@@ -1,5 +1,6 @@
 type _anon_class_10_1 = 
  service {
+   collectorInstructions: () -> (nat);
    getSchema: () -> (BenchSchema) query;
    getStats: () -> (BenchResult) query;
    init: () -> (BenchSchema);

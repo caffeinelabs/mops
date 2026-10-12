@@ -28,6 +28,7 @@ export const idlFactory = ({ IDL }) => {
     'rts_reclaimed' : IDL.Int,
   });
   const _anon_class_10_1 = IDL.Service({
+    'collectorInstructions' : IDL.Func([], [IDL.Nat], []),
     'getSchema' : IDL.Func([], [BenchSchema], ['query']),
     'getStats' : IDL.Func([], [BenchResult], ['query']),
     'init' : IDL.Func([], [BenchSchema], []),

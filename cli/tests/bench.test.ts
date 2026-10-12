@@ -122,6 +122,30 @@ args = ["-Werror", "-E=M0223,M0236,M0237"]
     }
   });
 
+  test("identical cells cost the same instructions, whatever ran before", async () => {
+    // A large live heap makes an incremental GC cycle span several messages.
+    // A cell that starts while a cycle is in progress pays for the GC's
+    // barriers (+38% here), so cells used to alternate between two values.
+    const cwd = path.join(import.meta.dirname, "bench-gc-barrier");
+    try {
+      const result = await cli(["bench", "--save"], { cwd });
+      expect(result.exitCode).toBe(0);
+      const saved = JSON.parse(
+        readFileSync(path.join(cwd, ".bench/barrier.bench.json"), "utf8"),
+      );
+      expect(saved.forceGc).toBe(false);
+      const instructions = new Set(
+        saved.results.map(
+          ([, res]: [string, { instructions: number }]) => res.instructions,
+        ),
+      );
+      expect(instructions.size).toBe(1);
+    } finally {
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+      rmSync(path.join(cwd, ".bench"), { recursive: true, force: true });
+    }
+  });
+
   test("reports exactly the cell's allocation, without harness overhead", async () => {
     const cwd = path.join(import.meta.dirname, "bench-allocation");
     try {
