@@ -29,6 +29,7 @@ import { isNestedCheckout, MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
 import { BenchReplica } from "./bench-replica.js";
+import { cliError } from "../error.js";
 
 type BenchOptions = {
   replicaVersion: string;
@@ -77,6 +78,22 @@ export async function bench(
   };
 
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
+
+  // moc 2 removed legacy persistence and every GC but the incremental one,
+  // so fail here rather than on moc's `unknown option '--legacy-persistence'`.
+  if (mocAtLeast(options, "2.0.0")) {
+    let flag = options.legacyPersistence
+      ? "--legacy-persistence"
+      : isLegacyGc(options.gc)
+        ? `--gc ${options.gc}`
+        : "";
+    if (flag) {
+      cliError(
+        `${flag} needs legacy persistence, which moc ${options.compilerVersion} no longer has: moc 2 always uses enhanced orthogonal persistence and the incremental GC.\n` +
+          `Drop ${flag}, or run ${chalk.green("mops toolchain use moc 1.16.1")} to benchmark under legacy persistence.`,
+      );
+    }
+  }
 
   if (options.optimize !== false) {
     checkOptimizeConfig(config);
@@ -260,12 +277,17 @@ function isLegacyGc(gc: BenchOptions["gc"]): boolean {
   return gc === "copying" || gc === "compacting" || gc === "generational";
 }
 
+function mocAtLeast(options: BenchOptions, version: string): boolean {
+  return (
+    !!options.compilerVersion &&
+    new SemVer(options.compilerVersion).compare(version) >= 0
+  );
+}
+
 function getMocArgs(options: BenchOptions): string[] {
   const args: string[] = [];
 
-  const mocAtLeast015 =
-    !!options.compilerVersion &&
-    new SemVer(options.compilerVersion).compare("0.15.0") >= 0;
+  const mocAtLeast015 = mocAtLeast(options, "0.15.0");
 
   // Legacy collectors require legacy persistence; moc < 0.15 is already legacy
   // and has no --legacy-persistence flag.
@@ -315,6 +337,14 @@ async function deployBenchFile(
     "./user-bench",
     path.relative(tempDir, file).replace(/.mo$/g, ""),
   );
+  // moc 1 requires `persistent`; moc 2 makes it the default and warns (M0217)
+  // on the keyword, which `-Werror` in `[moc] args` turns into an error.
+  if (mocAtLeast(options, "2.0.0")) {
+    benchCanisterData = benchCanisterData.replace(
+      "persistent actor class",
+      "actor class",
+    );
+  }
   fs.writeFileSync(path.join(tempDir, "canister.mo"), benchCanisterData);
 
   // build canister

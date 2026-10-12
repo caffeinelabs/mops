@@ -1,12 +1,15 @@
 import { describe, expect, jest, test } from "@jest/globals";
-import { readFileSync, rmSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "path";
-import { cli } from "./helpers";
+import { cli, useTempFixtures } from "./helpers";
 
 // Pin moc 1.16.1 (≥ 0.15) to exercise the EOP path — this repo's own mops.toml
 // uses moc 0.14.14, so the default bench run is never EOP-tested here.
 describe("bench", () => {
   jest.setTimeout(180_000);
+  const makeTempFixture = useTempFixtures(
+    path.join(import.meta.dirname, "bench"),
+  );
 
   test("runs under EOP with the default gc", async () => {
     const cwd = path.join(import.meta.dirname, "bench");
@@ -39,6 +42,44 @@ describe("bench", () => {
       const result = await cli(["bench"], { cwd });
       expect(result.stderr).not.toMatch(/M0223|M0236|M0237/);
       expect(result.exitCode).toBe(0);
+    } finally {
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
+  // moc 1 requires `persistent` on the generated canister, and moc 2 warns
+  // about it (M0217), so mops drops the keyword on moc 2.
+  test("compiles the bench canister with -Werror on moc 2", async () => {
+    const cwd = await makeTempFixture("moc-args-lint");
+    writeFileSync(
+      path.join(cwd, "mops.toml"),
+      `[dependencies]
+core = "2.0.0"
+
+[toolchain]
+moc = "2.0.0"
+pocket-ic = "12.0.0"
+
+[moc]
+args = ["-Werror", "-E=M0223,M0236,M0237"]
+`,
+    );
+    const result = await cli(["bench"], { cwd });
+    expect(result.stderr).not.toMatch(/M0217|M0223|M0236|M0237/);
+    expect(result.exitCode).toBe(0);
+  });
+
+  test("refuses legacy persistence on moc 2", async () => {
+    const cwd = path.join(import.meta.dirname, "bench-allocation");
+    try {
+      for (const args of [["--gc", "copying"], ["--legacy-persistence"]]) {
+        const result = await cli(["bench", ...args], { cwd });
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toMatch(
+          `${args.join(" ")} needs legacy persistence, which moc 2.0.0 no longer has`,
+        );
+        expect(result.stderr).not.toMatch("unknown option");
+      }
     } finally {
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
     }

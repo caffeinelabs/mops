@@ -712,7 +712,7 @@ program
   .addOption(
     new Option(
       "--gc <gc>",
-      "Garbage collector. Under enhanced orthogonal persistence (the default) the GC is fixed to `incremental`; selecting `copying`, `compacting`, or `generational` implies `--legacy-persistence`",
+      "Garbage collector. Under enhanced orthogonal persistence (the default) the GC is fixed to `incremental`; selecting `copying`, `compacting`, or `generational` implies `--legacy-persistence` (moc 1.x only)",
     )
       .choices(["copying", "compacting", "generational", "incremental"])
       .default("incremental"),
@@ -730,13 +730,13 @@ program
   .addOption(
     new Option(
       "--query",
-      "Measure each cell in a query call (how `query` methods run on the IC: no GC). Only for benchmarks whose runner is synchronous (no inter-canister calls)",
+      "Measure each cell in a query call instead of an update call",
     ),
   )
   .addOption(
     new Option(
       "--legacy-persistence",
-      "Compile benchmark canisters under legacy persistence instead of enhanced orthogonal persistence (the default)",
+      "Compile benchmark canisters under legacy persistence instead of enhanced orthogonal persistence (the default). moc 1.x only",
     ),
   )
   .addOption(

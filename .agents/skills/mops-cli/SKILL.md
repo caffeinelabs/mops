@@ -322,7 +322,7 @@ Benchmarks live in `bench/*.bench.mo`:
 ```bash
 mops bench                        # run all benchmarks
 mops bench my-bench               # filter by name
-mops bench --gc incremental       # select GC
+mops bench --gc copying           # moc 1.x only: legacy GC (moc 2 has only incremental)
 mops bench --save                 # save results to .bench/<name>.json
 mops bench --compare              # compare with saved results
 mops bench -- -Werror             # pass extra moc flags
