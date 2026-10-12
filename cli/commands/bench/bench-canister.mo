@@ -80,36 +80,26 @@ persistent actor class () {
 
   func _runCell(rowIndex : Nat, colIndex : Nat) : BenchResult {
     let ?bench = benchOpt else Runtime.trap("bench not initialized");
+    // Look up the cell function outside the measured closure, so its
+    // instruction count includes only the call.
+    let runCell = bench.runCell;
+    let cell = func() { runCell(rowIndex, colIndex) };
     let statsBefore = _getStats();
-
-    let instructions = Prim.nat64ToNat(
-      InternetComputer.countInstructions(
-        func() {
-          bench.runCell(rowIndex, colIndex);
-        }
-      )
-    );
-
+    // Read the heap counters immediately around the cell so the harness's own
+    // allocations (the stats records, the closure) stay outside the window.
+    // The incremental GC runs only between messages, so nothing is collected
+    // inside this synchronous window: heap growth is the cell's allocation.
+    // The heap counter is read innermost: under legacy persistence, reading a
+    // large `rts_total_allocation` can allocate, and that must not count as heap.
+    let (allocBefore, heapBefore) = (Prim.rts_total_allocation(), Prim.rts_heap_size());
+    let instructions = Prim.nat64ToNat(InternetComputer.countInstructions(cell));
+    let (heapAfter, allocAfter) = (Prim.rts_heap_size(), Prim.rts_total_allocation());
     let statsAfter = _getStats();
-    _diffStats(statsBefore, { statsAfter with instructions });
-  };
-
-  func _runCellAwait(rowIndex : Nat, colIndex : Nat) : async BenchResult {
-    let ?bench = benchOpt else Runtime.trap("bench not initialized");
-    let statsBefore = _getStats();
-
-    let instructions = Prim.nat64ToNat(
-      InternetComputer.countInstructions(
-        func() {
-          bench.runCell(rowIndex, colIndex);
-        }
-      )
-    );
-
-    await (func() : async () {})();
-
-    let statsAfter = _getStats();
-    _diffStats(statsBefore, { statsAfter with instructions });
+    {
+      _diffStats(statsBefore, { statsAfter with instructions }) with
+      rts_heap_size = heapAfter - heapBefore : Int;
+      rts_total_allocation = allocAfter - allocBefore : Int;
+    };
   };
 
   public query func getStats() : async BenchResult {
@@ -124,7 +114,9 @@ persistent actor class () {
     _runCell(rowIndex, colIndex);
   };
 
+  // Kept under this name for the CLI. The cell runs synchronously, so there is
+  // nothing to await: a cell cannot start inter-canister calls.
   public func runCellUpdateAwait(rowIndex : Nat, colIndex : Nat) : async BenchResult {
-    await _runCellAwait(rowIndex, colIndex);
+    _runCell(rowIndex, colIndex);
   };
 };

@@ -170,4 +170,60 @@ files = ["../outside.mo"]
     expect(result.stdout).toMatch(/No test files found/);
     expect(result.stdout).toMatch(/Dry-run OK/);
   });
+
+  // moc 2.0.0 has no legacy persistence, so the bench step must use the same
+  // defaults as `mops bench` (incremental GC) rather than a legacy collector.
+  test("runs the bench step with moc 2.0.0", async () => {
+    const cwd = await makeTempFixture("success");
+    await writeFile(
+      path.join(cwd, "mops.toml"),
+      `[package]
+name = "dry-run-fixture"
+version = "0.1.0"
+description = "Fixture for mops publish --dry-run"
+license = "MIT"
+
+[dependencies]
+core = "2.0.0"
+
+[toolchain]
+moc = "2.0.0"
+pocket-ic = "12.0.0"
+`,
+    );
+    // The bench canister only needs init() -> { getVersion; getSchema; runCell }.
+    await mkdir(path.join(cwd, "bench"), { recursive: true });
+    await writeFile(
+      path.join(cwd, "bench", "sanity.bench.mo"),
+      `module {
+  type Schema = { name : Text; description : Text; rows : [Text]; cols : [Text] };
+
+  class Bench(schema : Schema, run : (Nat, Nat) -> ()) {
+    public func getVersion() : Nat = 1;
+    public func getSchema() : Schema = schema;
+    public let runCell = run;
+  };
+
+  public func init() : Bench {
+    let schema = { name = "Sanity"; description = ""; rows = ["a"]; cols = ["1"] };
+    func run(_ri : Nat, _ci : Nat) {};
+    Bench(schema, run);
+  };
+};
+`,
+    );
+    // publish benchmarks the installed dependencies; it does not install them
+    expect((await cli(["install"], { cwd })).exitCode).toBe(0);
+    const result = await cli(
+      ["publish", "--dry-run", "--no-docs", "--no-test"],
+      {
+        cwd,
+        env: { CI: "1" },
+      },
+    );
+    expect(result.stdout + result.stderr).not.toMatch(/legacy-persistence/);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toMatch(/Running benchmarks/);
+    expect(result.stdout).toMatch(/Dry-run OK/);
+  }, 180_000);
 });

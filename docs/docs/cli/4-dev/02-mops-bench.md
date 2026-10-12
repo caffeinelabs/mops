@@ -28,7 +28,7 @@ Under the hood, Mops will:
 - Wrap each `*.bench.mo` file in a canister
 - Compile canisters under enhanced orthogonal persistence (moc's default) with the `--force-gc` flag and deploy them
 - Run each cell of the benchmark file as an update call (or a query call with [`--query`](#--query))
-- For each call measure usage of wasm instructions(`performance_counter`) and heap size(`rts_heap_size`)
+- For each call measure usage of wasm instructions(`performance_counter`) and heap growth(`rts_heap_size`). The GC does not run during the measurement, so heap growth is exactly what the call allocated. The Garbage Collection table, which would show 0, is not printed
 
 :::caution Instruction counts depend on how the wasm was built
 
@@ -57,6 +57,8 @@ Possible values:
 
 Under enhanced orthogonal persistence (the default persistence mode), moc fixes the GC to `incremental` and the collector cannot be chosen — the other collectors only exist under legacy persistence. Selecting `copying`, `compacting`, or `generational` therefore implies [`--legacy-persistence`](#--legacy-persistence).
 
+The other collectors are for `moc` 1.x only. `moc` 2.0.0 removes legacy persistence, so the incremental GC is the only one, and `mops bench` refuses `--gc copying`, `--gc compacting` and `--gc generational`.
+
 ### `--save`
 
 Save benchmark results to `.bench/<filename>.json` file.
@@ -69,15 +71,13 @@ Compare benchmark results with the results from `.bench/<filename>.json` file.
 
 Measure each cell in a **query** call instead of an update call.
 
-This reflects how `query` methods actually execute on the IC: queries run no garbage collection, so the instruction counts exclude GC work that an update would incur. Use it to benchmark read-only/`query` workloads realistically.
-
-Only works for benchmarks whose runner is **synchronous** — a runner that performs inter-canister (`await`) calls needs the update path and must be run without `--query`.
+This is how `query` methods execute on the IC. A cell's runner is a synchronous function, so the GC does not run during the measurement in either kind of call, and both report the same numbers.
 
 ### `--legacy-persistence`
 
 Compile benchmark canisters under legacy persistence instead of enhanced orthogonal persistence (the default).
 
-Use it to measure a canister that still uses legacy persistence. Has no effect with `moc < 0.15`, where legacy persistence is already the default.
+Use it to measure a canister that still uses legacy persistence. Has no effect with `moc < 0.15`, where legacy persistence is already the default. `moc` 2.0.0 removes legacy persistence, so `mops bench` refuses the flag with `moc` 2 pinned.
 
 ### `--no-optimize`
 

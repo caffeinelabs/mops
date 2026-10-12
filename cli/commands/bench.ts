@@ -29,6 +29,8 @@ import { isNestedCheckout, MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
 import { BenchReplica } from "./bench-replica.js";
+import { cliError, cliExit } from "../error.js";
+import { describeExecFailure } from "../helpers/exec-failure.js";
 
 type BenchOptions = {
   replicaVersion: string;
@@ -77,6 +79,22 @@ export async function bench(
   };
 
   let options: BenchOptions = { ...defaultOptions, ...optionsArg };
+
+  // moc 2 removed legacy persistence and every GC but the incremental one,
+  // so fail here rather than on moc's `unknown option '--legacy-persistence'`.
+  if (mocAtLeast(options, "2.0.0")) {
+    let flag = options.legacyPersistence
+      ? "--legacy-persistence"
+      : isLegacyGc(options.gc)
+        ? `--gc ${options.gc}`
+        : "";
+    if (flag) {
+      cliError(
+        `${flag} needs legacy persistence, which moc ${options.compilerVersion} no longer has: moc 2 always uses enhanced orthogonal persistence and the incremental GC.\n` +
+          `Drop ${flag}, or run ${chalk.green("mops toolchain use moc 1.16.1")} to benchmark under legacy persistence.`,
+      );
+    }
+  }
 
   if (options.optimize !== false) {
     checkOptimizeConfig(config);
@@ -260,12 +278,17 @@ function isLegacyGc(gc: BenchOptions["gc"]): boolean {
   return gc === "copying" || gc === "compacting" || gc === "generational";
 }
 
+function mocAtLeast(options: BenchOptions, version: string): boolean {
+  return (
+    !!options.compilerVersion &&
+    new SemVer(options.compilerVersion).compare(version) >= 0
+  );
+}
+
 function getMocArgs(options: BenchOptions): string[] {
   const args: string[] = [];
 
-  const mocAtLeast015 =
-    !!options.compilerVersion &&
-    new SemVer(options.compilerVersion).compare("0.15.0") >= 0;
+  const mocAtLeast015 = mocAtLeast(options, "0.15.0");
 
   // Legacy collectors require legacy persistence; moc < 0.15 is already legacy
   // and has no --legacy-persistence flag.
@@ -315,6 +338,14 @@ async function deployBenchFile(
     "./user-bench",
     path.relative(tempDir, file).replace(/.mo$/g, ""),
   );
+  // moc 1 requires `persistent`; moc 2 makes it the default and warns (M0217)
+  // on the keyword, which `-Werror` in `[moc] args` turns into an error.
+  if (mocAtLeast(options, "2.0.0")) {
+    benchCanisterData = benchCanisterData.replace(
+      "persistent actor class",
+      "actor class",
+    );
+  }
   fs.writeFileSync(path.join(tempDir, "canister.mo"), benchCanisterData);
 
   // build canister
@@ -335,11 +366,21 @@ async function deployBenchFile(
     );
     console.time(`build ${canisterName}`);
   }
-  await execa(mocPath, buildArgs, {
+  let result = await execa(mocPath, buildArgs, {
     cwd: tempDir,
     // `inherit` so the compiler output (warnings/errors) is streamed under --verbose
     stdio: options.verbose ? "inherit" : ["pipe", "ignore", "pipe"],
+    reject: false,
   });
+  if (result.exitCode !== 0) {
+    if (!options.verbose && result.stderr) {
+      console.error(chalk.red(result.stderr));
+    }
+    cliExit(
+      result.exitCode ?? 1,
+      `Failed to compile ${absToRel(file)} (${describeExecFailure(result)})`,
+    );
+  }
   options.verbose && console.timeEnd(`build ${canisterName}`);
 
   // deploy canister
@@ -479,8 +520,12 @@ async function runBenchFile(
       resArr.push(curRow);
     }
 
-    // don't show Stable Memory table if all values are 0
-    if (allZero && prop == "rts_logical_stable_memory_size") {
+    // don't show the Stable Memory and Garbage Collection tables if all values
+    // are 0 (the incremental GC never collects during a measured cell)
+    if (
+      allZero &&
+      (prop == "rts_logical_stable_memory_size" || prop == "rts_reclaimed")
+    ) {
       return "";
     }
 
@@ -505,7 +550,7 @@ async function runBenchFile(
         `Garbage Collection: ${colorizePercent(computeDiff(results, prevResults, schema.rows, schema.cols, "rts_reclaimed"), false)}`,
         `\n\n**Instructions**\n\n${getTable("instructions")}`,
         `\n\n**Heap**\n\n${getTable("rts_heap_size")}`,
-        `\n\n**Garbage Collection**\n\n${getTable("rts_reclaimed")}`,
+        `${getTable("rts_reclaimed") ? `\n\n**Garbage Collection**\n\n${getTable("rts_reclaimed")}` : ""}`,
         `${getTable("rts_logical_stable_memory_size") ? `\n\n**Stable Memory**\n\n${getTable("rts_logical_stable_memory_size")}` : ""}`,
         "\n</details>",
       ].join("\n");
@@ -515,7 +560,7 @@ async function runBenchFile(
 				${schema.description ? "\n" + chalk.gray(schema.description) : ""}
 				\n\n${chalk.blue("Instructions")}\n\n${getTable("instructions")}
 				\n\n${chalk.blue("Heap")}\n\n${getTable("rts_heap_size")}
-				\n\n${chalk.blue("Garbage Collection")}\n\n${getTable("rts_reclaimed")}
+				${getTable("rts_reclaimed") ? `\n\n${chalk.blue("Garbage Collection")}\n\n${getTable("rts_reclaimed")}` : ""}
 				${getTable("rts_logical_stable_memory_size") ? `\n\n${chalk.blue("Stable Memory")}\n\n${getTable("rts_logical_stable_memory_size")}` : ""}
 			`;
     }

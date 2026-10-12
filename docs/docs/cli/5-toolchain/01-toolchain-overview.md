@@ -17,7 +17,7 @@ When you run `mops install` command, Mops will install the specified version of 
 - `wasm-opt` - Binaryen Wasm optimizer (used when [`[optimize]`](../../09-mops.toml.md#optimize) is set)
 - `mo-fmt` - Motoko formatter (used by [`mops format`](../4-dev/02-mops-format.md#mo-fmt) when pinned; [https://github.com/caffeinelabs/tree-sitter-motoko](https://github.com/caffeinelabs/tree-sitter-motoko))
 
-Each tool is downloaded for the machine it runs on: macOS or Linux, on x86_64 or arm64. None has a Windows build, so on Windows use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). Releases that predate a tool's arm64 builds — `moc` below 0.14.6, `pocket-ic` below 9.0.2 — are downloaded as x86_64, which Apple silicon runs under Rosetta.
+Each tool is downloaded for the machine it runs on: macOS or Linux, on x86_64 or arm64. None has a Windows build, so on Windows use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). Releases that predate a tool's arm64 builds — `moc` below 0.14.6, `pocket-ic` below 9.0.2 — are downloaded as x86_64, which Apple silicon runs under Rosetta. `moc` 2.0.0 and later have no Intel-Mac build, so on an Intel Mac pin `moc` 1.x or build `moc` from source.
 
 ## Specifying tool versions
 
