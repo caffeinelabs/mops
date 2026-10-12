@@ -18,12 +18,12 @@ Useful when invoking `moc` directly and you want to include the flags configured
 ```toml
 # mops.toml
 [moc]
-args = ["--default-persistent-actors", "-Werror"]
+args = ["-W=M0223,M0236,M0237", "-Werror"]
 ```
 
 ```
 $ mops moc-args
---default-persistent-actors
+-W=M0223,M0236,M0237
 -Werror
 ```
 

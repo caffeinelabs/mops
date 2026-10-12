@@ -77,13 +77,15 @@ Global Motoko compiler flags applied to all `moc` invocations (`check`, `check-s
 
 | Field | Description |
 | ----- | ----------- |
-| args  | Array of flags to pass to `moc` (e.g. `["--default-persistent-actors", "-Werror"]`) |
+| args  | Array of flags to pass to `moc` (e.g. `["-Werror"]`) |
 
 Example:
 ```toml
 [moc]
-args = ["--default-persistent-actors", "-W=M0223,M0236,M0237"]
+args = ["-W=M0223,M0236,M0237"]
 ```
+
+`moc` 2.0.0 removes flags such as `--default-persistent-actors`, `--legacy-persistence` and `--incremental-gc`, and rejects them with `unknown option`. Remove them from `[moc].args` and `[canisters.<name>].args` when you pin `moc` 2. The [moc v1 → v2 migration guide](https://github.com/caffeinelabs/motoko/blob/master/doc/md/moc-v2-migration.md#removed-flags) lists every removed flag.
 
 These flags are applied before per-canister `[canisters.<name>].args` and CLI `-- flags`. For `mops build`, `[build].args` are also applied (after `[moc].args`, before per-canister args).
 
@@ -108,7 +110,7 @@ Example:
 ```toml
 [canisters.backend]
 main = "src/main.mo"
-args = ["--incremental-gc"]
+args = ["-Werror"]
 candid = "candid/backend.did"
 initArg = "(\"Hello\")"
 ```

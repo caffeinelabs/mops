@@ -120,7 +120,7 @@ Older `moc` pins and canisters without `[migrations]` are unaffected.
 Any arguments after `--` are forwarded to `moc` when generating stable type signatures.
 
 ```
-mops check-stable -- --experimental-stable-memory=1
+mops check-stable -- -Werror
 ```
 
 :::tip
