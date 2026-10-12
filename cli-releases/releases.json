@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "3.4.2"
+    "latest": "3.5.0"
   },
   "versions": {
     "0.41.0": {
@@ -648,6 +648,14 @@
       "commitHash": "65e6ff33908e5365ccc2a6d355e2f2511bea367c",
       "url": "https://cli.mops.one/versions/3.4.2.tgz",
       "hash": "b92932cb00a8fb19a12f5e15e6f93f87c212400d67fc2fd1a848105e56c9a10e"
+    },
+    "3.5.0": {
+      "time": 1791800469960,
+      "size": 2398995,
+      "relseaseNotes": "* `mops bench` shows in the Heap table exactly what a cell allocates. It used to add about 35 KiB of measurement overhead to every cell. The Garbage Collection table, which is now always 0, is no longer printed. With a legacy GC on `moc` 1.x, such as `--gc copying`, Heap likewise shows everything a cell allocates, no longer split into what it retained (Heap) and its garbage (Garbage Collection). Instruction counts no longer include the lookup of the cell function, about 36 instructions per cell.\n* `mops publish` compiles benchmarks with the same `moc` flags as `mops bench`. It hard-coded the copying GC after the `[moc] args` from `mops.toml`, overriding a GC chosen there, and failed on `moc` 2.0.0.\n* `mops bench` compiles its benchmark canister without the `persistent` keyword on `moc` 2.0.0 and later. moc 2 makes actors persistent by default and warns about the redundant keyword (M0217), so `-Werror` in `[moc] args` failed every benchmark. moc 1.x still gets `persistent`, which it requires.\n* `mops bench --gc copying`, `--gc compacting`, `--gc generational` and `--legacy-persistence` fail with an explanation on `moc` 2.0.0 and later, which has no legacy persistence and only the incremental GC. They used to fail inside `moc` with `unknown option '--legacy-persistence'`.\n* `mops bench` prints `moc`'s diagnostics and `Failed to compile bench/<file>.bench.mo` when a benchmark does not compile, instead of a stack trace. `moc` 2 turns several warnings into errors, such as a non-exhaustive `switch` (M0145), so benchmarks that compiled on `moc` 1 can fail this way.\n* `mops toolchain use moc` reports that `moc` 2.0.0 and later have no Intel-Mac build, instead of failing the download with `ERROR 404`.\n* The GitHub workflow that `mops init` and `mops template github-workflow:mops-test` add installs mops 3 instead of mops 1. mops 1 passes `moc` flags that `moc` 2 removed, so the workflow failed in a project that pins `moc` 2.\n* Set `GITHUB_TOKEN` to authenticate the GitHub API requests mops makes: resolving a GitHub dependency's branch or tag to a commit (`mops add org/repo`, `mops outdated`, `mops update`, and `mops install` when nothing names the commit), looking up `mops toolchain` releases, and reading release notes in `mops publish`. GitHub allows 60 unauthenticated requests an hour per IP address, and a shared CI runner can start a job with that budget spent, which can make `mops add org/repo` fail with `API rate limit exceeded`. In GitHub Actions, pass `GITHUB_TOKEN: ${{ github.token }}`. The token goes only to `api.github.com`, and a token GitHub rejects fails the lookup instead of falling back to an anonymous request.\n* `mops check <files...>` checks all the files in a single `moc` run on `moc` 2.0.0 and later, instead of one run per file. moc 2 checks each file on its own, so a library several of the files import is type-checked once and its warnings are printed once, and an error in one file no longer stops the files after it from being checked. `mops check --fix` collects its fixes from one run the same way. When several files are checked together, a failure reads `✗ Check failed for 3 files`, since moc's diagnostics already name the files at fault. Older `moc` versions concatenate several files into one program, so they keep one run per file.\n",
+      "commitHash": "166d7692a2c845a72425eefe23045bdf72cfc258",
+      "url": "https://cli.mops.one/versions/3.5.0.tgz",
+      "hash": "601e5305b369c7a6d56dbf02f0059bc74719015b4969eb64d883722f0313b8f2"
     }
   }
 }
