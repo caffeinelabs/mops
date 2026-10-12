@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 3.5.0
 - `mops bench` shows in the Heap table exactly what a cell allocates. It used to add about 35 KiB of measurement overhead to every cell. The Garbage Collection table, which is now always 0, is no longer printed. With a legacy GC on `moc` 1.x, such as `--gc copying`, Heap likewise shows everything a cell allocates, no longer split into what it retained (Heap) and its garbage (Garbage Collection). Instruction counts no longer include the lookup of the cell function, about 36 instructions per cell.
 - `mops publish` compiles benchmarks with the same `moc` flags as `mops bench`. It hard-coded the copying GC after the `[moc] args` from `mops.toml`, overriding a GC chosen there, and failed on `moc` 2.0.0.
 - `mops bench` compiles its benchmark canister without the `persistent` keyword on `moc` 2.0.0 and later. moc 2 makes actors persistent by default and warns about the redundant keyword (M0217), so `-Werror` in `[moc] args` failed every benchmark. moc 1.x still gets `persistent`, which it requires.
