@@ -114,7 +114,10 @@ args = ["-Werror", "-E=M0223,M0236,M0237"]
         cwd,
         env: { DFX_MOC_PATH: "/nonexistent/decoy-moc" },
       });
-      expect(result.exitCode).toBe(0);
+      expect({ exitCode: result.exitCode, stderr: result.stderr }).toEqual({
+        exitCode: 0,
+        stderr: expect.any(String),
+      });
       expect(result.stdout).not.toContain("decoy-moc");
       expect(result.stdout).toContain(path.join("moc", "1.16.1", "moc"));
     } finally {
