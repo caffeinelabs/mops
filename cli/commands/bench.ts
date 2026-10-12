@@ -29,7 +29,8 @@ import { isNestedCheckout, MOTOKO_GLOB_CONFIG } from "../constants.js";
 import { Benchmark, Benchmarks } from "../declarations/main/main.did.js";
 import { BenchResult, _SERVICE } from "../declarations/bench/bench.did.js";
 import { BenchReplica } from "./bench-replica.js";
-import { cliError } from "../error.js";
+import { cliError, cliExit } from "../error.js";
+import { describeExecFailure } from "../helpers/exec-failure.js";
 
 type BenchOptions = {
   replicaVersion: string;
@@ -365,11 +366,21 @@ async function deployBenchFile(
     );
     console.time(`build ${canisterName}`);
   }
-  await execa(mocPath, buildArgs, {
+  let result = await execa(mocPath, buildArgs, {
     cwd: tempDir,
     // `inherit` so the compiler output (warnings/errors) is streamed under --verbose
     stdio: options.verbose ? "inherit" : ["pipe", "ignore", "pipe"],
+    reject: false,
   });
+  if (result.exitCode !== 0) {
+    if (!options.verbose && result.stderr) {
+      console.error(chalk.red(result.stderr));
+    }
+    cliExit(
+      result.exitCode ?? 1,
+      `Failed to compile ${absToRel(file)} (${describeExecFailure(result)})`,
+    );
+  }
   options.verbose && console.timeEnd(`build ${canisterName}`);
 
   // deploy canister

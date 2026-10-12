@@ -29,6 +29,11 @@ describe("bench", () => {
       const result = await cli(["bench"], { cwd });
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toMatch(/invalid warning code/);
+      // moc's diagnostics, then one line naming the file: no stack trace
+      expect(result.stderr).toMatch(
+        "Failed to compile bench/simple.bench.mo (exit code: ",
+      );
+      expect(result.stderr).not.toMatch(/^\s+at /m);
     } finally {
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
     }
