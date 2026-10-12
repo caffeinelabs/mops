@@ -142,13 +142,12 @@ export async function bench(
   let replica = new BenchReplica(options.verbose);
 
   let rootDir = getRootDir();
-  let globStr = "**/bench?(mark)/**/*.bench.mo";
-  if (filter) {
-    globStr = `**/bench?(mark)/**/*${filter}*.mo`;
-  }
-  let files = globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG).filter(
-    (file) => !isNestedCheckout(file, rootDir),
-  );
+  let findFiles = (globStr: string) =>
+    globSync(path.join(rootDir, globStr), MOTOKO_GLOB_CONFIG).filter(
+      (file) => !isNestedCheckout(file, rootDir),
+    );
+  let allGlob = "**/bench?(mark)/**/*.bench.mo";
+  let files = findFiles(filter ? `**/bench?(mark)/**/*${filter}*.mo` : allGlob);
   if (!files.length) {
     if (filter) {
       options.silent ||
@@ -165,6 +164,9 @@ export async function bench(
   }
 
   files.sort();
+  // Keyed against every bench file, so a filter doesn't move a file's saved results.
+  let peers = filter ? [...files, ...findFiles(allGlob)] : files;
+  let keyedFiles = [...benchKeys(files, peers, rootDir)];
 
   let benchDir = `${getRootDir()}/.mops/.bench/`;
   fs.rmSync(benchDir, { recursive: true, force: true });
@@ -191,19 +193,19 @@ export async function bench(
       console.log("Deploying canisters...");
     }
 
-    await parallel(os.cpus().length, files, async (file: string) => {
-      await deployBenchFile(file, options, replica, globalMocArgs);
+    await parallel(os.cpus().length, keyedFiles, async ([file, key]) => {
+      await deployBenchFile(file, key, options, replica, globalMocArgs);
     });
 
     let benchResults: Benchmarks = [];
 
-    await parallel(1, files, async (file: string) => {
+    await parallel(1, keyedFiles, async ([file, key]) => {
       if (!options.silent && !process.env.CI) {
         console.log("\n" + "-".repeat(50));
         console.log(`\nRunning ${chalk.gray(absToRel(file))}...`);
         console.log("");
       }
-      let benchResult = await runBenchFile(file, options, replica);
+      let benchResult = await runBenchFile(file, key, options, replica);
       benchResults.push(benchResult);
     });
 
@@ -336,15 +338,49 @@ function getMocArgs(options: BenchOptions): string[] {
   return args;
 }
 
+// Names each bench file's temp dir, canister, timing labels and saved results:
+// the file name, or its path from the root when one of `peers` shares the name.
+// Case-insensitive, since on macOS `A.bench` and `a.bench` are one directory.
+function benchKeys(
+  files: string[],
+  peers: string[],
+  rootDir: string,
+): Map<string, string> {
+  let name = (file: string) => path.parse(file).name;
+  let keys = new Map<string, string>();
+  let fileByKey = new Map<string, string>();
+  for (let file of files) {
+    let shared = peers.some(
+      (f) => f !== file && name(f).toLowerCase() === name(file).toLowerCase(),
+    );
+    let key = shared
+      ? path
+          .relative(rootDir, file)
+          .replace(/\.mo$/i, "")
+          .split(path.sep)
+          .join("__")
+      : name(file);
+    let other = fileByKey.get(key.toLowerCase());
+    if (other) {
+      cliError(
+        `${absToRel(other)} and ${absToRel(file)} would both save their results to .bench/${key}.json. Rename one of them.`,
+      );
+    }
+    fileByKey.set(key.toLowerCase(), file);
+    keys.set(file, key);
+  }
+  return keys;
+}
+
 async function deployBenchFile(
   file: string,
+  key: string,
   options: BenchOptions,
   replica: BenchReplica,
   globalMocArgs: string[],
 ): Promise<void> {
   let rootDir = getRootDir();
-  let tempDir = path.join(rootDir, ".mops/.bench/", path.parse(file).name);
-  let canisterName = path.parse(file).name;
+  let tempDir = path.join(rootDir, ".mops/.bench/", key);
 
   // prepare temp files
   fs.mkdirSync(tempDir, { recursive: true });
@@ -380,10 +416,8 @@ async function deployBenchFile(
     ...options.extraArgs,
   ];
   if (options.verbose) {
-    console.log(
-      chalk.gray(`[${canisterName}] ${mocPath} ${buildArgs.join(" ")}`),
-    );
-    console.time(`build ${canisterName}`);
+    console.log(chalk.gray(`[${key}] ${mocPath} ${buildArgs.join(" ")}`));
+    console.time(`build ${key}`);
   }
   let result = await execa(mocPath, buildArgs, {
     cwd: tempDir,
@@ -400,7 +434,7 @@ async function deployBenchFile(
       `Failed to compile ${absToRel(file)} (${describeExecFailure(result)})`,
     );
   }
-  options.verbose && console.timeEnd(`build ${canisterName}`);
+  options.verbose && console.timeEnd(`build ${key}`);
 
   // deploy canister
   let wasm = path.join(tempDir, "canister.wasm");
@@ -408,35 +442,31 @@ async function deployBenchFile(
     verbose: options.verbose,
     optimize: options.optimize,
   });
-  options.verbose && console.time(`deploy ${canisterName}`);
-  await replica.deploy(canisterName, wasm, tempDir);
-  options.verbose && console.timeEnd(`deploy ${canisterName}`);
+  options.verbose && console.time(`deploy ${key}`);
+  await replica.deploy(key, wasm, tempDir);
+  options.verbose && console.timeEnd(`deploy ${key}`);
 
   // init bench
-  options.verbose && console.time(`init ${canisterName}`);
-  let actor = (await replica.getActor(canisterName)) as _SERVICE;
+  options.verbose && console.time(`init ${key}`);
+  let actor = (await replica.getActor(key)) as _SERVICE;
   await actor.init();
-  options.verbose && console.timeEnd(`init ${canisterName}`);
+  options.verbose && console.timeEnd(`init ${key}`);
 }
 
 async function runBenchFile(
   file: string,
+  key: string,
   options: BenchOptions,
   replica: BenchReplica,
 ): Promise<Benchmark> {
   let rootDir = getRootDir();
-  let canisterName = path.parse(file).name;
 
-  let actor = (await replica.getActor(canisterName)) as _SERVICE;
+  let actor = (await replica.getActor(key)) as _SERVICE;
   let schema = await actor.getSchema();
 
   // load previous results
   let prevResults: Map<string, BenchResult> | undefined;
-  let resultsJsonFile = path.join(
-    rootDir,
-    ".bench",
-    `${path.parse(file).name}.json`,
-  );
+  let resultsJsonFile = path.join(rootDir, ".bench", `${key}.json`);
   if (options.compare) {
     if (fs.existsSync(resultsJsonFile)) {
       let prevResultsJson = JSON.parse(

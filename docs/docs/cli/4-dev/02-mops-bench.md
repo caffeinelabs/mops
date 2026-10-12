@@ -62,11 +62,13 @@ The other collectors are for `moc` 1.x only. `moc` 2.0.0 removes legacy persiste
 
 ### `--save`
 
-Save benchmark results to `.bench/<filename>.json` file.
+Save benchmark results to `.bench/<filename>.json` file, such as `.bench/sort.bench.json` for `bench/sort.bench.mo`.
+
+When several benchmark files share a name in different directories, each one is saved under its path from the project root instead, with `__` between directories: `bench/a/sort.bench.mo` saves to `.bench/bench__a__sort.bench.json`. So when you add a file whose name is already taken, rename the existing results file to match before you run `--compare`.
 
 ### `--compare`
 
-Compare benchmark results with the results from `.bench/<filename>.json` file.
+Compare benchmark results with the results from `.bench/<filename>.json` file, named as in [`--save`](#--save).
 
 ### `--query`
 
