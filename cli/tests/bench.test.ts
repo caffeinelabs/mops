@@ -3,6 +3,19 @@ import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "path";
 import { cli, useTempFixtures } from "./helpers";
 
+// Each cell's Heap from a results file `mops bench --save` wrote.
+function savedHeap(cwd: string, key: string): Record<string, number> {
+  const saved = JSON.parse(
+    readFileSync(path.join(cwd, ".bench", `${key}.json`), "utf8"),
+  );
+  return Object.fromEntries(
+    saved.results.map(([cell, res]: [string, { rts_heap_size: number }]) => [
+      cell,
+      res.rts_heap_size,
+    ]),
+  );
+}
+
 // Pin moc 1.16.1 (≥ 0.15) to exercise the EOP path — this repo's own mops.toml
 // uses moc 0.14.14, so the default bench run is never EOP-tested here.
 describe("bench", () => {
@@ -130,23 +143,31 @@ args = ["-Werror", "-E=M0223,M0236,M0237"]
       // nothing is collected during a cell, so the all-zero table is not
       // printed (the "Garbage Collection: 0%" summary line in CI output stays)
       expect(result.stdout).not.toMatch(/Garbage Collection\**\s*\n\s*\n\s*\|/);
-      const saved = JSON.parse(
-        readFileSync(path.join(cwd, ".bench/allocation.bench.json"), "utf8"),
-      );
-      const heap = Object.fromEntries(
-        saved.results.map(
-          ([cell, res]: [string, { rts_heap_size: number }]) => [
-            cell,
-            res.rts_heap_size,
-          ],
-        ),
-      );
       // A 1000-element `[var Nat]` is a 24-byte header plus 8 bytes per slot.
-      expect(heap).toEqual({
+      expect(savedHeap(cwd, "allocation.bench")).toEqual({
         "noop:a": 0,
         "noop:b": 0,
         "array:a": 8024,
         "array:b": 8024,
+      });
+    } finally {
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+      rmSync(path.join(cwd, ".bench"), { recursive: true, force: true });
+    }
+  });
+
+  // Each of two same-named files must run in its own canister and save its own results.
+  test("keeps apart bench files that share a name", async () => {
+    const cwd = path.join(import.meta.dirname, "bench-same-name");
+    try {
+      const result = await cli(["bench", "--save", "--verbose"], { cwd });
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).not.toMatch("already exists");
+      expect(savedHeap(cwd, "bench__a__alloc.bench")).toEqual({
+        "array:a": 8024,
+      });
+      expect(savedHeap(cwd, "bench__b__alloc.bench")).toEqual({
+        "array:b": 16024,
       });
     } finally {
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });

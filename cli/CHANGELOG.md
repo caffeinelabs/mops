@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops bench` runs benchmark files that share a name, such as `bench/a/sort.bench.mo` and `bench/b/sort.bench.mo`, each in its own canister. Both were deployed under the file name, so the second deploy replaced the first and both files reported the second one's results. The two also compiled into the same temporary directory at the same time, which could deploy a half-written wasm. Such files now save to `.bench/` under their path from the project root, for example `.bench/bench__a__sort.bench.json`, so they no longer overwrite each other's results. A file whose name is unique keeps `.bench/<filename>.json`.
 
 ## 3.5.0
 - `mops bench` shows in the Heap table exactly what a cell allocates. It used to add about 35 KiB of measurement overhead to every cell. The Garbage Collection table, which is now always 0, is no longer printed. With a legacy GC on `moc` 1.x, such as `--gc copying`, Heap likewise shows everything a cell allocates, no longer split into what it retained (Heap) and its garbage (Garbage Collection). Instruction counts no longer include the lookup of the cell function, about 36 instructions per cell.
