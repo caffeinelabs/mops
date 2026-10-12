@@ -102,11 +102,7 @@ persistent actor class () {
     };
   };
 
-  // Returns the collector's cumulative instruction count. The CLI calls this
-  // between cells until two consecutive calls return the same count: then the
-  // message in between ended without a GC increment, so no incremental GC
-  // cycle is in progress. A cycle in progress turns on the GC's write and
-  // allocation barriers, which add instructions to the cell itself.
+  // GC instructions at the end of the previous update message, not a running total.
   public func collectorInstructions() : async Nat {
     Prim.rts_collector_instructions();
   };

@@ -66,10 +66,8 @@ export async function bench(
     compiler: "moc",
     compilerVersion: getMocVersion(),
     gc: "incremental",
-    // The incremental GC is not forced: `--force-gc` starts a new GC cycle at
-    // the end of every message, so a cycle would always be in progress when a
-    // cell starts. The legacy GCs complete their collection within a message,
-    // so forcing them leaves nothing behind for the next cell.
+    // A forced incremental GC starts a cycle after every message, so the next cell would run mid-cycle.
+    // Legacy GCs finish within the message.
     forceGc: isLegacyGc(optionsArg.gc ?? "incremental"),
     query: false,
     legacyPersistence: false,
@@ -276,12 +274,8 @@ function computeDiffAll(
   return diff;
 }
 
-// An incremental GC cycle runs in increments at the end of messages and can
-// span several messages. While a cycle is in progress, the GC's write and
-// allocation barriers are on, and every pointer write and allocation in the
-// cell costs extra instructions (20-40% for write-heavy code), depending on
-// what ran before the cell. Send empty messages until one ends without a GC
-// increment, so that every cell starts with the GC paused.
+// A cell started mid-cycle pays for the incremental GC's write and allocation barriers.
+// The GC check at the end of a message costs the same while the GC is paused, so two equal readings in a row mean no cycle is running.
 async function waitForGcPause(actor: _SERVICE) {
   let maxMessages = 1000;
   let prev = await actor.collectorInstructions();

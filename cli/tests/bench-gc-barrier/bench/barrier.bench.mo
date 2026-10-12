@@ -1,9 +1,7 @@
 import Prim "mo:prim";
 
-// Every cell does the same work, so every cell must cost the same number of
-// instructions. The live heap built in `init` is large enough that an
-// incremental GC cycle spans several messages; a cell that starts while a
-// cycle is in progress pays for the GC's write barrier on every pointer write.
+// The "fill" cells do identical work, so they must cost the same instructions.
+// A "garbage" cell can start a GC cycle that spans several messages, and a cell started mid-cycle pays for the write barrier.
 module {
   type Schema = {
     name : Text;
@@ -18,7 +16,7 @@ module {
     public let runCell = run;
   };
 
-  // Generic, so the element writes go through the GC's write barrier.
+  // Every write goes through the GC's write barrier, as `?Nat` may hold a pointer.
   func fill<T>(a : [var T], v : T) {
     var i = 0;
     while (i < a.size()) {
@@ -30,14 +28,22 @@ module {
   public func init() : Bench {
     let schema : Schema = {
       name = "Barrier";
-      description = "Identical cells on a large live heap";
-      rows = ["a", "b"];
-      cols = ["1", "2", "3", "4"];
+      description = "Identical writes between cells that leave garbage";
+      rows = ["a", "b", "c", "d"];
+      cols = ["fill", "garbage"];
     };
     let live = Prim.Array_tabulate<[var Nat]>(1_000_000, func i = [var i]);
-    let targets = Prim.Array_tabulate<[var ?Nat]>(8, func _ = Prim.Array_init<?Nat>(100_000, null));
-    func run(ri : Nat, ci : Nat) {
-      fill<?Nat>(targets[ri * 4 + ci], ?live.size());
+    let target = Prim.Array_init<?Nat>(100_000, null);
+    func run(_ : Nat, ci : Nat) {
+      if (ci == 0) {
+        fill<?Nat>(target, ?live.size());
+      } else {
+        var i = 0;
+        while (i < 5) {
+          ignore Prim.Array_init<Nat>(1_000_000, i);
+          i += 1;
+        };
+      };
     };
     Bench(schema, run);
   };
