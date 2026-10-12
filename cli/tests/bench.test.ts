@@ -127,11 +127,34 @@ args = ["-Werror", "-E=M0223,M0236,M0237"]
         cwd,
         env: { DFX_MOC_PATH: "/nonexistent/decoy-moc" },
       });
-      expect(result.exitCode).toBe(0);
+      expect({ exitCode: result.exitCode, stderr: result.stderr }).toEqual({
+        exitCode: 0,
+        stderr: expect.any(String),
+      });
       expect(result.stdout).not.toContain("decoy-moc");
       expect(result.stdout).toContain(path.join("moc", "1.16.1", "moc"));
     } finally {
       rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+    }
+  });
+
+  test("identical cells cost the same instructions, whatever ran before", async () => {
+    const cwd = path.join(import.meta.dirname, "bench-gc-barrier");
+    try {
+      const result = await cli(["bench", "--save"], { cwd });
+      expect(result.exitCode).toBe(0);
+      const saved = JSON.parse(
+        readFileSync(path.join(cwd, ".bench/barrier.bench.json"), "utf8"),
+      );
+      expect(saved.forceGc).toBe(false);
+      const fills = saved.results
+        .filter(([cell]: [string]) => cell.endsWith(":fill"))
+        .map(([, res]: [string, { instructions: number }]) => res.instructions);
+      expect(fills).toHaveLength(4);
+      expect(new Set(fills).size).toBe(1);
+    } finally {
+      rmSync(path.join(cwd, ".mops"), { recursive: true, force: true });
+      rmSync(path.join(cwd, ".bench"), { recursive: true, force: true });
     }
   });
 

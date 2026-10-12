@@ -26,7 +26,8 @@ Benchmarks run on [PocketIC](https://github.com/dfinity/pocketic), which Mops do
 Under the hood, Mops will:
 - Start a PocketIC server on an ephemeral port (or attach to the `MOPS_POCKET_IC_URL` server)
 - Wrap each `*.bench.mo` file in a canister
-- Compile canisters under enhanced orthogonal persistence (moc's default) with the `--force-gc` flag and deploy them
+- Compile canisters under enhanced orthogonal persistence (moc's default) and deploy them. Only the legacy GCs of `moc` 1.x are compiled with the `--force-gc` flag
+- Before each cell, send empty update calls until no incremental GC cycle is in progress. While a cycle is in progress, the GC's write and allocation barriers are on, so a cell would cost more instructions depending on what ran before it
 - Run each cell of the benchmark file as an update call (or a query call with [`--query`](#--query))
 - For each call measure usage of wasm instructions(`performance_counter`) and heap growth(`rts_heap_size`). The GC does not run during the measurement, so heap growth is exactly what the call allocated. The Garbage Collection table, which would show 0, is not printed
 
