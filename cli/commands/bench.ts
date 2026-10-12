@@ -66,7 +66,9 @@ export async function bench(
     compiler: "moc",
     compilerVersion: getMocVersion(),
     gc: "incremental",
-    forceGc: true,
+    // A forced incremental GC starts a cycle after every message, so the next cell would run mid-cycle.
+    // Legacy GCs finish within the message.
+    forceGc: isLegacyGc(optionsArg.gc ?? "incremental"),
     query: false,
     legacyPersistence: false,
     save: false,
@@ -270,6 +272,23 @@ function computeDiffAll(
   }
 
   return diff;
+}
+
+// A cell started mid-cycle pays for the incremental GC's write and allocation barriers.
+// The GC check at the end of a message costs the same while the GC is paused, so two equal readings in a row mean no cycle is running.
+async function waitForGcPause(actor: _SERVICE) {
+  let maxMessages = 1000;
+  let prev = await actor.collectorInstructions();
+  for (let i = 0; i < maxMessages; i++) {
+    let cur = await actor.collectorInstructions();
+    if (cur === prev) {
+      return;
+    }
+    prev = cur;
+  }
+  cliError(
+    `The incremental GC did not pause within ${maxMessages} messages before a benchmark cell.`,
+  );
 }
 
 // Collectors that only exist under legacy persistence. moc 0.15+ fixes the GC to
@@ -592,6 +611,9 @@ async function runBenchFile(
   // runner performs async calls. Otherwise use the update path.
   for (let [rowIndex, row] of schema.rows.entries()) {
     for (let [colIndex, col] of schema.cols.entries()) {
+      if (!options.forceGc) {
+        await waitForGcPause(actor);
+      }
       let res = options.query
         ? await actor.runCellQuery(BigInt(rowIndex), BigInt(colIndex))
         : await actor.runCellUpdateAwait(BigInt(rowIndex), BigInt(colIndex));

@@ -29,6 +29,7 @@ export interface BenchSchema {
   'description' : string,
 }
 export interface _anon_class_10_1 {
+  'collectorInstructions' : ActorMethod<[], bigint>,
   'getSchema' : ActorMethod<[], BenchSchema>,
   'getStats' : ActorMethod<[], BenchResult>,
   'init' : ActorMethod<[], BenchSchema>,

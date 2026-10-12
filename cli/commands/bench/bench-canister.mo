@@ -102,6 +102,11 @@ persistent actor class () {
     };
   };
 
+  // GC instructions at the end of the previous update message, not a running total.
+  public func collectorInstructions() : async Nat {
+    Prim.rts_collector_instructions();
+  };
+
   public query func getStats() : async BenchResult {
     _getStats();
   };

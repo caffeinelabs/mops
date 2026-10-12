@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops bench` instruction counts no longer depend on the order of the cells. An incremental GC cycle can span several messages, and a cell that started while one was in progress paid for the GC's write and allocation barriers: 20-40% more instructions for code that writes many pointers, such as sorting a generic array, in about every other cell. `mops bench` now compiles without `--force-gc`, which started a new cycle after every message, and sends empty messages before each cell until no cycle is in progress. The legacy GCs of `moc` 1.x are still compiled with `--force-gc`.
 
 ## 3.5.0
 - `mops bench` shows in the Heap table exactly what a cell allocates. It used to add about 35 KiB of measurement overhead to every cell. The Garbage Collection table, which is now always 0, is no longer printed. With a legacy GC on `moc` 1.x, such as `--gc copying`, Heap likewise shows everything a cell allocates, no longer split into what it retained (Heap) and its garbage (Garbage Collection). Instruction counts no longer include the lookup of the cell function, about 36 instructions per cell.
