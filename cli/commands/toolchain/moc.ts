@@ -79,6 +79,17 @@ export let assetUrl = (version: string, host: toolchainUtils.Host) => {
     let platform = host.os == "darwin" ? "macos" : "linux64";
     return `${base}/motoko-${platform}-${version}.tar.gz`;
   }
+  // moc 2.0.0 dropped the Intel-Mac build, so the download would only 404.
+  if (
+    host.os == "darwin" &&
+    host.arch == "x86_64" &&
+    semver.gte(version, "2.0.0")
+  ) {
+    cliError(
+      `moc ${version} has no Intel-Mac (x86_64) build. Run \`mops toolchain use moc 1.16.1\` to stay on moc 1, or build moc from source.\n` +
+        "On an Apple silicon Mac, run an arm64 build of Node: an x64 Node under Rosetta fetches x86_64 tools.",
+    );
+  }
   let platform = host.os == "darwin" ? "Darwin" : "Linux";
   let arch =
     host.arch == "x86_64" || semver.lt(version, "0.14.6")

@@ -131,6 +131,18 @@ describe("asset names", () => {
     expect(asset(moc.assetUrl("0.9.4", linuxIntel))).toBe(
       "motoko-linux64-0.9.4.tar.gz",
     );
+    expect(asset(moc.assetUrl("2.0.0", macArm))).toBe(
+      "motoko-Darwin-arm64-2.0.0.tar.gz",
+    );
+    expect(asset(moc.assetUrl("2.0.0", linuxIntel))).toBe(
+      "motoko-Linux-x86_64-2.0.0.tar.gz",
+    );
+  });
+
+  test("moc 2 has no Intel-Mac build", () => {
+    expect(() => moc.assetUrl("2.0.0", macIntel)).toThrow(
+      "moc 2.0.0 has no Intel-Mac (x86_64) build.",
+    );
   });
 
   test("pocket-ic", () => {
