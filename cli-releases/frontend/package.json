@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "filesize": "10.1.1",
-    "markdown-it": "14.2.0"
+    "markdown-it": "14.3.2"
   },
   "overrides": {
     "cookie": "^0.7.0"
