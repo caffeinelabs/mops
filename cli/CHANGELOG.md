@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 3.5.1
 - `mops bench` instruction counts no longer depend on the order of the cells. An incremental GC cycle can span several messages, and a cell that started while one was in progress paid for the GC's write and allocation barriers: 20-40% more instructions for code that writes many pointers, such as sorting a generic array, in about every other cell. `mops bench` now compiles without `--force-gc`, which started a new cycle after every message, and sends empty messages before each cell until no cycle is in progress. The legacy GCs of `moc` 1.x are still compiled with `--force-gc`.
 - `mops bench` runs benchmark files that share a name, such as `bench/a/sort.bench.mo` and `bench/b/sort.bench.mo`, each in its own canister. Both were deployed under the file name, so the second deploy replaced the first and both files reported the second one's results. The two also compiled into the same temporary directory at the same time, which could deploy a half-written wasm. Such files now save to `.bench/` under their path from the project root, for example `.bench/bench__a__sort.bench.json`, so they no longer overwrite each other's results. A file whose name is unique keeps `.bench/<filename>.json`.
 - `smol-toml` is updated to 1.9.1, which closes GHSA-r4xh-jqrq-34v2 (medium severity): parsing took time quadratic in the number of lines, so a large TOML document could stall the parser. `mops` parses `mops.toml` on nearly every command, including each installed dependency's own. 1.9 also rejects a few forms of invalid TOML that 1.7 accepted, such as a local date or time with a UTC offset.
