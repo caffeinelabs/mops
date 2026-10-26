@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- New **unstable** build manifest: with `[build] manifest = true` in `mops.toml`, `mops build` writes a `<canister>.build.json` record next to each built `.wasm`/`.did`/`.most` — artifact SHA-256 hashes, the pinned `moc` version, and the outcome of a non-gating `moc --stable-compatible` check against an empty-actor baseline (is the canister installable on a fresh canister, or upgrade-only). `mops build` deletes a stale `<canister>.build.json` at the start of each canister build even when the feature is off, so a record never outlives the artifacts it describes. Unstable: schema and behavior may change in any release; documented only on the new "Unstable features" docs page.
 
 ## 3.5.1
 - `mops bench` instruction counts no longer depend on the order of the cells. An incremental GC cycle can span several messages, and a cell that started while one was in progress paid for the GC's write and allocation barriers: 20-40% more instructions for code that writes many pointers, such as sorting a generic array, in about every other cell. `mops bench` now compiles without `--force-gc`, which started a new cycle after every message, and sends empty messages before each cell until no cycle is in progress. The legacy GCs of `moc` 1.x are still compiled with `--force-gc`.
