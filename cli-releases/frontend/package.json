@@ -23,11 +23,11 @@
     "svelte-check": "4.4.6",
     "tslib": "2.6.2",
     "typescript": "5.4.3",
-    "vite": "8.0.16"
+    "vite": "8.3.5"
   },
   "dependencies": {
     "filesize": "10.1.1",
-    "markdown-it": "14.3.2"
+    "markdown-it": "14.3.3"
   },
   "overrides": {
     "cookie": "^0.7.0"
