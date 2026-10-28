@@ -7,6 +7,7 @@ import Time "mo:base/Time";
 import Int "mo:base/Int";
 import Result "mo:base/Result";
 import Debug "mo:base/Debug";
+import Error "mo:base/Error";
 import Principal "mo:base/Principal";
 import Order "mo:base/Order";
 import Option "mo:base/Option";
@@ -174,13 +175,15 @@ actor class Main() = this {
         // Send Telegram notification
         let telegramBot = TelegramBot.TelegramBot(telegramBotToken, transformTelegramRequest);
         let message = _formatTelegramMessage(publishResult.config, publishResult.publication, publishResult.isNewPackage);
-        let tgRes = await telegramBot.sendMessage("@mops_feed", message, null);
-
-        switch (tgRes) {
-          case (#err(err)) {
-            Debug.print("Failed to send message to telegram: " # err);
+        try {
+          switch (await telegramBot.sendMessage("@mops_feed", message, null)) {
+            case (#err(err)) {
+              Debug.print("Failed to send message to telegram: " # err);
+            };
+            case (#ok) {};
           };
-          case (#ok) {};
+        } catch (err) {
+          Debug.print("Failed to send message to telegram: " # Error.message(err));
         };
 
         #ok;
