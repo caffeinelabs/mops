@@ -42,6 +42,7 @@ export const normalizePaths = (text: string): string => {
       // Per-invocation scratch / staging dirs use mkdtemp; redact the random suffix
       // (Node's exact suffix format isn't a stable contract) so snapshots stay stable.
       .replace(/\.mops\/\.check-stable-\w+/g, ".mops/.check-stable")
+      .replace(/\.mops\/\.empty-baseline-\w+/g, ".mops/.empty-baseline")
       .replace(/(\.migrations-[\w.-]+?)-\w+(?=[/\s"]|$)/g, "$1"),
   );
 };

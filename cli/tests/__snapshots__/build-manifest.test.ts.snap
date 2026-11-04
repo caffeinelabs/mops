@@ -1,0 +1,22 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`build manifest [build] manifest = true writes a record per canister 1`] = `
+{
+  "exitCode": 0,
+  "stderr": "",
+  "stdout": "build canister fresh
+<CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/fresh.wasm","src/Fresh.mo","--public-metadata","candid:service","--public-metadata","candid:args"]
+Stable types written to .mops/.build/fresh.most
+Adding metadata to .mops/.build/fresh.wasm
+<CACHE><MOC> ["--stable-compatible",".mops/.empty-baseline/empty.most",".mops/.build/fresh.most"]
+Build manifest written to .mops/.build/fresh.build.json
+build canister upgrade-only
+<CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/upgrade-only.wasm","src/UpgradeOnly.mo","--public-metadata","candid:service","--public-metadata","candid:args"]
+Stable types written to .mops/.build/upgrade-only.most
+Adding metadata to .mops/.build/upgrade-only.wasm
+<CACHE><MOC> ["--stable-compatible",".mops/.empty-baseline/empty.most",".mops/.build/upgrade-only.most"]
+Build manifest written to .mops/.build/upgrade-only.build.json
+
+✓ Built 2 canisters successfully",
+}
+`;
