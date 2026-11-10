@@ -98,6 +98,32 @@ describe("build pipeline", () => {
     },
   );
 
+  test("rejects a string [build].args for a [migrations] canister with a clear error", async () => {
+    const cwd = project({
+      "mops.toml": [
+        "[toolchain]",
+        'moc = "1.16.1"',
+        "[build]",
+        'args = "--release"',
+        "[canisters.main]",
+        'main = "Main.mo"',
+        "[canisters.main.migrations]",
+        'chain = "migrations"',
+      ].join("\n"),
+      "Main.mo": ACTOR,
+      "migrations/.keep": "",
+    });
+    try {
+      const result = await cli(["build"], { cwd });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        "[build].args should be an array of strings",
+      );
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   test("warns about a missing baseline only where --stable-baseline applies", async () => {
     const migrating = project({});
     const fixture = path.join(

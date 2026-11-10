@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { lock } from "proper-lockfile";
 import { CliError, cliError, cliErrorFrom, cliExit } from "../error.js";
 import { describeExecFailure } from "../helpers/exec-failure.js";
@@ -156,11 +156,14 @@ export async function build(
       args.push("--public-metadata", "candid:args");
       const generatedDidPath = join(outputDir, `${canisterName}.did`);
       try {
-        // Outputs of an earlier build must not pass for this one's.
+        // Outputs of an earlier build must not pass for this one's. A
+        // baseline that is this build's own `.most` stays for moc to read.
         await Promise.all(
-          [wasmPath, generatedDidPath, mostPath].map((p) =>
-            rm(p, { force: true }),
-          ),
+          [wasmPath, generatedDidPath, mostPath]
+            .filter(
+              (p) => !stableBaseline || resolve(p) !== resolve(stableBaseline),
+            )
+            .map((p) => rm(p, { force: true })),
         );
         if (options.verbose) {
           console.log(chalk.gray(mocPath, JSON.stringify(args)));
