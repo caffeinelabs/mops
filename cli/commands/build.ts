@@ -22,6 +22,7 @@ import { Config } from "../types.js";
 import {
   canUseStableBaselineCheck,
   requireMostBaseline,
+  resolveStablePath,
 } from "./check-stable.js";
 import { toolchain } from "./toolchain/index.js";
 
@@ -122,24 +123,11 @@ export async function build(
         );
       }
       // Only migration builds take a baseline (moc 1.15+, --enhanced-migration).
-      const configuredMost =
-        stableConfigPath && canUseStableBaselineCheck(prepared.args)
-          ? resolveConfigPath(stableConfigPath)
-          : null;
-      if (
-        configuredMost &&
-        !existsSync(configuredMost) &&
-        !canister["check-stable"]?.skipIfMissing
-      ) {
-        console.warn(
-          chalk.yellow(
-            `Warning: ${configuredMost} not found, so canister ${canisterName} builds without the --stable-baseline check.\n` +
-              `Before the first deploy, run \`mops deployed init ${canisterName}\` to create an empty-actor baseline.`,
-          ),
-        );
-      }
-      const stableBaseline =
-        configuredMost && existsSync(configuredMost) ? configuredMost : null;
+      // A configured baseline is a gate: a missing file fails the build, as in
+      // `mops check` and `mops check-stable`.
+      const stableBaseline = canUseStableBaselineCheck(prepared.args)
+        ? resolveStablePath(canister, canisterName)
+        : null;
 
       let args = [
         "-c",

@@ -124,7 +124,7 @@ describe("build pipeline", () => {
     }
   });
 
-  test("warns about a missing baseline only where --stable-baseline applies", async () => {
+  test("fails on a missing baseline where --stable-baseline applies", async () => {
     const migrating = project({});
     const fixture = path.join(
       import.meta.dirname,
@@ -167,11 +167,12 @@ describe("build pipeline", () => {
       "Main.mo": ACTOR,
     });
     try {
-      const warned = await cli(["build"], { cwd: migrating });
-      expect(warned.stderr).toMatch(
-        "builds without the --stable-baseline check",
-      );
-      expect(warned.stderr).toMatch("mops deployed init backend");
+      const failed = await cli(["build"], { cwd: migrating });
+      expect(failed.exitCode).toBe(1);
+      expect(failed.stderr).toMatch("Deployed file not found");
+      expect(
+        existsSync(path.join(migrating, ".mops/.build/backend.wasm")),
+      ).toBe(false);
 
       const quiet = await cli(["build"], { cwd: classic });
       expect(quiet.exitCode).toBe(0);
