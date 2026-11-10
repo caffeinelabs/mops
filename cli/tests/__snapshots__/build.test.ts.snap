@@ -20,7 +20,6 @@ exports[`build error 1`] = `
   "stdout": "build canister foo
 <CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/foo.most
-Adding metadata to .mops/.build/foo.wasm
 
 ✓ Built 1 canister successfully",
 }
@@ -29,7 +28,8 @@ Adding metadata to .mops/.build/foo.wasm
 exports[`build error 2`] = `
 {
   "exitCode": 1,
-  "stderr": "Candid compatibility check failed for canister bar",
+  "stderr": "Candid compatibility check failed for canister bar
+Method call: func () -> (text) is not a subtype of func () -> (nat): Subtype fails at function return type: Record field 0: text is not a subtype of nat: text is not a subtype of nat",
   "stdout": "build canister bar",
 }
 `;
@@ -37,7 +37,8 @@ exports[`build error 2`] = `
 exports[`build error 3`] = `
 {
   "exitCode": 1,
-  "stderr": "Candid compatibility check failed for canister bar",
+  "stderr": "Candid compatibility check failed for canister bar
+Method call: func () -> (text) is not a subtype of func () -> (nat): Subtype fails at function return type: Record field 0: text is not a subtype of nat: text is not a subtype of nat",
   "stdout": "build canister foo
 build canister bar",
 }
@@ -50,12 +51,11 @@ exports[`build ok 1`] = `
   "stdout": "build canister foo
 <CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/foo.wasm","src/Foo.mo","--package","core",".mops/core@1.0.0/src","--release","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/foo.most
-Adding metadata to .mops/.build/foo.wasm
 build canister bar
 <CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/bar.most
 Candid compatibility check passed for canister bar
-Adding metadata to .mops/.build/bar.wasm
+Embedded candid/bar.did as candid:service in .mops/.build/bar.wasm
 
 ✓ Built 2 canisters successfully",
 }
@@ -99,8 +99,7 @@ exports[`build warns when args contain managed flags 1`] = `
 Warning: '-c' in args for canister foo may conflict with mops build — this flag is always set by mops build
 Warning: '--idl' in args for canister foo may conflict with mops build — this flag is always set by mops build
 Warning: '--stable-types' in args for canister foo may conflict with mops build — this flag is always set by mops build
-Error while compiling canister foo
-ENOENT: no such file or directory, open '.mops/.build/foo.did'",
+moc did not write .mops/.build/foo.wasm for canister foo. Remove -o from the moc args and use --output or [build].outputDir instead.",
   "stdout": "build canister foo",
 }
 `;

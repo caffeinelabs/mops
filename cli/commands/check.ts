@@ -203,7 +203,12 @@ async function checkCanisters(
       const foldStableBaseline =
         !!configuredMost &&
         existsSync(configuredMost) &&
-        canUseStableBaselineCheck(canisterArgs);
+        // Same arg set as `mops build`, so both fold the baseline alike.
+        canUseStableBaselineCheck([
+          ...globalMocArgs,
+          ...canisterArgs,
+          ...(options.extraArgs ?? []),
+        ]);
       const foldedBaseline = foldStableBaseline ? configuredMost : null;
 
       const mocArgs = [

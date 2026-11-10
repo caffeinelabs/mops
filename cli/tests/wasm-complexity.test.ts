@@ -46,7 +46,6 @@ function analysis(
   overrides: Partial<WasmComplexityAnalysis> = {},
 ): WasmComplexityAnalysis {
   return {
-    maxComplexity: 0,
     riskyFunctions: [],
     ...overrides,
   };
@@ -67,7 +66,6 @@ describe("Wasm complexity thresholds", () => {
     const report = formatWasmPreflightReport(
       "backend",
       analysis({
-        maxComplexity: 1_120_000,
         riskyFunctions: [
           func(
             1_120_000,

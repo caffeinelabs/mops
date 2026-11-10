@@ -16,9 +16,8 @@ describe("build check-wasm", () => {
       expect(result.stderr).toMatch(
         /Function: 0[\s\S]*Estimated complexity: 1,000,050[\s\S]*IC0505 limit: 1,000,000[\s\S]*Limit usage: 100\.0%[\s\S]*Instruction count: 20,001/,
       );
-      expect(result.stderr).toMatch(
-        "Run `mops build --check-deploy` for authoritative PocketIC validation",
-      );
+      // check-deploy already runs in this build, so it isn't suggested.
+      expect(result.stderr).not.toMatch("Run `mops build --check-deploy`");
       expect(result.stderr).toMatch("Error code: CanisterInvalidWasm");
     } finally {
       cleanFixture(cwd);
@@ -31,6 +30,9 @@ describe("build check-wasm", () => {
       const result = await cli(["build", "--check-wasm"], { cwd });
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toMatch("Warning [MOPS-WASM-COMPLEXITY]");
+      expect(result.stderr).toMatch(
+        "Run `mops build --check-deploy` for authoritative PocketIC validation",
+      );
       expect(result.stdout).not.toMatch("check deploy canister");
       expect(result.stdout).toMatch("Built 1 canister successfully");
     } finally {

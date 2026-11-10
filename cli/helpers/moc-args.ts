@@ -98,8 +98,9 @@ function collectExtraArgs(
     }
     args.push(...config.build.args);
   }
+  // Also checks `[moc].args` and `[build].args`, so it runs without `args`.
+  validateCanisterArgs(canister, canisterName, config);
   if (canister.args) {
-    validateCanisterArgs(canister, canisterName, config);
     args.push(...canister.args);
   }
   if (extraArgs) {

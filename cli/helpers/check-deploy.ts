@@ -48,7 +48,9 @@ export async function checkDeploy(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `Invalid initArg for canister ${artifact.name}: ${message}`,
+        artifact.initArg === undefined
+          ? `Cannot encode the default init argument () for canister ${artifact.name}: ${message}\nSet [canisters.${artifact.name}].initArg in mops.toml.`
+          : `Invalid initArg for canister ${artifact.name}: ${message}`,
         { cause: error },
       );
     }

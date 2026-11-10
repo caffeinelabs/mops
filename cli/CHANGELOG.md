@@ -1,6 +1,16 @@
 # Mops CLI Changelog
 
 ## Next
+- `mops build` keeps the Wasm `name` section that `moc` emits, so a trap on the IC shows Motoko function names in its backtrace instead of bare function indices (#901). Adding the Candid metadata re-encoded the whole module and dropped the section, and `[optimize] keep-names` and `ic-wasm --keep-name-section` ran too late to bring it back. `moc` already embeds `candid:service` and `candid:args`, so `mops build` now writes its output unchanged, except to swap a canister's `candid` file into `candid:service`, which copies every other section byte for byte.
+- `mops build` no longer overwrites the `candid:args` metadata with `initArg`. By IC convention `candid:args` holds the init argument types, such as `(nat)`, which `moc` writes; `initArg` is a value, such as `(42)`, so tools that read the section got a value where they expected types. `initArg` is now used only by `--check-deploy`.
+- A failed Candid compatibility check in `mops build` and `mops check-candid` prints why, for example the method that the new interface is missing, or the syntax error in the `.did` file.
+- `mops build` and `mops deployed` resolve the default `.mops/.build` output directory from the project root, as they already did for `[build].outputDir`. Run from a subdirectory, `mops build` wrote to `<subdirectory>/.mops/.build`.
+- `mops build` and `mops generate candid` reject `--enhanced-migration` in `[moc].args` or `[build].args` for a canister with `[migrations]`, as `mops check` does. The check ran only for canisters that set their own `args`, so the flag reached `moc` twice.
+- `mops build` warns when `[canisters.<name>.check-stable].path` points to a file that does not exist. The build skipped the `--stable-baseline` check without a word.
+- `mops check` decides whether to pass `--stable-baseline` from the same flags as `mops build`, including `[moc].args` and `--` flags. With `--enhanced-migration` in `[moc].args`, only `mops build` ran the baseline check.
+- `mops build --check-deploy` without a `pocket-ic` pin fails before it compiles anything, instead of after every canister is built. When a canister sets no `initArg` and the default `()` does not fit its init arguments, the error says to set `initArg`, instead of reporting an invalid `initArg`.
+- The `MOPS-WASM-COMPLEXITY` warning no longer suggests running `mops build --check-deploy` when the build already runs it.
+- `mops build` no longer leaves a `.<canister>.buildlock` file in the output directory for each canister.
 
 ## 3.5.1
 - `mops bench` instruction counts no longer depend on the order of the cells. An incremental GC cycle can span several messages, and a cell that started while one was in progress paid for the GC's write and allocation barriers: 20-40% more instructions for code that writes many pointers, such as sorting a generic array, in about every other cell. `mops bench` now compiles without `--force-gc`, which started a new cycle after every message, and sends empty messages before each cell until no cycle is in progress. The legacy GCs of `moc` 1.x are still compiled with `--force-gc`.

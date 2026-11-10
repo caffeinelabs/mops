@@ -17,13 +17,13 @@ Canisters must be defined in the `[canisters]` section of your `mops.toml` file.
 
 For each canister, three files are written to the output directory (default `.mops/.build`):
 
-- `<canister>.wasm` — compiled WebAssembly module, with Candid metadata embedded
+- `<canister>.wasm` — compiled WebAssembly module, with Candid metadata embedded and the `name` section kept
 - `<canister>.did` — generated Candid interface
 - `<canister>.most` — Motoko stable types signature (used for upgrade safety checking)
 
-If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against it.
+`moc` embeds the generated Candid interface as `candid:service` metadata and the init argument types as `candid:args`, both public. If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against that file, and the file replaces the generated interface in `candid:service`. Every other section `moc` emits, including the `name` section that gives traps readable backtraces, is kept byte for byte.
 
-When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** candid metadata is embedded. Defaults are `-O3 -g` (see the config reference). Requires a `[toolchain] wasm-opt` pin, and a `wasm-opt` failure fails the build. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
+When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** the Candid metadata is in place. Defaults are `-O3 -g` (see the config reference). Requires a `[toolchain] wasm-opt` pin, and a `wasm-opt` failure fails the build. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
 
 When `--check-wasm` or `[build].check-wasm = true` enables static validation, Mops uses Walrus to estimate each function's IC0505 compilation complexity in the final Wasm:
 
@@ -74,13 +74,13 @@ mops build -- --release --ai-errors
 
 ### `--verbose`
 
-Show detailed build information including compiler commands and build times.
+Show detailed build information, including the compiler commands and their output.
 
 ### `--output`, `-o`
 
-Specify the output directory for compiled Wasm, Candid, and stable types files. Overrides `[build].outputDir` from `mops.toml`.
+Specify the output directory for compiled Wasm, Candid, and stable types files, relative to the current directory. Overrides `[build].outputDir` from `mops.toml`.
 
-Default `.mops/.build`
+Default `.mops/.build` in the project root
 
 ```
 mops build --output ./dist
@@ -119,7 +119,7 @@ mops build --no-check-wasm
 
 ### `--check-deploy`
 
-Install each built Wasm on a fresh PocketIC canister after compilation, metadata embedding, and optimization. The build fails if PocketIC rejects the Wasm or the canister initialization traps. Initialization uses the canister's configured `initArg`, or `()` when it is omitted.
+Install each built Wasm on a fresh PocketIC canister after compilation, metadata embedding, and optimization. A missing `pocket-ic` pin fails the build before any canister compiles. The build fails if PocketIC rejects the Wasm or the canister initialization traps. Initialization uses the canister's configured `initArg`, or `()` when it is omitted.
 
 Enable the same validation for every plain `mops build` invocation:
 ```toml
@@ -177,8 +177,8 @@ args = []
 Each canister configuration supports:
 - `main` - Path to the main Motoko file (required)
 - `args` - Additional compiler arguments for this specific canister (optional)
-- `initArg` - Candid-encoded initialization arguments (optional)
-- `candid` - Path to the Candid interface file (optional, for compatibility checking)
+- `initArg` - Init arguments as Candid text, such as `("Hello")`, used by [`--check-deploy`](#--check-deploy) (optional)
+- `candid` - Path to a Candid interface file (optional). The build checks the generated interface against it and embeds it as `candid:service` metadata
 - `wasmMemoryLimit` - Wasm memory limit in bytes applied by [`--check-deploy`](#--check-deploy) (optional)
 - `[canisters.<name>.migrations]` and `[canisters.<name>.check-stable]` subtables — see the [`mops.toml` reference](../../09-mops.toml.md#canisters)
 
@@ -195,7 +195,7 @@ check-deploy = true
 
 Custom output directory for compiled Wasm, Candid, and stable types files. The path is relative to the `mops.toml` location.
 
-Default `.mops/.build`
+Default `.mops/.build`, also relative to the `mops.toml` location
 
 The `--output` CLI flag takes precedence over this config value.
 
@@ -205,13 +205,13 @@ When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `m
 
 If `mops check` passes but `mops build` fails while [`check-limit`](./08-mops-migrate.md#chain-trimming) is set, re-run `mops check --no-check-limit` to surface the issue — `check` trims the chain, while `build` compiles all of it.
 
-When a canister also sets [`[canisters.<name>.check-stable].path`](../../09-mops.toml.md#canistersnamecheck-stable), `mops build` passes the deployed `.most` to `moc` as `--stable-baseline` for that canister. `moc` then validates the migration directory against the migration history recorded in the baseline, so an applied migration that was edited, deleted, or backdated fails the build with `M0268` instead of emitting a wasm that could wipe data on upgrade. This is the built-in backstop for `mops check` when `check-limit` trims the edited migration out of the folded check. Demote or silence the diagnostic on older `moc` as described under [`mops check`](./04-mops-check.md#stable-compatibility-checking).
+When a canister also sets [`[canisters.<name>.check-stable].path`](../../09-mops.toml.md#canistersnamecheck-stable), `mops build` passes the deployed `.most` to `moc` as `--stable-baseline` for that canister. `moc` then validates the migration directory against the migration history recorded in the baseline, so an applied migration that was edited, deleted, or backdated fails the build with `M0268` instead of emitting a wasm that could wipe data on upgrade. This is the built-in backstop for `mops check` when `check-limit` trims the edited migration out of the folded check. Demote or silence the diagnostic on older `moc` as described under [`mops check`](./04-mops-check.md#stable-compatibility-checking). If the configured `.most` file does not exist, the build warns and compiles without the baseline; create it with an empty actor to enable the check.
 
 ## Candid Compatibility
 
-If a `candid` field is specified in the canister configuration, the build command will automatically check that the generated Candid interface is compatible with the specified interface.
+If a `candid` field is specified in the canister configuration, the build checks that the generated Candid interface is a compatible subtype of that file, then embeds the file as the Wasm's `candid:service` metadata.
 
-If the compatibility check fails, the build will fail with an error message.
+If the check fails, the build fails and prints why, for example the method that the generated interface is missing.
 
 For manual compatibility checking, see [`mops check-candid`](./06-mops-check-candid.md).
 

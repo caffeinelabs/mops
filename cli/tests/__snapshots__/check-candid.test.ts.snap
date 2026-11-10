@@ -3,7 +3,8 @@
 exports[`check-candid error 1`] = `
 {
   "exitCode": 1,
-  "stderr": "✖ Candid compatibility check failed",
+  "stderr": "✖ Candid compatibility check failed
+Method call: func () -> (text) is not a subtype of func (text) -> (nat): Subtype fails at function return type: Record field 0: text is not a subtype of nat: text is not a subtype of nat",
   "stdout": "",
 }
 `;
@@ -11,7 +12,8 @@ exports[`check-candid error 1`] = `
 exports[`check-candid error 2`] = `
 {
   "exitCode": 1,
-  "stderr": "✖ Candid compatibility check failed",
+  "stderr": "✖ Candid compatibility check failed
+Method call: func (text) -> (nat) is not a subtype of func () -> (text): Subtype fails at function input type: Record field 0: text is only in the expected type and is not of type opt, null or reserved",
   "stdout": "",
 }
 `;
@@ -19,7 +21,8 @@ exports[`check-candid error 2`] = `
 exports[`check-candid error 3`] = `
 {
   "exitCode": 1,
-  "stderr": "✖ Candid compatibility check failed",
+  "stderr": "✖ Candid compatibility check failed
+Method call: func () -> (ReturnValue) is not a subtype of func (text) -> (nat): Subtype fails at function return type: Record field 0: ReturnValue is not a subtype of nat: text is not a subtype of nat",
   "stdout": "",
 }
 `;
@@ -27,7 +30,8 @@ exports[`check-candid error 3`] = `
 exports[`check-candid error 4`] = `
 {
   "exitCode": 1,
-  "stderr": "✖ Candid compatibility check failed",
+  "stderr": "✖ Candid compatibility check failed
+Method call: func (text) -> (nat) is not a subtype of func () -> (ReturnValue): Subtype fails at function input type: Record field 0: text is only in the expected type and is not of type opt, null or reserved",
   "stdout": "",
 }
 `;

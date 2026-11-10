@@ -58,7 +58,7 @@ args = ["--release"]
 
 Bootstrap that `.most`: new project → `mops deployed init` (empty-actor baseline); already-deployed canister → build from the deployed commit, then `mops deployed`. After every deploy, run `mops deployed` to promote the just-built `.most` (see [`mops deployed`](#mops-deployed) below).
 
-Optional canister fields: `candid` (path to .did for compatibility checking), `initArg` (Candid-encoded init args).
+Optional canister fields: `candid` (path to a .did that the build checks the generated interface against and embeds as `candid:service` metadata), `initArg` (init args as Candid text, used by `--check-deploy`).
 
 ### Persistent Actors
 

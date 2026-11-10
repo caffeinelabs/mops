@@ -457,7 +457,7 @@ program
       "canister names to build (default: every canister in mops.toml)",
     ),
   )
-  .description("Build a canister")
+  .description("Build canisters")
   .addOption(verboseConsoleOption())
   .addOption(new Option("--output, -o <output>", "Output directory"))
   .addOption(

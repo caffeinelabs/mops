@@ -1,13 +1,13 @@
 import chalk from "chalk";
 import { execa } from "execa";
-import { exists } from "fs-extra";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { lock } from "proper-lockfile";
 import { CliError, cliError, cliErrorFrom, cliExit } from "../error.js";
 import { describeExecFailure } from "../helpers/exec-failure.js";
-import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
+import { checkCandidCompatibility } from "../helpers/candid-compatibility.js";
+import { getPocketIcUrl } from "../helpers/pocket-ic-startup.js";
 import {
   filterCanisters,
   resolveCanisterConfigs,
@@ -16,7 +16,7 @@ import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { checkOptimizeConfig, optimizeWasm } from "../helpers/optimize-wasm.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
-import { CustomSection, getWasmBindings } from "../wasm.js";
+import { replaceCandidService } from "../helpers/wasm-metadata.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
 import { Config } from "../types.js";
 import {
@@ -38,8 +38,9 @@ export interface BuildOptions {
 export const DEFAULT_BUILD_OUTPUT_DIR = ".mops/.build";
 
 /**
- * Resolve the build output directory: CLI override → `[build].outputDir`
- * (project-root-relative, resolved via `resolveConfigPath`) → default.
+ * Resolve the build output directory: the CLI override as given (relative to
+ * the current directory), else `[build].outputDir` or the default, both
+ * relative to the project root.
  */
 export function resolveBuildOutputDir(
   config: Config,
@@ -48,9 +49,7 @@ export function resolveBuildOutputDir(
   if (override) {
     return override;
   }
-  return config.build?.outputDir
-    ? resolveConfigPath(config.build.outputDir)
-    : DEFAULT_BUILD_OUTPUT_DIR;
+  return resolveConfigPath(config.build?.outputDir ?? DEFAULT_BUILD_OUTPUT_DIR);
 }
 
 export async function build(
@@ -75,10 +74,12 @@ export async function build(
     checkOptimizeConfig(config);
   }
   let mocPath = await toolchain.bin("moc");
-
-  if (!(await exists(outputDir))) {
-    await mkdir(outputDir, { recursive: true });
+  // Fail on a missing pin before compiling anything, like `[optimize]` does.
+  if (checkDeployEnabled && !getPocketIcUrl()) {
+    await toolchain.bin("pocket-ic");
   }
+
+  await mkdir(outputDir, { recursive: true });
 
   const filteredCanisters = filterCanisters(canisters, canisterNames);
   const checkDeployArtifacts: CheckDeployArtifact[] = [];
@@ -88,13 +89,12 @@ export async function build(
     const wasmPath = join(outputDir, `${canisterName}.wasm`);
     const mostPath = join(outputDir, `${canisterName}.most`);
 
-    // per-canister lock to prevent parallel builds of the same canister from clobbering output files
-    const lockTarget = join(outputDir, `.${canisterName}.buildlock`);
-    await writeFile(lockTarget, "", { flag: "a" });
-
+    // Keeps parallel builds of one canister from clobbering its output files.
+    // `realpath: false` lets the wasm not exist yet; the lock is `<wasm>.lock`.
     let release: (() => Promise<void>) | undefined;
     try {
-      release = await lock(lockTarget, {
+      release = await lock(wasmPath, {
+        realpath: false,
         stale: 300_000,
         retries: { retries: 60, minTimeout: 500, maxTimeout: 5_000 },
       });
@@ -123,6 +123,20 @@ export async function build(
       }
       const configuredMost =
         stableConfigPath && resolveConfigPath(stableConfigPath);
+      if (
+        configuredMost &&
+        !existsSync(configuredMost) &&
+        !canister["check-stable"]?.skipIfMissing
+      ) {
+        console.warn(
+          chalk.yellow(
+            `Warning: ${configuredMost} not found, so canister ${canisterName} builds without the --stable-baseline check.\n` +
+              `Create ${stableConfigPath} with an empty actor to enable it:\n` +
+              "  // Version: 1.0.0\n" +
+              "  actor { };",
+          ),
+        );
+      }
       const foldStableBaseline =
         !!configuredMost &&
         existsSync(configuredMost) &&
@@ -140,12 +154,8 @@ export async function build(
         ...prepared.args,
       ];
 
-      const isPublicCandid = true; // always true for now to reduce corner cases
-      const candidVisibility = isPublicCandid ? "icp:public" : "icp:private";
-      if (isPublicCandid) {
-        args.push("--public-metadata", "candid:service");
-        args.push("--public-metadata", "candid:args");
-      }
+      args.push("--public-metadata", "candid:service");
+      args.push("--public-metadata", "candid:args");
       try {
         if (options.verbose) {
           console.log(chalk.gray(mocPath, JSON.stringify(args)));
@@ -174,6 +184,12 @@ export async function build(
         if (options.verbose && result.stdout && result.stdout.trim()) {
           console.log(result.stdout);
         }
+        // An `-o` in the canister's moc args sends the Wasm elsewhere.
+        if (!existsSync(wasmPath)) {
+          cliError(
+            `moc did not write ${wasmPath} for canister ${canisterName}. Remove -o from the moc args and use --output or [build].outputDir instead.`,
+          );
+        }
 
         options.verbose &&
           console.log(chalk.gray(`Stable types written to ${mostPath}`));
@@ -183,72 +199,57 @@ export async function build(
           ? resolveConfigPath(canister.candid)
           : null;
 
+        // moc already embeds `candid:service` and `candid:args` generated from
+        // source. Only a declared interface file needs checking and swapping in.
         if (resolvedCandidPath) {
-          try {
-            const compatible = await isCandidCompatible(
-              generatedDidPath,
-              resolvedCandidPath,
-            );
-
-            if (!compatible) {
-              cliError(
-                `Candid compatibility check failed for canister ${canisterName}`,
-              );
-            }
-
-            if (options.verbose) {
-              console.log(
-                chalk.gray(
-                  `Candid compatibility check passed for canister ${canisterName}`,
-                ),
-              );
-            }
-          } catch (err) {
-            cliErrorFrom(
-              err,
-              `Error during Candid compatibility check for canister ${canisterName}`,
+          const incompatibility = await checkCandidCompatibility(
+            generatedDidPath,
+            resolvedCandidPath,
+          );
+          if (incompatibility) {
+            cliError(
+              `Candid compatibility check failed for canister ${canisterName}\n${incompatibility}`,
             );
           }
-        }
+          options.verbose &&
+            console.log(
+              chalk.gray(
+                `Candid compatibility check passed for canister ${canisterName}`,
+              ),
+            );
 
-        options.verbose &&
-          console.log(chalk.gray(`Adding metadata to ${wasmPath}`));
-        const candidPath = resolvedCandidPath ?? generatedDidPath;
-        const candidText = await readFile(candidPath, "utf-8");
-        const customSections: CustomSection[] = [
-          { name: `${candidVisibility} candid:service`, data: candidText },
-        ];
-        if (canister.initArg) {
-          customSections.push({
-            name: `${candidVisibility} candid:args`,
-            data: canister.initArg,
-          });
+          const curated = replaceCandidService(
+            await readFile(wasmPath),
+            await readFile(resolvedCandidPath, "utf-8"),
+          );
+          if (curated) {
+            await writeFile(wasmPath, curated);
+            options.verbose &&
+              console.log(
+                chalk.gray(
+                  `Embedded ${resolvedCandidPath} as candid:service in ${wasmPath}`,
+                ),
+              );
+          }
         }
-        const wasmBytes = await readFile(wasmPath);
-        const newWasm = getWasmBindings().add_custom_sections(
-          wasmBytes,
-          customSections,
-        );
-        await writeFile(wasmPath, newWasm);
         await optimizeWasm(wasmPath, config, {
           verbose: options.verbose,
           optimize: options.optimize,
         });
         if (checkWasmEnabled) {
-          runWasmComplexityPreflight(canisterName, await readFile(wasmPath));
+          runWasmComplexityPreflight(canisterName, await readFile(wasmPath), {
+            checkDeployEnabled,
+          });
         }
         if (checkDeployEnabled) {
           // Init args must be encoded against the Motoko-generated init
           // signature. A declared candid file is typically service-only and
           // has no init types.
-          const initCandidText = resolvedCandidPath
-            ? await readFile(generatedDidPath, "utf-8")
-            : candidText;
           checkDeployArtifacts.push({
             name: canisterName,
             wasmPath,
             mostPath,
-            initCandid: initCandidText,
+            initCandid: await readFile(generatedDidPath, "utf-8"),
             initArg: canister.initArg,
             wasmMemoryLimit: canister.wasmMemoryLimit,
           });

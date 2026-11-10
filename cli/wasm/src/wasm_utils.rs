@@ -1,35 +1,6 @@
-use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
-use std::io::{self, Read};
+use serde::Serialize;
 use walrus::ir::{self, BinaryOp, Instr, LoadKind, StoreKind, UnaryOp, Visitor};
-use walrus::{Module, RawCustomSection};
-
-pub const WASM_MAGIC_BYTES: &[u8] = &[0, 97, 115, 109];
-pub const GZIPPED_WASM_MAGIC_BYTES: &[u8] = &[31, 139, 8];
-pub const COMPLEXITY_REPORTING_THRESHOLD: usize = 750_000;
-
-#[derive(Debug)]
-pub enum Error {
-    IO(std::io::Error),
-    WasmParse(String),
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::IO(e) => write!(f, "IO error: {}", e),
-            Error::WasmParse(e) => write!(f, "WASM parse error: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CustomSection {
-    pub name: String,
-    pub data: String,
-}
+use walrus::Module;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,43 +35,23 @@ pub struct ComplexityBreakdown {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WasmComplexityAnalysis {
-    pub max_complexity: usize,
     pub risky_functions: Vec<FunctionComplexity>,
 }
 
-pub fn add_custom_sections(
+pub fn analyze_function_complexity(
     bytes: &[u8],
-    custom_sections: Vec<CustomSection>,
-) -> Result<Vec<u8>, Error> {
-    let mut module = parse_wasm(&bytes, false)?;
-    for m in &custom_sections {
-        module.customs.remove_raw(&m.name);
-    }
-    for m in custom_sections {
-        module.customs.add(RawCustomSection {
-            name: m.name,
-            data: m.data.as_bytes().to_vec(),
-        });
-    }
-    Ok(module.emit_wasm())
-}
-
-pub fn analyze_function_complexity(bytes: &[u8]) -> Result<WasmComplexityAnalysis, Error> {
-    let module = parse_wasm(bytes, true)?;
-    Ok(analyze_module_function_complexity(
-        &module,
-        COMPLEXITY_REPORTING_THRESHOLD,
-    ))
+    threshold: usize,
+) -> Result<WasmComplexityAnalysis, String> {
+    let module = parse_wasm(bytes)?;
+    Ok(analyze_module_function_complexity(&module, threshold))
 }
 
 fn analyze_module_function_complexity(module: &Module, limit: usize) -> WasmComplexityAnalysis {
-    let mut max_complexity = 0;
     let mut risky_functions = Vec::new();
 
     for (id, function) in module.funcs.iter_local() {
         let mut visitor = ComplexityVisitor::default();
         ir::dfs_in_order(&mut visitor, function, function.entry_block());
-        max_complexity = max_complexity.max(visitor.complexity);
 
         if visitor.complexity >= limit {
             risky_functions.push(FunctionComplexity {
@@ -113,16 +64,7 @@ fn analyze_module_function_complexity(module: &Module, limit: usize) -> WasmComp
         }
     }
 
-    risky_functions.sort_unstable_by(|a, b| {
-        b.complexity
-            .cmp(&a.complexity)
-            .then_with(|| a.index.cmp(&b.index))
-    });
-
-    WasmComplexityAnalysis {
-        max_complexity,
-        risky_functions,
-    }
+    WasmComplexityAnalysis { risky_functions }
 }
 
 #[derive(Default)]
@@ -245,36 +187,11 @@ fn binary_complexity(op: BinaryOp) -> usize {
     }
 }
 
-pub fn wasm_parser_config(keep_name_section: bool) -> walrus::ModuleConfig {
-    let mut config = walrus::ModuleConfig::new();
-    config.generate_name_section(keep_name_section);
-    config.generate_producers_section(false);
-    config
-}
-
-pub fn decompress(bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    let mut decoder = libflate::gzip::Decoder::new(bytes)?;
-    let mut decoded_data = Vec::new();
-    decoder.read_to_end(&mut decoded_data)?;
-    Ok(decoded_data)
-}
-
-pub fn parse_wasm(bytes: &[u8], keep_name_section: bool) -> Result<Module, Error> {
-    let wasm = if bytes.starts_with(WASM_MAGIC_BYTES) {
-        Ok(Cow::Borrowed(bytes))
-    } else if bytes.starts_with(GZIPPED_WASM_MAGIC_BYTES) {
-        decompress(bytes).map(Cow::Owned)
-    } else {
-        Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Input must be either gzipped or uncompressed WASM.",
-        ))
-    }
-    .map_err(Error::IO)?;
-    let config = wasm_parser_config(keep_name_section);
-    config
-        .parse(&wasm)
-        .map_err(|e| Error::WasmParse(e.to_string()))
+// Default config: function names are parsed, so warnings can name functions.
+pub fn parse_wasm(bytes: &[u8]) -> Result<Module, String> {
+    walrus::ModuleConfig::new()
+        .parse(bytes)
+        .map_err(|e| format!("Wasm parse error: {e}"))
 }
 
 #[cfg(test)]
@@ -328,10 +245,9 @@ mod tests {
 
     #[test]
     fn reports_functions_over_the_limit_with_metrics() {
-        let module = parse_wasm(BLOCK_AND_BRANCH_WASM, true).unwrap();
+        let module = parse_wasm(BLOCK_AND_BRANCH_WASM).unwrap();
         let analysis = analyze_module_function_complexity(&module, 99);
 
-        assert_eq!(analysis.max_complexity, 100);
         assert_eq!(
             analysis.risky_functions,
             vec![FunctionComplexity {
@@ -361,7 +277,7 @@ mod tests {
 
     #[test]
     fn reports_functions_at_the_threshold() {
-        let module = parse_wasm(BLOCK_AND_BRANCH_WASM, true).unwrap();
+        let module = parse_wasm(BLOCK_AND_BRANCH_WASM).unwrap();
         let analysis = analyze_module_function_complexity(&module, 100);
 
         assert_eq!(analysis.risky_functions.len(), 1);

@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import path from "path";
 import { cleanFixture } from "./build-helpers";
+import { listCustomSections } from "../helpers/wasm-metadata";
 import { cli, cliSnapshot } from "./helpers";
 import { RECOMMENDED_POCKET_IC_VERSION } from "../commands/toolchain/pocket-ic-versions";
 
@@ -24,6 +25,34 @@ describe("build", () => {
       await cliSnapshot(["build", "foo"], { cwd }, 0);
       await cliSnapshot(["build", "bar"], { cwd }, 0);
       await cliSnapshot(["build", "foo", "bar"], { cwd }, 0);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
+  test("keeps moc's metadata and name section, swapping in a declared .did", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    const sections = (canister: string) =>
+      new Map(
+        listCustomSections(
+          readFileSync(path.join(cwd, `.mops/.build/${canister}.wasm`)),
+        ).map((s) => [s.name, new TextDecoder().decode(s.data)]),
+      );
+    try {
+      await cli(["build"], { cwd });
+
+      const foo = sections("foo");
+      expect(foo.has("name")).toBe(true);
+      expect(foo.get("icp:public candid:service")).toMatch(/^service/m);
+      expect(foo.has("icp:public candid:args")).toBe(true);
+
+      const bar = sections("bar");
+      expect(bar.has("name")).toBe(true);
+      expect(bar.get("icp:public candid:service")).toBe(
+        readFileSync(path.join(cwd, "candid/bar.did"), "utf8"),
+      );
+      // moc's init argument types, not the fixture's `initArg` value.
+      expect(bar.get("icp:public candid:args")).toBe("()");
     } finally {
       cleanFixture(cwd);
     }
