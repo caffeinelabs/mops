@@ -55,6 +55,8 @@ export async function prepareMocArgs(
     cliError(`No main file is specified for canister ${canisterName}`);
   }
   const motokoPath = resolveConfigPath(canister.main);
+  // Before staging the migration chain, so a rejection leaves nothing behind.
+  validateCanisterArgs(canister, canisterName, config);
 
   const migration = await prepareMigrationArgs(
     canister.migrations,
@@ -98,8 +100,6 @@ function collectExtraArgs(
     }
     args.push(...config.build.args);
   }
-  // Also checks `[moc].args` and `[build].args`, so it runs without `args`.
-  validateCanisterArgs(canister, canisterName, config);
   if (canister.args) {
     args.push(...canister.args);
   }

@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { execa } from "execa";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { lock } from "proper-lockfile";
 import { CliError, cliError, cliErrorFrom, cliExit } from "../error.js";
@@ -121,8 +121,11 @@ export async function build(
           `[canisters.${canisterName}.check-stable].path`,
         );
       }
+      // Only migration builds take a baseline (moc 1.15+, --enhanced-migration).
       const configuredMost =
-        stableConfigPath && resolveConfigPath(stableConfigPath);
+        stableConfigPath && canUseStableBaselineCheck(prepared.args)
+          ? resolveConfigPath(stableConfigPath)
+          : null;
       if (
         configuredMost &&
         !existsSync(configuredMost) &&
@@ -131,17 +134,12 @@ export async function build(
         console.warn(
           chalk.yellow(
             `Warning: ${configuredMost} not found, so canister ${canisterName} builds without the --stable-baseline check.\n` +
-              `Create ${stableConfigPath} with an empty actor to enable it:\n` +
-              "  // Version: 1.0.0\n" +
-              "  actor { };",
+              `Before the first deploy, run \`mops deployed init ${canisterName}\` to create an empty-actor baseline.`,
           ),
         );
       }
-      const foldStableBaseline =
-        !!configuredMost &&
-        existsSync(configuredMost) &&
-        canUseStableBaselineCheck(prepared.args);
-      const stableBaseline = foldStableBaseline ? configuredMost : null;
+      const stableBaseline =
+        configuredMost && existsSync(configuredMost) ? configuredMost : null;
 
       let args = [
         "-c",
@@ -156,7 +154,14 @@ export async function build(
 
       args.push("--public-metadata", "candid:service");
       args.push("--public-metadata", "candid:args");
+      const generatedDidPath = join(outputDir, `${canisterName}.did`);
       try {
+        // Outputs of an earlier build must not pass for this one's.
+        await Promise.all(
+          [wasmPath, generatedDidPath, mostPath].map((p) =>
+            rm(p, { force: true }),
+          ),
+        );
         if (options.verbose) {
           console.log(chalk.gray(mocPath, JSON.stringify(args)));
         }
@@ -194,7 +199,6 @@ export async function build(
         options.verbose &&
           console.log(chalk.gray(`Stable types written to ${mostPath}`));
 
-        const generatedDidPath = join(outputDir, `${canisterName}.did`);
         const resolvedCandidPath = canister.candid
           ? resolveConfigPath(canister.candid)
           : null;
@@ -230,6 +234,12 @@ export async function build(
                   `Embedded ${resolvedCandidPath} as candid:service in ${wasmPath}`,
                 ),
               );
+          } else {
+            console.warn(
+              chalk.yellow(
+                `Warning: ${wasmPath} has no candid:service section (--omit-metadata candid:service?), so ${resolvedCandidPath} is not embedded`,
+              ),
+            );
           }
         }
         await optimizeWasm(wasmPath, config, {
