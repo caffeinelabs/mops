@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { execa } from "execa";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { lock } from "proper-lockfile";
 import { CliError, cliError, cliErrorFrom, cliExit } from "../error.js";
@@ -16,7 +16,6 @@ import { BUILD_MANAGED_FLAGS, prepareMocArgs } from "../helpers/moc-args.js";
 import { checkOptimizeConfig, optimizeWasm } from "../helpers/optimize-wasm.js";
 import type { CheckDeployArtifact } from "../helpers/check-deploy.js";
 import { runWasmComplexityPreflight } from "../helpers/wasm-complexity.js";
-import { replaceCandidService } from "../helpers/wasm-metadata.js";
 import { readConfig, resolveConfigPath } from "../mops.js";
 import { Config } from "../types.js";
 import {
@@ -194,8 +193,8 @@ export async function build(
           ? resolveConfigPath(canister.candid)
           : null;
 
-        // moc already embeds `candid:service` and `candid:args` generated from
-        // source. Only a declared interface file needs checking and swapping in.
+        // A declared interface is a gate on breaking changes. moc's own
+        // `candid:service` is what ships in the Wasm.
         if (resolvedCandidPath) {
           const incompatibility = await checkCandidCompatibility(
             generatedDidPath,
@@ -212,26 +211,6 @@ export async function build(
                 `Candid compatibility check passed for canister ${canisterName}`,
               ),
             );
-
-          const curated = replaceCandidService(
-            await readFile(wasmPath),
-            await readFile(resolvedCandidPath, "utf-8"),
-          );
-          if (curated) {
-            await writeFile(wasmPath, curated);
-            options.verbose &&
-              console.log(
-                chalk.gray(
-                  `Embedded ${resolvedCandidPath} as candid:service in ${wasmPath}`,
-                ),
-              );
-          } else {
-            console.warn(
-              chalk.yellow(
-                `Warning: ${wasmPath} has no candid:service section (--omit-metadata candid:service?), so ${resolvedCandidPath} is not embedded`,
-              ),
-            );
-          }
         }
         await optimizeWasm(wasmPath, config, {
           verbose: options.verbose,

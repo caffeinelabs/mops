@@ -78,4 +78,4 @@ All canisters share one directory. Path is relative to `mops.toml`.
 
 ## Why not handle `.did` here too?
 
-`.did` is a curated build-input contract (subtype-checked and embedded into the wasm by `mops build`), not a deploy artifact — its lifecycle is interface-change-driven, not deploy-driven. `mops deployed` only handles `.most`.
+`.did` is a curated build-input contract (subtype-checked by `mops build`), not a deploy artifact — its lifecycle is interface-change-driven, not deploy-driven. `mops deployed` only handles `.most`.

@@ -4,7 +4,6 @@ import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import path from "path";
 import { cleanFixture } from "./build-helpers";
-import { listCustomSections } from "../helpers/wasm-metadata";
 import { cli, cliSnapshot } from "./helpers";
 import { RECOMMENDED_POCKET_IC_VERSION } from "../commands/toolchain/pocket-ic-versions";
 
@@ -30,29 +29,27 @@ describe("build", () => {
     }
   });
 
-  test("keeps moc's metadata and name section, swapping in a declared .did", async () => {
+  test("writes moc's Wasm unchanged, even with a declared .did", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
-    const sections = (canister: string) =>
-      new Map(
-        listCustomSections(
-          readFileSync(path.join(cwd, `.mops/.build/${canister}.wasm`)),
-        ).map((s) => [s.name, new TextDecoder().decode(s.data)]),
-      );
     try {
-      await cli(["build"], { cwd });
+      const result = await cli(["build", "bar", "--verbose"], { cwd });
+      expect(result.exitCode).toBe(0);
+      // The verbose moc invocation: `<moc path> ["-c", ...]`.
+      const line = result.stdout
+        .split("\n")
+        .find((l) => l.includes(' ["-c",'))!;
+      const split = line.indexOf(' ["-c",');
+      const args: string[] = JSON.parse(line.slice(split + 1));
+      const built = path.join(cwd, ".mops/.build/bar.wasm");
+      const raw = path.join(cwd, ".mops/.build/raw.wasm");
+      args[args.indexOf("-o") + 1] = raw;
+      await execa(line.slice(0, split), args, { cwd });
 
-      const foo = sections("foo");
-      expect(foo.has("name")).toBe(true);
-      expect(foo.get("icp:public candid:service")).toMatch(/^service/m);
-      expect(foo.has("icp:public candid:args")).toBe(true);
-
-      const bar = sections("bar");
-      expect(bar.has("name")).toBe(true);
-      expect(bar.get("icp:public candid:service")).toBe(
-        readFileSync(path.join(cwd, "candid/bar.did"), "utf8"),
-      );
-      // moc's init argument types, not the fixture's `initArg` value.
-      expect(bar.get("icp:public candid:args")).toBe("()");
+      expect(readFileSync(built).equals(readFileSync(raw))).toBe(true);
+      // Not in the CLI's TypeScript lib, but always there in Node.
+      const { Module } = (globalThis as any).WebAssembly;
+      const module = new Module(readFileSync(built));
+      expect(Module.customSections(module, "name")).toHaveLength(1);
     } finally {
       cleanFixture(cwd);
     }

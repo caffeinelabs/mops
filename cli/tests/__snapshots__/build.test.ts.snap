@@ -55,7 +55,6 @@ build canister bar
 <CACHE><MOC> ["-c","--idl","--stable-types","-o",".mops/.build/bar.wasm","src/Bar.mo","--package","core",".mops/core@1.0.0/src","--release","--incremental-gc","--public-metadata","candid:service","--public-metadata","candid:args"]
 Stable types written to .mops/.build/bar.most
 Candid compatibility check passed for canister bar
-Embedded candid/bar.did as candid:service in .mops/.build/bar.wasm
 
 ✓ Built 2 canisters successfully",
 }

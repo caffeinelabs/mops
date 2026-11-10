@@ -58,7 +58,7 @@ args = ["--release"]
 
 Bootstrap that `.most`: new project → `mops deployed init` (empty-actor baseline); already-deployed canister → build from the deployed commit, then `mops deployed`. After every deploy, run `mops deployed` to promote the just-built `.most` (see [`mops deployed`](#mops-deployed) below).
 
-Optional canister fields: `candid` (path to a .did that the build checks the generated interface against and embeds as `candid:service` metadata), `initArg` (init args as Candid text, used by `--check-deploy`).
+Optional canister fields: `candid` (path to .did for compatibility checking), `initArg` (init args as Candid text, used by `--check-deploy`).
 
 ### Persistent Actors
 
@@ -167,7 +167,7 @@ mops build -- --ai-errors # pass extra moc flags
 
 Produces `.wasm`, `.did`, and `.most` files in `[build].outputDir` (default `.mops/.build`).
 
-With `[optimize]` in `mops.toml`, runs `wasm-opt` after candid metadata (default `-O3 -g`). Requires a Binaryen pin: `mops toolchain use wasm-opt 131`. Build commands never write the pin themselves, and a `wasm-opt` failure fails the build. Pass `--no-optimize` (on `build` or `bench`) to skip the pass for a single run without editing `mops.toml`.
+With `[optimize]` in `mops.toml`, runs `wasm-opt` on the compiled Wasm (default `-O3 -g`). Requires a Binaryen pin: `mops toolchain use wasm-opt 131`. Build commands never write the pin themselves, and a `wasm-opt` failure fails the build. Pass `--no-optimize` (on `build` or `bench`) to skip the pass for a single run without editing `mops.toml`.
 
 When `--check-wasm` or `[build].check-wasm = true` is enabled, Mops runs fast Walrus analysis on the final Wasm without starting PocketIC. Per-function IC0505 complexity below 750,000 is quiet, 750,000 through 899,999 emits an early warning, and 900,000 or more emits a critical warning. `MOPS-WASM-COMPLEXITY` output includes actionable function metrics, the three largest complexity contributors, and Motoko correction guidance. The estimate never fails the build. Use `--no-check-wasm` to skip configured analysis once.
 

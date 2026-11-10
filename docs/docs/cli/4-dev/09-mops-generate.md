@@ -15,7 +15,7 @@ mops generate candid [canisters...]
 
 (Re)generate the curated `.did` Candid interface file for one or more canisters from the current Motoko source.
 
-The committed `.did` is what `mops build` subtype-checks against and embeds into the canister wasm, and what tools like [`@icp-sdk/bindgen`](https://www.npmjs.com/package/@icp-sdk/bindgen) read to generate frontend bindings. Refresh it whenever the Motoko interface changes; commit alongside the source change.
+The committed `.did` is what `mops build` subtype-checks against, and what tools like [`@icp-sdk/bindgen`](https://www.npmjs.com/package/@icp-sdk/bindgen) read to generate frontend bindings. Refresh it whenever the Motoko interface changes; commit alongside the source change.
 
 Canister selection mirrors `mops build`: with no arguments, all canisters in `[canisters]` are processed; otherwise only the named ones (unknown names error).
 
@@ -73,4 +73,4 @@ When `moc` fails, neither the destination file nor `mops.toml` is touched.
 
 ## Relation to `mops build`
 
-`mops build` subtype-checks the auto-generated interface against `[canisters.<name>].candid` (when set) and embeds the curated file as `candid:service` metadata. Use `mops generate candid` to keep that curated file in sync with source. The two commands share moc invocation logic so the generated `.did` always passes the build's compatibility check.
+`mops build` subtype-checks the auto-generated interface against `[canisters.<name>].candid` (when set). The Wasm carries the interface `moc` generates, not the curated file. Use `mops generate candid` to keep that curated file in sync with source. The two commands share moc invocation logic so the generated `.did` always passes the build's compatibility check.

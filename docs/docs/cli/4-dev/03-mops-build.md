@@ -17,13 +17,13 @@ Canisters must be defined in the `[canisters]` section of your `mops.toml` file.
 
 For each canister, three files are written to the output directory (default `.mops/.build`):
 
-- `<canister>.wasm` — compiled WebAssembly module, with Candid metadata embedded and the `name` section kept
+- `<canister>.wasm` — compiled WebAssembly module, as `moc` writes it
 - `<canister>.did` — generated Candid interface
 - `<canister>.most` — Motoko stable types signature (used for upgrade safety checking)
 
-`moc` embeds the generated Candid interface as `candid:service` metadata and the init argument types as `candid:args`, both public. If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against that file, and the file replaces the generated interface in `candid:service`. If `--omit-metadata candid:service` in the `moc` args removes the section, the build warns and embeds nothing. Every other section `moc` emits, including the `name` section that gives traps readable backtraces, is kept byte for byte.
+`moc` embeds the generated Candid interface as `candid:service` metadata and the init argument types as `candid:args`, both public. `mops build` doesn't change the Wasm `moc` writes, so its `name` section, which gives traps readable backtraces, is kept. If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against that file.
 
-When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm **after** the Candid metadata is in place. Defaults are `-O3 -g` (see the config reference). Requires a `[toolchain] wasm-opt` pin, and a `wasm-opt` failure fails the build. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
+When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm after compilation. Defaults are `-O3 -g` (see the config reference). Requires a `[toolchain] wasm-opt` pin, and a `wasm-opt` failure fails the build. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
 
 When `--check-wasm` or `[build].check-wasm = true` enables static validation, Mops uses Walrus to estimate each function's IC0505 compilation complexity in the final Wasm:
 
@@ -119,7 +119,7 @@ mops build --no-check-wasm
 
 ### `--check-deploy`
 
-Install each built Wasm on a fresh PocketIC canister after compilation, metadata embedding, and optimization. A missing `pocket-ic` pin fails the build before any canister compiles. The build fails if PocketIC rejects the Wasm or the canister initialization traps. Initialization uses the canister's configured `initArg`, or `()` when it is omitted.
+Install each built Wasm on a fresh PocketIC canister after compilation and optimization. A missing `pocket-ic` pin fails the build before any canister compiles. The build fails if PocketIC rejects the Wasm or the canister initialization traps. Initialization uses the canister's configured `initArg`, or `()` when it is omitted.
 
 Enable the same validation for every plain `mops build` invocation:
 ```toml
@@ -178,7 +178,7 @@ Each canister configuration supports:
 - `main` - Path to the main Motoko file (required)
 - `args` - Additional compiler arguments for this specific canister (optional)
 - `initArg` - Init arguments as Candid text, such as `("Hello")`, used by [`--check-deploy`](#--check-deploy) (optional)
-- `candid` - Path to a Candid interface file (optional). The build checks the generated interface against it and embeds it as `candid:service` metadata
+- `candid` - Path to the Candid interface file (optional, for compatibility checking)
 - `wasmMemoryLimit` - Wasm memory limit in bytes applied by [`--check-deploy`](#--check-deploy) (optional)
 - `[canisters.<name>.migrations]` and `[canisters.<name>.check-stable]` subtables — see the [`mops.toml` reference](../../09-mops.toml.md#canisters)
 
@@ -209,7 +209,7 @@ When a canister also sets [`[canisters.<name>.check-stable].path`](../../09-mops
 
 ## Candid Compatibility
 
-If a `candid` field is specified in the canister configuration, the build checks that the generated Candid interface is a compatible subtype of that file, then embeds the file as the Wasm's `candid:service` metadata.
+If a `candid` field is specified in the canister configuration, the build checks that the generated Candid interface is a compatible subtype of that file. The file is not embedded in the Wasm.
 
 If the check fails, the build fails and prints why, for example the method that the generated interface is missing.
 
