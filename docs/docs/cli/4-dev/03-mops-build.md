@@ -21,7 +21,7 @@ For each canister, three files are written to the output directory (default `.mo
 - `<canister>.did` — generated Candid interface
 - `<canister>.most` — Motoko stable types signature (used for upgrade safety checking)
 
-`moc` embeds the generated Candid interface as `candid:service` metadata and the init argument types as `candid:args`, both public. `mops build` doesn't change the Wasm `moc` writes, so its `name` section, which gives traps readable backtraces, is kept. If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against that file.
+`moc` embeds the canister's methods as `candid:service` metadata and its init argument types as `candid:args`, both public. Unlike the generated `.did`, `candid:service` has no init signature. `mops build` doesn't change the Wasm `moc` writes, so its `name` section, which gives traps readable backtraces, is kept. If the canister config sets a `candid` field, the generated `.did` is also checked for compatibility against that file.
 
 When [`[optimize]`](../../09-mops.toml.md#optimize) is set in `mops.toml`, mops runs Binaryen `wasm-opt` on the Wasm after compilation. Defaults are `-O3 -g` (see the config reference). Requires a `[toolchain] wasm-opt` pin, and a `wasm-opt` failure fails the build. Pass [`--no-optimize`](#--no-optimize) to skip this pass for a single run.
 
@@ -70,7 +70,7 @@ Pass additional arguments to the Motoko compiler
 mops build -- --release --ai-errors
 ```
 
-`mops build` rejects `moc`'s own `-o` there, and in `[build].args` or `[canisters.<name>].args`. Set the output directory with `--output` or `[build].outputDir` instead.
+`mops build` rejects `moc`'s own `-o` there, and in `[moc].args`, `[build].args`, or `[canisters.<name>].args`. Set the output directory with `--output` or `[build].outputDir` instead.
 
 ## Options
 

@@ -56,15 +56,62 @@ describe("build pipeline", () => {
     }
   });
 
-  test("rejects -o in the moc args before compiling", async () => {
-    const cwd = project({ "mops.toml": MOPS_TOML, "src/Main.mo": ACTOR });
+  test.each([
+    ["build", ["build", "--", "-o", "x.wasm"], ""],
+    ["build", ["build", "--", "-o=x.wasm"], ""],
+    ["build", ["build"], '[moc]\nargs = ["-o", "x.wasm"]'],
+    ["build", ["build"], '[build]\nargs = ["-o=x.wasm"]'],
+    ["generate candid", ["generate", "candid", "--", "-o", "x.did"], ""],
+  ])(
+    "mops %s rejects -o in the moc args before compiling (%j)",
+    async (command, args, extraToml) => {
+      const cwd = project({
+        "mops.toml": `${extraToml}\n${MOPS_TOML}`,
+        "src/Main.mo": ACTOR,
+      });
+      try {
+        const result = await cli(args, { cwd });
+        expect(result.exitCode).toBe(1);
+        expect(result.stderr).toMatch(
+          `'-o' in the moc args for canister main is not supported by mops ${command}`,
+        );
+        expect(readdirSync(cwd).filter((f) => f.startsWith("x."))).toEqual([]);
+      } finally {
+        rmSync(cwd, { recursive: true, force: true });
+      }
+    },
+  );
+
+  test("a rejected -o leaves no staged migration chain", async () => {
+    const cwd = project({});
+    const fixture = path.join(
+      import.meta.dirname,
+      "check-stable/migrations-chain",
+    );
+    for (const dir of ["src", "migrations"]) {
+      cpSync(path.join(fixture, dir), path.join(cwd, dir), {
+        recursive: true,
+      });
+    }
+    writeFileSync(
+      path.join(cwd, "mops.toml"),
+      [
+        "[toolchain]",
+        'moc = "1.16.1"',
+        "[moc]",
+        'args = ["--default-persistent-actors"]',
+        "[canisters.backend]",
+        'main = "src/main.mo"',
+        "[canisters.backend.migrations]",
+        'chain = "migrations"',
+        "build-limit = 1",
+      ].join("\n"),
+    );
     try {
       const result = await cli(["build", "--", "-o", "x.wasm"], { cwd });
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch(
-        "'-o' in args for canister main is not supported by mops build",
-      );
-      expect(existsSync(path.join(cwd, "x.wasm"))).toBe(false);
+      expect(result.stderr).toMatch("'-o' in the moc args");
+      expect(existsSync(path.join(cwd, ".migrations-backend"))).toBe(false);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

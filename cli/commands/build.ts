@@ -179,7 +179,7 @@ export async function build(
         if (options.verbose && result.stdout && result.stdout.trim()) {
           console.log(result.stdout);
         }
-        // An `-o` in the canister's moc args sends the Wasm elsewhere.
+        // A last safeguard: `-o` in the moc args is rejected before compiling.
         if (!existsSync(wasmPath)) {
           cliError(
             `moc did not write ${wasmPath} for canister ${canisterName}`,

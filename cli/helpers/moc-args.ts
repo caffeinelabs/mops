@@ -56,6 +56,7 @@ export async function prepareMocArgs(
   const motokoPath = resolveConfigPath(canister.main);
   // Before staging the migration chain, so a rejection leaves nothing behind.
   validateCanisterArgs(canister, canisterName, config);
+  const globalArgs = getGlobalMocArgs(config);
   const extraArgs = collectExtraArgs(
     config,
     canister,
@@ -64,6 +65,14 @@ export async function prepareMocArgs(
     options.commandName,
     options.extraArgs,
   );
+  // moc would write its output where mops never looks.
+  if (
+    [...globalArgs, ...extraArgs].some((a) => a === "-o" || a.startsWith("-o="))
+  ) {
+    cliError(
+      `'-o' in the moc args for canister ${canisterName} is not supported by ${options.commandName} — ${options.managedFlags["-o"]}`,
+    );
+  }
 
   const migration = await prepareMigrationArgs(
     canister.migrations,
@@ -74,7 +83,7 @@ export async function prepareMocArgs(
 
   const args = [
     ...(await sourcesArgs()).flat(),
-    ...getGlobalMocArgs(config),
+    ...globalArgs,
     ...migration.migrationArgs,
     ...extraArgs,
   ];
@@ -105,13 +114,6 @@ function collectExtraArgs(
   }
   if (extraArgs) {
     args.push(...extraArgs);
-  }
-
-  // moc would write its output where mops never looks.
-  if (args.includes("-o")) {
-    cliError(
-      `'-o' in args for canister ${canisterName} is not supported by ${commandName} — ${managedFlags["-o"]}`,
-    );
   }
 
   const warned = new Set<string>();
