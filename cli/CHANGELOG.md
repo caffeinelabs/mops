@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 3.6.0
 - `mops build` keeps the Wasm `name` section that `moc` emits, so a trap on the IC shows Motoko function names in its backtrace instead of bare function indices (#901). Adding the Candid metadata re-encoded the whole module and dropped the section, and `[optimize] keep-names` and `ic-wasm --keep-name-section` ran too late to bring it back. `moc` already embeds `candid:service` and `candid:args`, so `mops build` no longer rewrites `moc`'s output. Only `[optimize]`, when set, still changes the Wasm.
 - **Behaviour change**: `mops build` no longer embeds a `.did` file as `candid:service` metadata: neither a canister's `candid` file nor, without one, the generated `.did`. The Wasm carries the interface `moc` embeds, which has no init signature such as `(start : nat) ->`, so this changes `candid:service` for every actor class; the init argument types are in `candid:args`. `candid` still fails the build on a breaking interface change. `moc` has no input for a canister's own interface, so the swap patched its output after the fact, and a hand-edited file could hide methods the canister still has. Migration: tooling that read init types or a hand-edited interface out of `candid:service` should read `candid:args`, or the `.did` file itself.
 - `mops build` no longer overwrites the `candid:args` metadata with `initArg`. By IC convention `candid:args` holds the init argument types, such as `(nat)`, which `moc` writes; `initArg` is a value, such as `(42)`, so tools that read the section got a value where they expected types. `initArg` is now used only by `--check-deploy`.
