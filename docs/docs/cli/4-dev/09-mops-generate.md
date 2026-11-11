@@ -51,6 +51,8 @@ Pass additional arguments to the Motoko compiler
 mops generate candid -- -Werror
 ```
 
+`moc`'s own `-o` is rejected there, and in `[build].args` or `[canisters.<name>].args`. Use `mops generate candid --output` instead.
+
 ## Options
 
 ### `--output`, `-o`

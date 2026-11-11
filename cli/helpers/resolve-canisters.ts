@@ -114,7 +114,9 @@ export function validateCanisterArgs(
   ];
   for (const [section, args] of flagSources) {
     if (args !== undefined && !Array.isArray(args)) {
-      cliError(`${section} should be an array of strings in mops.toml`);
+      cliError(
+        `${section.replace(/\.args$/, "")} config 'args' should be an array of strings in mops.toml config file`,
+      );
     }
     if (args?.some((a) => a.startsWith("--enhanced-migration"))) {
       cliError(

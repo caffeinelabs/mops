@@ -112,17 +112,14 @@ describe("build", () => {
 
   test("warns when args contain managed flags", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
-    const artifact = path.join(cwd, "x");
-    const artifactDid = path.join(cwd, "x.did");
-
     try {
       await cliSnapshot(
-        ["build", "foo", "--", "-o", "x", "-c", "--idl", "--stable-types"],
+        ["build", "foo", "--", "-c", "--idl", "--stable-types"],
         { cwd },
-        1,
+        0,
       );
     } finally {
-      cleanFixture(cwd, artifact, artifactDid);
+      cleanFixture(cwd);
     }
   });
 

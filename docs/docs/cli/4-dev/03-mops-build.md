@@ -17,7 +17,7 @@ Canisters must be defined in the `[canisters]` section of your `mops.toml` file.
 
 For each canister, three files are written to the output directory (default `.mops/.build`):
 
-- `<canister>.wasm` — compiled WebAssembly module, as `moc` writes it
+- `<canister>.wasm` — compiled WebAssembly module, as `moc` writes it (then optimized, if `[optimize]` is set)
 - `<canister>.did` — generated Candid interface
 - `<canister>.most` — Motoko stable types signature (used for upgrade safety checking)
 
@@ -69,6 +69,8 @@ Pass additional arguments to the Motoko compiler
 ```
 mops build -- --release --ai-errors
 ```
+
+`mops build` rejects `moc`'s own `-o` there, and in `[build].args` or `[canisters.<name>].args`. Set the output directory with `--output` or `[build].outputDir` instead.
 
 ## Options
 
@@ -205,7 +207,7 @@ When a canister has a `[canisters.<name>.migrations]` section in `mops.toml`, `m
 
 If `mops check` passes but `mops build` fails while [`check-limit`](./08-mops-migrate.md#chain-trimming) is set, re-run `mops check --no-check-limit` to surface the issue — `check` trims the chain, while `build` compiles all of it.
 
-When a canister also sets [`[canisters.<name>.check-stable].path`](../../09-mops.toml.md#canistersnamecheck-stable), `mops build` passes the deployed `.most` to `moc` as `--stable-baseline` for that canister. `moc` then validates the migration directory against the migration history recorded in the baseline, so an applied migration that was edited, deleted, or backdated fails the build with `M0268` instead of emitting a wasm that could wipe data on upgrade. This is the built-in backstop for `mops check` when `check-limit` trims the edited migration out of the folded check. Demote or silence the diagnostic on older `moc` as described under [`mops check`](./04-mops-check.md#stable-compatibility-checking). If the configured `.most` file does not exist, the build fails, as `mops check` and `mops check-stable` do. Before the first deploy, run [`mops deployed init <canister>`](./09-mops-deployed.md) to create an empty-actor baseline.
+When a canister also sets [`[canisters.<name>.check-stable].path`](../../09-mops.toml.md#canistersnamecheck-stable), `mops build` passes the deployed `.most` to `moc` as `--stable-baseline` for that canister. `moc` then validates the migration directory against the migration history recorded in the baseline, so an applied migration that was edited, deleted, or backdated fails the build with `M0268` instead of emitting a wasm that could wipe data on upgrade. This is the built-in backstop for `mops check` when `check-limit` trims the edited migration out of the folded check. Demote or silence the diagnostic on older `moc` as described under [`mops check`](./04-mops-check.md#stable-compatibility-checking). On `moc` 1.15 or later, which the baseline check requires, a configured `.most` file that does not exist fails the build, as it fails `mops check` and `mops check-stable`. Before the first deploy, run [`mops deployed init <canister>`](./09-mops-deployed.md) to create an empty-actor baseline.
 
 ## Candid Compatibility
 

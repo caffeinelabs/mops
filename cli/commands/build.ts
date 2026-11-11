@@ -182,7 +182,7 @@ export async function build(
         // An `-o` in the canister's moc args sends the Wasm elsewhere.
         if (!existsSync(wasmPath)) {
           cliError(
-            `moc did not write ${wasmPath} for canister ${canisterName}. Remove -o from the moc args and use --output or [build].outputDir instead.`,
+            `moc did not write ${wasmPath} for canister ${canisterName}`,
           );
         }
 

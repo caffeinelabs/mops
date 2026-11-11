@@ -93,12 +93,12 @@ build canister bar
 
 exports[`build warns when args contain managed flags 1`] = `
 {
-  "exitCode": 1,
-  "stderr": "Warning: '-o' in args for canister foo may conflict with mops build — use [build].outputDir in mops.toml or --output flag instead
-Warning: '-c' in args for canister foo may conflict with mops build — this flag is always set by mops build
+  "exitCode": 0,
+  "stderr": "Warning: '-c' in args for canister foo may conflict with mops build — this flag is always set by mops build
 Warning: '--idl' in args for canister foo may conflict with mops build — this flag is always set by mops build
-Warning: '--stable-types' in args for canister foo may conflict with mops build — this flag is always set by mops build
-moc did not write .mops/.build/foo.wasm for canister foo. Remove -o from the moc args and use --output or [build].outputDir instead.",
-  "stdout": "build canister foo",
+Warning: '--stable-types' in args for canister foo may conflict with mops build — this flag is always set by mops build",
+  "stdout": "build canister foo
+
+✓ Built 1 canister successfully",
 }
 `;

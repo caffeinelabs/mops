@@ -7,9 +7,8 @@ import { prepareMigrationArgs } from "./migrations.js";
 import { validateCanisterArgs } from "./resolve-canisters.js";
 
 /** Single source of truth for "how moc is invoked for canister X" — keeps
- * `mops build` and `mops generate candid` in lockstep so the auto-generated
- * `.did` they each produce stays subtype-compatible with the curated one
- * embedded by `mops build`. */
+ * `mops build` and `mops generate candid` in lockstep, so the `.did` that
+ * `mops generate candid` writes passes `mops build`'s compatibility check. */
 export interface PrepareMocArgsOptions {
   /** Selects the migration trim limit (`build-limit` vs `check-limit`). */
   mode: "check" | "build";
@@ -57,6 +56,14 @@ export async function prepareMocArgs(
   const motokoPath = resolveConfigPath(canister.main);
   // Before staging the migration chain, so a rejection leaves nothing behind.
   validateCanisterArgs(canister, canisterName, config);
+  const extraArgs = collectExtraArgs(
+    config,
+    canister,
+    canisterName,
+    options.managedFlags,
+    options.commandName,
+    options.extraArgs,
+  );
 
   const migration = await prepareMigrationArgs(
     canister.migrations,
@@ -69,14 +76,7 @@ export async function prepareMocArgs(
     ...(await sourcesArgs()).flat(),
     ...getGlobalMocArgs(config),
     ...migration.migrationArgs,
-    ...collectExtraArgs(
-      config,
-      canister,
-      canisterName,
-      options.managedFlags,
-      options.commandName,
-      options.extraArgs,
-    ),
+    ...extraArgs,
   ];
 
   return { motokoPath, args, cleanup: migration.cleanup };
@@ -105,6 +105,13 @@ function collectExtraArgs(
   }
   if (extraArgs) {
     args.push(...extraArgs);
+  }
+
+  // moc would write its output where mops never looks.
+  if (args.includes("-o")) {
+    cliError(
+      `'-o' in args for canister ${canisterName} is not supported by ${commandName} — ${managedFlags["-o"]}`,
+    );
   }
 
   const warned = new Set<string>();

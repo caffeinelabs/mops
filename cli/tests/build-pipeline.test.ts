@@ -9,7 +9,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "path";
-import { cleanFixture } from "./build-helpers";
 import { cli } from "./helpers";
 
 // Throwaway projects for build-pipeline edge cases that no committed fixture
@@ -27,18 +26,25 @@ function project(files: Record<string, string>): string {
 }
 
 const ACTOR = "persistent actor { public func ping() : async () {} };\n";
+const MOPS_TOML = [
+  "[toolchain]",
+  'moc = "1.16.1"',
+  "[canisters.main]",
+  'main = "src/Main.mo"',
+].join("\n");
 
 describe("build pipeline", () => {
   jest.setTimeout(120_000);
 
   test("from a subdirectory, writes to the project root and leaves no lock files", async () => {
-    const cwd = path.join(import.meta.dirname, "build/success");
+    const cwd = project({
+      "mops.toml": MOPS_TOML,
+      "src/Main.mo": ACTOR,
+    });
     try {
-      const result = await cli(["build", "foo"], {
-        cwd: path.join(cwd, "src"),
-      });
+      const result = await cli(["build"], { cwd: path.join(cwd, "src") });
       expect(result.exitCode).toBe(0);
-      expect(existsSync(path.join(cwd, ".mops/.build/foo.wasm"))).toBe(true);
+      expect(existsSync(path.join(cwd, ".mops/.build/main.wasm"))).toBe(true);
       expect(existsSync(path.join(cwd, "src/.mops"))).toBe(false);
       expect(
         readdirSync(path.join(cwd, ".mops/.build")).filter((f) =>
@@ -46,26 +52,21 @@ describe("build pipeline", () => {
         ),
       ).toEqual([]);
     } finally {
-      cleanFixture(cwd);
-      rmSync(path.join(cwd, "src/.mops"), { recursive: true, force: true });
+      rmSync(cwd, { recursive: true, force: true });
     }
   });
 
-  test("a rebuild that writes no Wasm fails instead of keeping the old one", async () => {
-    const cwd = path.join(import.meta.dirname, "build/success");
+  test("rejects -o in the moc args before compiling", async () => {
+    const cwd = project({ "mops.toml": MOPS_TOML, "src/Main.mo": ACTOR });
     try {
-      expect((await cli(["build", "foo"], { cwd })).exitCode).toBe(0);
-      const result = await cli(["build", "foo", "--", "-o", "x.wasm"], {
-        cwd,
-      });
+      const result = await cli(["build", "--", "-o", "x.wasm"], { cwd });
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toMatch("moc did not write");
-      expect(existsSync(path.join(cwd, ".mops/.build/foo.wasm"))).toBe(false);
-    } finally {
-      cleanFixture(
-        cwd,
-        ...["x.wasm", "x.did", "x.most"].map((f) => path.join(cwd, f)),
+      expect(result.stderr).toMatch(
+        "'-o' in args for canister main is not supported by mops build",
       );
+      expect(existsSync(path.join(cwd, "x.wasm"))).toBe(false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
     }
   });
 
@@ -117,7 +118,7 @@ describe("build pipeline", () => {
       const result = await cli(["build"], { cwd });
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toMatch(
-        "[build].args should be an array of strings",
+        "[build] config 'args' should be an array of strings",
       );
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -201,6 +202,27 @@ describe("build pipeline", () => {
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toMatch("Tool 'pocket-ic' is not defined");
       expect(result.stdout).not.toMatch("build canister");
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+  test("--check-deploy says to set initArg when the default () does not fit", async () => {
+    const cwd = project({
+      "mops.toml": MOPS_TOML,
+      "src/Main.mo":
+        "persistent actor class Main(start : Nat) { public func get() : async Nat { start } };\n",
+    });
+    try {
+      const result = await cli(["build", "--check-deploy"], {
+        cwd,
+        // Encoding fails before mops connects, so no PocketIC is needed.
+        env: { MOPS_POCKET_IC_URL: "http://127.0.0.1:1" },
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toMatch(
+        "Cannot encode the default init argument () for canister main",
+      );
+      expect(result.stderr).toMatch("Set [canisters.main].initArg");
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
