@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { execa } from "execa";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rm } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { lock } from "proper-lockfile";
 import { CliError, cliError, cliErrorFrom, cliExit } from "../error.js";
 import { describeExecFailure } from "../helpers/exec-failure.js";
@@ -143,15 +143,8 @@ export async function build(
       args.push("--public-metadata", "candid:args");
       const generatedDidPath = join(outputDir, `${canisterName}.did`);
       try {
-        // Outputs of an earlier build must not pass for this one's. A
-        // baseline that is this build's own `.most` stays for moc to read.
-        await Promise.all(
-          [wasmPath, generatedDidPath, mostPath]
-            .filter(
-              (p) => !stableBaseline || resolve(p) !== resolve(stableBaseline),
-            )
-            .map((p) => rm(p, { force: true })),
-        );
+        // An earlier build's Wasm must not pass for this one's.
+        await rm(wasmPath, { force: true });
         if (options.verbose) {
           console.log(chalk.gray(mocPath, JSON.stringify(args)));
         }
@@ -179,7 +172,7 @@ export async function build(
         if (options.verbose && result.stdout && result.stdout.trim()) {
           console.log(result.stdout);
         }
-        // A last safeguard: `-o` in the moc args is rejected before compiling.
+        // moc can exit 0 without compiling, for example on `--version`.
         if (!existsSync(wasmPath)) {
           cliError(
             `moc did not write ${wasmPath} for canister ${canisterName}`,

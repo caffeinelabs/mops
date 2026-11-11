@@ -119,7 +119,8 @@ function collectExtraArgs(
   const warned = new Set<string>();
   for (const arg of args) {
     const hint = managedFlags[arg];
-    if (hint && !warned.has(arg)) {
+    // `-o` is an error, raised by the caller.
+    if (hint && arg !== "-o" && !warned.has(arg)) {
       warned.add(arg);
       console.warn(
         chalk.yellow(

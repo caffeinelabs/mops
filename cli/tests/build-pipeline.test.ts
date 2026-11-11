@@ -111,7 +111,10 @@ describe("build pipeline", () => {
       const result = await cli(["build", "--", "-o", "x.wasm"], { cwd });
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toMatch("'-o' in the moc args");
-      expect(existsSync(path.join(cwd, ".migrations-backend"))).toBe(false);
+      // Staging dirs get a random suffix: `.migrations-backend-XXXXXX`.
+      expect(
+        readdirSync(cwd).filter((f) => f.startsWith(".migrations-backend")),
+      ).toEqual([]);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
