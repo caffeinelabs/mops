@@ -327,8 +327,15 @@ export async function runStableCheck(
     cliError(`File not found: ${baselineMost}`);
   }
 
-  // moc 1.15.0+ → one --check, no scratch dir.
-  if (canUseStableBaselineCheck(canisterArgs)) {
+  // moc 1.15.0+ → one --check, no scratch dir. Decided from the same flags
+  // as `mops check` and `mops build`.
+  if (
+    canUseStableBaselineCheck([
+      ...globalMocArgs,
+      ...canisterArgs,
+      ...(options.extraArgs ?? []),
+    ])
+  ) {
     await runFoldedStableCheck({
       canisterMain,
       canisterName,

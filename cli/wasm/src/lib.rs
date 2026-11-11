@@ -9,15 +9,17 @@ use candid_parser::{
 };
 use wasm_bindgen::prelude::*;
 
-use crate::utils::{js_return, js_value, JsResult};
+use crate::utils::{js_return, JsResult};
 
+/// Why `new_interface` is not a subtype of `original_interface`, or `None` when it is.
 #[wasm_bindgen]
-pub fn is_candid_compatible(new_interface: &str, original_interface: &str) -> bool {
+pub fn check_candid_compatibility(new_interface: &str, original_interface: &str) -> Option<String> {
     service_compatible(
         CandidSource::Text(new_interface),
         CandidSource::Text(original_interface),
     )
-    .is_ok()
+    .err()
+    .map(|e| format!("{e:#}"))
 }
 
 #[wasm_bindgen]
@@ -40,16 +42,11 @@ fn encode_candid_args_inner(args: &str, interface: &str) -> Result<Vec<u8>, Stri
         .map_err(|e| e.to_string())
 }
 
+/// Functions whose estimated IC0505 complexity is at least `threshold`.
 #[wasm_bindgen]
-pub fn add_custom_sections(bytes: &[u8], custom_sections: JsValue) -> JsResult<Vec<u8>> {
-    wasm_utils::add_custom_sections(bytes, js_value(custom_sections)?)
-        .map_err(|e| JsError::new(&e.to_string()))
-}
-
-#[wasm_bindgen]
-pub fn analyze_wasm_function_complexity(bytes: &[u8]) -> JsResult {
+pub fn analyze_wasm_function_complexity(bytes: &[u8], threshold: usize) -> JsResult {
     let analysis =
-        wasm_utils::analyze_function_complexity(bytes).map_err(|e| JsError::new(&e.to_string()))?;
+        wasm_utils::analyze_function_complexity(bytes, threshold).map_err(|e| JsError::new(&e))?;
     js_return(&analysis)
 }
 
@@ -57,6 +54,14 @@ pub fn analyze_wasm_function_complexity(bytes: &[u8]) -> JsResult {
 mod tests {
     use super::*;
     use candid::{Encode, Nat};
+
+    #[test]
+    fn explains_candid_incompatibility() {
+        let original = "service : { greet : () -> (text) query }";
+        assert_eq!(check_candid_compatibility(original, original), None);
+        let error = check_candid_compatibility("service : {}", original).unwrap();
+        assert!(error.contains("greet"), "unexpected error: {}", error);
+    }
 
     #[test]
     fn encodes_candid_constructor_args() {
@@ -91,7 +96,8 @@ mod tests {
         // Owned by candid_parser — assert the substance, not the exact wording.
         assert!(
             error.contains("number of argument"),
-            "unexpected error: {error}"
+            "unexpected error: {}",
+            error
         );
     }
 }

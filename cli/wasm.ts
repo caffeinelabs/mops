@@ -1,8 +1,3 @@
-export interface CustomSection {
-  name: string;
-  data: string;
-}
-
 export interface FunctionComplexity {
   index: number;
   name?: string;
@@ -28,19 +23,19 @@ export interface ComplexityBreakdown {
 }
 
 export interface WasmComplexityAnalysis {
-  maxComplexity: number;
   riskyFunctions: FunctionComplexity[];
 }
 
 export interface WasmBindings {
-  is_candid_compatible: (newCandid: string, originalCandid: string) => boolean;
+  /** Why `newCandid` is not a subtype of `originalCandid`; `undefined` when it is. */
+  check_candid_compatibility: (
+    newCandid: string,
+    originalCandid: string,
+  ) => string | undefined;
   encode_candid_args: (args: string, candidInterface: string) => Uint8Array;
-  add_custom_sections: (
-    bytes: Uint8Array,
-    customSections: CustomSection[],
-  ) => Uint8Array;
   analyze_wasm_function_complexity: (
     bytes: Uint8Array,
+    threshold: number,
   ) => WasmComplexityAnalysis;
 }
 

@@ -113,6 +113,11 @@ export function validateCanisterArgs(
     ["[build].args", config?.build?.args],
   ];
   for (const [section, args] of flagSources) {
+    if (args !== undefined && !Array.isArray(args)) {
+      cliError(
+        `${section.replace(/\.args$/, "")} config 'args' should be an array of strings in mops.toml config file`,
+      );
+    }
     if (args?.some((a) => a.startsWith("--enhanced-migration"))) {
       cliError(
         `Canister '${canisterName}' has [migrations] config but --enhanced-migration in ${section}.\n` +

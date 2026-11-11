@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { isCandidCompatible } from "../helpers/is-candid-compatible.js";
+import { checkCandidCompatibility } from "../helpers/candid-compatibility.js";
 import { cliError, cliErrorFrom } from "../error.js";
 
 export interface CheckCandidOptions {
@@ -11,9 +11,12 @@ export async function checkCandid(
   originalPath: string,
 ): Promise<void> {
   try {
-    const compatible = await isCandidCompatible(newPath, originalPath);
-    if (!compatible) {
-      cliError("✖ Candid compatibility check failed");
+    const incompatibility = await checkCandidCompatibility(
+      newPath,
+      originalPath,
+    );
+    if (incompatibility) {
+      cliError(`✖ Candid compatibility check failed\n${incompatibility}`);
     }
     console.log(chalk.green("✓ Candid compatibility check passed"));
   } catch (error) {

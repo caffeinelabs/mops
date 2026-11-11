@@ -7,9 +7,8 @@ import { prepareMigrationArgs } from "./migrations.js";
 import { validateCanisterArgs } from "./resolve-canisters.js";
 
 /** Single source of truth for "how moc is invoked for canister X" — keeps
- * `mops build` and `mops generate candid` in lockstep so the auto-generated
- * `.did` they each produce stays subtype-compatible with the curated one
- * embedded by `mops build`. */
+ * `mops build` and `mops generate candid` in lockstep, so the `.did` that
+ * `mops generate candid` writes passes `mops build`'s compatibility check. */
 export interface PrepareMocArgsOptions {
   /** Selects the migration trim limit (`build-limit` vs `check-limit`). */
   mode: "check" | "build";
@@ -55,6 +54,25 @@ export async function prepareMocArgs(
     cliError(`No main file is specified for canister ${canisterName}`);
   }
   const motokoPath = resolveConfigPath(canister.main);
+  // Before staging the migration chain, so a rejection leaves nothing behind.
+  validateCanisterArgs(canister, canisterName, config);
+  const globalArgs = getGlobalMocArgs(config);
+  const extraArgs = collectExtraArgs(
+    config,
+    canister,
+    canisterName,
+    options.managedFlags,
+    options.commandName,
+    options.extraArgs,
+  );
+  // moc would write its output where mops never looks.
+  if (
+    [...globalArgs, ...extraArgs].some((a) => a === "-o" || a.startsWith("-o="))
+  ) {
+    cliError(
+      `'-o' in the moc args for canister ${canisterName} is not supported by ${options.commandName} — ${options.managedFlags["-o"]}`,
+    );
+  }
 
   const migration = await prepareMigrationArgs(
     canister.migrations,
@@ -65,16 +83,9 @@ export async function prepareMocArgs(
 
   const args = [
     ...(await sourcesArgs()).flat(),
-    ...getGlobalMocArgs(config),
+    ...globalArgs,
     ...migration.migrationArgs,
-    ...collectExtraArgs(
-      config,
-      canister,
-      canisterName,
-      options.managedFlags,
-      options.commandName,
-      options.extraArgs,
-    ),
+    ...extraArgs,
   ];
 
   return { motokoPath, args, cleanup: migration.cleanup };
@@ -99,7 +110,6 @@ function collectExtraArgs(
     args.push(...config.build.args);
   }
   if (canister.args) {
-    validateCanisterArgs(canister, canisterName, config);
     args.push(...canister.args);
   }
   if (extraArgs) {
@@ -109,7 +119,8 @@ function collectExtraArgs(
   const warned = new Set<string>();
   for (const arg of args) {
     const hint = managedFlags[arg];
-    if (hint && !warned.has(arg)) {
+    // `-o` is an error, raised by the caller.
+    if (hint && arg !== "-o" && !warned.has(arg)) {
       warned.add(arg);
       console.warn(
         chalk.yellow(

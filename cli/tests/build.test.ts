@@ -29,6 +29,32 @@ describe("build", () => {
     }
   });
 
+  test("writes moc's Wasm unchanged, even with a declared .did", async () => {
+    const cwd = path.join(import.meta.dirname, "build/success");
+    try {
+      const result = await cli(["build", "bar", "--verbose"], { cwd });
+      expect(result.exitCode).toBe(0);
+      // The verbose moc invocation: `<moc path> ["-c", ...]`.
+      const line = result.stdout
+        .split("\n")
+        .find((l) => l.includes(' ["-c",'))!;
+      const split = line.indexOf(' ["-c",');
+      const args: string[] = JSON.parse(line.slice(split + 1));
+      const built = path.join(cwd, ".mops/.build/bar.wasm");
+      const raw = path.join(cwd, ".mops/.build/raw.wasm");
+      args[args.indexOf("-o") + 1] = raw;
+      await execa(line.slice(0, split), args, { cwd });
+
+      expect(readFileSync(built).equals(readFileSync(raw))).toBe(true);
+      // Not in the CLI's TypeScript lib, but always there in Node.
+      const { Module } = (globalThis as any).WebAssembly;
+      const module = new Module(readFileSync(built));
+      expect(Module.customSections(module, "name")).toHaveLength(1);
+    } finally {
+      cleanFixture(cwd);
+    }
+  });
+
   test("error", async () => {
     const cwd = path.join(import.meta.dirname, "build/error");
     try {
@@ -86,17 +112,14 @@ describe("build", () => {
 
   test("warns when args contain managed flags", async () => {
     const cwd = path.join(import.meta.dirname, "build/success");
-    const artifact = path.join(cwd, "x");
-    const artifactDid = path.join(cwd, "x.did");
-
     try {
       await cliSnapshot(
-        ["build", "foo", "--", "-o", "x", "-c", "--idl", "--stable-types"],
+        ["build", "foo", "--", "-c", "--idl", "--stable-types"],
         { cwd },
-        1,
+        0,
       );
     } finally {
-      cleanFixture(cwd, artifact, artifactDid);
+      cleanFixture(cwd);
     }
   });
 

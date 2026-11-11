@@ -102,8 +102,8 @@ Each canister entry specifies the entrypoint file and optional compiler settings
 | -------- | --------------------------------------------------------------- |
 | main     | Path to the main Motoko file (required)                         |
 | args     | Array of additional `moc` arguments for this canister (optional). Applied after `[moc].args` in `check`, `check-stable`, and `build`. |
-| candid   | Path to a Candid interface file (optional). `mops build` subtype-checks the generated interface against this file and embeds it into the wasm as `candid:service` metadata. `mops generate candid` writes the regenerated `.did` to this path. |
-| initArg  | Candid-encoded initialization arguments (optional)              |
+| candid   | Path to a Candid interface file (optional). `mops build` fails if the generated interface is not a subtype of this file. The Wasm carries the interface `moc` generates. `mops generate candid` writes the regenerated `.did` to this path. |
+| initArg  | Init arguments as Candid text (optional). Used by `mops build --check-deploy` to install the canister. |
 | wasmMemoryLimit | Positive integer Wasm memory limit in bytes applied by `mops build --check-deploy` (optional). Invalid values are rejected by every command that resolves canisters. |
 
 Example:
@@ -188,7 +188,7 @@ Global build settings used by [`mops build`](./cli/4-dev/03-mops-build.md).
 
 | Field     | Description                                                     |
 | --------- | --------------------------------------------------------------- |
-| outputDir | Output directory for compiled Wasm and Candid files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
+| outputDir | Output directory for compiled Wasm, Candid, and stable types (`.most`) files (default `.mops/.build`). Path is relative to `mops.toml`. The `--output` CLI flag takes precedence. |
 | args      | Array of flags passed to `moc` for every canister build (e.g. `["--release", "--ai-errors"]`) |
 | check-wasm | Analyze each final Wasm for likely IC0505 function-complexity risks without starting PocketIC (default `false`). Override for one build with `--check-wasm` or `--no-check-wasm`. |
 | check-deploy | Install every built Wasm on a fresh PocketIC canister and fail on deployment or initialization errors (default `false`). Requires a `[toolchain] pocket-ic` pin (below 9.0.0 rejected), unless `MOPS_POCKET_IC_URL` points at an already-running PocketIC server. Before installation, Mops runs `moc --stable-compatible` from a temporary empty-actor `.most` to each generated `.most`. Incompatible canisters are skipped with `MOPS-CHECK-DEPLOY-SKIPPED`; eligible siblings are still checked. Override for one build with `--check-deploy` or `--no-check-deploy`. |
@@ -207,7 +207,7 @@ These flags are applied after `[moc].args` and before per-canister `[canisters.<
 
 ## [optimize]
 
-Opt-in post-build Wasm optimization via Binaryen's `wasm-opt`. When this section is present (even empty), `mops build` and `mops bench` run `wasm-opt` on the compiled module after candid metadata is attached.
+Opt-in post-build Wasm optimization via Binaryen's `wasm-opt`. When this section is present (even empty), `mops build` and `mops bench` run `wasm-opt` on the compiled module.
 
 | Field       | Description |
 | ----------- | ----------- |

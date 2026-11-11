@@ -32,14 +32,19 @@ export function classifyComplexity(complexity: number): ComplexitySeverity {
   return "none";
 }
 
+export interface WasmPreflightOptions {
+  /** This build already runs `--check-deploy`, so don't suggest it. */
+  checkDeployEnabled?: boolean;
+}
+
 export function formatWasmPreflightReport(
   canisterName: string,
   analysis: WasmComplexityAnalysis,
+  options: WasmPreflightOptions = {},
 ): WasmPreflightReport {
   const diagnostics: WasmPreflightDiagnostic[] = [];
 
   const riskyFunctions = [...analysis.riskyFunctions]
-    .filter((func) => classifyComplexity(func.complexity) !== "none")
     .sort((a, b) => b.complexity - a.complexity || a.index - b.index)
     .slice(0, DISPLAYED_FUNCTION_LIMIT);
 
@@ -48,7 +53,12 @@ export function formatWasmPreflightReport(
     if (severity === "none") {
       continue;
     }
-    const message = formatComplexityMessage(canisterName, func, severity);
+    const message = formatComplexityMessage(
+      canisterName,
+      func,
+      severity,
+      options,
+    );
     diagnostics.push({ message });
   }
 
@@ -58,10 +68,14 @@ export function formatWasmPreflightReport(
 export function runWasmComplexityPreflight(
   canisterName: string,
   wasm: Uint8Array,
+  options: WasmPreflightOptions = {},
 ): WasmPreflightReport {
   try {
-    const analysis = getWasmBindings().analyze_wasm_function_complexity(wasm);
-    const report = formatWasmPreflightReport(canisterName, analysis);
+    const analysis = getWasmBindings().analyze_wasm_function_complexity(
+      wasm,
+      EARLY_COMPLEXITY_THRESHOLD,
+    );
+    const report = formatWasmPreflightReport(canisterName, analysis, options);
     for (const diagnostic of report.diagnostics) {
       console.warn(chalk.yellow(diagnostic.message));
     }
@@ -81,6 +95,7 @@ function formatComplexityMessage(
   canisterName: string,
   func: FunctionComplexity,
   severity: Exclude<ComplexitySeverity, "none">,
+  { checkDeployEnabled = false }: WasmPreflightOptions,
 ): string {
   const exceedsLimit = func.complexity > IC_FUNCTION_COMPLEXITY_LIMIT;
   const name = func.name ? ` (${func.name})` : "";
@@ -97,7 +112,11 @@ function formatComplexityMessage(
     ...(exceedsLimit
       ? [
           "Result: This estimate exceeds the IC0505 limit.",
-          "Next step: Run `mops build --check-deploy` for authoritative PocketIC validation.",
+          ...(checkDeployEnabled
+            ? []
+            : [
+                "Next step: Run `mops build --check-deploy` for authoritative PocketIC validation.",
+              ]),
           "Suggested correction: Split this Motoko function into smaller independently compiled functions, reduce generated statements or branches, then rebuild.",
         ]
       : [
