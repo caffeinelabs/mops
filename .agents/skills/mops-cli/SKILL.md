@@ -201,7 +201,7 @@ mops toolchain use moc latest        # pin latest version (non-interactive)
 mops toolchain use lintoko 0.11.0    # pin specific version
 mops toolchain use pocket-ic 15.0.0  # pin for replica tests / benchmarks / --check-deploy
 mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
-mops toolchain use mo-fmt 0.2.0      # standalone formatter used by `mops format`
+mops toolchain use mo-fmt 0.5.0      # standalone formatter used by `mops format`
 mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
 mops toolchain update                # update all tools to latest
 mops toolchain info <tool>           # show release info (latest, pinned, history)
@@ -349,7 +349,7 @@ mops format --verify      # format, run `mops check`, revert the formatting if i
 mops format -- --syntax moc2   # flags after -- go to mo-fmt (needs mo-fmt pinned)
 ```
 
-With `mo-fmt` pinned in `[toolchain]`, `mops format` runs it instead of the bundled Prettier plugin — no fallback, `.prettierrc` ignored. Configure it with `mo-fmt.toml` in the project root (`syntax = "preserve" | "moc2"`, `indent-width`). Exit is non-zero on unformatted files under `--check`, and whenever a file fails to format (syntax error; left untouched).
+Pin `mo-fmt` in every project you format: `mops toolchain use mo-fmt 0.5.0`. Without the pin, `mops format` falls back to the bundled Prettier plugin, which is deprecated and prints a warning on every run. With the pin there is no fallback and `.prettierrc` is ignored; move Motoko options from `.prettierrc` to `mo-fmt.toml` in the project root (`tabWidth` → `indent-width`; `useTabs` and `printWidth` have no equivalent). `mo-fmt.toml` also takes `syntax = "preserve" | "moc2"` and per-rule keys such as `trailing-commas` and `imports`. Exit is non-zero on unformatted files under `--check`, and whenever a file fails to format (syntax error; left untouched).
 
 `mops format` and `mops lint` skip files the project's `.gitignore` excludes (generated sources); `mops test`, `mops sync` and `mops check <files>` do not.
 

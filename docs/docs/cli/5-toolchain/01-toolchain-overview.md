@@ -15,7 +15,7 @@ When you run `mops install` command, Mops will install the specified version of 
 - `pocket-ic` - PocketIC replica (used by `mops bench`, `mops test --mode replica` and [`mops build --check-deploy`](../4-dev/03-mops-build.md#--check-deploy))
 - `lintoko` - Extensible linter for Motoko ([https://github.com/caffeinelabs/lintoko](https://github.com/caffeinelabs/lintoko))
 - `wasm-opt` - Binaryen Wasm optimizer (used when [`[optimize]`](../../09-mops.toml.md#optimize) is set)
-- `mo-fmt` - Motoko formatter (used by [`mops format`](../4-dev/02-mops-format.md#mo-fmt) when pinned; [https://github.com/caffeinelabs/tree-sitter-motoko](https://github.com/caffeinelabs/tree-sitter-motoko))
+- `mo-fmt` - Motoko formatter (used by [`mops format`](../4-dev/02-mops-format.md#mo-fmt) when pinned, replacing the deprecated Prettier plugin; [https://github.com/caffeinelabs/tree-sitter-motoko](https://github.com/caffeinelabs/tree-sitter-motoko))
 
 Each tool is downloaded for the machine it runs on: macOS or Linux, on x86_64 or arm64. None has a Windows build, so on Windows use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). Releases that predate a tool's arm64 builds — `moc` below 0.14.6, `pocket-ic` below 9.0.2 — are downloaded as x86_64, which Apple silicon runs under Rosetta. `moc` 2.0.0 and later have no Intel-Mac build, so on an Intel Mac pin `moc` 1.x or build `moc` from source.
 
@@ -30,7 +30,7 @@ mops toolchain use wasmtime 41.0.0
 mops toolchain use pocket-ic 15.0.0
 mops toolchain use lintoko 0.11.0
 mops toolchain use wasm-opt 131
-mops toolchain use mo-fmt 0.2.0
+mops toolchain use mo-fmt 0.5.0
 ```
 
 No need to run `mops install` when you use `mops toolchain use` command.
@@ -46,7 +46,7 @@ wasmtime = "41.0.0"
 lintoko = "0.11.0"
 pocket-ic = "15.0.0"
 wasm-opt = "131"
-mo-fmt = "0.2.0"
+mo-fmt = "0.5.0"
 ```
 
 You need to run `mops install` command when you edit `mops.toml` file manually.

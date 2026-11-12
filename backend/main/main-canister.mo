@@ -875,8 +875,8 @@ actor class Main() = this {
     // migrate packageOwners -> ownersByPackage
     if (ownersByPackageStable.size() == 0) {
       ownersByPackage := packageOwnersStable.vals()
-      |> Iter.map<(PackageName, Principal), (PackageName, [Principal])>(_, func((name, owner)) = (name, [owner]))
-      |> TrieMap.fromEntries<PackageName, [Principal]>(_, Text.equal, Text.hash);
+        |> Iter.map<(PackageName, Principal), (PackageName, [Principal])>(_, func((name, owner)) = (name, [owner]))
+        |> TrieMap.fromEntries<PackageName, [Principal]>(_, Text.equal, Text.hash);
     } else {
       ownersByPackage := TrieMap.fromEntries<PackageName, [Principal]>(ownersByPackageStable.vals(), Text.equal, Text.hash);
       ownersByPackageStable := [];
