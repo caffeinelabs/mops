@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 3.7.0
 - **Deprecation**: the Prettier plugin bundled in `mops format` is deprecated, since its repository is being archived. `mops format` without `mo-fmt` pinned in `[toolchain]` still formats with it, but prints a warning on every run, and `mops watch --format` shows the warning under its format status. To switch, run `mops toolchain use mo-fmt 0.5.0`, move Motoko options from `.prettierrc` to `mo-fmt.toml`, and commit one reformat. The [migration guide](https://docs.mops.one/cli/mops-format#switch-from-prettier) maps each `.prettierrc` option. `mo-fmt` has no Windows build, so on Windows the warning says to run `mops` under WSL instead. The plugin will be removed in a future major version.
 - The `mo-fmt` version that `mops format` suggests pinning is now 0.5.0.
 
