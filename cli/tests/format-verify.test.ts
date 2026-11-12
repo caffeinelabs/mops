@@ -3,7 +3,7 @@ import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { cli, cliSnapshot, useTempFixtures } from "./helpers";
 
-// Sources are written per test: lint-staged runs Prettier over committed
+// Sources are written per test: lint-staged formats committed
 // `.mo` files, which would reformat an unformatted fixture on commit.
 const MAIN = `import Lib "Lib";
 

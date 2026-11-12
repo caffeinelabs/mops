@@ -54,7 +54,19 @@ jobs:
       - name: Check global bundle
         run: mops -v
 
-      - run: mops format
+      - name: Check formatting with mo-fmt
+        run: mops format --check
+
+      # The bundle ships the deprecated Prettier plugin's wasm, which mops format falls back to without a mo-fmt pin.
+      - name: Format with the bundled Prettier plugin
+        working-directory: ${{ runner.temp }}
+        run: |
+          printf '[dependencies]\n' > mops.toml
+          printf 'module {\npublic func f():Nat{1};\n}\n' > A.mo
+          if mops format --check; then echo "A.mo should need formatting"; exit 1; fi
+          mops format 2>&1 | tee output.txt
+          grep -q "deprecated" output.txt
+          mops format --check
 
   ci-ok-cli:
     timeout-minutes: 5

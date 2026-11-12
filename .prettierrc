@@ -1,5 +1,4 @@
 {
-  "plugins": ["prettier-plugin-motoko"],
   "tabWidth": 2,
   "useTabs": false
 }

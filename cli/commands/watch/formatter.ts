@@ -1,5 +1,6 @@
 import chalk from "chalk";
-import { format, FormatResult } from "../format.js";
+import { readConfig } from "../../mops.js";
+import { format, FormatResult, prettierPluginWarning } from "../format.js";
 import { ErrorChecker } from "./error-checker.js";
 
 export class Formatter {
@@ -11,6 +12,8 @@ export class Formatter {
   controller = new AbortController();
   currentRun: Promise<any> | undefined;
   result: FormatResult | undefined;
+  // `format` prints its deprecation warning to the console, which watch clears.
+  usesPrettier = false;
 
   constructor({
     verbose,
@@ -37,6 +40,7 @@ export class Formatter {
 
   async run(onProgress: () => void) {
     await this.abortCurrent();
+    this.usesPrettier = !readConfig().toolchain?.["mo-fmt"];
 
     if (this.errorChecker.status === "error") {
       this.status = "syntax-error";
@@ -67,6 +71,13 @@ export class Formatter {
   }
 
   getOutput(): string {
+    let warning = this.usesPrettier
+      ? `\n${chalk.yellow(prettierPluginWarning())}`
+      : "";
+    return this.getStatus() + warning;
+  }
+
+  getStatus(): string {
     if (this.status === "pending") {
       return `Format: ${chalk.gray("(pending)")}`;
     }

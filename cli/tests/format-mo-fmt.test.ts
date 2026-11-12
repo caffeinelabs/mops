@@ -1,9 +1,10 @@
 import { describe, expect, test } from "@jest/globals";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { prettierPluginWarning, switchToMoFmtHint } from "../commands/format";
 import { cli, cliSnapshot, useTempFixtures } from "./helpers";
 
-// Sources are written per test: lint-staged runs Prettier over committed
+// Sources are written per test: lint-staged formats committed
 // `.mo` files, which would reformat an unformatted fixture on commit.
 const FORMATTED = `module {
   public func add(a : Nat, b : Nat) : Nat {
@@ -132,7 +133,7 @@ describe("format with mo-fmt pinned", () => {
       const result = await cli(["format", "--", "--syntax", "moc2"], { cwd });
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toMatch(/forwarded to mo-fmt, which is not pinned/);
-      expect(result.stderr).toMatch(/mops toolchain use mo-fmt 0\.2\.0/);
+      expect(result.stderr).toMatch(/mops toolchain use mo-fmt 0\.5\.0/);
       expect(await readFile(path.join(cwd, "src/Legacy.mo"), "utf8")).toBe(
         LEGACY,
       );
@@ -145,5 +146,47 @@ describe("format with mo-fmt pinned", () => {
     const result = await cli(["format", "Clean", "Messy"], { cwd });
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toMatch(/mops format takes one filter/);
+  });
+});
+
+describe("the bundled Prettier plugin", () => {
+  const makeTempFixture = useTempFixtures(import.meta.dirname);
+
+  let setup = async (mopsToml: string) => {
+    const cwd = await makeTempFixture("format-mo-fmt");
+    await writeFile(path.join(cwd, "mops.toml"), mopsToml);
+    await mkdir(path.join(cwd, "src"), { recursive: true });
+    await writeFile(path.join(cwd, "src", "Messy.mo"), UNFORMATTED);
+    return cwd;
+  };
+
+  test("still formats, with a deprecation warning", async () => {
+    const cwd = await setup("[dependencies]\n");
+
+    const result = await cli(["format"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toMatch(/Prettier plugin, which is deprecated/);
+    expect(result.stderr).toMatch(/mops toolchain use mo-fmt 0\.5\.0/);
+    expect(await readFile(path.join(cwd, "src/Messy.mo"), "utf8")).not.toBe(
+      UNFORMATTED,
+    );
+  });
+
+  test("is not mentioned once mo-fmt is pinned", async () => {
+    const cwd = await setup('[toolchain]\nmo-fmt = "0.5.0"\n');
+
+    const result = await cli(["format"], { cwd });
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).not.toMatch(/Prettier/);
+  });
+
+  test("on Windows, hints do not suggest pinning mo-fmt", () => {
+    for (let hint of [
+      prettierPluginWarning("win32"),
+      switchToMoFmtHint("win32"),
+    ]) {
+      expect(hint).not.toMatch(/toolchain use/);
+      expect(hint).toMatch(/WSL/);
+    }
   });
 });
