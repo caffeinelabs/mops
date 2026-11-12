@@ -71,7 +71,7 @@ The [Prettier plugin](https://github.com/caffeinelabs/prettier-plugin-motoko) is
 
    | Prettier plugin                                     | `mo-fmt.toml`                                                      |
    | --------------------------------------------------- | ------------------------------------------------------------------ |
-   | `tabWidth`, or `indent_size` in `.editorconfig`     | `indent-width`                                                     |
+   | `tabWidth`, or `indent_size` in `.editorconfig` when the project has a `.prettierrc` | `indent-width`                                  |
    | `useTabs`                                           | None: `mo-fmt` indents with spaces only                            |
    | `printWidth`                                        | None: line breaks are kept as written                              |
    | `bracketSpacing`                                    | None: always `{ x = 1 }`                                           |
