@@ -39,6 +39,18 @@
     "check": "run-p check:cli check:frontend",
     "precommit": "lint-staged && npm run check"
   },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,html}": [
+      "prettier --write"
+    ],
+    "*.mo": [
+      "node scripts/mo-fmt-staged.mjs"
+    ]
+  },
   "devDependencies": {
     "@icp-sdk/bindgen": "0.4.0",
     "@typescript-eslint/eslint-plugin": "7.18.0",

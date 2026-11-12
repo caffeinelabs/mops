@@ -63,8 +63,9 @@ jobs:
         run: |
           printf '[dependencies]\n' > mops.toml
           printf 'module {\npublic func f():Nat{1};\n}\n' > A.mo
-          mops format 2> stderr.txt
-          grep -q "deprecated" stderr.txt
+          if mops format --check; then echo "A.mo should need formatting"; exit 1; fi
+          mops format 2>&1 | tee output.txt
+          grep -q "deprecated" output.txt
           mops format --check
 
   ci-ok-cli:

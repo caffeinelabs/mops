@@ -17,7 +17,7 @@ import { checkStable } from "./commands/check-stable.js";
 import { deployed, deployedInit } from "./commands/deployed.js";
 import { docsCoverage } from "./commands/docs-coverage.js";
 import { docs } from "./commands/docs.js";
-import { format, MO_FMT_VERSION } from "./commands/format.js";
+import { format, switchToMoFmtHint } from "./commands/format.js";
 import { formatVerified } from "./commands/format-verify.js";
 import { generateCandid } from "./commands/generate.js";
 import { info } from "./commands/info.js";
@@ -1222,7 +1222,7 @@ program
   )
   .addHelpText(
     "after",
-    `\nRuns mo-fmt when it is pinned in [toolchain]. Without the pin, falls back to the bundled Prettier plugin, which is deprecated; to switch, run:\n  $ mops toolchain use mo-fmt ${MO_FMT_VERSION}`,
+    `\nRuns mo-fmt when it is pinned in [toolchain]. Without the pin, falls back to the bundled Prettier plugin, which is deprecated.\n${switchToMoFmtHint()}`,
   )
   .addHelpText(
     "after",

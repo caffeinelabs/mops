@@ -67,17 +67,20 @@ The [Prettier plugin](https://github.com/caffeinelabs/prettier-plugin-motoko) is
    mops toolchain use mo-fmt 0.5.0
    ```
 
-2. If `.prettierrc` sets options for `.mo` files, move them to `mo-fmt.toml` in the project root:
+2. Move the plugin's settings to `mo-fmt.toml` in the project root. `mo-fmt` reads neither `.prettierrc` nor `.editorconfig`, and its rules keep code as written by default, where the plugin added trailing commas to lists broken across lines. To keep those commas, set `trailing-commas = "multiline"` even when `.prettierrc` sets nothing:
 
-   | `.prettierrc`             | `mo-fmt.toml`                                         |
-   | ------------------------- | ----------------------------------------------------- |
-   | `tabWidth`                | `indent-width`                                        |
-   | `useTabs`                 | None: `mo-fmt` indents with spaces only               |
-   | `printWidth`              | None: line breaks are kept as written                 |
-   | `bracketSpacing`          | None: always `{ x = 1 }`                              |
-   | `semi: false`             | `semicolons = "minimal"`                              |
-   | `trailingComma: "all"`    | `trailing-commas = "multiline"`                       |
-   | `trailingComma: "none"`   | `trailing-commas = "never"`                           |
+   | Prettier plugin                                     | `mo-fmt.toml`                                                      |
+   | --------------------------------------------------- | ------------------------------------------------------------------ |
+   | `tabWidth`, or `indent_size` in `.editorconfig`     | `indent-width`                                                     |
+   | `useTabs`                                           | None: `mo-fmt` indents with spaces only                            |
+   | `printWidth`                                        | None: line breaks are kept as written                              |
+   | `bracketSpacing`                                    | None: always `{ x = 1 }`                                           |
+   | `semi: true` (the default)                          | None: `mo-fmt` does not add missing semicolons                     |
+   | `semi: false`                                       | `semicolons = "minimal"`                                           |
+   | `trailingComma: "all"` (the default) or `"es5"`     | `trailing-commas = "multiline"`                                    |
+   | `trailingComma: "none"`                             | `trailing-commas = "never"`                                        |
+   | `motokoOrganizeImports: true`                       | `imports = "organize"`, which puts packages first, not canisters   |
+   | `motokoRemoveLinesAroundCodeBlocks: true`           | `block-blank-lines = "trim"`                                       |
 
    Then remove `prettier-plugin-motoko` from `.prettierrc` and `package.json`, if it is there.
 
@@ -91,13 +94,11 @@ The [Prettier plugin](https://github.com/caffeinelabs/prettier-plugin-motoko) is
 
 4. Leave CI as it is: `mops format --check` now checks with `mo-fmt`.
 
-The Motoko extension for VS Code still formats with the Prettier plugin, so its format-on-save and `mops format` can disagree. Until the extension moves to `mo-fmt`, turn format-on-save off for Motoko in `.vscode/settings.json` and run `mops format` instead:
+The Motoko extension for VS Code still formats with the Prettier plugin, so its formatting and `mops format` can disagree. Until the extension moves to `mo-fmt`, turn its formatter off in `.vscode/settings.json` and run `mops format` instead:
 
 ```json
 {
-  "[motoko]": {
-    "editor.formatOnSave": false
-  }
+  "motoko.formatter": "none"
 }
 ```
 

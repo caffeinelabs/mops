@@ -25,18 +25,18 @@ type FormatOptions = {
 // The version the deprecation warning and error hints tell users to pin.
 export const MO_FMT_VERSION = "0.5.0";
 
-const PIN_MO_FMT = `mops toolchain use mo-fmt ${MO_FMT_VERSION}`;
+/** How to move to mo-fmt here; it has no Windows build, so pinning it there fails. */
+export function switchToMoFmtHint(platform = process.platform): string {
+  return platform === "win32"
+    ? "mo-fmt has no Windows build; run mops under WSL to use it."
+    : `To switch to mo-fmt, run: mops toolchain use mo-fmt ${MO_FMT_VERSION}`;
+}
 
 /** Printed by every `mops format` run that falls back to the bundled Prettier plugin. */
 export function prettierPluginWarning(platform = process.platform): string {
-  // mo-fmt has no Windows build, so pinning it there fails.
-  let howToSwitch =
-    platform === "win32"
-      ? "Its replacement, mo-fmt, has no Windows build: run mops under WSL to switch."
-      : `Switch to mo-fmt: ${PIN_MO_FMT}`;
   return (
     "WARN: mops format is using the bundled Prettier plugin, which is deprecated and will be removed in a future major version.\n" +
-    `${howToSwitch}\n` +
+    `${switchToMoFmtHint(platform)}\n` +
     "Migration guide: https://docs.mops.one/cli/mops-format#switch-from-prettier"
   );
 }
@@ -74,7 +74,7 @@ export async function format(
   if (options.extraArgs?.length && !moFmtPinned) {
     cliError(
       "Arguments after -- are forwarded to mo-fmt, which is not pinned in [toolchain].\n" +
-        `Run ${chalk.green(PIN_MO_FMT)} to pin it.`,
+        switchToMoFmtHint(),
     );
   }
   if (!moFmtPinned && !options.silent) {

@@ -40,6 +40,7 @@ export class Formatter {
 
   async run(onProgress: () => void) {
     await this.abortCurrent();
+    this.usesPrettier = !readConfig().toolchain?.["mo-fmt"];
 
     if (this.errorChecker.status === "error") {
       this.status = "syntax-error";
@@ -51,7 +52,6 @@ export class Formatter {
     onProgress();
 
     this.controller = new AbortController();
-    this.usesPrettier = !readConfig().toolchain?.["mo-fmt"];
 
     this.currentRun = format(
       "",

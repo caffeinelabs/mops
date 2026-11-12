@@ -1,7 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { prettierPluginWarning } from "../commands/format";
+import { prettierPluginWarning, switchToMoFmtHint } from "../commands/format";
 import { cli, cliSnapshot, useTempFixtures } from "./helpers";
 
 // Sources are written per test: lint-staged formats committed
@@ -180,9 +180,13 @@ describe("the bundled Prettier plugin", () => {
     expect(result.stderr).not.toMatch(/Prettier/);
   });
 
-  test("the warning on Windows does not suggest pinning mo-fmt", () => {
-    let warning = prettierPluginWarning("win32");
-    expect(warning).not.toMatch(/toolchain use/);
-    expect(warning).toMatch(/WSL/);
+  test("on Windows, hints do not suggest pinning mo-fmt", () => {
+    for (let hint of [
+      prettierPluginWarning("win32"),
+      switchToMoFmtHint("win32"),
+    ]) {
+      expect(hint).not.toMatch(/toolchain use/);
+      expect(hint).toMatch(/WSL/);
+    }
   });
 });
