@@ -108,5 +108,8 @@
     "tsx": "4.22.4",
     "typescript": "5.9.2",
     "wasm-pack": "0.15.0"
+  },
+  "overrides": {
+    "undici": "7.30.1"
   }
 }
