@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+- Rebuilding a release now gives the same `cli.tgz` every time, so its published SHA256 can be verified. `wasm-bindgen` is updated to 0.2.130: 0.2.106 ordered the type section of the CLI's wasm differently from run to run.
+- `glob` is updated to 14.0.4 and `minimatch` to 11.0.5, which fix GHSA-g3hv-75wg-m249 (denial of service through a pattern that expands into very many parts) and GHSA-3g3m-2fjr-6pw4 (an aborted async glob that keeps reading directories), both medium severity. `mops` finds the same files as before.
 - The unused `jsdom` dependency is removed, along with `undici`, which it pulled in. Neither was in the CLI bundle, so `npm i -g ic-mops` no longer installs code that `mops` never loads, with its 8 open `undici` advisories.
 - The CLI bundle is now built from the same `package-lock.json` that CI tests. It was built from a `bun.lock` that had not changed since August, so its dependency versions differed from the ones CI ran, for example `pretty-ms` and `p-map`.
 
