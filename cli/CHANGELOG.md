@@ -1,6 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
+- `glob` is updated to 14.0.4 and `minimatch` to 11.0.5, which fix GHSA-3g3m-2fjr-6pw4 and GHSA-g3hv-75wg-m249 (both medium severity). `minimatch` 11 matches each part of a pattern without a regular expression, so a pattern can no longer cause catastrophic backtracking. `mops` finds the same files as before.
 - The unused `jsdom` dependency is removed, along with `undici`, which it pulled in. Neither was in the CLI bundle, so `npm i -g ic-mops` no longer installs code that `mops` never loads, with its 8 open `undici` advisories.
 - The CLI bundle is now built from the same `package-lock.json` that CI tests. It was built from a `bun.lock` that had not changed since August, so its dependency versions differed from the ones CI ran, for example `pretty-ms` and `p-map`.
 
