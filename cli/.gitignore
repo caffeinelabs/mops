@@ -3,3 +3,5 @@ dist
 bundle
 cli.js
 identity.pem
+# releases install from package-lock.json
+bun.lock

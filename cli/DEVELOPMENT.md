@@ -38,7 +38,7 @@ npm run mops -- install
 
 ## Reproducible build
 
-Every release's bundle hash is published by the [build-hash workflow](https://github.com/caffeinelabs/mops/actions/workflows/build-hash.yml). To reproduce a build locally (requires Docker; the builder base image lives in [`cli-builder/`](../cli-builder/)):
+Every release's bundle hash is published in its [GitHub Release](https://github.com/caffeinelabs/mops/releases). To reproduce a build locally (requires Docker; the builder base image lives in [`cli-builder/`](../cli-builder/)):
 
 ```bash
 cd cli
@@ -48,6 +48,8 @@ MOPS_VERSION=<version> COMMIT_HASH=<commit_hash> ./build.sh
 To verify a released bundle against its published hash:
 
 ```bash
+git checkout <commit_hash>
+cd cli
 docker build . --build-arg COMMIT_HASH=<commit_hash> --build-arg MOPS_VERSION=<mops_version> -t mops
 docker run --rm --env SHASUM=<build_hash> mops
 ```
