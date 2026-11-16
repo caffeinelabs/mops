@@ -37,7 +37,7 @@ jobs:
           cache: "npm"
 
       - name: Install npm dependencies
-        run: cd cli && npm i
+        run: cd cli && npm ci
 
       - name: Prepare
         run: cd cli && npm run prepare

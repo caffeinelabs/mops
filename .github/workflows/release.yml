@@ -171,6 +171,7 @@ jobs:
             echo ""
             echo "**Verify build:**"
             echo '```bash'
+            echo "git checkout ${COMMIT_HASH}"
             echo "cd cli"
             echo "docker build . --build-arg COMMIT_HASH=${COMMIT_HASH} --build-arg MOPS_VERSION=${VERSION} -t mops"
             echo "docker run --rm --env SHASUM=${BUILD_HASH} mops"
@@ -220,6 +221,7 @@ jobs:
             echo ""
             echo "**Verify build:**"
             echo '```bash'
+            echo "git checkout ${COMMIT_HASH}"
             echo "cd cli"
             echo "docker build . --build-arg COMMIT_HASH=${COMMIT_HASH} --build-arg MOPS_VERSION=${VERSION} -t mops"
             echo "docker run --rm --env SHASUM=${BUILD_HASH} mops"

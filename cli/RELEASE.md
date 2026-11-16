@@ -88,6 +88,7 @@ gh pr merge --auto --squash
 Anyone can verify a released version by rebuilding from source. Instructions are included in each [GitHub Release](https://github.com/caffeinelabs/mops/releases).
 
 ```bash
+git checkout <commit_hash>
 cd cli
 docker build . --build-arg COMMIT_HASH=<commit_hash> --build-arg MOPS_VERSION=<mops_version> -t mops
 docker run --rm --env SHASUM=<build_hash> mops

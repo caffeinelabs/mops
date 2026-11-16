@@ -1,7 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
-- `undici`, a dependency of `jsdom`, is updated to 7.30.2, which closes 8 advisories, 4 of them high severity. The CLI bundle is now built from the same `package-lock.json` that CI tests. It was built from a `bun.lock` that had not changed since August, so it shipped `undici` 7.24.5 and other dependency versions that CI never ran.
+- The unused `jsdom` dependency is removed, along with `undici`, which it pulled in. Neither was in the CLI bundle, so `npm i -g ic-mops` no longer installs code that `mops` never loads, with its 8 open `undici` advisories.
+- The CLI bundle is now built from the same `package-lock.json` that CI tests. It was built from a `bun.lock` that had not changed since August, so its dependency versions differed from the ones CI ran, for example `pretty-ms` and `p-map`.
 
 ## 3.7.0
 - **Deprecation**: the Prettier plugin bundled in `mops format` is deprecated, since its repository is being archived. `mops format` without `mo-fmt` pinned in `[toolchain]` still formats with it, but prints a warning on every run, and `mops watch --format` shows the warning under its format status. To switch, run `mops toolchain use mo-fmt 0.5.0`, move Motoko options from `.prettierrc` to `mo-fmt.toml`, and commit one reformat. The [migration guide](https://docs.mops.one/cli/mops-format#switch-from-prettier) maps each `.prettierrc` option. `mo-fmt` has no Windows build, so on Windows the warning says to run `mops` under WSL instead. The plugin will be removed in a future major version.
