@@ -451,11 +451,20 @@ jobs:
 
             const reviewerLogin = process.env.REVIEWER_LOGIN;
 
-            const reviews = await github.paginate(github.rest.pulls.listReviews, {
-              owner,
-              repo,
-              pull_number,
-            });
+            let reviews;
+            try {
+              reviews = await github.paginate(github.rest.pulls.listReviews, {
+                owner,
+                repo,
+                pull_number,
+              });
+            } catch (error) {
+              // Without the review list there is nothing safe to dismiss, so
+              // only a dismissal run fails; an approval run just warns.
+              if (verdict !== "APPROVE") throw error;
+              core.warning(`Could not list reviews, so no automated approval was submitted: ${error.message}`);
+              return;
+            }
             // Also matches the service-account PAT that approved before the
             // switch to the App, so its approvals are still dismissed.
             const approverLogins = [reviewerLogin, "automation-sa-sre"];
