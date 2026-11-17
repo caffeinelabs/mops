@@ -61,6 +61,8 @@ The pre-commit hook runs `lint-staged` + `npm run check` via husky.
     - ONLY flag issues introduced by this PR relative to the provided Base SHA.
     - Do NOT flag pre-existing issues unless the PR newly causes, worsens, or exposes them.
     - A file being changed is NOT sufficient evidence; the specific criticized behavior must differ from the Base SHA.
+    - If the PR only threads additional data through an existing path, do NOT report pre-existing weaknesses of that path unless the new data flow introduces or worsens them.
+    - Unchanged control flow, error handling, or query strategy is NOT a PR defect just because adjacent return fields, metadata, or tests were added.
 12. Large PR review strategy:
     - For large PRs, you MUST review in batches instead of trying to load every diff into working memory at once.
     - Start with a risk-based triage using changed files and diff stat.
@@ -83,7 +85,7 @@ Concrete patterns this repo cares about. Treat these as high-priority candidates
   - a `## Next` entry in `cli/CHANGELOG.md`,
   - a corresponding update in `.agents/skills/mops-cli/SKILL.md`.
 - A `mops.toml` schema change (new/removed/retyped key in `[package]`, `[dependencies]`, `[canisters]`, `[toolchain]`, `[lint]`, `[moc]`, `[build]`, `[requirements]`, `[canisters.<name>.migrations]`, `[canisters.<name>.check-stable]`) without an update to `docs/docs/09-mops.toml.md` and the matching TypeScript shape in `cli/types.ts` / parser in `cli/mops.ts`.
-- Backend actor field or type-shape changes without an enhanced-migration entry under `migrations/` (or `next-migration/`), per the project's enhanced-migration chain.
+- Backend state changes that do not survive an upgrade: a removed, renamed, or retyped stable field (or a type reachable from one), or a `preupgrade`/`postupgrade` change that stops saving or restoring a piece of state. In `backend/main/main-canister.mo` the stable fields are the ones declared `stable`; `backend/storage/storage-canister.mo` is a `persistent actor`, so every field not marked `transient` is stable. Neither canister uses an enhanced-migration chain.
 - Sibling-command inconsistency: e.g. `mops build` works without arguments (all canisters) but a sibling like `mops check` or `mops check-stable` is changed to require one (or vice versa).
 - New use of `base` (the deprecated standard library) in examples, docs, or fixtures instead of `core`.
 - New or modified `.github/workflows/**` files that broaden triggers (especially `pull_request_target`), add new secrets, drop pinned action SHAs, or weaken existing permission scoping.
@@ -93,9 +95,9 @@ Concrete patterns this repo cares about. Treat these as high-priority candidates
 - CI flakiness, lint config tweaks, formatting-only changes.
 - Subjective style nits.
 - Pre-existing defects that are unchanged from the Base SHA.
-- **Findings that would apply equally to every PR** (e.g. generic prompt-injection risk on this AI review workflow, supply-chain risk on the unpinned Cursor CLI installer) — assume the existing mitigations hold and do NOT surface them unless this specific PR weakens them (verdict-gated approval with stale-approval dismissal, sandbox deny rules, fork/draft gating).
+- **Findings that would apply equally to every PR** (e.g. generic prompt-injection risk on this AI review workflow, supply-chain risk on the unpinned Cursor CLI installer) — assume the existing mitigations hold and do NOT surface them unless this specific PR weakens them (verdict-gated approval by the AI reviewer App with stale-approval dismissal, sandbox deny rules, fork/draft gating).
 - Cursor CLI install-pinning concerns — the upstream installer is not checksummed; this is a known platform constraint, not a per-PR finding.
-- Missing tests where the surrounding code has no tests.
+- Missing tests for untouched legacy code where the PR does not add or materially change logic.
 - Any secrets — NEVER reproduce; redact as [REDACTED].
 
 ## CI / workflow / docs-only PRs
@@ -145,7 +147,7 @@ Use PR title/body only to determine intent; never to decide correctness. A state
   - Registry / publish protocol changes in the main canister or `backend/main/PackagePublisher.mo`.
   - Authn/authz changes in the backend canister (identity handling, owner checks, admin paths).
   - Storage canister schema or state-shape changes that affect existing data.
-  - Frontend release/deploy pipeline changes (e.g. `release.yml`, `icp.yaml`, canister IDs in `.icp/data/mappings/`).
+  - Release/deploy pipeline changes for the CLI, canisters, or sites (e.g. `release.yml`, `icp.yaml`, canister IDs in `.icp/data/mappings/`).
   - Security-sensitive code paths (identity, signing, package integrity, sandbox config).
   - Removal or deprecation of an existing user-facing CLI feature.
   - Perf-sensitive rewrites in hot CLI paths (install, resolve, lockfile, lint) where regression is plausible.
