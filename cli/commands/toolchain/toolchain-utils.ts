@@ -242,21 +242,15 @@ export type ReleaseTagOptions = ReleaseFilter & {
   tagPrefix?: string;
 };
 
-let withExclusions = (tags: string[], exclude?: string[]): string[] => {
-  return exclude && exclude.length > 0
-    ? tags.filter((tag) => !exclude.includes(tag))
-    : tags;
-};
-
 export type ReleaseTagsResult = {
   tags: string[];
   /** True when only the first page was fetched and GitHub may have more. */
   truncated: boolean;
   /**
-   * First tag in GitHub publish order, matching `getLatestReleaseTag`. Modules
-   * that filter `tags` further must drop it too, or the two disagree.
+   * Highest version in `tags`, matching `getLatestReleaseTag`. Modules that
+   * filter `tags` further must drop it too, or the two disagree.
    */
-  publishedLatest?: string;
+  latest?: string;
 };
 
 // `undefined` for a tag that belongs to another release line of the repo.
@@ -267,58 +261,58 @@ let releaseVersion = (tag: string, tagPrefix?: string): string | undefined => {
   return tag.startsWith(tagPrefix) ? tag.slice(tagPrefix.length) : undefined;
 };
 
+let fetchReleasePage = async (
+  octokit: Octokit,
+  repo: string,
+  page: number,
+  tagPrefix?: string,
+): Promise<{ releases: ReleaseInfo[]; last: boolean }> => {
+  let res = await octokit.request(`GET /repos/${repo}/releases`, {
+    per_page: 100,
+    page,
+    headers: {
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+  if (res.status !== 200) {
+    cliError("Releases fetch error");
+  }
+  let releases: ReleaseInfo[] = [];
+  for (let release of res.data) {
+    let version = releaseVersion(release.tag_name, tagPrefix);
+    if (version === undefined) {
+      continue;
+    }
+    releases.push({
+      tag_name: version,
+      published_at: release.published_at,
+      prerelease: release.prerelease,
+      draft: release.draft,
+    });
+  }
+  return { releases, last: res.data.length < 100 };
+};
+
 let fetchReleasePages = async (
   repo: string,
   { maxPages, tagPrefix }: { maxPages?: number; tagPrefix?: string } = {},
 ): Promise<{ releases: ReleaseInfo[]; truncated: boolean }> => {
   let octokit = new Octokit({ auth: githubToken() });
   let releases: ReleaseInfo[] = [];
-  let truncated = false;
 
   for (let page = 1; ; page++) {
-    if (maxPages !== undefined && page > maxPages) {
-      truncated = true;
-      break;
-    }
-
-    let res = await octokit.request(`GET /repos/${repo}/releases`, {
-      per_page: 100,
-      page,
-      headers: {
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
-    if (res.status !== 200) {
-      cliError("Releases fetch error");
-    }
-    if (res.data.length === 0) {
-      break;
-    }
-    for (let release of res.data) {
-      let version = releaseVersion(release.tag_name, tagPrefix);
-      if (version === undefined) {
-        continue;
-      }
-      releases.push({
-        tag_name: version,
-        published_at: release.published_at,
-        prerelease: release.prerelease,
-        draft: release.draft,
-      });
-    }
-    if (res.data.length < 100) {
-      break;
+    let res = await fetchReleasePage(octokit, repo, page, tagPrefix);
+    releases.push(...res.releases);
+    if (res.last) {
+      return { releases, truncated: false };
     }
     if (maxPages !== undefined && page >= maxPages) {
-      truncated = true;
-      break;
+      return { releases, truncated: true };
     }
   }
-
-  return { releases, truncated };
 };
 
-/** Release tags, newest first. Default: first GitHub page only. */
+/** Release tags, highest version first. Default: first GitHub page only. */
 export let getReleaseTags = async (
   repo: string,
   {
@@ -332,16 +326,13 @@ export let getReleaseTags = async (
     maxPages: all ? undefined : 1,
     tagPrefix,
   });
-  let rows = releaseRows(releases, { prerelease, exclude });
-  return {
-    tags: withExclusions(releaseTags(releases, { prerelease }), exclude),
-    truncated: all ? false : truncated,
-    // Derived from the same filtered rows, so it can never name a tag that
-    // `tags` leaves out.
-    publishedLatest: rows[0]?.tag_name,
-  };
+  let tags = releaseTags(releases, { prerelease, exclude });
+  return { tags, truncated, latest: tags[0] };
 };
 
+// The highest version, not the newest publish: a bugfix on an older line (moc
+// 1.x after 2.0) is published last but must not become `latest`. Later pages
+// are read only while no release has matched yet.
 export let getLatestReleaseTag = async (
   repo: string,
   { prerelease = false, exclude, tagPrefix }: ReleaseTagOptions = {},
@@ -349,29 +340,17 @@ export let getLatestReleaseTag = async (
   let octokit = new Octokit({ auth: githubToken() });
 
   for (let page = 1; ; page++) {
-    let res = await octokit.request(`GET /repos/${repo}/releases`, {
-      per_page: 100,
+    let { releases, last } = await fetchReleasePage(
+      octokit,
+      repo,
       page,
-      headers: {
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
-    if (res.status !== 200) {
-      cliError("Releases fetch error");
+      tagPrefix,
+    );
+    let [latest] = releaseTags(releases, { prerelease, exclude });
+    if (latest !== undefined) {
+      return latest;
     }
-    if (res.data.length === 0) {
-      break;
-    }
-    for (let release of res.data) {
-      let tag = releaseVersion(release.tag_name, tagPrefix);
-      if (tag === undefined || exclude?.includes(tag)) {
-        continue;
-      }
-      if (!release.draft && (prerelease || !release.prerelease)) {
-        return tag;
-      }
-    }
-    if (res.data.length < 100) {
+    if (last) {
       break;
     }
   }
@@ -380,7 +359,7 @@ export let getLatestReleaseTag = async (
 };
 
 /**
- * Recent release rows, newest first, for prompts and the `info` preview.
+ * Recent release rows, highest version first, for prompts and the `info` preview.
  * Drafts and prereleases are excluded unless asked for explicitly.
  */
 export let getReleases = async (

@@ -202,10 +202,11 @@ mops toolchain use lintoko 0.11.0    # pin specific version
 mops toolchain use pocket-ic 15.0.0  # pin for replica tests / benchmarks / --check-deploy
 mops toolchain use wasm-opt 131      # Binaryen for [optimize] (or `latest`)
 mops toolchain use mo-fmt 0.5.0      # standalone formatter used by `mops format`
-mops toolchain update moc            # update to latest (requires existing [toolchain] entry)
-mops toolchain update                # update all tools to latest
+mops toolchain update moc            # newest compatible version, same major (requires existing [toolchain] entry)
+mops toolchain update                # update all tools within their caret range
+mops toolchain update moc --major    # cross the major version (same as `use moc latest`)
 mops toolchain info <tool>           # show release info (latest, pinned, history)
-mops toolchain info <tool> --versions # list recent releases, newest first
+mops toolchain info <tool> --versions # list recent releases, highest version first
 mops toolchain info <tool> --versions --all # full release history (cache warming)
 mops toolchain info <tool> --versions --prerelease # include prereleases
 mops toolchain bin moc               # print path to binary
@@ -213,7 +214,7 @@ mops toolchain bin moc               # print path to binary
 
 **`pocket-ic` versions**: pin anything from `9.0.0` up, `latest` included — mops keeps no list of blessed versions. Pins below `9.0.0` error with a migration message (they ran on the legacy client that mops 3.0.0 removed). With no pin, replica tests / `mops bench` / `--check-deploy` / `mops toolchain bin pocket-ic` error naming `mops toolchain use pocket-ic 15.0.0`. That version is a hint, not a fallback.
 
-**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. The picker, `latest`, and `--versions` all default to stable releases; pass `--prerelease` to include prereleases. `toolchain update` only works when the tool already has a `[toolchain]` entry. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
+**Agent note**: `toolchain use <tool>` without a version opens an interactive picker — do not use in scripts or agents. Always pass a version or `latest`. The picker, `latest`, and `--versions` all default to stable releases, highest version first (`latest` is the highest version, not the newest publish); pass `--prerelease` to include prereleases. `toolchain update` only works when the tool already has a `[toolchain]` entry, and stays within the caret range of the pin unless you pass `--major`. `toolchain info <tool> --versions` works without `mops.toml` (first GitHub page by default; pass `--all` for full history).
 
 ### Enhanced migrations
 

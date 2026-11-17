@@ -15,19 +15,29 @@ let cacheDir = path.join(globalCacheDir, "wasm-opt");
 
 export let repo = "WebAssembly/binaryen";
 
+// Also keeps out the repo's old Emscripten-era `1.38.x` tags, which mops
+// cannot install and which would otherwise outrank `version_131` as semver.
+let tagPrefix = "version_";
+
 /** Resolved wasm-opt path inside a versioned cache dir (keeps sibling `lib/` for rpath). */
 export let binaryPath = (version: string) =>
   path.join(cacheDir, version, "bin", "wasm-opt");
 
 export let getLatestReleaseTag = async ({ prerelease = false } = {}) => {
-  let tag = await toolchainUtils.getLatestReleaseTag(repo, { prerelease });
+  let tag = await toolchainUtils.getLatestReleaseTag(repo, {
+    prerelease,
+    tagPrefix,
+  });
   return normalizeBinaryenVersion(tag);
 };
 
 export let getReleases = async ({ prerelease = false } = {}): Promise<
   ReleaseInfo[]
 > => {
-  let releases = await toolchainUtils.getReleases(repo, { prerelease });
+  let releases = await toolchainUtils.getReleases(repo, {
+    prerelease,
+    tagPrefix,
+  });
   return releases.map((r) => ({
     ...r,
     tag_name: normalizeBinaryenVersion(r.tag_name),
@@ -38,13 +48,14 @@ export let getReleases = async ({ prerelease = false } = {}): Promise<
 export let getReleaseTags = async (
   options: toolchainUtils.ReleaseTagOptions = {},
 ) => {
-  let res = await toolchainUtils.getReleaseTags(repo, options);
+  let res = await toolchainUtils.getReleaseTags(repo, {
+    ...options,
+    tagPrefix,
+  });
   return {
     ...res,
     tags: res.tags.map(normalizeBinaryenVersion),
-    publishedLatest: res.publishedLatest
-      ? normalizeBinaryenVersion(res.publishedLatest)
-      : undefined,
+    latest: res.latest ? normalizeBinaryenVersion(res.latest) : undefined,
   };
 };
 

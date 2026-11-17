@@ -1,4 +1,4 @@
-import { SemVer } from "semver";
+import semver, { SemVer } from "semver";
 
 export type ReleaseInfo = {
   tag_name: string;
@@ -13,15 +13,36 @@ export type ReleaseFilter = {
   exclude?: string[];
 };
 
+let parseSemVer = (tag: string): SemVer | undefined => {
+  try {
+    return new SemVer(tag);
+  } catch {
+    return undefined;
+  }
+};
+
+// Any version outranks a non-version tag, so a stray tag such as `dev` can
+// never become `latest`. Non-version tags compare numerically, so Binaryen's
+// `version_99` sorts below `version_131`.
 export let sortReleaseTags = (tags: string[]): string[] => {
   return [...tags].sort((a, b) => {
-    try {
-      return new SemVer(a).compare(new SemVer(b));
-    } catch {
-      return a.localeCompare(b);
+    let va = parseSemVer(a);
+    let vb = parseSemVer(b);
+    if (va && vb) {
+      return va.compare(vb);
     }
+    if (va || vb) {
+      return va ? 1 : -1;
+    }
+    return a.localeCompare(b, "en", { numeric: true });
   });
 };
+
+// A semver prerelease such as `2.3.0-rc.1` counts even when GitHub does not
+// flag it, or it would outrank the stable `2.2.x` line as `latest`.
+let isPrerelease = (release: ReleaseInfo): boolean =>
+  release.prerelease ||
+  (parseSemVer(release.tag_name)?.prerelease.length ?? 0) > 0;
 
 // Drafts are excluded unconditionally: GitHub never exposes them to anyone but
 // the repo's own maintainers. Callers only choose whether prereleases show.
@@ -32,12 +53,12 @@ let filterReleases = (
   return releases.filter(
     (release) =>
       !release.draft &&
-      (prerelease || !release.prerelease) &&
+      (prerelease || !isPrerelease(release)) &&
       !exclude?.includes(release.tag_name),
   );
 };
 
-/** Tags matching what `mops toolchain update` would resolve to, newest first. */
+/** Tags matching what `mops toolchain use <tool> latest` resolves to, highest first. */
 export let releaseTags = (
   releases: ReleaseInfo[],
   options?: ReleaseFilter,
@@ -47,11 +68,27 @@ export let releaseTags = (
   ).reverse();
 };
 
-/** Tags in GitHub publish order, for display. */
+/** Rows in `releaseTags` order, for display with their dates. */
 export let releaseRows = (
   releases: ReleaseInfo[],
   options?: ReleaseFilter,
 ): ReleaseInfo[] => {
-  let kept = new Set(filterReleases(releases, options).map((r) => r.tag_name));
-  return releases.filter((release) => kept.has(release.tag_name));
+  let kept = filterReleases(releases, options);
+  let byTag = new Map(kept.map((release) => [release.tag_name, release]));
+  return releaseTags(kept, options).map((tag) => byTag.get(tag)!);
+};
+
+/**
+ * Highest of `tags` within Cargo's caret range of `pinned`: same major, or
+ * same minor for `0.x`, as `mops update` picks for packages. `undefined` when `pinned`
+ * is not a version (a Binaryen `133`, a local file) or no tag fits the range.
+ */
+export let latestCompatible = (
+  pinned: string,
+  tags: string[],
+): string | undefined => {
+  if (!semver.valid(pinned)) {
+    return undefined;
+  }
+  return semver.maxSatisfying(tags, `^${pinned}`) ?? undefined;
 };
