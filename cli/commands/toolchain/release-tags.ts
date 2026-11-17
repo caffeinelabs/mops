@@ -13,13 +13,28 @@ export type ReleaseFilter = {
   exclude?: string[];
 };
 
+let parseSemVer = (tag: string): SemVer | undefined => {
+  try {
+    return new SemVer(tag);
+  } catch {
+    return undefined;
+  }
+};
+
+// Any version outranks a non-version tag, so a stray tag such as `dev` can
+// never become `latest`. Non-version tags compare numerically, so Binaryen's
+// `version_99` sorts below `version_131`.
 export let sortReleaseTags = (tags: string[]): string[] => {
   return [...tags].sort((a, b) => {
-    try {
-      return new SemVer(a).compare(new SemVer(b));
-    } catch {
-      return a.localeCompare(b);
+    let va = parseSemVer(a);
+    let vb = parseSemVer(b);
+    if (va && vb) {
+      return va.compare(vb);
     }
+    if (va || vb) {
+      return va ? 1 : -1;
+    }
+    return a.localeCompare(b, "en", { numeric: true });
   });
 };
 
@@ -37,7 +52,7 @@ let filterReleases = (
   );
 };
 
-/** Tags matching what `mops toolchain update` would resolve to, newest first. */
+/** Tags matching what `mops toolchain update` would resolve to, highest first. */
 export let releaseTags = (
   releases: ReleaseInfo[],
   options?: ReleaseFilter,
@@ -47,11 +62,12 @@ export let releaseTags = (
   ).reverse();
 };
 
-/** Tags in GitHub publish order, for display. */
+/** Rows in `releaseTags` order, for display with their dates. */
 export let releaseRows = (
   releases: ReleaseInfo[],
   options?: ReleaseFilter,
 ): ReleaseInfo[] => {
-  let kept = new Set(filterReleases(releases, options).map((r) => r.tag_name));
-  return releases.filter((release) => kept.has(release.tag_name));
+  let kept = filterReleases(releases, options);
+  let byTag = new Map(kept.map((release) => [release.tag_name, release]));
+  return releaseTags(kept, options).map((tag) => byTag.get(tag)!);
 };

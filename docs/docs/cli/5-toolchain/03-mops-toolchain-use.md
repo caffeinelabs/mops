@@ -21,7 +21,7 @@ mops toolchain use pocket-ic 15.0.0
 mops toolchain use lintoko 0.11.0
 ```
 
-You can specify `latest` as version to install the latest available version.
+You can specify `latest` as version to install the release with the highest version. A bugfix on an older line, published after a newer major release, is not `latest`.
 ```
 mops toolchain use moc latest
 ```

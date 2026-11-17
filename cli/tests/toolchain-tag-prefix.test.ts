@@ -37,7 +37,7 @@ describe("tagPrefix", () => {
   test("every listing keeps only prefixed tags, prefix stripped", async () => {
     let res = await getReleaseTags("a/b", { tagPrefix });
     expect(res.tags).toEqual(["0.1.1", "0.1.0"]);
-    expect(res.publishedLatest).toBe("0.1.1");
+    expect(res.latest).toBe("0.1.1");
 
     let rows = await getReleases("a/b", { tagPrefix });
     expect(rows.map((r) => r.tag_name)).toEqual(["0.1.1", "0.1.0"]);

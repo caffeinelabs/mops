@@ -264,7 +264,7 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   }
 
   // Capped: a short history plus the `latest` line.
-  let { tags, truncated, publishedLatest } = await toolUtils.getReleaseTags({
+  let { tags, truncated, latest } = await toolUtils.getReleaseTags({
     prerelease,
   });
 
@@ -276,8 +276,8 @@ async function info(tool: Tool, options: ToolchainInfoOptions = {}) {
   console.log("");
   console.log(chalk.green.bold(tool));
 
-  if (publishedLatest) {
-    console.log(chalk.yellow(`latest: ${publishedLatest}`));
+  if (latest) {
+    console.log(chalk.yellow(`latest: ${latest}`));
   }
 
   if (pinned) {

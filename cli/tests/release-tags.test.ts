@@ -52,7 +52,25 @@ describe("toolchain release tags", () => {
     ]);
   });
 
-  test("releaseRows keeps GitHub publish order", () => {
+  // Binaryen tags are not semver, and `version_99` must not outrank `version_131`.
+  test("sortReleaseTags orders non-semver tags numerically", () => {
+    expect(
+      sortReleaseTags(["version_131", "version_99", "version_100"]),
+    ).toEqual(["version_99", "version_100", "version_131"]);
+  });
+
+  // A moc 1.x bugfix published after 2.0 must not show up as the newest.
+  test("releaseRows orders by version, not publish order", () => {
+    let releases = [release("1.16.2"), release("2.0.0"), release("1.16.1")];
+
+    expect(releaseRows(releases).map((r) => r.tag_name)).toEqual([
+      "2.0.0",
+      "1.16.2",
+      "1.16.1",
+    ]);
+  });
+
+  test("releaseRows filters prereleases", () => {
     let releases = [
       release("2.0.0-beta.0", { prerelease: true }),
       release("1.16.1"),
@@ -69,8 +87,8 @@ describe("toolchain release tags", () => {
     ).toEqual([
       "2.0.0-beta.0",
       "1.16.1",
-      "1.15.1-dedup-stable-types-3",
       "1.15.1",
+      "1.15.1-dedup-stable-types-3",
     ]);
   });
 
@@ -82,10 +100,9 @@ describe("toolchain release tags", () => {
     ).toEqual(["1.0.0"]);
   });
 
-  // `getReleaseTags` derives `publishedLatest` from `releaseRows`, and `latest`
-  // falls back to it. A module that filters `tags` further must drop it too, or
-  // `latest` can name a tag the same command filtered out.
-  test("releaseTags and releaseRows agree on membership", () => {
+  // The picker lists `releaseRows` and `latest` resolves from `releaseTags`, so
+  // they must offer the same tags in the same order.
+  test("releaseTags and releaseRows agree", () => {
     let releases = [
       release("49.0.0-rc.1", { prerelease: true }),
       release("48.0.2"),
@@ -94,9 +111,8 @@ describe("toolchain release tags", () => {
     ];
 
     for (let options of [undefined, { prerelease: true }]) {
-      let tags = new Set(releaseTags(releases, options));
       expect(releaseRows(releases, options).map((r) => r.tag_name)).toEqual(
-        releases.map((r) => r.tag_name).filter((tag) => tags.has(tag)),
+        releaseTags(releases, options),
       );
     }
   });
