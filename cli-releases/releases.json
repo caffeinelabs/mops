@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "3.7.0"
+    "latest": "3.7.1"
   },
   "versions": {
     "0.41.0": {
@@ -680,6 +680,14 @@
       "commitHash": "4d91c01f6f23c6c1cf5193abc0a0f381e63a6aae",
       "url": "https://cli.mops.one/versions/3.7.0.tgz",
       "hash": "e6b0a02b633cb2aeb62a62f13675b94a0006efdfbd838cb323a015cf64405fd5"
+    },
+    "3.7.1": {
+      "time": 1794919518605,
+      "size": 2255883,
+      "relseaseNotes": "* Rebuilding a release now gives the same `cli.tgz` every time, so its published SHA256 can be verified. `wasm-bindgen` is updated to 0.2.130: 0.2.106 ordered the type section of the CLI's wasm differently from run to run.\n* `glob` is updated to 14.0.4 and `minimatch` to 11.0.5, which fix GHSA-g3hv-75wg-m249 (denial of service through a pattern that expands into very many parts) and GHSA-3g3m-2fjr-6pw4 (an aborted async glob that keeps reading directories), both medium severity. `mops` finds the same files as before.\n* The unused `jsdom` dependency is removed, along with `undici`, which it pulled in. Neither was in the CLI bundle, so `npm i -g ic-mops` no longer installs code that `mops` never loads, with its 8 open `undici` advisories.\n* The CLI bundle is now built from the same `package-lock.json` that CI tests. It was built from a `bun.lock` that had not changed since August, so its dependency versions differed from the ones CI ran, for example `pretty-ms` and `p-map`.\n",
+      "commitHash": "81c9e47cfcee5dc0c50dac7f686f4a3bc05dc447",
+      "url": "https://cli.mops.one/versions/3.7.1.tgz",
+      "hash": "ceb5560eaa11c5c3f5fb5742a03d9561ab345c01f976a37c2a905e7481642dc0"
     }
   }
 }
