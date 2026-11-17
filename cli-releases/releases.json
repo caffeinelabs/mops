@@ -1,6 +1,6 @@
 {
   "tags": {
-    "latest": "3.7.1"
+    "latest": "3.8.0"
   },
   "versions": {
     "0.41.0": {
@@ -688,6 +688,14 @@
       "commitHash": "81c9e47cfcee5dc0c50dac7f686f4a3bc05dc447",
       "url": "https://cli.mops.one/versions/3.7.1.tgz",
       "hash": "ceb5560eaa11c5c3f5fb5742a03d9561ab345c01f976a37c2a905e7481642dc0"
+    },
+    "3.8.0": {
+      "time": 1794931555633,
+      "size": 2257521,
+      "relseaseNotes": "* **Behaviour change**: `mops toolchain update` stays within the caret range of each pin, as `mops update` does for packages: the same major version, or the same minor version for `0.x.y`. A project pinned to `moc` 1.16.1 now gets the newest 1.x release instead of jumping to 2.x. When a newer release is out of range, the command names it. To cross the bound, pass the new `--major` flag. A pin that is not a semantic version, such as `wasm-opt` `133`, changes only with `--major`. A pin to a local file is always skipped, as `mops update` skips path dependencies; before, `update` replaced it with the latest release.\n* **Behaviour change**: `mops toolchain use <tool> latest`, `mops toolchain update --major` and the `latest` line of `mops toolchain info` resolve to the stable release with the highest version, as Cargo does. A tag with a semver prerelease suffix, such as `2.3.0-rc.1`, counts as a prerelease even when GitHub does not flag it. They took the most recently published release, so a bugfix on an older line, such as `moc` 1.16.2 published after 2.0, became `latest`. The interactive `mops toolchain use <tool>` picker also lists releases highest version first, so it no longer preselects that bugfix.\n* `wasm-opt` release lists, such as `mops toolchain info wasm-opt --versions` and the picker, show only Binaryen's `version_N` releases, highest first. They also listed the repo's old `1.38.x` tags, which `mops` cannot install, and put `99` above `131`.\n",
+      "commitHash": "c5388d40dcbf8d9db881126b4ea8962bf986aea2",
+      "url": "https://cli.mops.one/versions/3.8.0.tgz",
+      "hash": "9875732950b3a7c5127ca5b871fdf13cac92a527291cd0c3c6eb0008e35f66e2"
     }
   }
 }
