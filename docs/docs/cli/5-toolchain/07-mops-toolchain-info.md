@@ -31,7 +31,7 @@ mops toolchain info lintoko
 
 ### `--versions`
 
-Print release versions, one per line (newest first). By default fetches only the first GitHub releases page (up to 100 releases). Useful for scripting.
+Print release versions, one per line (highest version first). By default fetches only the first GitHub releases page (up to 100 releases). Useful for scripting.
 
 ```
 mops toolchain info moc --versions

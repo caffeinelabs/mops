@@ -38,6 +38,12 @@ export let sortReleaseTags = (tags: string[]): string[] => {
   });
 };
 
+// A semver prerelease such as `2.3.0-rc.1` counts even when GitHub does not
+// flag it, or it would outrank the stable `2.2.x` line as `latest`.
+let isPrerelease = (release: ReleaseInfo): boolean =>
+  release.prerelease ||
+  (parseSemVer(release.tag_name)?.prerelease.length ?? 0) > 0;
+
 // Drafts are excluded unconditionally: GitHub never exposes them to anyone but
 // the repo's own maintainers. Callers only choose whether prereleases show.
 let filterReleases = (
@@ -47,7 +53,7 @@ let filterReleases = (
   return releases.filter(
     (release) =>
       !release.draft &&
-      (prerelease || !release.prerelease) &&
+      (prerelease || !isPrerelease(release)) &&
       !exclude?.includes(release.tag_name),
   );
 };

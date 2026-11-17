@@ -92,6 +92,16 @@ describe("toolchain release tags", () => {
     ]);
   });
 
+  test("an unflagged semver prerelease is still a prerelease", () => {
+    let releases = [release("2.2.3"), release("2.3.0-rc.1")];
+
+    expect(releaseTags(releases)).toEqual(["2.2.3"]);
+    expect(releaseTags(releases, { prerelease: true })).toEqual([
+      "2.3.0-rc.1",
+      "2.2.3",
+    ]);
+  });
+
   test("releaseRows drops drafts unconditionally", () => {
     let releases = [release("1.0.0"), release("2.0.0", { draft: true })];
 

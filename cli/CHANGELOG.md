@@ -1,7 +1,7 @@
 # Mops CLI Changelog
 
 ## Next
-- **Behaviour change**: `mops toolchain use <tool> latest`, `mops toolchain update` and the `latest` line of `mops toolchain info` resolve to the release with the highest version, as Cargo does. They took the most recently published release, so a bugfix on an older line, such as `moc` 1.16.2 published after 2.0, became `latest`. The interactive `mops toolchain use <tool>` picker also lists releases highest version first, so it no longer preselects that bugfix.
+- **Behaviour change**: `mops toolchain use <tool> latest`, `mops toolchain update` and the `latest` line of `mops toolchain info` resolve to the stable release with the highest version, as Cargo does. A tag with a semver prerelease suffix, such as `2.3.0-rc.1`, counts as a prerelease even when GitHub does not flag it. They took the most recently published release, so a bugfix on an older line, such as `moc` 1.16.2 published after 2.0, became `latest`. The interactive `mops toolchain use <tool>` picker also lists releases highest version first, so it no longer preselects that bugfix.
 - `wasm-opt` release lists, such as `mops toolchain info wasm-opt --versions` and the picker, show only Binaryen's `version_N` releases, highest first. They also listed the repo's old `1.38.x` tags, which `mops` cannot install, and put `99` above `131`.
 
 ## 3.7.1

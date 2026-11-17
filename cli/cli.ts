@@ -1052,7 +1052,7 @@ toolchainCommand
   )
   .option(
     "--versions",
-    "List release versions, one per line (newest first; first GitHub page by default)",
+    "List release versions, one per line (highest version first; first GitHub page by default)",
   )
   .option(
     "--all",
