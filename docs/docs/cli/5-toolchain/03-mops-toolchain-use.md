@@ -35,7 +35,7 @@ mops toolchain use moc
 
 ![user prompt image](mops-toolchain-use-moc.png)
 
-The picker lists stable releases only, matching what `mops toolchain update` resolves to. Pass `--prerelease` to include prereleases (and let `latest` resolve to one):
+The picker lists stable releases only, highest version first, matching what `mops toolchain use <tool> latest` resolves to. Pass `--prerelease` to include prereleases (and let `latest` resolve to one):
 ```
 mops toolchain use moc --prerelease
 ```

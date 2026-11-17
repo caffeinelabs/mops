@@ -40,5 +40,9 @@ mops toolchain update moc
 mops toolchain update wasmtime
 mops toolchain update pocket-ic
 mops toolchain update lintoko
-mops toolchain update wasm-opt
+```
+
+Update a tool past its compatible range, for example `wasm-opt`, whose pins are not semantic versions
+```
+mops toolchain update wasm-opt --major
 ```

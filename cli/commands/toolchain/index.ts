@@ -227,8 +227,11 @@ async function resolveUpdate(
   // Page 1 nearly always has a stable release. Only when it does not is
   // another request worth it.
   let latest = res.latest ?? (await toolUtils.getLatestReleaseTag());
+  // `--major` never moves a prerelease pin back to an older stable line.
+  let pinnedIsNewer =
+    pinned !== latest && sortReleaseTags([pinned, latest])[1] === pinned;
   if (major) {
-    return { version: latest, latest };
+    return { version: pinnedIsNewer ? pinned : latest, latest };
   }
   let version = latestCompatible(pinned, tags);
   // A newer release on the pinned line is almost always on page 1. Only an
