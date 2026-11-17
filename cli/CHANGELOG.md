@@ -1,6 +1,8 @@
 # Mops CLI Changelog
 
 ## Next
+
+## 3.8.0
 - **Behaviour change**: `mops toolchain update` stays within the caret range of each pin, as `mops update` does for packages: the same major version, or the same minor version for `0.x.y`. A project pinned to `moc` 1.16.1 now gets the newest 1.x release instead of jumping to 2.x. When a newer release is out of range, the command names it. To cross the bound, pass the new `--major` flag. A pin that is not a semantic version, such as `wasm-opt` `133`, changes only with `--major`. A pin to a local file is always skipped, as `mops update` skips path dependencies; before, `update` replaced it with the latest release.
 - **Behaviour change**: `mops toolchain use <tool> latest`, `mops toolchain update --major` and the `latest` line of `mops toolchain info` resolve to the stable release with the highest version, as Cargo does. A tag with a semver prerelease suffix, such as `2.3.0-rc.1`, counts as a prerelease even when GitHub does not flag it. They took the most recently published release, so a bugfix on an older line, such as `moc` 1.16.2 published after 2.0, became `latest`. The interactive `mops toolchain use <tool>` picker also lists releases highest version first, so it no longer preselects that bugfix.
 - `wasm-opt` release lists, such as `mops toolchain info wasm-opt --versions` and the picker, show only Binaryen's `version_N` releases, highest first. They also listed the repo's old `1.38.x` tags, which `mops` cannot install, and put `99` above `131`.
