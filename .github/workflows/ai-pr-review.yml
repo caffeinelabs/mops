@@ -2,15 +2,16 @@ name: AI PR review
 
 # Posts a Cursor AI review as a single updatable PR comment with a verdict
 # header (APPROVE / REQUEST_CHANGES / REQUEST_HUMAN_REVIEW / REVIEW_ERROR).
-# An APPROVE verdict also submits an approving review with the
-# SA_RW_GITHUB_TOKEN service-account PAT — the default GITHUB_TOKEN's reviews
-# do not count toward branch protection — so a required-approval rule can be
+# An APPROVE verdict also submits an approving review as the
+# caffeine-ci-ai-reviewer App — the default GITHUB_TOKEN's reviews do not
+# count toward branch protection — so a required-approval rule can be
 # satisfied by either a human or this workflow; any other verdict dismisses
-# still-active automated approvals from previous runs. CHANGES_REQUESTED
-# reviews are never submitted — REQUEST_CHANGES fails the job (red X) instead,
-# so a human approval can override a false positive without dismissing a bot
-# review. When SA_RW_GITHUB_TOKEN is not configured, the review degrades to
-# comment-only.
+# still-active automated approvals from previous runs. The App has its own API
+# rate budget, unlike the org-wide service-account PAT this used before.
+# CHANGES_REQUESTED reviews are never submitted — REQUEST_CHANGES fails the job
+# (red X) instead, so a human approval can override a false positive without
+# dismissing a bot review. When the App is not configured, the review degrades
+# to comment-only.
 #
 # The prompt and this workflow are read from the PR head, so a PR that changes
 # them is reviewed BY them — prompt changes are testable on their own PR. The
@@ -54,7 +55,8 @@ jobs:
         id: token
         env:
           CURSOR_API_TOKEN: ${{ secrets.CURSOR_API_TOKEN }}
-          SA_RW_GITHUB_TOKEN: ${{ secrets.SA_RW_GITHUB_TOKEN }}
+          AI_REVIEWER_APP_CLIENT_ID: ${{ vars.AI_REVIEWER_APP_CLIENT_ID }}
+          AI_REVIEWER_APP_PRIVATE_KEY: ${{ secrets.AI_REVIEWER_APP_PRIVATE_KEY }}
         run: |
           if [ -z "${CURSOR_API_TOKEN:-}" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
@@ -62,9 +64,9 @@ jobs:
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
-          if [ -z "${SA_RW_GITHUB_TOKEN:-}" ]; then
+          if [ -z "${AI_REVIEWER_APP_CLIENT_ID:-}" ] || [ -z "${AI_REVIEWER_APP_PRIVATE_KEY:-}" ]; then
             echo "approval=false" >> "$GITHUB_OUTPUT"
-            echo "SA_RW_GITHUB_TOKEN not configured; review is comment-only (no GitHub approval)."
+            echo "AI reviewer App not configured; review is comment-only (no GitHub approval)."
           else
             echo "approval=true" >> "$GITHUB_OUTPUT"
           fi
@@ -279,12 +281,13 @@ jobs:
           fi
 
           # Extract the model's stated Decision token for tie-breaking only.
+          # Tolerates bold markers, a "Verdict:" label, and trailing text
+          # such as "APPROVE." or "APPROVE (low risk)".
           DECISION_TOKEN="$(
-            grep -E '^(\*\*Decision\*\*|Decision):' cursor-ai-review.md \
-              | sed -E 's/^(\*\*Decision\*\*|Decision):[[:space:]]*//' \
-              | tr -d '\r' \
-              | xargs \
-              | tail -n 1 || true
+            grep -E '^[[:space:]]*(\*\*)?(Decision|Verdict)(\*\*)?:' cursor-ai-review.md \
+              | tail -n 1 \
+              | grep -oE 'REQUEST_HUMAN_REVIEW|REQUEST_CHANGES|REVIEW_ERROR|APPROVE' \
+              | head -n 1 || true
           )"
 
           if [ "$HAS_P" = "true" ]; then
@@ -370,7 +373,11 @@ jobs:
               repo,
               issue_number,
             });
-            const existing = comments.filter((comment) => (comment.body || "").includes(marker));
+            // Only our own comments: on a public repo anyone can post the marker.
+            const existing = comments.filter((comment) =>
+              (comment.user || {}).login === "github-actions[bot]" &&
+              (comment.body || "").includes(marker)
+            );
 
             if (existing.length > 0) {
               const comment = existing[existing.length - 1];
@@ -389,9 +396,23 @@ jobs:
               });
             }
 
+      - name: Mint AI reviewer App token
+        # Minted after the agent step so the token never exists while it runs.
+        id: app-token
+        if: always() && steps.token.outputs.configured == 'true' && steps.token.outputs.approval == 'true'
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.AI_REVIEWER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AI_REVIEWER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-pull-requests: write
+          # Only an identity with write access gives an approval that counts.
+          permission-contents: write
+
       - name: Submit or dismiss GitHub approval
-        # Runs with the SA_RW_GITHUB_TOKEN service-account PAT because the
-        # default GITHUB_TOKEN's reviews do not count toward branch protection.
+        # Runs as the AI reviewer App because the default GITHUB_TOKEN's
+        # reviews do not count toward branch protection.
         # APPROVE submits an approving review (skipped if this head SHA is
         # already approved); every other verdict — including UNKNOWN from an
         # early failure — dismisses still-active automated approvals so a
@@ -399,12 +420,14 @@ jobs:
         # Approval failure is a warning (humans can still approve); dismissal
         # failure fails the job because leaving a stale approval standing is a
         # gating bug.
-        if: always() && steps.token.outputs.configured == 'true' && steps.token.outputs.approval == 'true'
+        if: always() && steps.app-token.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           AI_REVIEW_VERDICT: ${{ env.AI_REVIEW_VERDICT }}
+          # Installation tokens cannot call GET /user, so name the bot directly.
+          REVIEWER_LOGIN: ${{ steps.app-token.outputs.app-slug }}[bot]
         with:
-          github-token: ${{ secrets.SA_RW_GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const {owner, repo} = context.repo;
             const pull_number = context.payload.pull_request.number;
@@ -412,21 +435,24 @@ jobs:
             const verdict = process.env.AI_REVIEW_VERDICT || "REVIEW_ERROR";
             const marker = "<!-- cursor-ai-review-approval -->";
 
-            const {data: reviewer} = await github.rest.users.getAuthenticated();
+            const reviewerLogin = process.env.REVIEWER_LOGIN;
 
             const reviews = await github.paginate(github.rest.pulls.listReviews, {
               owner,
               repo,
               pull_number,
             });
+            // Matched by marker, not login, so approvals left by the
+            // service-account PAT before the switch to the App are dismissed too.
             const botApprovals = reviews.filter((review) =>
               review.state === "APPROVED" &&
-              (review.user || {}).login === reviewer.login &&
               (review.body || "").includes(marker)
             );
 
             if (verdict === "APPROVE") {
-              if (botApprovals.some((review) => review.commit_id === headSha)) {
+              if (botApprovals.some((review) =>
+                (review.user || {}).login === reviewerLogin && review.commit_id === headSha
+              )) {
                 core.info(`Commit ${headSha} already has an automated approval; skipping.`);
                 return;
               }
