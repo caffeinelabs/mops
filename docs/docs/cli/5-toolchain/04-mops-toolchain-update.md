@@ -15,7 +15,7 @@ Only tools present in the `[toolchain]` section of `mops.toml` are updated. With
 
 Like [`mops update`](../1-deps/04-mops-update.md) for packages, the update stays within the caret range of the pinned version: the same major version, or for a `0.x.y` pin, the same minor version. A project pinned to `moc` 1.16.1 gets the newest 1.x release, not 2.x. When a newer release is out of range, the command names it and the flag that installs it.
 
-A pin that is not a semantic version, such as `wasm-opt` `133`, has no compatible range, so it changes only with `--major`. A pin to a local file is skipped unless you pass `--major`.
+A pin that is not a semantic version, such as `wasm-opt` `133`, has no compatible range, so it changes only with `--major`. A pin to a local file is always skipped. To replace it, run [`mops toolchain use <tool> <version>`](./03-mops-toolchain-use.md).
 
 ## Options
 

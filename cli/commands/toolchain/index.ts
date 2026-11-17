@@ -222,11 +222,14 @@ async function resolveUpdate(
   major: boolean,
 ): Promise<{ version: string; latest: string }> {
   let toolUtils = getToolUtils(tool);
-  let latest = await toolUtils.getLatestReleaseTag();
+  let res = await toolUtils.getReleaseTags();
+  let { tags, truncated } = res;
+  // Page 1 nearly always has a stable release. Only when it does not is
+  // another request worth it.
+  let latest = res.latest ?? (await toolUtils.getLatestReleaseTag());
   if (major) {
     return { version: latest, latest };
   }
-  let { tags, truncated } = await toolUtils.getReleaseTags();
   let version = latestCompatible(pinned, tags);
   // A newer release on the pinned line is almost always on page 1. Only an
   // old pin with nothing there needs the full history.
@@ -252,7 +255,8 @@ async function update(tool?: Tool, { major = false } = {}) {
       );
     }
 
-    if (!major && pinned.match(FILE_PATH_REGEX)) {
+    // As `mops update` never touches path dependencies, `--major` included.
+    if (pinned.match(FILE_PATH_REGEX)) {
       console.log(`${tool} is pinned to a local file, skipping`);
       continue;
     }

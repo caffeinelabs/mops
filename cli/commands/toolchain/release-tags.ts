@@ -58,7 +58,7 @@ let filterReleases = (
   );
 };
 
-/** Tags matching what `mops toolchain update` would resolve to, highest first. */
+/** Tags matching what `mops toolchain use <tool> latest` resolves to, highest first. */
 export let releaseTags = (
   releases: ReleaseInfo[],
   options?: ReleaseFilter,
@@ -79,8 +79,8 @@ export let releaseRows = (
 };
 
 /**
- * Highest of `tags` within the caret range of `pinned`, as `mops update` picks
- * for packages: same major, or same minor for `0.x`. `undefined` when `pinned`
+ * Highest of `tags` within Cargo's caret range of `pinned`: same major, or
+ * same minor for `0.x`, as `mops update` picks for packages. `undefined` when `pinned`
  * is not a version (a Binaryen `133`, a local file) or no tag fits the range.
  */
 export let latestCompatible = (

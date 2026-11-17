@@ -56,7 +56,7 @@ mops toolchain info moc --versions --prerelease
 
 Drafts are never listed, with or without the flag.
 
-By default, listed versions match what `mops toolchain update` and `mops toolchain use <tool> latest` resolve to (the stable release with the highest version, which is not always the most recently published one).
+By default, listed versions match what `mops toolchain update --major` and `mops toolchain use <tool> latest` resolve to (the stable release with the highest version, which is not always the most recently published one).
 
 ## Output
 
