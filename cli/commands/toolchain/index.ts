@@ -22,7 +22,12 @@ import { FILE_PATH_REGEX } from "../../constants.js";
 import { cliError } from "../../error.js";
 import { getPocketIcUrl } from "../../helpers/pocket-ic-startup.js";
 import { RECOMMENDED_POCKET_IC_VERSION } from "./pocket-ic-versions.js";
-import type { ReleaseInfo } from "./release-tags.js";
+import semver from "semver";
+import {
+  latestCompatible,
+  sortReleaseTags,
+  type ReleaseInfo,
+} from "./release-tags.js";
 
 function label(text: string): string {
   return chalk.bold(text.padEnd(16));
@@ -208,35 +213,71 @@ async function use(tool: Tool, version?: string, { prerelease = false } = {}) {
   }
 }
 
-// download latest binary and set version in mops.toml
-async function update(tool?: Tool) {
+// The newest version `update` may move a pin to, and the overall latest when
+// that is out of range. Mirrors `mops update`: stays within the caret range of
+// the pin unless `major` is set.
+async function resolveUpdate(
+  tool: Tool,
+  pinned: string,
+  major: boolean,
+): Promise<{ version: string; latest: string }> {
+  let toolUtils = getToolUtils(tool);
+  let latest = await toolUtils.getLatestReleaseTag();
+  if (major) {
+    return { version: latest, latest };
+  }
+  let { tags, truncated } = await toolUtils.getReleaseTags();
+  let version = latestCompatible(pinned, tags);
+  // A newer release on the pinned line is almost always on page 1. Only an
+  // old pin with nothing there needs the full history.
+  if (version === undefined && truncated && semver.valid(pinned)) {
+    ({ tags } = await toolUtils.getReleaseTags({ all: true }));
+    version = latestCompatible(pinned, tags);
+  }
+  return { version: version ?? pinned, latest };
+}
+
+// download the newest compatible binary and set version in mops.toml
+async function update(tool?: Tool, { major = false } = {}) {
   let config = readConfig();
   config.toolchain = config.toolchain || {};
 
   let tools = tool ? [tool] : (Object.keys(config.toolchain) as Tool[]);
 
   for (let tool of tools) {
-    if (!config.toolchain[tool]) {
+    let pinned = config.toolchain[tool];
+    if (!pinned) {
       cliError(
         `Tool '${tool}' is not defined in [toolchain] section in mops.toml`,
       );
     }
 
-    let toolUtils = getToolUtils(tool);
-    let version = await toolUtils.getLatestReleaseTag();
+    if (!major && pinned.match(FILE_PATH_REGEX)) {
+      console.log(`${tool} is pinned to a local file, skipping`);
+      continue;
+    }
+
+    let { version, latest } = await resolveUpdate(tool, pinned, major);
 
     await download(tool, version);
 
-    let oldVersion = config.toolchain[tool];
-    config.toolchain[tool] = version;
-    writeConfig(config);
-
-    await checkRequirements();
-
-    if (oldVersion === version) {
-      console.log(`Latest ${tool} ${version} is already installed`);
-    } else {
+    if (version !== pinned) {
+      config.toolchain[tool] = version;
+      writeConfig(config);
+      await checkRequirements();
       console.log(chalk.green(`Installed ${tool} ${version}`));
+    } else {
+      console.log(`${tool} ${pinned} is already the latest compatible version`);
+    }
+
+    let outOfRange =
+      latest !== version && sortReleaseTags([version, latest])[1] === latest;
+    if (outOfRange) {
+      console.log(
+        chalk.gray(
+          `${tool} ${latest} is available. To update to it, run ${chalk.green(`mops toolchain update ${tool} --major`)}`,
+        ),
+      );
     }
   }
 }

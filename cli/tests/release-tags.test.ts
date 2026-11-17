@@ -1,5 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
 import {
+  latestCompatible,
   releaseRows,
   releaseTags,
   sortReleaseTags,
@@ -125,5 +126,29 @@ describe("toolchain release tags", () => {
         releaseTags(releases, options),
       );
     }
+  });
+
+  describe("latestCompatible", () => {
+    let tags = ["2.2.2", "2.0.0", "1.16.2", "1.16.1", "0.14.1", "0.14.0"];
+
+    // A project on moc 1.x gets the 1.x bugfix from `update`, not 2.x.
+    test("stays on the pinned major", () => {
+      expect(latestCompatible("1.16.1", tags)).toBe("1.16.2");
+      expect(latestCompatible("2.0.0", tags)).toBe("2.2.2");
+    });
+
+    test("stays on the pinned minor for 0.x", () => {
+      expect(latestCompatible("0.14.0", ["0.15.0", ...tags])).toBe("0.14.1");
+    });
+
+    test("never moves below the pin", () => {
+      expect(latestCompatible("2.3.0-beta.1", tags)).toBeUndefined();
+      expect(latestCompatible("1.17.0", tags)).toBeUndefined();
+    });
+
+    test("a pin that is not a version has no compatible range", () => {
+      expect(latestCompatible("133", ["134", "133"])).toBeUndefined();
+      expect(latestCompatible("./moc", tags)).toBeUndefined();
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { SemVer } from "semver";
+import semver, { SemVer } from "semver";
 
 export type ReleaseInfo = {
   tag_name: string;
@@ -76,4 +76,19 @@ export let releaseRows = (
   let kept = filterReleases(releases, options);
   let byTag = new Map(kept.map((release) => [release.tag_name, release]));
   return releaseTags(kept, options).map((tag) => byTag.get(tag)!);
+};
+
+/**
+ * Highest of `tags` within the caret range of `pinned`, as `mops update` picks
+ * for packages: same major, or same minor for `0.x`. `undefined` when `pinned`
+ * is not a version (a Binaryen `133`, a local file) or no tag fits the range.
+ */
+export let latestCompatible = (
+  pinned: string,
+  tags: string[],
+): string | undefined => {
+  if (!semver.valid(pinned)) {
+    return undefined;
+  }
+  return semver.maxSatisfying(tags, `^${pinned}`) ?? undefined;
 };

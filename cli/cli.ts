@@ -1031,7 +1031,7 @@ toolchainCommand
 toolchainCommand
   .command("update")
   .description(
-    "Update specified tool or all tools to the latest version and update mops.toml",
+    "Update specified tool or all tools to the newest compatible version and update mops.toml",
   )
   .addArgument(
     new Argument(
@@ -1039,9 +1039,13 @@ toolchainCommand
       "tool to update (defaults to all configured tools)",
     ).choices(TOOLCHAINS),
   )
-  .action(async (tool?: Tool) => {
+  .option(
+    "--major",
+    "Allow updates that cross the caret bound (major versions, or for 0.x.y tools, minor versions)",
+  )
+  .action(async (tool: Tool | undefined, options: { major?: boolean }) => {
     checkConfigFile();
-    await toolchain.update(tool);
+    await toolchain.update(tool, options);
   });
 
 toolchainCommand
