@@ -6,8 +6,9 @@ name: AI PR review
 # caffeine-ci-ai-reviewer App — the default GITHUB_TOKEN's reviews do not
 # count toward branch protection — so a required-approval rule can be
 # satisfied by either a human or this workflow; any other verdict dismisses
-# still-active automated approvals from previous runs. The App has its own API
-# rate budget, unlike the org-wide service-account PAT this used before.
+# still-active automated approvals from previous runs. The App's API rate
+# budget is shared only with the few repos that use it, unlike the org-wide
+# service-account PAT this used before.
 # CHANGES_REQUESTED reviews are never submitted — REQUEST_CHANGES fails the job
 # (red X) instead, so a human approval can override a false positive without
 # dismissing a bot review. When the App is not configured, the review degrades
@@ -283,13 +284,22 @@ jobs:
 
           # Extract the model's stated Decision token for tie-breaking only.
           # Tolerates bold markers, a "Verdict:" label, and trailing text
-          # such as "APPROVE." or "APPROVE (low risk)".
-          DECISION_TOKEN="$(
+          # such as "APPROVE." or "APPROVE (low risk)". A line naming more
+          # than one token (an echoed template, "not APPROVE; REQUEST_CHANGES")
+          # is undecided and falls through to REVIEW_ERROR.
+          DECISION_LINE="$(
             grep -E '^[[:space:]]*(\*\*)?(Decision|Verdict)(\*\*)?:' cursor-ai-review.md \
-              | tail -n 1 \
-              | grep -oE 'REQUEST_HUMAN_REVIEW|REQUEST_CHANGES|REVIEW_ERROR|APPROVE' \
-              | head -n 1 || true
+              | tail -n 1 || true
           )"
+          DECISION_TOKENS="$(
+            printf '%s\n' "$DECISION_LINE" \
+              | grep -oE '\b(REQUEST_HUMAN_REVIEW|REQUEST_CHANGES|REVIEW_ERROR|APPROVE)\b' \
+              | sort -u || true
+          )"
+          DECISION_TOKEN=""
+          if [ -n "$DECISION_TOKENS" ] && [ "$(printf '%s\n' "$DECISION_TOKENS" | wc -l)" -eq 1 ]; then
+            DECISION_TOKEN="$DECISION_TOKENS"
+          fi
 
           if [ "$HAS_P" = "true" ]; then
             VERDICT=REQUEST_CHANGES
@@ -401,6 +411,9 @@ jobs:
         # Minted after the agent step so the token never exists while it runs.
         id: app-token
         if: always() && steps.token.outputs.configured == 'true' && steps.token.outputs.approval == 'true'
+        # A failed approval is only a warning (humans can still approve), but
+        # a failed dismissal must fail the job.
+        continue-on-error: ${{ env.AI_REVIEW_VERDICT == 'APPROVE' }}
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.AI_REVIEWER_APP_CLIENT_ID }}
@@ -443,10 +456,12 @@ jobs:
               repo,
               pull_number,
             });
-            // Matched by marker, not login, so approvals left by the
-            // service-account PAT before the switch to the App are dismissed too.
+            // Also matches the service-account PAT that approved before the
+            // switch to the App, so its approvals are still dismissed.
+            const approverLogins = [reviewerLogin, "automation-sa-sre"];
             const botApprovals = reviews.filter((review) =>
               review.state === "APPROVED" &&
+              approverLogins.includes((review.user || {}).login) &&
               (review.body || "").includes(marker)
             );
 
