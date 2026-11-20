@@ -7,8 +7,7 @@ name: AI PR review
 # count toward branch protection — so a required-approval rule can be
 # satisfied by either a human or this workflow; any other verdict dismisses
 # still-active automated approvals from previous runs. The App's API rate
-# budget is shared only with the few repos that use it, unlike the org-wide
-# service-account PAT this used before.
+# budget is shared only with the few repos that use it.
 # CHANGES_REQUESTED reviews are never submitted — REQUEST_CHANGES fails the job
 # (red X) instead, so a human approval can override a false positive without
 # dismissing a bot review. When the App is not configured, the review degrades
@@ -465,12 +464,9 @@ jobs:
               core.warning(`Could not list reviews, so no automated approval was submitted: ${error.message}`);
               return;
             }
-            // Also matches the service-account PAT that approved before the
-            // switch to the App, so its approvals are still dismissed.
-            const approverLogins = [reviewerLogin, "automation-sa-sre"];
             const botApprovals = reviews.filter((review) =>
               review.state === "APPROVED" &&
-              approverLogins.includes((review.user || {}).login) &&
+              (review.user || {}).login === reviewerLogin &&
               (review.body || "").includes(marker)
             );
 
